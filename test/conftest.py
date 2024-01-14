@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from dataclasses_json import dataclass_json
 
-PROJECT_ROOT_DIR = Path(__file__).parent.parent
+PROJECT_ROOT_DIR: Path = Path(__file__).parent.parent
 
 
 @pytest.fixture(scope="session")

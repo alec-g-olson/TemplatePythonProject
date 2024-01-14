@@ -1,4 +1,6 @@
 [flake8]
-max-line-length = 100  # black enforce 88 for code. Comments up to 100.
+;Black enforce a line length of 88 for code.
+;This setting allows comments to have a longer line length.
+max-line-length = 100
 exclude = .git,__pycache__,build,dist
 max-complexity = 10
