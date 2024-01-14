@@ -1,0 +1,13 @@
+autoflake
+black
+dataclasses
+dataclasses-json
+isort
+flake8
+pydocstyle
+pytest
+pytest-cov
+pytest-html
+pytest-xdist
+requests
+twine
