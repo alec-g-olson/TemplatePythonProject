@@ -1,5 +1,3 @@
-import math
-
 import pytest
 
 from template_python_project.calculators.calculator import calculate_result
@@ -9,37 +7,35 @@ from template_python_project.calculators.dataclasses import (
     CalculatorOutput,
 )
 
+calculate_results_test_cases = [
+    (
+        CalculatorInput(typeOfCalc=CalculationType.ADD, value1=2, value2=1),
+        CalculatorOutput(result=3),
+    ),
+    (
+        CalculatorInput(typeOfCalc=CalculationType.SUBTRACT, value1=1, value2=2),
+        CalculatorOutput(result=-1),
+    ),
+    (
+        CalculatorInput(typeOfCalc=CalculationType.MULTIPLY, value1=3, value2=3),
+        CalculatorOutput(result=9),
+    ),
+    (
+        CalculatorInput(typeOfCalc=CalculationType.DIVIDE, value1=5, value2=2),
+        CalculatorOutput(result=2.5),
+    ),
+]
 
-@pytest.mark.parametrize(
-    "input_vals, result",
-    [
-        (
-            CalculatorInput(typeOfCalc=CalculationType.ADD, value1=2, value2=1),
-            CalculatorOutput(result=3),
-        ),
-        (
-            CalculatorInput(typeOfCalc=CalculationType.SUBTRACT, value1=1, value2=2),
-            CalculatorOutput(result=-1),
-        ),
-        (
-            CalculatorInput(typeOfCalc=CalculationType.MULTIPLY, value1=3, value2=3),
-            CalculatorOutput(result=9),
-        ),
-        (
-            CalculatorInput(typeOfCalc=CalculationType.DIVIDE, value1=5, value2=2),
-            CalculatorOutput(result=2.5),
-        ),
-        (
-            CalculatorInput(typeOfCalc="invalid", value1=5, value2=2),
-            CalculatorOutput(result=float("Nan")),
-        ),
-    ],
-)
-def test_calculate_result(input_vals, result):
-    if math.isnan(result.result):
-        assert math.isnan(calculate_result(input_vals).result)
-    else:
-        assert calculate_result(input_vals) == result
+
+@pytest.mark.parametrize("input_values, result", calculate_results_test_cases)
+def test_calculate_result(input_values, result):
+    assert calculate_result(input_values) == result
+
+
+def test_calculate_result_all_types_covered():
+    assert len(
+        {input_value[0].typeOfCalc for input_value in calculate_results_test_cases}
+    ) == len(CalculationType)
 
 
 def test_divide_by_zero():

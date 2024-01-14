@@ -1,5 +1,7 @@
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 VERSION = $(shell cat $(MAKEFILE_DIR)/semver)
+USER_ID = $(shell id -u)
+USER_GROUP = $(shell id -g)
 
 PROJECT_NAME = template_python_project
 BUILD_DIR = $(MAKEFILE_DIR)build
@@ -42,7 +44,7 @@ DOCKER_REMOTE_DIST = $(DOCKER_REMOTE_BUILD)/dist
 
 DOCKER_REMOTE_FILES_TO_MAINTAIN = $(DOCKER_REMOTE_SRC_AND_TEST) $(DOCKER_REMOTE_BUILD_SUPPORT)
 
-DOCKER_COMMAND = docker run --rm --workdir=$(DOCKER_REMOTE_DEV_ROOT) -e "PYTHONPATH=$(DOCKER_REMOTE_SRC):$(DOCKER_REMOTE_TEST)" -v $(MAKEFILE_DIR):$(DOCKER_REMOTE_DEV_ROOT) $(DOCKER_DEV_IMAGE)
+DOCKER_COMMAND = docker run --rm --workdir=$(DOCKER_REMOTE_DEV_ROOT) --user $(USER_ID):$(USER_GROUP) -e "PYTHONPATH=$(DOCKER_REMOTE_SRC):$(DOCKER_REMOTE_TEST)" -v $(MAKEFILE_DIR):$(DOCKER_REMOTE_DEV_ROOT) $(DOCKER_DEV_IMAGE)
 DOCKER_BUILD_SUPPORT = $(DOCKER_REMOTE_DEV_ROOT)/build_support
 
 
@@ -64,6 +66,7 @@ test: test_without_style
 	$(DOCKER_COMMAND) pydocstyle $(DOCKER_REMOTE_SRC)
 	$(DOCKER_COMMAND) pydocstyle --add-ignore=D100,D104 $(DOCKER_REMOTE_TEST) $(DOCKER_REMOTE_BUILD_SUPPORT)
 	$(DOCKER_COMMAND) flake8 $(DOCKER_REMOTE_FILES_TO_MAINTAIN)
+	$(DOCKER_COMMAND) mypy $(DOCKER_REMOTE_FILES_TO_MAINTAIN)
 
 .PHONY: autoflake
 autoflake: lint test_without_style  # Do not autoflake unless tests are passing - can cause cascading issues

@@ -30,12 +30,12 @@ Are there other services?
 
 To get started with this repository the developer must install the following:
   
-  - Docker
-  - Make
+  - [Docker](https://docs.docker.com/)
+  - [Make](https://www.gnu.org/software/make/)
 
 To ensure that you have installed all components correctly run `make lint test` from the projects root directory.
 
-## Development Environment Setup 
+## Development Environment Setup
 
 Jump to:
  - [PyCharm](#pycharm)
@@ -45,27 +45,28 @@ Jump to:
 
 If you prefer to use the PyCharm IDE use the following instructions to get setup.
 
-#### Setting the Python Interpreter
+#### PyCharm: Setting the Python Interpreter
 
 In the root directory for this project run `make build_dev_environment` to build the docker image with the correct
-interpreter.  Once you have done this go to PyCharm's Interpreter Settings and navigate to "Add Interpreter > On Docker".
-Select "Pull or use existing" and fill the "image tag" field with `template_project:dev`.  Click "Next", wait for the 
-image to load, click "Next", ensure that "System Interpreter" is selected on the left with `/usr/local/bin/python3`,
-and finally click "Create".  Then hit "Apply" on PyCharm's Interpreter Settings page and enjoy!
+interpreter.  Once you have done this go to PyCharm's Interpreter Settings and navigate to "Add Interpreter > On 
+Docker". Select "Pull or use existing" and fill the "image tag" field with `template_python_project:dev`.  Click 
+"Next", wait for the image to load, click "Next", ensure that "System Interpreter" is selected on the left with 
+`/usr/local/bin/python3`, and finally click "Create".  Then hit "Apply" on PyCharm's Interpreter Settings page and 
+enjoy!
 
-#### Setting Src and Test Folders
+#### PyCharm: Setting Src and Test Folders
 
 In the project drop down menu right-click on "src" and near the bottom of the drop-down menu should be "Mark Directory as".
 Hover over that and then select "Sources Root".  Do the same for "test", but select "Test Sources Root".
 
-#### Configuring PyCharm to Use Pytest
+#### PyCharm: Configuring PyCharm to Use Pytest
 
 By default, PyCharm uses `unittest`.  This project uses `pytest` and PyCharm needs to be configured to default to it.
 To do this go to PyCharm's Settings and on the left side select "Tools" and then "Python Integration Tools".  On this
 pane there should be a "testing" section with a drop-down menu.  Select `pytest` from the drop-down and click "Apply"
 and then "OK".
 
-#### Checking Your Work by Running the Tests in PyCharm
+#### PyCharm: Checking Your Work by Running the Tests
 
 Right click "test" in the project structure window.  Then click "Run 'pytest in test'".  All tests should run and pass.
 If there are any issues it is an indication that setup was not followed correctly.  Ensure that the docker image was
@@ -75,19 +76,19 @@ built correctly, PyCharm correctly picking up its interpreter, and that PyCharm 
 
 If you prefer to use the VS Code IDE use the following instructions to get setup.
 
-#### Setting the Python Interpreter
+#### VS Code: Setting the Python Interpreter
 
 Someone else can add instructions here.
 
-#### Setting Src and Test Folders
+#### VS Code: Setting Src and Test Folders
 
 Someone else can add instructions here.
 
-#### Configuring PyCharm to Use Pytest
+#### VS Code: Configuring VS Code to Use Pytest
 
 Someone else can add instructions here.
 
-#### Checking Your Work by Running the Tests in PyCharm
+#### VS Code: Checking Your Work by Running the Tests
 
 Someone else can add instructions here.
 
@@ -107,8 +108,56 @@ listed in the "Getting Started", and runs `make test` it should work.  And the o
 | `make build_dev_environment` | Builds the docker with the dev environment.                     |
 | `make lint`                  | Runs the lint commands on this repo.                            |
 | `make test`                  | Runs                                                            |
-| `make build_artifact` TBD    | Builds the artifact produced by this repo.                      |
+| `make build_artifact`        | Builds the artifact produced by this repo.                      |
 | `make push`  TBD             | Pushes the artifact produced by this repo to prod.              |
+
+### Tools Enforcing Dev Standards
+ - [PyTest and PyTest-Cov](#pytest-and-pytest-cov)
+ - [iSort](#isort)
+ - [Black](#black)
+ - [PyDocStyle](#pydocstyle)
+ - [Flake8](#flake8)
+ - [MyPy](#mypy)
+
+#### PyTest and PyTest-Cov
+We enforce 100% coverage of files in the src and test folders in this repo.  If there is a line, branch, or function
+that is going to be too difficult to test you can add a `#pragma: no cover` comment on that line, and it will be
+ignored.
+
+#### iSort
+
+[iSort](https://pycqa.github.io/isort/) is used to enforce consistent import statement order.  This cedes all 
+authority on the "correct" way to order import statements to iSort so that there are not arguments between devs.
+
+We enforce import sorting on all src, test, and build_support python files.
+
+#### Black
+
+Similar to how we have given authority over import order to iSort, we have given authority over code formatting to 
+[Black](https://black.readthedocs.io/).
+
+We enforce import sorting on all src, test, and build_support python files.
+
+#### PyDocStyle
+
+[PyDocStyle](https://www.pydocstyle.org/) enforces documentation.  Requires devs to write a docstring for every
+function, class, module, etc... and enforces some style guides on those docstrings.
+
+If we can find a way to enforce documenting the inputs and return values of functions I'd love to add it.
+
+We only enforce docstrings on python files in the src folder.
+
+#### Flake8
+
+[flake8](https://flake8.pycqa.org/) enforces some basic code patterns and style.
+
+We enforce flake8 requirements on all src, test, and build_support python files.
+
+#### MyPy
+
+[MyPy](https://mypy.readthedocs.io/) enforces typing.
+
+We enforce typing on all src, test, and build_support python files.
 
 ## Technologies and Frameworks
 

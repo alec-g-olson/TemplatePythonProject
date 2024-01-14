@@ -1,9 +1,8 @@
 autoflake
 black
-dataclasses
-dataclasses-json
 isort
 flake8
+mypy
 pydocstyle
 pytest
 pytest-cov
@@ -11,3 +10,4 @@ pytest-html
 pytest-xdist
 requests
 twine
+types-requests

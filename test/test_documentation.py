@@ -5,7 +5,7 @@ from typing import Dict, List, Tuple
 
 import pytest
 import requests
-from conftest import PROJECT_ROOT_DIR
+from conftest import PROJECT_ROOT_DIR  # type: ignore
 
 README_FILENAME = "README.md"
 
@@ -114,7 +114,7 @@ def _get_extra_headers(
     extra_headers = []
     if readme_path.exists():
         for line in readme_path.open():
-            if re.match(r"^#", line):
+            if line.startswith("#"):
                 expected_header = False
                 for regex_str in header_regexes:
                     if re.match(regex_str, line):
@@ -131,7 +131,10 @@ def _get_extra_headers(
 
 
 def _is_broken_hyperlink(
-    current_dir: Path, hyperlink: Tuple[str, str], check_weblinks: bool
+    current_dir: Path,
+    hyperlink: Tuple[str, str],
+    check_weblinks: bool,
+    all_headers: List[str],
 ) -> bool:
     if hyperlink[1].startswith("http"):
         if (
@@ -140,7 +143,9 @@ def _is_broken_hyperlink(
             return requests.get(hyperlink[1]).status_code != 200
         else:
             return False  # pragma: no cover - might not hit if check_weblinks is true
-    else:  # pragma: no cover - only checked if README.md references a local file
+    elif hyperlink[1].startswith("#"):
+        return not hyperlink[1] in all_headers
+    else:
         return not current_dir.joinpath(hyperlink[1]).exists()
 
 
@@ -152,6 +157,22 @@ def _get_all_bad_hyperlinks(
     bad_hyperlinks = []
     line_number = 1
     if readme_path.exists():
+        all_headers = []
+        for line in readme_path.open():
+            if line.startswith("#"):
+                all_headers.append(line)
+        possible_header_links = []
+        for header in all_headers:
+            start_of_header = 0
+            for char in header:
+                if char in ["#", " "]:
+                    start_of_header += 1
+                else:
+                    break
+            strip_header = "#" + header[start_of_header:-1]
+            strip_header = strip_header.replace(" ", "-").lower()
+            possible_header_links.append(strip_header)
+        print(possible_header_links)
         for line in readme_path.open():
             hyperlinks = re.findall(HYPERLINK_PATTERN, line)
             for hyperlink in hyperlinks:
@@ -159,6 +180,7 @@ def _get_all_bad_hyperlinks(
                     current_dir=readme_path.parent,
                     hyperlink=hyperlink,
                     check_weblinks=check_weblinks,
+                    all_headers=possible_header_links,
                 ):
                     bad_hyperlinks.append(
                         BadHyperlinkInfo(
@@ -178,12 +200,25 @@ TOP_LEVEL_README_HEADER_LEVEL_DICT = {
     "Other Service": 3,
     "Getting Started": 1,
     "Development Environment Setup": 2,
-    "Setting the Python Interpreter": 3,
-    "Setting Src and Test Folders": 3,
-    "Configuring PyCharm to Use Pytest": 3,
-    "Checking Your Work by Running the Tests in PyCharm": 3,
+    "PyCharm": 3,
+    "PyCharm: Setting the Python Interpreter": 4,
+    "PyCharm: Setting Src and Test Folders": 4,
+    "PyCharm: Configuring PyCharm to Use Pytest": 4,
+    "PyCharm: Checking Your Work by Running the Tests": 4,
+    "VS Code": 3,
+    "VS Code: Setting the Python Interpreter": 4,
+    "VS Code: Setting Src and Test Folders": 4,
+    "VS Code: Configuring VS Code to Use Pytest": 4,
+    "VS Code: Checking Your Work by Running the Tests": 4,
     "Working in this Repository": 2,
     "Selected Build Commands": 3,
+    "Tools Enforcing Dev Standards": 3,
+    "PyTest and PyTest-Cov": 4,
+    "iSort": 4,
+    "Black": 4,
+    "PyDocStyle": 4,
+    "Flake8": 4,
+    "MyPy": 4,
     "Technologies and Frameworks": 2,
     "Major Technologies": 3,
     "Other tools": 3,

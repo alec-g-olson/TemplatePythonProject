@@ -8,14 +8,12 @@ from template_python_project.calculators.dataclasses import (
 
 def calculate_result(args: CalculatorInput) -> CalculatorOutput:
     """Perform calculation based on the inputs."""
-    result = float("Nan")
-    match args.typeOfCalc:
-        case CalculationType.ADD:
-            result = args.value1 + args.value2
-        case CalculationType.SUBTRACT:
-            result = args.value1 - args.value2
-        case CalculationType.MULTIPLY:
-            result = args.value1 * args.value2
-        case CalculationType.DIVIDE:
-            result = args.value1 / args.value2
+    if args.typeOfCalc == CalculationType.ADD:
+        result = args.value1 + args.value2
+    elif args.typeOfCalc == CalculationType.SUBTRACT:
+        result = args.value1 - args.value2
+    elif args.typeOfCalc == CalculationType.MULTIPLY:
+        result = args.value1 * args.value2
+    else:
+        result = args.value1 / args.value2
     return CalculatorOutput(result=result)
