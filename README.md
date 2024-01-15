@@ -32,6 +32,7 @@ To get started with this repository the developer must install the following:
   
   - [Docker](https://docs.docker.com/)
   - [Make](https://www.gnu.org/software/make/)
+  - [Python](https://www.python.org/)
 
 To ensure that you have installed all components correctly run `make lint test` from the projects root directory.
 
@@ -53,6 +54,9 @@ Docker". Select "Pull or use existing" and fill the "image tag" field with `temp
 "Next", wait for the image to load, click "Next", ensure that "System Interpreter" is selected on the left with 
 `/usr/local/bin/python3`, and finally click "Create".  Then hit "Apply" on PyCharm's Interpreter Settings page and 
 enjoy!
+
+Note: The image name is pulled from [pyproject.toml](pyproject.toml).  If you change `template_python_project` to
+something else you must build a new image and reset the interpreter.  You'll also need to update this README.
 
 #### PyCharm: Setting Src and Test Folders
 
@@ -173,7 +177,7 @@ Are there other tools that augment the major technologies?
 
 # Versioning
 
-SemVer!
+SemVer!  This is managed in [pyproject.toml](pyproject.toml)
 
 # Creating a Release
 
