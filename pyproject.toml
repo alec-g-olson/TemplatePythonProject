@@ -1,0 +1,46 @@
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+fail_under = 100
+exclude_lines = [
+  "pragma: no cover"
+]
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.black]
+line_length = 88
+
+[tool.poetry]
+name = "template_python_project"
+version = "0.2.0"
+license = "MIT-0"
+description = "A project that can be used as a template to provide some CI/CD out of the box."
+authors = ["Alexander Olson <alec.g.olson@gmail.com>"]
+readme = "README.md"
+repository = "https://github.com/alec-g-olson/TemplatePythonProject"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+dataclasses-json = "^0.6"
+
+[tool.poetry.group.dev.dependencies]
+autoflake = "^2.2"
+black = "^23.12"
+isort = "^5.13"
+flake8 = "^7.0"
+mypy = "^1.8"
+pydocstyle = "^6.3"
+pytest = "^7.4"
+pytest-cov = "^4.1"
+pytest-html = "^4.1"
+pytest-xdist = "^3.5"
+requests = "^2.31"
+types-requests = "^2.31"
+
+[build-system]
+requires = ["poetry-core==1.7.1"]  # make sure to update in Dockerfile
+build-backend = "poetry.core.masonry.api"
