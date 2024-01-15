@@ -1,4 +1,4 @@
-FROM python:3.11.4 AS base
+FROM python:3.12.1 AS base
 
 # make sure to update build.system.requries poetry version in pyproject.toml
 ENV POETRY_VERSION="1.7.1"
