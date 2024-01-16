@@ -67,7 +67,7 @@ all: docker_prune_all clean lint autoflake build_artifact push
 
 .PHONY: push
 push:build_artifact
-	python3 $(BUILD_SUPPORT_DIR)/push_if_allowed.py
+	$(DOCKER_COMMAND)  python $(DOCKER_REMOTE_BUILD_SUPPORT)/push_if_allowed.py
 
 .PHONY: build_artifact
 build_artifact: test build_prod_environment
