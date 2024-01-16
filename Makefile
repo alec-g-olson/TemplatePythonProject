@@ -2,6 +2,7 @@ MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 PYPROJECT_TOML = $(MAKEFILE_DIR)pyproject.toml
 VERSION = $(shell awk -F'[ ="]+' '$$1 == "version" { print $$2 }' $(PYPROJECT_TOML))
 PROJECT_NAME = $(shell awk -F'[ ="]+' '$$1 == "name" { print $$2 }' $(PYPROJECT_TOML))
+BRANCH = $(shell git rev-parse --abbrev-ref HEAD)
 USER_ID = $(shell id -u)
 USER_GROUP = $(shell id -g)
 
@@ -59,6 +60,8 @@ all: docker_prune_all clean lint autoflake build_artifact push
 
 .PHONY: push
 push: build_artifact
+	git tag v$(VERSION)
+	git push --tags
 
 .PHONY: build_artifact
 build_artifact: test build_prod_environment
@@ -111,7 +114,6 @@ build_prod_environment:
 .PHONY: get_git_info
 get_git_info:
 	mkdir -p $(BUILD_DIR)
-	$(eval BRANCH := $(shell git rev-parse --abbrev-ref HEAD))
 	echo '{"branch": "$(BRANCH)"}' > $(GIT_DATA_FILE)
 
 .PHONY: clean
