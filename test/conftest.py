@@ -31,6 +31,7 @@ class GitInfo:
     """An object containing the current git information."""
 
     branch: str
+    tags: list[str]
 
 
 @pytest.fixture(scope="session")
