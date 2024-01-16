@@ -16,7 +16,7 @@ line_length = 88
 
 [tool.poetry]
 name = "template_python_project"
-version = "0.2.3-dev.2"
+version = "0.2.4"
 license = "MIT-0"
 description = "A project that can be used as a template to provide some CI/CD out of the box."
 authors = ["Alexander Olson <alec.g.olson@gmail.com>"]

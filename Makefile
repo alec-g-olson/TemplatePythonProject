@@ -67,7 +67,9 @@ all: docker_prune_all clean lint autoflake build_artifact push
 
 .PHONY: push
 push:build_artifact
-	$(DOCKER_COMMAND)  python $(DOCKER_REMOTE_BUILD_SUPPORT)/push_if_allowed.py
+	$(DOCKER_COMMAND) python $(DOCKER_REMOTE_BUILD_SUPPORT)/push_if_allowed.py && \
+	git tag v$(VERSION) && \
+	git push --tags
 
 .PHONY: build_artifact
 build_artifact: test build_prod_environment

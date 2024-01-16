@@ -40,5 +40,6 @@ def push_artifact() -> None:
 
 if __name__ == "__main__":
     if allowed_to_push():
-        push_tags()
-        push_artifact()
+        exit(0)
+    else:
+        exit(1)
