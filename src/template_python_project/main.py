@@ -46,7 +46,7 @@ def main(args):
     )
     output = calculate_result(input_vals)
     with args.out_file.open("w") as out_writer:
-        out_writer.write(output.to_json())
+        out_writer.write(output.model_dump_json())
 
 
 if __name__ == "__main__":  # pragma: no cover

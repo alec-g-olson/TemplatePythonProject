@@ -1,8 +1,7 @@
-from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
-from dataclasses_json import dataclass_json
+from pydantic import BaseModel
 
 PROJECT_ROOT_DIR: Path = Path(__file__).parent.parent
 
@@ -25,9 +24,7 @@ def git_info_file(project_build_dir: Path) -> Path:
     return project_build_dir.joinpath("git_info.json")
 
 
-@dataclass_json
-@dataclass
-class GitInfo:
+class GitInfo(BaseModel):
     """An object containing the current git information."""
 
     branch: str
@@ -38,7 +35,7 @@ class GitInfo:
 def git_info(git_info_file: Path) -> GitInfo:
     """Return the git information at the time of this test."""
     with git_info_file.open() as git_info_data:
-        return GitInfo.from_json(git_info_data.read())
+        return GitInfo.model_validate_json(git_info_data.read())
 
 
 @pytest.fixture(scope="session")
