@@ -1,8 +1,7 @@
 """Dataclasses used for calculations."""
-from dataclasses import dataclass
 from enum import Enum
 
-from dataclasses_json import dataclass_json
+from pydantic import BaseModel
 
 
 class CalculationType(Enum):
@@ -18,9 +17,7 @@ class CalculationType(Enum):
         return self.name
 
 
-@dataclass_json
-@dataclass
-class CalculatorInput:
+class CalculatorInput(BaseModel):
     """Object containing the information required to do a calculation."""
 
     typeOfCalc: CalculationType
@@ -28,9 +25,7 @@ class CalculatorInput:
     value2: float
 
 
-@dataclass_json
-@dataclass
-class CalculatorOutput:
+class CalculatorOutput(BaseModel):
     """Object containing the information resulting from a calculation."""
 
     result: float

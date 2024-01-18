@@ -32,5 +32,5 @@ def test_main(tmp_path):
     out_file = tmp_path.joinpath("out.json")
     main(Namespace(type="ADD", val1=5.55, val2=10, out_file=out_file))
     with out_file.open() as result_reader:
-        observed_output = CalculatorOutput.from_json(result_reader.read())
+        observed_output = CalculatorOutput.model_validate_json(result_reader.read())
     assert observed_output == CalculatorOutput(result=15.55)
