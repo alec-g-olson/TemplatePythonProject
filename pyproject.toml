@@ -16,7 +16,7 @@ line_length = 88
 
 [tool.poetry]
 name = "template_python_project"
-version = "0.2.5"
+version = "0.2.6"
 license = "MIT-0"
 description = "A project that can be used as a template to provide some CI/CD out of the box."
 authors = ["Alexander Olson <alec.g.olson@gmail.com>"]
@@ -26,6 +26,9 @@ repository = "https://github.com/alec-g-olson/TemplatePythonProject"
 [tool.poetry.dependencies]
 python = "^3.12"
 Pydantic = "^2.5"
+
+[tool.poetry.group.dev]
+optional = true
 
 [tool.poetry.group.dev.dependencies]
 autoflake = "^2.2"
@@ -40,6 +43,13 @@ pytest-html = "^4.1"
 pytest-xdist = "^3.5"
 requests = "^2.31"
 types-requests = "^2.31"
+
+[tool.poetry.group.pulumi]
+optional = true
+
+[tool.poetry.group.pulumi.dependencies]
+pulumi = "^3.0"
+pulumi-aws = "^6.0"
 
 [build-system]
 requires = ["poetry-core==1.7.1"]  # make sure to update in Dockerfile

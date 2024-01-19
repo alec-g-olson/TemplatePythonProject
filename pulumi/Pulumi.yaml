@@ -1,0 +1,6 @@
+name: templatePythonProject
+runtime:
+  name: python
+  options:
+    virtualenv: venv
+description: This project is a template that other AWS cloud projects can be built on.

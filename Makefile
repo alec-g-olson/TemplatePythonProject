@@ -14,6 +14,7 @@ GIT_DATA_FILE = $(BUILD_DIR)/git_info.json
 
 DOCKER_DEV_IMAGE = $(PROJECT_NAME):dev
 DOCKER_PROD_IMAGE = $(PROJECT_NAME):prod
+DOCKER_PULUMI_IMAGE = $(PROJECT_NAME):pulumi
 DOCKER_CONTEXT = $(MAKEFILE_DIR)
 ifdef DOCKER_CONFIG_DIR
 DOCKER_CONFIG_ARG = --config $(DOCKER_CONFIG_DIR)
@@ -24,10 +25,13 @@ endif
 ifeq ($(CACHE_TYPE), NONE)
   DOCKER_DEV_CACHE_ARG = --no-cache
   DOCKER_PROD_CACHE_ARG = --no-cache
+  DOCKER_PULUMI_CACHE_ARG = --no-cache
 else
   DOCKER_DEV_CACHE_ARG = --cache-from $(DOCKER_DEV_IMAGE)
   DOCKER_PROD_CACHE_ARG = --cache-from $(DOCKER_PROD_IMAGE)
+  DOCKER_PULUMI_CACHE_ARG = --cache-from $(DOCKER_PULUMI_IMAGE)
 endif
+DOCKERFILE = $(MAKEFILE_DIR)Dockerfile
 
 HTML_REPORT_NAME = $(PROJECT_NAME)_test_report_$(VERSION).html
 HTML_REPORT = $(BUILD_DIR)/$(HTML_REPORT_NAME)
@@ -56,6 +60,10 @@ INTERACTIVE_DOCKER_COMMAND = $(BASE_DOCKER_COMMAND) -it $(DOCKER_DEV_IMAGE)
 
 PROD_DOCKER_COMMAND = $(BASE_DOCKER_COMMAND) $(DOCKER_PROD_IMAGE)
 INTERACTIVE_PROD_DOCKER_COMMAND = $(BASE_DOCKER_COMMAND) -it $(DOCKER_PROD_IMAGE)
+
+BASE_PULUMI_DOCKER_COMMAND = docker run --rm --workdir=$(DOCKER_REMOTE_DEV_ROOT) -e "PYTHONPATH=$(DOCKER_REMOTE_SRC):$(DOCKER_REMOTE_TEST)" -v $(MAKEFILE_DIR):$(DOCKER_REMOTE_DEV_ROOT)
+PULUMI_DOCKER_COMMAND = $(BASE_PULUMI_DOCKER_COMMAND) --user $(USER_ID):$(USER_GROUP) $(DOCKER_PULUMI_IMAGE)
+INTERACTIVE_PULUMI_DOCKER_COMMAND = $(BASE_PULUMI_DOCKER_COMMAND) -it $(DOCKER_PULUMI_IMAGE)
 
 
 
@@ -102,22 +110,30 @@ test_without_style: build_dev_environment get_git_info
 	$(eval THREADS := $(shell docker run --rm $(DOCKER_DEV_IMAGE) python -c "import multiprocessing;print(multiprocessing.cpu_count())"))
 	$(DOCKER_COMMAND) pytest -n $(THREADS) $(TEST_ARGS) $(DOCKER_REMOTE_SRC_AND_TEST)
 
-.PHONY: open_docker_shell
-open_docker_shell: build_dev_environment
+.PHONY: open_pulumi_docker_shell
+open_pulumi_docker_shell: build_pulumi_environment
+	$(INTERACTIVE_PULUMI_DOCKER_COMMAND) /bin/bash
+
+.PHONY: open_dev_docker_shell
+open_dev_docker_shell: build_dev_environment
 	$(INTERACTIVE_DOCKER_COMMAND) /bin/bash
 
+.PHONY: build_pulumi_environment
+build_pulumi_environment:
+	$(DOCKER_LOGIN)
+	DOCKER_BUILDKIT=1 docker $(DOCKER_CONFIG_ARG) build -f $(DOCKERFILE) $(DOCKER_PULUMI_CACHE_ARG) --target pulumi --build-arg BUILDKIT_INLINE_CACHE=1 -t "$(DOCKER_PULUMI_IMAGE)" $(DOCKER_CONTEXT)
 
 .PHONY: build_dev_environment
 build_dev_environment:
 	$(DOCKER_LOGIN)
 	#DOCKER_BUILDKIT=1 docker $(DOCKER_CONFIG_ARG) build $(DOCKER_DEV_CACHE_ARG) --target dev --build-arg BUILDKIT_INLINE_CACHE=1 -t "$(DOCKER_DEV_IMAGE)" --secret id=pip.conf,src=$(PIP_CONF) $(DOCKER_CONTEXT)
-	DOCKER_BUILDKIT=1 docker $(DOCKER_CONFIG_ARG) build $(DOCKER_DEV_CACHE_ARG) --target dev --build-arg BUILDKIT_INLINE_CACHE=1 -t "$(DOCKER_DEV_IMAGE)" $(DOCKER_CONTEXT)
+	DOCKER_BUILDKIT=1 docker $(DOCKER_CONFIG_ARG) build -f $(DOCKERFILE) $(DOCKER_PROD_CACHE_ARG) --target dev --build-arg BUILDKIT_INLINE_CACHE=1 -t "$(DOCKER_DEV_IMAGE)" $(DOCKER_CONTEXT)
 
 .PHONY: build_prod_environment
 build_prod_environment:
 	$(DOCKER_LOGIN)
 	#DOCKER_BUILDKIT=1 docker $(DOCKER_CONFIG_ARG) build $(DOCKER_PROD_CACHE_ARG) --target prod --build-arg BUILDKIT_INLINE_CACHE=1 -t "$(DOCKER_PROD_IMAGE)" --secret id=pip.conf,src=$(PIP_CONF) $(DOCKER_CONTEXT)
-	DOCKER_BUILDKIT=1 docker $(DOCKER_CONFIG_ARG) build $(DOCKER_PROD_CACHE_ARG) --target prod --build-arg BUILDKIT_INLINE_CACHE=1 -t "$(DOCKER_PROD_IMAGE)" $(DOCKER_CONTEXT)
+	DOCKER_BUILDKIT=1 docker $(DOCKER_CONFIG_ARG) build -f $(DOCKERFILE) $(DOCKER_PROD_CACHE_ARG) --target prod --build-arg BUILDKIT_INLINE_CACHE=1 -t "$(DOCKER_PROD_IMAGE)" $(DOCKER_CONTEXT)
 
 .PHONY: get_git_info
 get_git_info:
