@@ -15,8 +15,19 @@ RUN poetry config virtualenvs.create false
 
 FROM base AS dev
 
-RUN poetry install
+RUN poetry install --with dev
 
 FROM base as prod
 
-RUN poetry install --without dev
+RUN poetry install
+
+FROM base as pulumi
+
+RUN poetry install --with pulumi
+
+ENV PULUMI_VERSION="3.101.1"
+ENV PULUMI_HOME="/root/.pulumi/"
+
+ENV PATH="$PULUMI_HOME/bin:$PATH"
+
+RUN curl -fsSL https://get.pulumi.com | sh -s -- --version $PULUMI_VERSION
