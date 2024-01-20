@@ -211,7 +211,7 @@ class GitInfo:
 
     def to_json(self) -> str:
         """Dumps object as a json str."""
-        return json.dumps(self)
+        return json.dumps({"branch": self.branch, "tags": self.tags})
 
 
 class GetGitInfo(TaskNode):
