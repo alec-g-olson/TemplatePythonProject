@@ -32,7 +32,7 @@ To get started with this repository the developer must install the following:
   
   - [Docker](https://docs.docker.com/)
   - [Make](https://www.gnu.org/software/make/)
-  - [Python](https://www.python.org/)
+  - [Python 3.12](https://www.python.org/)
 
 To ensure that you have installed all components correctly run `make lint test` from the projects root directory.
 
