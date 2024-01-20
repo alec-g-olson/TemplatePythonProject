@@ -52,7 +52,3 @@ clean:
 .PHONY: docker_prune_all
 docker_prune_all:
 	$(BUILD_SUPPORT_COMMAND) docker_prune_all
-
-.PHONY: pip_install_toml
-pip_install_toml:
-	python -m pip install toml
