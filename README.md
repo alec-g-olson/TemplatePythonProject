@@ -32,7 +32,7 @@ To get started with this repository the developer must install the following:
   
   - [Docker](https://docs.docker.com/)
   - [Make](https://www.gnu.org/software/make/)
-  - [Python](https://www.python.org/)
+  - [Python 3.12](https://www.python.org/)
 
 To ensure that you have installed all components correctly run `make lint test` from the projects root directory.
 
@@ -60,8 +60,13 @@ something else you must build a new image and reset the interpreter.  You'll als
 
 #### PyCharm: Setting Src and Test Folders
 
-In the project drop down menu right-click on "src" and near the bottom of the drop-down menu should be "Mark Directory as".
-Hover over that and then select "Sources Root".  Do the same for "test", but select "Test Sources Root".
+There are two source folders in this project, `src` and `build_support/build_src`.  For each of them you need to 
+right-click on the folder in the project view.  There will be a `Mark Directory as` option.  Hover over that and then
+select `Sources Root`.
+
+There are two test folders in this project, `test`, and `build_support/build_test`.  For each of them you will repeat
+the process described for the source folders, but instead of selecting `Sources Root`, you will mark these as `Test
+Sources Root`.
 
 #### PyCharm: Configuring PyCharm to Use Pytest
 
