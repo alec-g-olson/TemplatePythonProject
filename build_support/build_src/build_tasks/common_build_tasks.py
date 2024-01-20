@@ -240,7 +240,7 @@ class TestBuildSanity(TaskNode):
 
     def required_tasks(self) -> list[TaskNode]:
         """Ensures the dev environment is present before running tests."""
-        return [BuildDevEnvironment()]
+        return [GetGitInfo(), BuildDevEnvironment()]
 
     def run(self) -> None:
         """Runs tests in the build_test folder."""
