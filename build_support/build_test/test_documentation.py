@@ -5,11 +5,9 @@ from typing import Dict, List, Tuple
 
 import pytest
 import requests
-from conftest import PROJECT_ROOT_DIR  # type: ignore
+from common_vars import PROJECT_ROOT_DIR
 
-README_FILENAME = "README.md"
-
-TOP_LEVEL_README_PATH = PROJECT_ROOT_DIR.joinpath(README_FILENAME)
+TOP_LEVEL_README_PATH = PROJECT_ROOT_DIR.joinpath("README.md")
 
 # Anything that isn't a square closing bracket
 hyperlink_display_name = "[^]]+"
