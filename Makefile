@@ -52,3 +52,7 @@ clean:
 .PHONY: docker_prune_all
 docker_prune_all:
 	$(BUILD_SUPPORT_COMMAND) docker_prune_all
+
+.PHONY: install_tomllib
+install_tomllib:
+	python -m pip install tomllib
