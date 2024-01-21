@@ -396,7 +396,7 @@ class PushTags(TaskNode):
         """Push tags."""
         if PUSH_ALLOWED:
             run_process(args=concatenate_args(args=["git", "tag", VERSION]))
-            run_process(args=concatenate_args(args=["git", "push", "tags"]))
+            run_process(args=concatenate_args(args=["git", "push", "--tags"]))
         else:
             exit(1)
 
