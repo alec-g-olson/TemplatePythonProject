@@ -21,21 +21,62 @@ class TaskNode(ABC):
         """Will contain the logic of each task."""
 
 
-def run_task(task: TaskNode) -> None:
+def _build_dict_of_all_dag_tasks(
+    all_tasks: dict[str, TaskNode], task_to_add: TaskNode
+) -> None:
+    if task_to_add.task_label() not in all_tasks:
+        all_tasks[task_to_add.task_label()] = task_to_add
+        for required_task in task_to_add.required_tasks():
+            _build_dict_of_all_dag_tasks(all_tasks=all_tasks, task_to_add=required_task)
+
+
+def _add_tasks_to_list_with_dfs(
+    execution_order: list[TaskNode],
+    task_names_added: set[str],
+    task_name_to_required_names: dict[str, list[str]],
+    task_to_add: TaskNode,
+) -> None:
+    if task_to_add.task_label() not in task_names_added:
+        for required_task in task_to_add.required_tasks():
+            _add_tasks_to_list_with_dfs(
+                execution_order=execution_order,
+                task_names_added=task_names_added,
+                task_name_to_required_names=task_name_to_required_names,
+                task_to_add=required_task,
+            )
+        task_names_added.add(task_to_add.task_label())
+        execution_order.append(task_to_add)
+
+
+def _get_task_execution_order(
+    all_tasks: dict[str, TaskNode], enforced_task_order: list[TaskNode]
+) -> list[TaskNode]:
+    execution_order: list[TaskNode] = []
+    task_names_added: set[str] = set()
+    task_name_to_required_names = {
+        task.task_label(): [
+            required_task.task_label() for required_task in task.required_tasks()
+        ]
+        for task in all_tasks.values()
+    }
+    for task in enforced_task_order:
+        _add_tasks_to_list_with_dfs(
+            execution_order=execution_order,
+            task_names_added=task_names_added,
+            task_name_to_required_names=task_name_to_required_names,
+            task_to_add=task,
+        )
+    return execution_order
+
+
+def run_tasks(tasks: list[TaskNode]) -> None:
     """Builds the DAG required for a task and runs the DAG."""
-    tasks = {}
-    tasks_to_add = [task]
-    reverse_execution_order = []
-    for task in tasks_to_add:
-        task_label = task.task_label()
-        if task_label not in tasks:
-            tasks[task_label] = task
-            reverse_execution_order.append(task)
-            required_tasks = task.required_tasks()
-            for required_task in required_tasks:
-                if required_task not in tasks:
-                    tasks_to_add.append(required_task)
-    task_execution_order = list(reversed(reverse_execution_order))
+    all_dag_tasks: dict[str, TaskNode] = {}
+    for task in tasks:
+        _build_dict_of_all_dag_tasks(all_tasks=all_dag_tasks, task_to_add=task)
+    task_execution_order = _get_task_execution_order(
+        all_tasks=all_dag_tasks, enforced_task_order=tasks
+    )
     print("Will execute the following tasks:")
     for task in task_execution_order:
         print(f"  - {task.task_label()}")

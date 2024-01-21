@@ -22,7 +22,9 @@ from common_vars import (
     INTERACTIVE_DOCKER_COMMAND,
     INTERACTIVE_PROD_DOCKER_COMMAND,
     INTERACTIVE_PULUMI_DOCKER_COMMAND,
+    PROJECT_SETTINGS_TOML,
     PUSH_ALLOWED,
+    PYPROJECT_TOML,
     PYTHON_PATH_TO_INCLUDE,
     THREADS_AVAILABLE,
     USER,
@@ -207,11 +209,11 @@ class GitInfo:
     def from_json(cls, json_str: str) -> "GitInfo":
         """Builds an object from a json str."""
         json_vals = json.loads(json_str)
-        return GitInfo(branch=json_vals["branch"], tags=json_vals["tags"])
+        return GitInfo(**json_vals)
 
     def to_json(self) -> str:
         """Dumps object as a json str."""
-        return json.dumps({"branch": self.branch, "tags": self.tags})
+        return json.dumps(self.__dict__, indent=2)
 
 
 class GetGitInfo(TaskNode):
@@ -397,3 +399,43 @@ class PushTags(TaskNode):
             run_process(args=concatenate_args(args=["git", "push", "tags"]))
         else:
             exit(1)
+
+
+@dataclass
+class ProjectSettings:
+    """An object containing the project settings for this project."""
+
+    name: str
+
+    @classmethod
+    def from_json(cls, json_str: str) -> "ProjectSettings":
+        """Builds an object from a json str."""
+        json_vals = json.loads(json_str)
+        return ProjectSettings(**json_vals)
+
+    def to_json(self) -> str:
+        """Dumps object as a json str."""
+        return json.dumps(self.__dict__, indent=2)
+
+
+class MakeProjectFromTemplate(TaskNode):
+    """Updates project based on the project settings yaml."""
+
+    def required_tasks(self) -> list[TaskNode]:
+        """Nothing required."""
+        return [Clean()]
+
+    def run(self) -> None:
+        """Modifies the appropriate files to start a new project."""
+        master_project_settings = ProjectSettings.from_json(
+            PROJECT_SETTINGS_TOML.read_text()
+        )
+        new_text = ""
+        for line in PYPROJECT_TOML.open():
+            if line == 'name = "template_python_project"\n':
+                new_text += f'name = "{master_project_settings.name}"\n'
+            elif line.startswith("version = "):
+                new_text += 'version = "0.0.0"\n'
+            else:
+                new_text += line
+        PYPROJECT_TOML.write_text(new_text)

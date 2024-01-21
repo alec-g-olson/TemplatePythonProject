@@ -193,6 +193,11 @@ def _get_all_bad_hyperlinks(
 
 TOP_LEVEL_README_HEADER_LEVEL_DICT = {
     "Template Project": 1,
+    "Scope of Template Project": 3,
+    "Services to Control With CI/CD": 4,
+    "Environments this Template Strives to Support": 4,
+    "Additional Control this Template Tries to Provide": 4,
+    "Creating a New Project From This Template": 3,
     "Primary Services": 2,
     "API": 3,
     "Other Service": 3,

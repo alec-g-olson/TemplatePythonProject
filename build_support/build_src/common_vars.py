@@ -7,6 +7,11 @@ from dag_engine import concatenate_args, get_output_of_process
 
 PROJECT_ROOT_DIR = Path(__file__).parent.parent.parent
 PYPROJECT_TOML = PROJECT_ROOT_DIR.joinpath("pyproject.toml")
+PROJECT_SETTINGS_TOML = PROJECT_ROOT_DIR.joinpath(
+    "build_support", "project_settings.json"
+)
+
+
 PYPROJECT_TOML_DATA = tomllib.loads(PYPROJECT_TOML.read_text())
 VERSION = "v" + PYPROJECT_TOML_DATA["tool"]["poetry"]["version"]
 PROJECT_NAME = PYPROJECT_TOML_DATA["tool"]["poetry"]["name"]

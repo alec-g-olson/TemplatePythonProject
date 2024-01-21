@@ -2,9 +2,6 @@ MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
 BUILD_SUPPORT_COMMAND = PYTHONPATH=$(MAKEFILE_DIR)build_support/build_src python build_support/build_src/build_tools.py
 
-.PHONY: all
-all: docker_prune_all clean push
-
 .PHONY: push
 push:
 	$(BUILD_SUPPORT_COMMAND) push
@@ -52,3 +49,7 @@ clean:
 .PHONY: docker_prune_all
 docker_prune_all:
 	$(BUILD_SUPPORT_COMMAND) docker_prune_all
+
+.PHONY: make_new_project
+make_new_project:
+	$(BUILD_SUPPORT_COMMAND) make_new_project
