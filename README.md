@@ -11,6 +11,41 @@ same environment and execution steps locally or on whatever CI/CD service you ar
 This is licensed with the MIT No Attribution License, which allows anyone to take the code and do
 whatever they want with no need for attribution or requirement to keep your projects open source.
 
+### Scope of Template Project
+
+The platonic ideal of a project with well functioning CI/CD is that if your entire environment is completely
+destroyed you should be able to run a 1 line command and have everything rebuilt as it was.  This template project
+strives to give as much of that functionality out of the box as possible.
+
+#### Services to Control With CI/CD
+ - API (Not implemented)
+ - Compute engine (Not implemented)
+   - Fast tasks - Less than 10ms in API layer
+   - Medium tasks - Less than 2 minutes but more than 10ms (Not implemented)
+   - Long tasks - More than 2 minutes (Not implemented)
+ - Database storage (Not implemented)
+   - Structured - e.g. mySQL (Not implemented)
+   - Semi-structured - e.g. PostgreSQL (Not implemented)
+   - Unstructured - e.g. MongoDB (Not implemented)
+ 
+#### Environments this Template Strives to Support
+ - Local Deployment to Docker Compose (Not implemented)
+ - AWS (Not implemented)
+ - GCP (Not implemented)
+ - Azure (Not implemented)
+
+#### Additional Control this Template Tries to Provide
+ - GitHub setup (Not implemented)
+ - User account management including permissions (Not implemented)
+
+### Creating a New Project From This Template
+
+In order to create a new project from this template first modify the fields in the 
+[project_settings.json](build_support/project_settings.json) to what ever values you need and then run 
+`make make_new_project`.  This will do the following:
+ - PyPi:
+   - Rename the [pyproject.toml](pyproject.toml) project name.
+   - Reset the version number of this project to `0.0.0`.
 
 ## Primary Services
 
