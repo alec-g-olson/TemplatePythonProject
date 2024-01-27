@@ -43,7 +43,7 @@ ARG CURRENT_USER=default_user
 ARG CURRENT_GROUP=default_group
 ARG CURRENT_USER_ID=1000
 ARG CURRENT_GROUP_ID=1000
-RUN groupadd --gid $CURRENT_GROUP_ID || true
+RUN groupadd --gid $CURRENT_GROUP_ID $CURRENT_GROUP || groupadd --gid $CURRENT_GROUP_ID hack-group || true
 RUN adduser --gid $CURRENT_GROUP_ID --uid $CURRENT_USER_ID $CURRENT_USER
 RUN mkdir -p /home/$CURRENT_USER/.ssh
 RUN chown -R $CURRENT_USER_ID:$CURRENT_GROUP_ID /home/$CURRENT_USER/.ssh
