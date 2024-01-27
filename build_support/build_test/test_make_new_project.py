@@ -36,7 +36,7 @@ def test_make_new_project(tmp_path: Path, project_root_dir: Path):
     project_settings_path.write_text(modified_project_settings.to_json())
     make_project_task = MakeProjectFromTemplate()
     make_project_task.run(
-        non_docker_project_root=tmp_project_path, docker_project_root=tmp_project_path
+        non_docker_project_root=tmp_project_path, docker_project_root=tmp_project_path, local_username="Not used"
     )
     _ensure_project_folder_matches_settings(
         project_folder=tmp_project_path,
