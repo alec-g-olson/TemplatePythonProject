@@ -146,6 +146,10 @@ class GetGitInfo(TaskNode):
         local_username: str,
     ) -> None:
         """Builds a json with required git info."""
+        run_process_as_local_user(
+            args=concatenate_args(args=["git", "fetch"]),
+            local_username=local_username,
+        )
         get_git_info_json(project_root=docker_project_root).parent.mkdir(
             parents=True, exist_ok=True
         )
@@ -414,6 +418,10 @@ class PushTags(TaskNode):
                             f"'Committing staged changes for {version}'",
                         ]
                     ),
+                    local_username=local_username,
+                )
+                run_process_as_local_user(
+                    args=concatenate_args(args=["git", "push"]),
                     local_username=local_username,
                 )
             run_process(args=concatenate_args(args=["git", "tag", version]))
