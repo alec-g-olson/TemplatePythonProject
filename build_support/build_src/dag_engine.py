@@ -1,6 +1,8 @@
 """Shared logic across all tasks and how to run them in a DAG."""
+
 import itertools
 from abc import ABC, abstractmethod
+from pathlib import Path
 from subprocess import PIPE, Popen, run
 from typing import Any
 
@@ -17,7 +19,7 @@ class TaskNode(ABC):
         """Will return the tasks required to start the current task."""
 
     @abstractmethod
-    def run(self) -> None:
+    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
         """Will contain the logic of each task."""
 
 
@@ -69,7 +71,9 @@ def _get_task_execution_order(
     return execution_order
 
 
-def run_tasks(tasks: list[TaskNode]) -> None:
+def run_tasks(
+    tasks: list[TaskNode], non_docker_project_root: Path, docker_project_root: Path
+) -> None:
     """Builds the DAG required for a task and runs the DAG."""
     all_dag_tasks: dict[str, TaskNode] = {}
     for task in tasks:
@@ -82,7 +86,10 @@ def run_tasks(tasks: list[TaskNode]) -> None:
         print(f"  - {task.task_label()}")
     for task in task_execution_order:
         print(f"Starting: {task.task_label()}")
-        task.run()
+        task.run(
+            non_docker_project_root=non_docker_project_root,
+            docker_project_root=docker_project_root,
+        )
 
 
 def get_str_args(args: list[Any]) -> list[str]:

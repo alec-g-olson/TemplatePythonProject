@@ -1,54 +1,52 @@
 """A module for running tasks that are not domain specific."""
+
 import json
 from dataclasses import dataclass
+from pathlib import Path
 
 from common_vars import (
-    BASE_DOCKER_COMMAND,
     BRANCH,
-    BUILD_DIR,
-    DOCKER_COMMAND,
-    DOCKER_CONTEXT,
-    DOCKER_DEV_IMAGE,
-    DOCKER_PROD_IMAGE,
-    DOCKER_PULUMI_IMAGE,
-    DOCKER_REMOTE_ALL_PYTHON_FOLDERS,
-    DOCKER_REMOTE_ALL_SRC_FOLDERS,
-    DOCKER_REMOTE_ALL_TEST_FOLDERS,
-    DOCKER_REMOTE_BUILD_SUPPORT_SRC,
-    DOCKER_REMOTE_BUILD_SUPPORT_TESTS,
-    DOCKER_REMOTE_PYPI_SRC_AND_TEST,
-    DOCKERFILE,
-    GIT_DATA_FILE,
-    INTERACTIVE_DOCKER_COMMAND,
-    INTERACTIVE_PROD_DOCKER_COMMAND,
-    INTERACTIVE_PULUMI_DOCKER_COMMAND,
-    PROJECT_SETTINGS_TOML,
-    PUSH_ALLOWED,
-    PYPROJECT_TOML,
-    PYTHON_PATH_TO_INCLUDE,
     THREADS_AVAILABLE,
-    USER,
-    VERSION,
+    get_all_python_folders,
+    get_all_src_folders,
+    get_all_test_folders,
+    get_base_docker_command,
+    get_build_dir,
+    get_build_src_dir,
+    get_build_test_dir,
+    get_dev_docker_command,
+    get_docker_dev_image,
+    get_dockerfile,
+    get_git_info_json,
+    get_interactive_dev_docker_command,
+    get_interactive_prod_docker_command,
+    get_interactive_pulumi_docker_command,
+    get_mypy_path_env,
+    get_project_settings_json,
+    get_project_version,
+    get_pypi_src_and_test,
+    get_pyproject_toml,
 )
-from dag_engine import (
-    TaskNode,
-    concatenate_args,
-    get_output_of_process,
-    run_piped_processes,
-    run_process,
-)
+from dag_engine import TaskNode, concatenate_args, get_output_of_process, run_process
 
 
-class DockerLogin(TaskNode):
-    """Logs into docker before trying to execute commands."""
-
-    def required_tasks(self) -> list[TaskNode]:
-        """Nothing required."""
-        return []
-
-    def run(self) -> None:
-        """Runs docker login."""
-        run_process(args=["docker", "login"])
+def get_docker_build_command(target: str, project_root: Path) -> list[str]:
+    """Creates docker build command."""
+    return concatenate_args(
+        args=[
+            "docker",
+            "build",
+            "-f",
+            get_dockerfile(project_root=project_root),
+            "--target",
+            target,
+            "--build-arg",
+            "BUILDKIT_INLINE_CACHE=1",
+            "-t",
+            get_docker_dev_image(project_root=project_root),
+            project_root.absolute(),
+        ]
+    )
 
 
 class BuildDevEnvironment(TaskNode):
@@ -56,24 +54,14 @@ class BuildDevEnvironment(TaskNode):
 
     def required_tasks(self) -> list[TaskNode]:
         """Check to make sure we are logged into docker."""
-        return [DockerLogin()]
+        return []
 
-    def run(self) -> None:
+    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
         """Builds a stable environment for running dev commands."""
         run_process(
-            args=[
-                "docker",
-                "build",
-                "-f",
-                DOCKERFILE,
-                "--target",
-                "dev",
-                "--build-arg",
-                "BUILDKIT_INLINE_CACHE=1",
-                "-t",
-                DOCKER_DEV_IMAGE,
-                DOCKER_CONTEXT,
-            ]
+            args=get_docker_build_command(
+                target="dev", project_root=docker_project_root
+            )
         )
 
 
@@ -84,10 +72,18 @@ class OpenDevDockerShell(TaskNode):
         """Requires we build a dev docker image first."""
         return [BuildDevEnvironment()]
 
-    def run(self) -> None:
+    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
         """Runs an interactive docker command that opens a bash shell."""
         run_process(
-            args=concatenate_args(args=[INTERACTIVE_DOCKER_COMMAND, "/bin/bash"])
+            args=concatenate_args(
+                args=[
+                    get_interactive_dev_docker_command(
+                        non_docker_project_root=non_docker_project_root,
+                        docker_project_root=docker_project_root,
+                    ),
+                    "/bin/bash",
+                ]
+            )
         )
 
 
@@ -96,24 +92,14 @@ class BuildProdEnvironment(TaskNode):
 
     def required_tasks(self) -> list[TaskNode]:
         """Check to make sure we are logged into docker."""
-        return [DockerLogin()]
+        return []
 
-    def run(self) -> None:
+    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
         """Builds a stable environment for running prod commands."""
         run_process(
-            args=[
-                "docker",
-                "build",
-                "-f",
-                DOCKERFILE,
-                "--target",
-                "prod",
-                "--build-arg",
-                "BUILDKIT_INLINE_CACHE=1",
-                "-t",
-                DOCKER_PROD_IMAGE,
-                DOCKER_CONTEXT,
-            ]
+            args=get_docker_build_command(
+                target="prod", project_root=docker_project_root
+            )
         )
 
 
@@ -124,10 +110,18 @@ class OpenProdDockerShell(TaskNode):
         """Requires we build a prod docker image first."""
         return [BuildProdEnvironment()]
 
-    def run(self) -> None:
+    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
         """Runs an interactive docker command that opens a bash shell."""
         run_process(
-            args=concatenate_args(args=[INTERACTIVE_PROD_DOCKER_COMMAND, "/bin/bash"])
+            args=concatenate_args(
+                args=[
+                    get_interactive_prod_docker_command(
+                        non_docker_project_root=non_docker_project_root,
+                        docker_project_root=docker_project_root,
+                    ),
+                    "/bin/bash",
+                ]
+            )
         )
 
 
@@ -136,24 +130,14 @@ class BuildPulumiEnvironment(TaskNode):
 
     def required_tasks(self) -> list[TaskNode]:
         """Check to make sure we are logged into docker."""
-        return [DockerLogin()]
+        return []
 
-    def run(self) -> None:
+    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
         """Builds a stable environment for running pulumi commands."""
         run_process(
-            args=[
-                "docker",
-                "build",
-                "-f",
-                DOCKERFILE,
-                "--target",
-                "pulumi",
-                "--build-arg",
-                "BUILDKIT_INLINE_CACHE=1",
-                "-t",
-                DOCKER_PULUMI_IMAGE,
-                DOCKER_CONTEXT,
-            ]
+            args=get_docker_build_command(
+                target="pulumi", project_root=docker_project_root
+            )
         )
 
 
@@ -164,10 +148,18 @@ class OpenPulumiDockerShell(TaskNode):
         """Requires we build a pulumi docker image first."""
         return [BuildPulumiEnvironment()]
 
-    def run(self) -> None:
+    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
         """Runs an interactive docker command that opens a bash shell."""
         run_process(
-            args=concatenate_args(args=[INTERACTIVE_PULUMI_DOCKER_COMMAND, "/bin/bash"])
+            args=concatenate_args(
+                args=[
+                    get_interactive_pulumi_docker_command(
+                        non_docker_project_root=non_docker_project_root,
+                        docker_project_root=docker_project_root,
+                    ),
+                    "/bin/bash",
+                ]
+            )
         )
 
 
@@ -178,24 +170,9 @@ class Clean(TaskNode):
         """Nothing required."""
         return []
 
-    def run(self) -> None:
+    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
         """Deletes all the temporary build files."""
-        run_process(args=["rm", "-rf", BUILD_DIR])
-
-
-class DockerPruneAll(TaskNode):
-    """Clears all docker information for a clean docker environment."""
-
-    def required_tasks(self) -> list[TaskNode]:
-        """Nothing required."""
-        return []
-
-    def run(self) -> None:
-        """Stops all docker processes and then clears all cached docker info."""
-        run_piped_processes(
-            processes=[["docker", "ps", "-q"], ["xargs", "-r", "docker", "stop"]]
-        )
-        run_process(args=["docker", "system", "prune", "--all", "--force"])
+        run_process(args=["rm", "-rf", get_build_dir(project_root=docker_project_root)])
 
 
 @dataclass
@@ -223,10 +200,12 @@ class GetGitInfo(TaskNode):
         """Nothing required."""
         return []
 
-    def run(self) -> None:
+    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
         """Builds a json with required git info."""
-        GIT_DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
-        GIT_DATA_FILE.write_text(
+        get_git_info_json(project_root=docker_project_root).parent.mkdir(
+            parents=True, exist_ok=True
+        )
+        get_git_info_json(project_root=docker_project_root).write_text(
             GitInfo(
                 branch=BRANCH, tags=get_output_of_process(["git", "tag"]).split("\n")
             ).to_json()
@@ -244,16 +223,19 @@ class TestBuildSanity(TaskNode):
         """Ensures the dev environment is present before running tests."""
         return [GetGitInfo(), BuildDevEnvironment()]
 
-    def run(self) -> None:
+    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
         """Runs tests in the build_test folder."""
         run_process(
             args=concatenate_args(
                 args=[
-                    DOCKER_COMMAND,
+                    get_dev_docker_command(
+                        non_docker_project_root=non_docker_project_root,
+                        docker_project_root=docker_project_root,
+                    ),
                     "pytest",
                     "-n",
                     THREADS_AVAILABLE,
-                    DOCKER_REMOTE_BUILD_SUPPORT_TESTS,
+                    get_build_test_dir(project_root=docker_project_root),
                 ]
             )
         )
@@ -267,56 +249,80 @@ class TestPythonStyle(TaskNode):
         # Todo: Add in pulumi environment and test once pulumi build doesn't break
         return [BuildDevEnvironment()]  # , BuildPulumiEnvironment()]
 
-    def run(self) -> None:
+    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
         """Runs all stylistic checks on code."""
         run_process(
             args=concatenate_args(
                 args=[
-                    DOCKER_COMMAND,
+                    get_dev_docker_command(
+                        non_docker_project_root=non_docker_project_root,
+                        docker_project_root=docker_project_root,
+                    ),
                     "isort",
                     "--check-only",
-                    DOCKER_REMOTE_ALL_PYTHON_FOLDERS,
+                    get_all_python_folders(project_root=docker_project_root),
                 ]
             )
         )
         run_process(
             args=concatenate_args(
                 args=[
-                    DOCKER_COMMAND,
+                    get_dev_docker_command(
+                        non_docker_project_root=non_docker_project_root,
+                        docker_project_root=docker_project_root,
+                    ),
                     "black",
                     "--check",
-                    DOCKER_REMOTE_ALL_PYTHON_FOLDERS,
+                    get_all_python_folders(project_root=docker_project_root),
                 ]
-            )
-        )
-        run_process(
-            args=concatenate_args(
-                args=[DOCKER_COMMAND, "pydocstyle", DOCKER_REMOTE_ALL_SRC_FOLDERS]
             )
         )
         run_process(
             args=concatenate_args(
                 args=[
-                    DOCKER_COMMAND,
+                    get_dev_docker_command(
+                        non_docker_project_root=non_docker_project_root,
+                        docker_project_root=docker_project_root,
+                    ),
                     "pydocstyle",
-                    "--add-ignore=D100,D104",
-                    DOCKER_REMOTE_ALL_TEST_FOLDERS,
+                    get_all_src_folders(project_root=docker_project_root),
                 ]
             )
         )
         run_process(
             args=concatenate_args(
-                args=[DOCKER_COMMAND, "flake8", DOCKER_REMOTE_ALL_PYTHON_FOLDERS]
+                args=[
+                    get_dev_docker_command(
+                        non_docker_project_root=non_docker_project_root,
+                        docker_project_root=docker_project_root,
+                    ),
+                    "pydocstyle",
+                    "--add-ignore=D100,D104",
+                    get_all_test_folders(project_root=docker_project_root),
+                ]
+            )
+        )
+        run_process(
+            args=concatenate_args(
+                args=[
+                    get_dev_docker_command(
+                        non_docker_project_root=non_docker_project_root,
+                        docker_project_root=docker_project_root,
+                    ),
+                    "flake8",
+                    get_all_python_folders(project_root=docker_project_root),
+                ]
             )
         )
         mypy_command = concatenate_args(
             args=[
-                BASE_DOCKER_COMMAND,
+                get_base_docker_command(
+                    non_docker_project_root=non_docker_project_root,
+                    docker_project_root=docker_project_root,
+                ),
                 "-e",
-                "MYPYPATH=" + PYTHON_PATH_TO_INCLUDE,
-                "--user",
-                USER,
-                DOCKER_DEV_IMAGE,
+                get_mypy_path_env(project_root=docker_project_root),
+                get_docker_dev_image(project_root=docker_project_root),
                 "mypy",
                 "--explicit-package-bases",
             ]
@@ -325,7 +331,7 @@ class TestPythonStyle(TaskNode):
             args=concatenate_args(
                 args=[
                     mypy_command,
-                    DOCKER_REMOTE_PYPI_SRC_AND_TEST,
+                    get_pypi_src_and_test(project_root=docker_project_root),
                 ]
             )
         )
@@ -333,7 +339,7 @@ class TestPythonStyle(TaskNode):
             args=concatenate_args(
                 args=[
                     mypy_command,
-                    DOCKER_REMOTE_BUILD_SUPPORT_SRC,
+                    get_build_src_dir(project_root=docker_project_root),
                 ]
             )
         )
@@ -341,7 +347,7 @@ class TestPythonStyle(TaskNode):
             args=concatenate_args(
                 args=[
                     mypy_command,
-                    DOCKER_REMOTE_BUILD_SUPPORT_TESTS,
+                    get_build_test_dir(project_root=docker_project_root),
                 ]
             )
         )
@@ -350,7 +356,9 @@ class TestPythonStyle(TaskNode):
         run_process(
             args=concatenate_args(
                 args=[
-                    BASE_DOCKER_COMMAND,
+                    get_base_docker_command(
+                        external_project_root=external_project_root,
+                    ),
                     "-e",
                     "MYPYPATH=" + PYTHON_PATH_TO_INCLUDE,
                     "--user",
@@ -371,16 +379,30 @@ class Lint(TaskNode):
         """Makes sure dev environment has been built before linting."""
         return [BuildDevEnvironment()]
 
-    def run(self) -> None:
+    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
         """Lints all python files in project."""
         run_process(
             args=concatenate_args(
-                args=[DOCKER_COMMAND, "isort", DOCKER_REMOTE_ALL_PYTHON_FOLDERS]
+                args=[
+                    get_dev_docker_command(
+                        non_docker_project_root=non_docker_project_root,
+                        docker_project_root=docker_project_root,
+                    ),
+                    "isort",
+                    get_all_python_folders(project_root=docker_project_root),
+                ]
             )
         )
         run_process(
             args=concatenate_args(
-                args=[DOCKER_COMMAND, "black", DOCKER_REMOTE_ALL_PYTHON_FOLDERS]
+                args=[
+                    get_dev_docker_command(
+                        non_docker_project_root=non_docker_project_root,
+                        docker_project_root=docker_project_root,
+                    ),
+                    "black",
+                    get_all_python_folders(project_root=docker_project_root),
+                ]
             )
         )
 
@@ -392,13 +414,14 @@ class PushTags(TaskNode):
         """Checks to see if the version is appropriate for the branch we are on."""
         return [TestBuildSanity()]
 
-    def run(self) -> None:
+    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
         """Push tags."""
-        if PUSH_ALLOWED:
-            run_process(args=concatenate_args(args=["git", "tag", VERSION]))
+        version = get_project_version(project_root=docker_project_root)
+        if (BRANCH == "main") ^ ("dev" in version):
+            run_process(args=concatenate_args(args=["git", "tag", version]))
             run_process(args=concatenate_args(args=["git", "push", "--tags"]))
         else:
-            exit(1)
+            raise Exception(f"Tag {version} is incompatible with branch {BRANCH}.")
 
 
 @dataclass
@@ -425,17 +448,18 @@ class MakeProjectFromTemplate(TaskNode):
         """Nothing required."""
         return [Clean()]
 
-    def run(self) -> None:
+    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
         """Modifies the appropriate files to start a new project."""
         master_project_settings = ProjectSettings.from_json(
-            PROJECT_SETTINGS_TOML.read_text()
+            get_project_settings_json(project_root=docker_project_root).read_text()
         )
+        pyproject_toml = get_pyproject_toml(project_root=docker_project_root)
         new_text = ""
-        for line in PYPROJECT_TOML.open():
+        for line in pyproject_toml.open():
             if line == 'name = "template_python_project"\n':
                 new_text += f'name = "{master_project_settings.name}"\n'
             elif line.startswith("version = "):
                 new_text += 'version = "0.0.0"\n'
             else:
                 new_text += line
-        PYPROJECT_TOML.write_text(new_text)
+        pyproject_toml.write_text(new_text)

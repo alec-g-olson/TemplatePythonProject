@@ -3,6 +3,9 @@
 We can also put collective tasks here.
 e.g. A "Test" task that runs all domain specific tests.
 """
+
+from pathlib import Path
+
 from build_tasks.common_build_tasks import (
     Lint,
     PushTags,
@@ -10,7 +13,7 @@ from build_tasks.common_build_tasks import (
     TestPythonStyle,
 )
 from build_tasks.python_build_tasks import PushPypi, TestPypi
-from common_vars import DOCKER_COMMAND, DOCKER_REMOTE_ALL_PYTHON_FOLDERS
+from common_vars import get_all_python_folders, get_dev_docker_command
 from dag_engine import TaskNode, concatenate_args, run_process
 
 
@@ -21,7 +24,7 @@ class Push(TaskNode):
         """Adds all required "sub-pushes" to the DAG."""
         return [PushTags(), PushPypi()]
 
-    def run(self) -> None:
+    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
         """Does nothing."""
 
 
@@ -32,7 +35,7 @@ class Test(TaskNode):
         """Adds all required "subtests" to the DAG."""
         return [TestPythonStyle(), TestPypi(), TestBuildSanity()]
 
-    def run(self) -> None:
+    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
         """Does nothing."""
 
 
@@ -47,18 +50,21 @@ class Autoflake(TaskNode):
         """
         return [Lint(), TestPypi()]
 
-    def run(self) -> None:
+    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
         """Runs autoflake on all python files."""
         run_process(
             args=concatenate_args(
                 args=[
-                    DOCKER_COMMAND,
+                    get_dev_docker_command(
+                        non_docker_project_root=non_docker_project_root,
+                        docker_project_root=docker_project_root,
+                    ),
                     "autoflake",
                     "--remove-all-unused-imports",
                     "--remove-duplicate-keys",
                     "--in-place",
                     "--recursive",
-                    DOCKER_REMOTE_ALL_PYTHON_FOLDERS,
+                    get_all_python_folders(project_root=docker_project_root),
                 ]
             )
         )

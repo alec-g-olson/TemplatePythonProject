@@ -2,13 +2,12 @@ from pathlib import Path
 
 import pytest
 from build_tasks.common_build_tasks import GitInfo
-from common_vars import PROJECT_ROOT_DIR
 
 
 @pytest.fixture(scope="session")
 def project_root_dir() -> Path:
     """Return the root directory of this project."""
-    return PROJECT_ROOT_DIR
+    return Path(__file__).parent.parent.parent
 
 
 @pytest.fixture(scope="session")

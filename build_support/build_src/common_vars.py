@@ -1,120 +1,300 @@
 """A place to hold tasks and variable used in multiple domains."""
+
 import multiprocessing
 import tomllib
 from pathlib import Path
+from typing import Any
 
 from dag_engine import concatenate_args, get_output_of_process
 
-PROJECT_ROOT_DIR = Path(__file__).parent.parent.parent
-PYPROJECT_TOML = PROJECT_ROOT_DIR.joinpath("pyproject.toml")
-PROJECT_SETTINGS_TOML = PROJECT_ROOT_DIR.joinpath(
-    "build_support", "project_settings.json"
-)
-
-
-PYPROJECT_TOML_DATA = tomllib.loads(PYPROJECT_TOML.read_text())
-VERSION = "v" + PYPROJECT_TOML_DATA["tool"]["poetry"]["version"]
-PROJECT_NAME = PYPROJECT_TOML_DATA["tool"]["poetry"]["name"]
 BRANCH = get_output_of_process(
     args=["git", "rev-parse", "--abbrev-ref", "HEAD"], silent=True
 )
-USER_ID = get_output_of_process(args=["id", "-u"], silent=True)
-USER_GROUP = get_output_of_process(args=["id", "-g"], silent=True)
-USER = ":".join([USER_ID, USER_GROUP])
-
-
-BUILD_DIR = PROJECT_ROOT_DIR.joinpath("build")
-BUILD_SUPPORT_DIR = PROJECT_ROOT_DIR.joinpath("build_support")
-DIST_DIR = BUILD_DIR.joinpath("dist")
-
-GIT_DATA_FILE = BUILD_DIR.joinpath("git_info.json")
-
-DOCKER_DEV_IMAGE = ":".join([PROJECT_NAME, "dev"])
-DOCKER_PROD_IMAGE = ":".join([PROJECT_NAME, "prod"])
-DOCKER_PULUMI_IMAGE = ":".join([PROJECT_NAME, "pulumi"])
-DOCKER_CONTEXT = PROJECT_ROOT_DIR
-DOCKERFILE = PROJECT_ROOT_DIR.joinpath("Dockerfile")
-
-DOCKER_REMOTE_DEV_ROOT = Path("/usr/dev")
-DOCKER_REMOTE_BUILD_SUPPORT = DOCKER_REMOTE_DEV_ROOT.joinpath("build_support")
-DOCKER_REMOTE_BUILD_SUPPORT_SRC = DOCKER_REMOTE_BUILD_SUPPORT.joinpath("build_src")
-DOCKER_REMOTE_BUILD_SUPPORT_TESTS = DOCKER_REMOTE_BUILD_SUPPORT.joinpath("build_test")
-DOCKER_REMOTE_BUILD_SUPPORT_SRC_AND_TEST = [
-    DOCKER_REMOTE_BUILD_SUPPORT_SRC,
-    DOCKER_REMOTE_BUILD_SUPPORT_TESTS,
-]
-DOCKER_REMOTE_PYPI_SRC = DOCKER_REMOTE_DEV_ROOT.joinpath("src")
-DOCKER_REMOTE_PYPI_TEST = DOCKER_REMOTE_DEV_ROOT.joinpath("test")
-DOCKER_REMOTE_PULUMI = DOCKER_REMOTE_DEV_ROOT.joinpath("pulumi")
-DOCKER_REMOTE_PYPI_SRC_AND_TEST = [DOCKER_REMOTE_PYPI_SRC, DOCKER_REMOTE_PYPI_TEST]
-DOCKER_REMOTE_DEV = [
-    DOCKER_REMOTE_PYPI_SRC,
-    DOCKER_REMOTE_PYPI_TEST,
-    DOCKER_REMOTE_BUILD_SUPPORT_SRC,
-    DOCKER_REMOTE_BUILD_SUPPORT_TESTS,
-]
-DOCKER_REMOTE_ALL_PYTHON_FOLDERS = [
-    DOCKER_REMOTE_BUILD_SUPPORT_SRC,
-    DOCKER_REMOTE_BUILD_SUPPORT_TESTS,
-    DOCKER_REMOTE_PYPI_SRC,
-    DOCKER_REMOTE_PYPI_TEST,
-    DOCKER_REMOTE_PULUMI,
-]
-DOCKER_REMOTE_ALL_SRC_FOLDERS = [
-    DOCKER_REMOTE_BUILD_SUPPORT_SRC,
-    DOCKER_REMOTE_PYPI_SRC,
-    DOCKER_REMOTE_PULUMI,
-]
-DOCKER_REMOTE_ALL_TEST_FOLDERS = [
-    DOCKER_REMOTE_BUILD_SUPPORT_TESTS,
-    DOCKER_REMOTE_PYPI_TEST,
-]
-DOCKER_REMOTE_BUILD = DOCKER_REMOTE_DEV_ROOT.joinpath("build")
-DOCKER_REMOTE_TEMP_DIST = DOCKER_REMOTE_DEV_ROOT.joinpath("dist")
-DOCKER_REMOTE_DIST = DOCKER_REMOTE_BUILD.joinpath("dist")
-
-PYTHON_PATH_TO_INCLUDE = ":".join(str(x) for x in DOCKER_REMOTE_DEV)
-
-BASE_DOCKER_COMMAND = [
-    "docker",
-    "run",
-    "--rm",
-    f"--workdir={DOCKER_REMOTE_DEV_ROOT}",
-    "-e",
-    "PYTHONPATH=" + PYTHON_PATH_TO_INCLUDE,
-    "-v",
-    f"{PROJECT_ROOT_DIR}:{DOCKER_REMOTE_DEV_ROOT}",
-]
-DOCKER_COMMAND = concatenate_args(
-    [BASE_DOCKER_COMMAND, "--user", USER, DOCKER_DEV_IMAGE]
-)
-INTERACTIVE_DOCKER_COMMAND = concatenate_args(
-    [BASE_DOCKER_COMMAND, "-it", DOCKER_DEV_IMAGE]
-)
-
-PROD_DOCKER_COMMAND = concatenate_args([BASE_DOCKER_COMMAND, DOCKER_PROD_IMAGE])
-INTERACTIVE_PROD_DOCKER_COMMAND = concatenate_args(
-    [BASE_DOCKER_COMMAND, "-it", DOCKER_PROD_IMAGE]
-)
-
-
-BASE_PULUMI_DOCKER_COMMAND = [
-    "docker",
-    "run",
-    "--rm",
-    f"--workdir={DOCKER_REMOTE_DEV_ROOT}",
-    "-e",
-    f"PYTHONPATH={DOCKER_REMOTE_PYPI_SRC}:{DOCKER_REMOTE_PYPI_TEST}:{DOCKER_REMOTE_BUILD_SUPPORT}",
-    "-v",
-    f"{PROJECT_ROOT_DIR}:{DOCKER_REMOTE_DEV_ROOT}",
-]
-PULUMI_DOCKER_COMMAND = concatenate_args(
-    [BASE_PULUMI_DOCKER_COMMAND, "--user", USER, DOCKER_PULUMI_IMAGE]
-)
-INTERACTIVE_PULUMI_DOCKER_COMMAND = concatenate_args(
-    [BASE_PULUMI_DOCKER_COMMAND, "-it", DOCKER_PULUMI_IMAGE]
-)
-
 THREADS_AVAILABLE = multiprocessing.cpu_count()
 
-PUSH_ALLOWED = (BRANCH == "main") ^ ("dev" in VERSION)
+
+def get_pyproject_toml(project_root: Path) -> Path:
+    """Get a path to the pyproject.toml in a project."""
+    return project_root.joinpath("pyproject.toml")
+
+
+def get_project_settings_json(project_root: Path) -> Path:
+    """Get a path to the project_settings.json in a project."""
+    return project_root.joinpath("build_support", "project_settings.json")
+
+
+def get_pyproject_toml_data(project_root: Path) -> dict[Any, Any]:
+    """Get a dict with the contents of the pyproject.toml in a project."""
+    return tomllib.loads(get_pyproject_toml(project_root=project_root).read_text())
+
+
+def get_project_version(project_root: Path) -> str:
+    """Gets the project version from the pyproject.toml in a project."""
+    return (
+        "v"
+        + get_pyproject_toml_data(project_root=project_root)["tool"]["poetry"][
+            "version"
+        ]
+    )
+
+
+def get_project_name(project_root: Path) -> str:
+    """Gets the project name from the pyproject.toml in a project."""
+    return get_pyproject_toml_data(project_root=project_root)["tool"]["poetry"]["name"]
+
+
+def get_build_dir(project_root: Path) -> Path:
+    """Gets the build dir for the project."""
+    return project_root.joinpath("build")
+
+
+def get_build_support_dir(project_root: Path) -> Path:
+    """Gets the build_support dir for the project."""
+    return project_root.joinpath("build_support")
+
+
+def get_build_src_dir(project_root: Path) -> Path:
+    """Gets the build_src dir for the project."""
+    return get_build_support_dir(project_root=project_root).joinpath("build_src")
+
+
+def get_build_test_dir(project_root: Path) -> Path:
+    """Gets the build_src dir for the project."""
+    return get_build_support_dir(project_root=project_root).joinpath("build_test")
+
+
+def get_dist_dir(project_root: Path) -> Path:
+    """Gets the build dir for the project."""
+    return get_build_dir(project_root=project_root).joinpath("dist")
+
+
+def get_git_info_json(project_root: Path) -> Path:
+    """Gets the location of the git_info.json for the project."""
+    return get_build_dir(project_root=project_root).joinpath("git_info.json")
+
+
+def get_docker_dev_image(project_root: Path) -> str:
+    """Gets the dev docker image name."""
+    return ":".join([get_project_name(project_root=project_root), "dev"])
+
+
+def get_docker_prod_image(project_root: Path) -> str:
+    """Gets the prod docker image name."""
+    return ":".join([get_project_name(project_root=project_root), "prod"])
+
+
+def get_docker_pulumi_image(project_root: Path) -> str:
+    """Gets the pulumi docker image name."""
+    return ":".join([get_project_name(project_root=project_root), "pulumi"])
+
+
+def get_dockerfile(project_root: Path) -> Path:
+    """Gets the Dockerfile for the project."""
+    return project_root.joinpath("Dockerfile")
+
+
+def get_build_support_src_and_test(project_root: Path) -> list[str]:
+    """Gets both the build_src and build_test dir for the project."""
+    return concatenate_args(
+        args=[
+            get_build_src_dir(project_root=project_root),
+            get_build_test_dir(project_root=project_root),
+        ]
+    )
+
+
+def get_pypi_src_dir(project_root: Path) -> Path:
+    """Gets the PyPi src dir for the project."""
+    return project_root.joinpath("src")
+
+
+def get_pypi_test_dir(project_root: Path) -> Path:
+    """Gets the PyPi test dir for the project."""
+    return project_root.joinpath("test")
+
+
+def get_pulumi_dir(project_root: Path) -> Path:
+    """Gets the PyPi pulumi dir for the project."""
+    return project_root.joinpath("pulumi")
+
+
+def get_pypi_src_and_test(project_root: Path) -> list[str]:
+    """Gets both the PyPi src and test dir for the project."""
+    return concatenate_args(
+        args=[
+            get_pypi_src_dir(project_root=project_root),
+            get_pypi_test_dir(project_root=project_root),
+        ]
+    )
+
+
+def get_all_non_pulumi_python_folders(project_root: Path) -> list[str]:
+    """Gets all the non-pulumi python folders in the project."""
+    return concatenate_args(
+        args=[
+            get_build_support_src_and_test(project_root=project_root),
+            get_pypi_src_and_test(project_root=project_root),
+        ]
+    )
+
+
+def get_all_python_folders(project_root: Path) -> list[str]:
+    """Gets all the python folders in the project."""
+    return concatenate_args(
+        args=[
+            get_all_non_pulumi_python_folders(project_root=project_root),
+            get_pulumi_dir(project_root=project_root),
+        ]
+    )
+
+
+def get_all_src_folders(project_root: Path) -> list[str]:
+    """Gets all the python src folders in the project."""
+    return concatenate_args(
+        args=[
+            get_build_src_dir(project_root=project_root),
+            get_pypi_src_dir(project_root=project_root),
+            get_pulumi_dir(project_root=project_root),
+        ]
+    )
+
+
+def get_all_test_folders(project_root: Path) -> list[str]:
+    """Gets all the python test folders in the project."""
+    return concatenate_args(
+        args=[
+            get_build_test_dir(project_root=project_root),
+            get_pypi_test_dir(project_root=project_root),
+        ]
+    )
+
+
+def get_temp_dist_dir(project_root: Path) -> Path:
+    """Gets the temporary dist dir for the project."""
+    return project_root.joinpath("dist")
+
+
+def get_python_path(project_root: Path) -> str:
+    """Gets the python path to use with this project."""
+    return ":".join(str(x) for x in get_all_python_folders(project_root=project_root))
+
+
+def get_python_path_env(project_root: Path) -> str:
+    """Gets the python path ENV to use with this project."""
+    return "PYTHONPATH=" + get_python_path(project_root=project_root)
+
+
+def get_mypy_path_env(project_root: Path) -> str:
+    """Gets the python path ENV to use with this project."""
+    return "MYPYPATH=" + get_python_path(project_root=project_root)
+
+
+def get_base_docker_command(
+    non_docker_project_root: Path, docker_project_root: Path
+) -> list[str]:
+    """Basic docker args that are called for every command."""
+    return concatenate_args(
+        args=[
+            "docker",
+            "run",
+            "--rm",
+            f"--workdir={docker_project_root.absolute()}",
+            "-e",
+            get_python_path_env(project_root=docker_project_root),
+            "-v",
+            f"{non_docker_project_root.absolute()}:{docker_project_root.absolute()}",
+        ]
+    )
+
+
+def get_dev_docker_command(
+    non_docker_project_root: Path, docker_project_root: Path
+) -> list[str]:
+    """Basic docker args that are called for dev environment commands."""
+    return concatenate_args(
+        [
+            get_base_docker_command(
+                non_docker_project_root=non_docker_project_root,
+                docker_project_root=docker_project_root,
+            ),
+            get_docker_dev_image(project_root=docker_project_root),
+        ]
+    )
+
+
+def get_interactive_dev_docker_command(
+    non_docker_project_root: Path, docker_project_root: Path
+) -> list[str]:
+    """Basic docker args that are called for an interactive dev environment."""
+    return concatenate_args(
+        [
+            get_base_docker_command(
+                non_docker_project_root=non_docker_project_root,
+                docker_project_root=docker_project_root,
+            ),
+            "-it",
+            get_docker_dev_image(project_root=docker_project_root),
+        ]
+    )
+
+
+def get_prod_docker_command(
+    non_docker_project_root: Path, docker_project_root: Path
+) -> list[str]:
+    """Basic docker args that are called for prod environment commands."""
+    return concatenate_args(
+        [
+            get_base_docker_command(
+                non_docker_project_root=non_docker_project_root,
+                docker_project_root=docker_project_root,
+            ),
+            get_docker_prod_image(project_root=docker_project_root),
+        ]
+    )
+
+
+def get_interactive_prod_docker_command(
+    non_docker_project_root: Path, docker_project_root: Path
+) -> list[str]:
+    """Basic docker args that are called for an interactive prod environment."""
+    return concatenate_args(
+        [
+            get_base_docker_command(
+                non_docker_project_root=non_docker_project_root,
+                docker_project_root=docker_project_root,
+            ),
+            "-it",
+            get_docker_prod_image(project_root=docker_project_root),
+        ]
+    )
+
+
+def get_pulumi_docker_command(
+    non_docker_project_root: Path, docker_project_root: Path
+) -> list[str]:
+    """Basic docker args that are called for pulumi environment commands."""
+    return concatenate_args(
+        [
+            get_base_docker_command(
+                non_docker_project_root=non_docker_project_root,
+                docker_project_root=docker_project_root,
+            ),
+            get_docker_pulumi_image(project_root=docker_project_root),
+        ]
+    )
+
+
+def get_interactive_pulumi_docker_command(
+    non_docker_project_root: Path, docker_project_root: Path
+) -> list[str]:
+    """Basic docker args that are called for an interactive pulumi environment."""
+    return concatenate_args(
+        [
+            get_base_docker_command(
+                non_docker_project_root=non_docker_project_root,
+                docker_project_root=docker_project_root,
+            ),
+            "-it",
+            get_docker_pulumi_image(project_root=docker_project_root),
+        ]
+    )
