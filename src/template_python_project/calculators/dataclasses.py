@@ -1,4 +1,5 @@
 """Dataclasses used for calculations."""
+
 from enum import Enum
 
 from pydantic import BaseModel

@@ -1,4 +1,5 @@
 """Module implementing calculator logic."""
+
 from template_python_project.calculators.dataclasses import (
     CalculationType,
     CalculatorInput,

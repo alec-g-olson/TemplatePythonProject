@@ -5,7 +5,8 @@ from typing import Dict, List, Tuple
 
 import pytest
 import requests
-from common_vars import PROJECT_ROOT_DIR
+
+PROJECT_ROOT_DIR = Path(__file__).parent.parent.parent
 
 TOP_LEVEL_README_PATH = PROJECT_ROOT_DIR.joinpath("README.md")
 

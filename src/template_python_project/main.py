@@ -1,4 +1,5 @@
 """Module that provides a CLI for calculations."""
+
 from argparse import ArgumentParser
 from pathlib import Path
 
