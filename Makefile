@@ -92,6 +92,7 @@ make_new_project: setup_build_envs
 
 .PHONY: setup_build_envs
 setup_build_envs:
+	ls ~/.gitconfig
 	docker login
 	docker build --build-arg CURRENT_USER_ID=$(USER_ID) --build-arg CURRENT_GROUP_ID=$(GROUP_ID) --build-arg CURRENT_USER=$(USER_NAME) --build-arg CURRENT_GROUP=$(GROUP_NAME) -f $(DOCKERFILE) --target build --build-arg BUILDKIT_INLINE_CACHE=1 -t $(DOCKER_BUILD_IMAGE) $(MAKEFILE_DIR)
 
