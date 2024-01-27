@@ -40,11 +40,13 @@ RUN apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugi
 # create local user so local permissions can be mounted into the container
 # Should be safe, but never push build images or containers
 ARG CURRENT_USER=default_user
+ARG CURRENT_GROUP=default_group
 ARG CURRENT_USER_ID=1000
-ARG CURRENT_USER_GROUP=1000
-RUN adduser --gid $CURRENT_USER_GROUP --uid $CURRENT_USER_ID $CURRENT_USER
+ARG CURRENT_GROUP_ID=1000
+RUN addgroup $CURRENT_GROUP --gid $CURRENT_GROUP_ID || true
+RUN adduser --gid $CURRENT_GROUP_ID --uid $CURRENT_USER_ID $CURRENT_USER
 RUN mkdir -p /home/$CURRENT_USER/.ssh
-RUN chown -R $CURRENT_USER_ID:$CURRENT_USER_GROUP /home/$CURRENT_USER/.ssh
+RUN chown -R $CURRENT_USER_ID:$CURRENT_GROUP_ID /home/$CURRENT_USER/.ssh
 
 FROM git_enabled AS dev
 

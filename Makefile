@@ -8,9 +8,10 @@ DOCKER_PROD_IMAGE = $(PROJECT_NAME):prod
 DOCKER_PULUMI_IMAGE = $(PROJECT_NAME):pulumi
 DOCKER_REMOTE_PROJECT_ROOT = /usr/dev
 USER_ID = $(shell id -u)
-USER_GROUP = $(shell id -g)
+GROUP_ID = $(shell id -g)
 USER_NAME = $(shell id -un)
-USER = $(USER_ID):$(USER_GROUP)
+GROUP_NAME = $(shell id -gn)
+USER = $(USER_ID):$(GROUP_ID)
 
 
 BASE_DOCKER_BUILD_ENV_COMMAND = docker run --rm --workdir=$(DOCKER_REMOTE_PROJECT_ROOT) \
@@ -26,7 +27,7 @@ INTERACTIVE_DOCKER_BUILD_ENV_COMMAND = $(BASE_DOCKER_BUILD_ENV_COMMAND) -it $(DO
 SHARED_BUILD_VARS = --non-docker-project-root $(MAKEFILE_DIR) --docker-project-root $(DOCKER_REMOTE_PROJECT_ROOT)
 
 EXECUTE_BUILD_STEPS_COMMAND = $(DOCKER_BUILD_ENV_COMMAND) python build_support/build_src/execute_build_steps.py \
-$(SHARED_BUILD_VARS) --user-id $(USER_ID) --group-id $(USER_GROUP) --local-username $(USER_NAME)
+$(SHARED_BUILD_VARS) --user-id $(USER_ID) --group-id $(GROUP_ID) --local-username $(USER_NAME)
 
 GET_BUILD_VAR_COMMAND = $(DOCKER_BUILD_ENV_COMMAND) python build_support/build_src/report_build_var.py \
 $(SHARED_BUILD_VARS) --build-variable-to-report
@@ -92,7 +93,7 @@ make_new_project: setup_build_envs
 .PHONY: setup_build_envs
 setup_build_envs:
 	docker login
-	docker build --build-arg CURRENT_USER_ID=$(USER_ID) --build-arg CURRENT_USER_GROUP=$(USER_GROUP) --build-arg CURRENT_USER=$(USER_NAME) -f $(DOCKERFILE) --target build --build-arg BUILDKIT_INLINE_CACHE=1 -t $(DOCKER_BUILD_IMAGE) $(MAKEFILE_DIR)
+	docker build --build-arg CURRENT_USER_ID=$(USER_ID) --build-arg CURRENT_GROUP_ID=$(GROUP_ID) --build-arg CURRENT_USER=$(USER_NAME) --build-arg CURRENT_GROUP=$(GROUP_NAME) -f $(DOCKERFILE) --target build --build-arg BUILDKIT_INLINE_CACHE=1 -t $(DOCKER_BUILD_IMAGE) $(MAKEFILE_DIR)
 
 .PHONY: docker_prune_all
 docker_prune_all:
