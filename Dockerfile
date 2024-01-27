@@ -37,6 +37,18 @@ RUN echo \
 RUN apt-get update
 RUN apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
+ARG CURRENT_USER=default_user
+ARG CURRENT_USER_ID=1000
+ARG CURRENT_USER_GROUP=1000
+RUN adduser --gid $CURRENT_USER_GROUP --uid $CURRENT_USER_ID $CURRENT_USER
+RUN mkdir -p /home/$CURRENT_USER/.ssh
+RUN chown -R $CURRENT_USER_ID:$CURRENT_USER_GROUP /home/$CURRENT_USER/.ssh
+RUN usermod -aG docker $CURRENT_USER
+RUN adduser $CURRENT_USER root
+RUN newgrp docker
+RUN systemctl enable docker.service
+RUN systemctl enable containerd.service
+
 FROM git_enabled AS dev
 
 RUN poetry install --with dev

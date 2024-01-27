@@ -19,7 +19,12 @@ class TaskNode(ABC):
         """Will return the tasks required to start the current task."""
 
     @abstractmethod
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Will contain the logic of each task."""
 
 
@@ -72,7 +77,10 @@ def _get_task_execution_order(
 
 
 def run_tasks(
-    tasks: list[TaskNode], non_docker_project_root: Path, docker_project_root: Path
+    tasks: list[TaskNode],
+    non_docker_project_root: Path,
+    docker_project_root: Path,
+    local_username: str,
 ) -> None:
     """Builds the DAG required for a task and runs the DAG."""
     all_dag_tasks: dict[str, TaskNode] = {}
@@ -89,6 +97,7 @@ def run_tasks(
         task.run(
             non_docker_project_root=non_docker_project_root,
             docker_project_root=docker_project_root,
+            local_username=local_username,
         )
 
 
@@ -118,6 +127,12 @@ def _resolve_process_results(
         exit(return_code)
 
 
+def _get_run_as_local_user_command(args: list[Any], local_username: str) -> list[str]:
+    args = get_str_args(args=args)
+    command_as_str = '"' + " ".join(args) + '"'
+    return concatenate_args(args=["su", local_username, "-c", command_as_str])
+
+
 def run_process(args: list[Any], silent=False) -> bytes:
     """Runs a process."""
     args = get_str_args(args=args)
@@ -134,6 +149,14 @@ def run_process(args: list[Any], silent=False) -> bytes:
         return_code=return_code,
     )
     return output
+
+
+def run_process_as_local_user(args: list[Any], local_username: str, silent=False):
+    """Runs a process as the local user."""
+    run_process(
+        args=_get_run_as_local_user_command(args=args, local_username=local_username),
+        silent=silent,
+    )
 
 
 def get_output_of_process(args: list[Any], silent=False) -> str:

@@ -114,7 +114,12 @@ class TestPypi(TaskNode):
         """Ensures dev env is built."""
         return [BuildDevEnvironment()]
 
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Tests the PyPi package."""
         run_process(
             args=concatenate_args(
@@ -145,7 +150,12 @@ class BuildPypi(TaskNode):
             BuildProdEnvironment(),
         ]
 
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Builds PyPi package."""
         run_process(
             args=concatenate_args(
@@ -198,5 +208,10 @@ class PushPypi(TaskNode):
         """Must build PyPi and push git tags before PyPi is pushed."""
         return [PushTags(), BuildPypi()]
 
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Push PyPi."""

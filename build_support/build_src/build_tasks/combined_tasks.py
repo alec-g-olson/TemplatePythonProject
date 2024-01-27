@@ -28,7 +28,12 @@ class Push(TaskNode):
         """Adds all required "sub-pushes" to the DAG."""
         return [PushTags(), PushPypi()]
 
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Does nothing."""
 
 
@@ -39,7 +44,12 @@ class Test(TaskNode):
         """Adds all required "subtests" to the DAG."""
         return [TestPythonStyle(), TestPypi(), TestBuildSanity()]
 
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Does nothing."""
 
 
@@ -54,7 +64,12 @@ class Autoflake(TaskNode):
         """
         return [Lint(), TestPypi()]
 
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Runs autoflake on all python files."""
         run_process(
             args=concatenate_args(

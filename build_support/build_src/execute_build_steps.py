@@ -95,6 +95,12 @@ if __name__ == "__main__":
         required=True,
         help="User's Group ID, used to return files made by docker to owner.",
     )
+    parser.add_argument(
+        "--local-username",
+        type=str,
+        required=True,
+        help="User's name, used to run commands in docker as the local user.",
+    )
     args = parser.parse_args()
     tasks = [CLI_ARG_TO_TASK[arg] for arg in args.build_tasks]
     try:
@@ -102,6 +108,7 @@ if __name__ == "__main__":
             tasks=tasks,
             non_docker_project_root=args.non_docker_project_root,
             docker_project_root=args.docker_project_root,
+            local_username=args.local_username,
         )
     except Exception as e:
         print(e)

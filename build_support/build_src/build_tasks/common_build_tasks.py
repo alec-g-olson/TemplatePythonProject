@@ -25,7 +25,13 @@ from common_vars import (
     get_pypi_src_and_test,
     get_pyproject_toml,
 )
-from dag_engine import TaskNode, concatenate_args, get_output_of_process, run_process
+from dag_engine import (
+    TaskNode,
+    concatenate_args,
+    get_output_of_process,
+    run_process,
+    run_process_as_local_user,
+)
 
 
 class BuildDevEnvironment(TaskNode):
@@ -35,7 +41,12 @@ class BuildDevEnvironment(TaskNode):
         """Check to make sure we are logged into docker."""
         return []
 
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Builds a stable environment for running dev commands."""
         run_process(
             args=get_docker_build_command(
@@ -51,7 +62,12 @@ class BuildProdEnvironment(TaskNode):
         """Check to make sure we are logged into docker."""
         return []
 
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Builds a stable environment for running prod commands."""
         run_process(
             args=get_docker_build_command(
@@ -67,7 +83,12 @@ class BuildPulumiEnvironment(TaskNode):
         """Check to make sure we are logged into docker."""
         return []
 
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Builds a stable environment for running pulumi commands."""
         run_process(
             args=get_docker_build_command(
@@ -83,7 +104,12 @@ class Clean(TaskNode):
         """Nothing required."""
         return []
 
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Deletes all the temporary build files."""
         run_process(args=["rm", "-rf", get_build_dir(project_root=docker_project_root)])
 
@@ -113,7 +139,12 @@ class GetGitInfo(TaskNode):
         """Nothing required."""
         return []
 
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Builds a json with required git info."""
         get_git_info_json(project_root=docker_project_root).parent.mkdir(
             parents=True, exist_ok=True
@@ -137,7 +168,12 @@ class TestBuildSanity(TaskNode):
         """Ensures the dev environment is present before running tests."""
         return [GetGitInfo(), BuildDevEnvironment()]
 
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Runs tests in the build_test folder."""
         run_process(
             args=concatenate_args(
@@ -164,7 +200,12 @@ class TestPythonStyle(TaskNode):
         # Todo: Add in pulumi environment and test once pulumi build doesn't break
         return [BuildDevEnvironment()]  # , BuildPulumiEnvironment()]
 
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Runs all stylistic checks on code."""
         run_process(
             args=concatenate_args(
@@ -305,7 +346,12 @@ class Lint(TaskNode):
         """Makes sure dev environment has been built before linting."""
         return [BuildDevEnvironment()]
 
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Lints all python files in project."""
         run_process(
             args=concatenate_args(
@@ -342,12 +388,20 @@ class PushTags(TaskNode):
         """Checks to see if the version is appropriate for the branch we are on."""
         return [TestBuildSanity()]
 
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Push tags."""
         version = get_project_version(project_root=docker_project_root)
         if (BRANCH == "main") ^ ("dev" in version):
             run_process(args=concatenate_args(args=["git", "tag", version]))
-            # run_process(args=concatenate_args(args=["git", "push", "--tags"]))
+            run_process_as_local_user(
+                args=concatenate_args(args=["git", "push", "--tags"]),
+                local_username=local_username,
+            )
         else:
             raise Exception(f"Tag {version} is incompatible with branch {BRANCH}.")
 
@@ -376,7 +430,12 @@ class MakeProjectFromTemplate(TaskNode):
         """Nothing required."""
         return [Clean()]
 
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Modifies the appropriate files to start a new project."""
         master_project_settings = ProjectSettings.from_json(
             get_project_settings_json(project_root=docker_project_root).read_text()
