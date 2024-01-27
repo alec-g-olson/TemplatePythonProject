@@ -13,9 +13,15 @@ COPY poetry.lock poetry.lock
 COPY pyproject.toml pyproject.toml
 RUN poetry config virtualenvs.create false
 
-FROM base AS build
+FROM base as git_enabled
+
+# Allow for git stuff to work in /usr/dev
+RUN git config --global --add safe.directory /usr/dev
+
+FROM git_enabled AS build
 
 RUN poetry install --with build
+
 # Add Docker's official GPG key:
 RUN apt-get update
 RUN apt-get install ca-certificates curl gnupg
@@ -31,7 +37,7 @@ RUN echo \
 RUN apt-get update
 RUN apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-FROM base AS dev
+FROM git_enabled AS dev
 
 RUN poetry install --with dev
 

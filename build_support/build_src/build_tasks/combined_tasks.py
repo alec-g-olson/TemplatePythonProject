@@ -13,7 +13,11 @@ from build_tasks.common_build_tasks import (
     TestPythonStyle,
 )
 from build_tasks.python_build_tasks import PushPypi, TestPypi
-from common_vars import get_all_python_folders, get_dev_docker_command
+from common_vars import (
+    DockerTarget,
+    get_all_python_folders,
+    get_docker_command_for_image,
+)
 from dag_engine import TaskNode, concatenate_args, run_process
 
 
@@ -55,9 +59,10 @@ class Autoflake(TaskNode):
         run_process(
             args=concatenate_args(
                 args=[
-                    get_dev_docker_command(
+                    get_docker_command_for_image(
                         non_docker_project_root=non_docker_project_root,
                         docker_project_root=docker_project_root,
+                        target_image=DockerTarget.DEV,
                     ),
                     "autoflake",
                     "--remove-all-unused-imports",
