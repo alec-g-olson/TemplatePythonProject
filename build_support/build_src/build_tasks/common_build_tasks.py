@@ -401,7 +401,10 @@ class PushTags(TaskNode):
                 args=concatenate_args(args=["git", "diff"])
             )
             if current_diff:
-                run_process_as_local_user(args=concatenate_args(args=["git", "add", "-u"]), local_username=local_username)
+                run_process_as_local_user(
+                    args=concatenate_args(args=["git", "add", "-u"]),
+                    local_username=local_username,
+                )
                 run_process_as_local_user(
                     args=concatenate_args(
                         args=[
