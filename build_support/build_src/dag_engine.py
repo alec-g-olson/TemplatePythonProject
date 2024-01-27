@@ -154,11 +154,13 @@ def run_process(args: list[Any], silent=False) -> bytes:
 
 def run_process_as_local_user(args: list[Any], local_username: str, silent=False):
     """Runs a process as the local user."""
-    os.system(
+    return_code = os.system(
         " ".join(
             _get_run_as_local_user_command(args=args, local_username=local_username)
         )
     )
+    if return_code != 0:
+        exit(return_code)
 
 
 def get_output_of_process(args: list[Any], silent=False) -> str:
