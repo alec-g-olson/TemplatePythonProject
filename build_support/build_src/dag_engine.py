@@ -1,6 +1,7 @@
 """Shared logic across all tasks and how to run them in a DAG."""
 
 import itertools
+import os
 from abc import ABC, abstractmethod
 from pathlib import Path
 from subprocess import PIPE, Popen
@@ -153,9 +154,10 @@ def run_process(args: list[Any], silent=False) -> bytes:
 
 def run_process_as_local_user(args: list[Any], local_username: str, silent=False):
     """Runs a process as the local user."""
-    run_process(
-        args=_get_run_as_local_user_command(args=args, local_username=local_username),
-        silent=silent,
+    os.system(
+        " ".join(
+            _get_run_as_local_user_command(args=args, local_username=local_username)
+        )
     )
 
 

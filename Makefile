@@ -16,6 +16,7 @@ USER = $(USER_ID):$(USER_GROUP)
 BASE_DOCKER_BUILD_ENV_COMMAND = docker run --rm --workdir=$(DOCKER_REMOTE_PROJECT_ROOT) \
 -e PYTHONPATH=/usr/dev/build_support/build_src \
 -v ~/.ssh:/home/$(USER_NAME)/.ssh:ro \
+-v ~/.gitconfig:/home/$(USER_NAME)/.gitconfig \
 -v /var/run/docker.sock:/var/run/docker.sock \
 -v $(MAKEFILE_DIR):$(DOCKER_REMOTE_PROJECT_ROOT)
 
