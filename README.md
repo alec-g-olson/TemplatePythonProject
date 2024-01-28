@@ -41,7 +41,7 @@ strives to give as much of that functionality out of the box as possible.
 ### Creating a New Project From This Template
 
 In order to create a new project from this template first modify the fields in the 
-[project_settings.json](build_support/project_settings.json) to what ever values you need and then run 
+[project_settings.yaml](build_support/project_settings.yaml) to what ever values you need and then run 
 `make make_new_project`.  This will do the following:
  - PyPi:
    - Rename the [pyproject.toml](pyproject.toml) project name.

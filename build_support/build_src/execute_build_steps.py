@@ -11,12 +11,12 @@ from build_tasks.common_build_tasks import (
     Clean,
     GetGitInfo,
     Lint,
-    MakeProjectFromTemplate,
     TestBuildSanity,
     TestPythonStyle,
 )
 from build_tasks.python_build_tasks import BuildPypi, PushPypi, TestPypi
 from dag_engine import TaskNode, concatenate_args, run_process, run_tasks
+from new_project_setup.setup_new_project import MakeProjectFromTemplate
 
 CLI_ARG_TO_TASK: dict[str, TaskNode] = {
     "make_new_project": MakeProjectFromTemplate(),

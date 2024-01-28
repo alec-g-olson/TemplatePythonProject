@@ -50,7 +50,7 @@ RUN chown -R $CURRENT_USER_ID:$CURRENT_GROUP_ID /home/$CURRENT_USER/.ssh
 
 FROM git_enabled AS dev
 
-RUN poetry install --with dev
+RUN poetry install --with dev --with build
 
 FROM base as prod
 
