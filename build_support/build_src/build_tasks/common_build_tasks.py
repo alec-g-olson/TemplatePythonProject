@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from common_vars import (
-    BRANCH,
     THREADS_AVAILABLE,
     DockerTarget,
     get_all_python_folders,
@@ -15,15 +14,14 @@ from common_vars import (
     get_build_dir,
     get_build_src_dir,
     get_build_test_dir,
+    get_current_branch,
     get_docker_build_command,
     get_docker_command_for_image,
     get_docker_image,
     get_git_info_json,
     get_mypy_path_env,
-    get_project_settings_json,
     get_project_version,
     get_pypi_src_and_test,
-    get_pyproject_toml,
 )
 from dag_engine import (
     TaskNode,
@@ -155,7 +153,7 @@ class GetGitInfo(TaskNode):
         )
         get_git_info_json(project_root=docker_project_root).write_text(
             GitInfo(
-                branch=BRANCH,
+                branch=get_current_branch(),
                 tags=get_output_of_process(["git", "tag"], silent=True).split("\n"),
             ).to_json()
         )
@@ -399,8 +397,9 @@ class PushTags(TaskNode):
         local_username: str,
     ) -> None:
         """Push tags."""
+        branch = get_current_branch()
         version = get_project_version(project_root=docker_project_root)
-        if (BRANCH == "main") ^ ("dev" in version):
+        if (branch == "main") ^ ("dev" in version):
             current_diff = get_output_of_process(
                 args=concatenate_args(args=["git", "diff"])
             )
@@ -430,50 +429,4 @@ class PushTags(TaskNode):
                 local_username=local_username,
             )
         else:
-            raise Exception(f"Tag {version} is incompatible with branch {BRANCH}.")
-
-
-@dataclass
-class ProjectSettings:
-    """An object containing the project settings for this project."""
-
-    name: str
-
-    @classmethod
-    def from_json(cls, json_str: str) -> "ProjectSettings":
-        """Builds an object from a json str."""
-        json_vals = json.loads(json_str)
-        return ProjectSettings(**json_vals)
-
-    def to_json(self) -> str:
-        """Dumps object as a json str."""
-        return json.dumps(self.__dict__, indent=2)
-
-
-class MakeProjectFromTemplate(TaskNode):
-    """Updates project based on the project settings yaml."""
-
-    def required_tasks(self) -> list[TaskNode]:
-        """Nothing required."""
-        return [Clean()]
-
-    def run(
-        self,
-        non_docker_project_root: Path,
-        docker_project_root: Path,
-        local_username: str,
-    ) -> None:
-        """Modifies the appropriate files to start a new project."""
-        master_project_settings = ProjectSettings.from_json(
-            get_project_settings_json(project_root=docker_project_root).read_text()
-        )
-        pyproject_toml = get_pyproject_toml(project_root=docker_project_root)
-        new_text = ""
-        for line in pyproject_toml.open():
-            if line == 'name = "template_python_project"\n':
-                new_text += f'name = "{master_project_settings.name}"\n'
-            elif line.startswith("version = "):
-                new_text += 'version = "0.0.0"\n'
-            else:
-                new_text += line
-        pyproject_toml.write_text(new_text)
+            raise Exception(f"Tag {version} is incompatible with branch {branch}.")

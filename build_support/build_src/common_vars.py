@@ -8,10 +8,14 @@ from typing import Any
 
 from dag_engine import concatenate_args, get_output_of_process
 
-BRANCH = get_output_of_process(
-    args=["git", "rev-parse", "--abbrev-ref", "HEAD"], silent=True
-)
 THREADS_AVAILABLE = multiprocessing.cpu_count()
+
+
+def get_current_branch() -> str:
+    """Gets the branch that is currently checked out."""
+    return get_output_of_process(
+        args=["git", "rev-parse", "--abbrev-ref", "HEAD"], silent=True
+    )
 
 
 class DockerTarget(Enum):
@@ -28,9 +32,14 @@ def get_pyproject_toml(project_root: Path) -> Path:
     return project_root.joinpath("pyproject.toml")
 
 
-def get_project_settings_json(project_root: Path) -> Path:
-    """Get a path to the project_settings.json in a project."""
-    return project_root.joinpath("build_support", "project_settings.json")
+def get_license_file(project_root: Path) -> Path:
+    """Get a path to the pyproject.toml in a project."""
+    return project_root.joinpath("LICENSE")
+
+
+def get_new_project_settings(project_root: Path) -> Path:
+    """Get a path to the project_settings.yaml in a project."""
+    return project_root.joinpath("build_support", "project_settings.yaml")
 
 
 def get_pyproject_toml_data(project_root: Path) -> dict[Any, Any]:
@@ -260,7 +269,7 @@ def get_interactive_docker_command_for_image(
 ) -> list[str]:
     """Basic docker args that are called for an interactive dev environment."""
     return concatenate_args(
-        [
+        args=[
             get_base_docker_command_for_image(
                 non_docker_project_root=non_docker_project_root,
                 docker_project_root=docker_project_root,

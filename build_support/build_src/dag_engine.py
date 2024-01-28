@@ -114,9 +114,13 @@ def concatenate_args(args: list[Any | list[Any]]) -> list[str]:
 
 
 def _resolve_process_results(
-    command_as_str: str, output: bytes, error: bytes, return_code: int
+    command_as_str: str,
+    output: bytes,
+    error: bytes,
+    return_code: int,
+    silent: bool = False,
 ) -> None:
-    if output:
+    if output and not silent:
         print(output.decode("utf-8"), flush=True, end="")
     if error:
         print(error.decode("utf-8"), flush=True, end="")
@@ -148,17 +152,19 @@ def run_process(args: list[Any], silent=False) -> bytes:
         output=output,
         error=error,
         return_code=return_code,
+        silent=silent,
     )
     return output
 
 
 def run_process_as_local_user(args: list[Any], local_username: str, silent=False):
     """Runs a process as the local user."""
-    return_code = os.system(
-        " ".join(
-            _get_run_as_local_user_command(args=args, local_username=local_username)
-        )
+    command = " ".join(
+        _get_run_as_local_user_command(args=args, local_username=local_username)
     )
+    if not silent:
+        print(command)
+    return_code = os.system(command)
     if return_code != 0:
         exit(return_code)
 
@@ -193,4 +199,5 @@ def run_piped_processes(processes: list[list[Any]], silent=False) -> None:
             output=output,
             error=error,
             return_code=return_code,
+            silent=silent,
         )
