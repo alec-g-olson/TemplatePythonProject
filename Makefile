@@ -13,11 +13,19 @@ USER_NAME = $(shell id -un)
 GROUP_NAME = $(shell id -gn)
 USER = $(USER_ID):$(GROUP_ID)
 
+USER_HOME_DIR = $(shell ~)
+
+ifeq ("$(wildcard $(USER_HOME_DIR)/.gitconfig)","")
+    GIT_MOUNT = -v ~/.gitconfig:/home/$(USER_NAME)/.gitconfig
+else
+    GIT_MOUNT =
+endif
+
 
 BASE_DOCKER_BUILD_ENV_COMMAND = docker run --rm --workdir=$(DOCKER_REMOTE_PROJECT_ROOT) \
 -e PYTHONPATH=/usr/dev/build_support/build_src \
 -v ~/.ssh:/home/$(USER_NAME)/.ssh:ro \
--v ~/.gitconfig:/home/$(USER_NAME)/.gitconfig \
+$(GIT_MOUNT) \
 -v /var/run/docker.sock:/var/run/docker.sock \
 -v $(MAKEFILE_DIR):$(DOCKER_REMOTE_PROJECT_ROOT)
 
@@ -92,7 +100,6 @@ make_new_project: setup_build_envs
 
 .PHONY: setup_build_envs
 setup_build_envs:
-	ls ~/.gitconfig
 	docker login
 	docker build --build-arg CURRENT_USER_ID=$(USER_ID) --build-arg CURRENT_GROUP_ID=$(GROUP_ID) --build-arg CURRENT_USER=$(USER_NAME) --build-arg CURRENT_GROUP=$(GROUP_NAME) -f $(DOCKERFILE) --target build --build-arg BUILDKIT_INLINE_CACHE=1 -t $(DOCKER_BUILD_IMAGE) $(MAKEFILE_DIR)
 
