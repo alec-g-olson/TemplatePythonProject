@@ -4,7 +4,9 @@ import itertools
 import os
 from abc import ABC, abstractmethod
 from pathlib import Path
-from subprocess import PIPE, Popen
+
+# The purpose of this module is to make subprocess calls
+from subprocess import PIPE, Popen  # nosec: B404
 from typing import Any
 
 
@@ -145,7 +147,10 @@ def run_process(args: list[Any], silent=False) -> bytes:
     command_as_str = " ".join(args)
     if not silent:
         print(command_as_str, flush=True)
-    p = Popen(args, stdin=PIPE, stdout=PIPE, stderr=PIPE, bufsize=-1)
+    # As this is currently setup args are never injected by external users, safe
+    p = Popen(
+        args, stdin=PIPE, stdout=PIPE, stderr=PIPE, bufsize=-1, shell=False
+    )  # nosec: B603
     output, error = p.communicate()
     return_code = p.returncode
     _resolve_process_results(
@@ -165,7 +170,10 @@ def run_process_as_local_user(args: list[Any], local_username: str, silent=False
     )
     if not silent:
         print(command)
-    return_code = os.system(command)
+    # As this is currently setup args are never injected by external users
+    # However, this would be vulnerable to shell attacks
+    # Todo: Figure out how to pass "some list of args" through subprocess
+    return_code = os.system(command)  # nosec B605
     if return_code != 0:
         exit(return_code)
 
@@ -186,13 +194,18 @@ def run_piped_processes(processes: list[list[Any]], silent=False) -> None:
     if len(args_list) == 1:
         run_process(args=args_list[0], silent=silent)
     else:
-        p1 = Popen(args=args_list[0], stdout=PIPE)
-        popen_processes = [p1]  # type: ignore
+        # As this is currently setup args are never injected by external users, safe
+        p1 = Popen(args=args_list[0], stdout=PIPE)  # nosec: B603
+        popen_processes = [p1]
         for args in args_list[1:]:
             last_process = popen_processes[-1]
-            popen_processes.append(
-                Popen(args=args, stdin=last_process.stdout, stdout=PIPE)  # type: ignore
+            # As this is currently setup args are never injected by external users, safe
+            next_process = Popen(  # nosec: B603
+                args=args,
+                stdin=last_process.stdout,
+                stdout=PIPE,
             )
+            popen_processes.append(next_process)
         output, error = popen_processes[-1].communicate()
         return_code = popen_processes[-1].returncode
         _resolve_process_results(

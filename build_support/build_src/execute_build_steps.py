@@ -15,6 +15,7 @@ from build_tasks.common_build_tasks import (
     TestPythonStyle,
 )
 from build_tasks.python_build_tasks import BuildPypi, PushPypi, TestPypi
+from common_vars import get_build_dir
 from dag_engine import TaskNode, concatenate_args, run_process, run_tasks
 from new_project_setup.setup_new_project import MakeProjectFromTemplate
 
@@ -102,12 +103,16 @@ if __name__ == "__main__":
         help="User's name, used to run commands in docker as the local user.",
     )
     args = parser.parse_args()
+    non_docker_project_root = args.non_docker_project_root
+    docker_project_root = args.docker_project_root
     tasks = [CLI_ARG_TO_TASK[arg] for arg in args.build_tasks]
     try:
+        build_dir = get_build_dir(project_root=docker_project_root)
+        build_dir.mkdir(parents=True, exist_ok=True)
         run_tasks(
             tasks=tasks,
-            non_docker_project_root=args.non_docker_project_root,
-            docker_project_root=args.docker_project_root,
+            non_docker_project_root=non_docker_project_root,
+            docker_project_root=docker_project_root,
             local_username=args.local_username,
         )
     except Exception as e:

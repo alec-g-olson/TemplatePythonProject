@@ -33,7 +33,7 @@ def get_html_report_name(project_root: Path) -> str:
 
 
 def get_html_report_path(project_root: Path) -> Path:
-    """Get the name of the pytest html report."""
+    """Get the path of the pytest html report."""
     return get_build_dir(project_root=project_root).joinpath(
         get_html_report_name(project_root=project_root)
     )
@@ -50,7 +50,7 @@ def get_xml_report_name(project_root: Path) -> str:
 
 
 def get_xml_report_path(project_root: Path) -> Path:
-    """Get the name of the pytest xml report."""
+    """Get the path of the pytest xml report."""
     return get_build_dir(project_root=project_root).joinpath(
         get_xml_report_name(project_root=project_root)
     )
@@ -67,7 +67,7 @@ def get_xml_coverage_report_name(project_root: Path) -> str:
 
 
 def get_xml_coverage_report_path(project_root: Path) -> Path:
-    """Get the name of the pytest xml report."""
+    """Get the path of the pytest xml report."""
     return get_build_dir(project_root=project_root).joinpath(
         get_xml_coverage_report_name(project_root=project_root)
     )
@@ -83,7 +83,7 @@ def get_html_coverage_report_name(project_root: Path) -> str:
 
 
 def get_html_coverage_report_path(project_root: Path) -> Path:
-    """Get the name of the pytest xml report."""
+    """Get the path of the pytest xml report."""
     return get_build_dir(project_root=project_root).joinpath(
         get_html_coverage_report_name(project_root=project_root)
     )
@@ -96,12 +96,12 @@ def get_test_report_args(project_root: Path) -> list[str]:
             "--cov-report",
             "term-missing",
             "--cov-report",
-            f"xml:build/{get_xml_coverage_report_path(project_root=project_root)}",
+            f"xml:{get_xml_coverage_report_path(project_root=project_root)}",
             "--cov-report",
-            f"html:build/{get_html_coverage_report_path(project_root=project_root)}",
+            f"html:{get_html_coverage_report_path(project_root=project_root)}",
             "--cov=.",
-            f"--junitxml=build/{get_xml_report_path(project_root=project_root)}",
-            f"--html=build/{get_html_report_path(project_root=project_root)}",
+            f"--junitxml={get_xml_report_path(project_root=project_root)}",
+            f"--html={get_html_report_path(project_root=project_root)}",
             "--self-contained-html",
         ]
     )
