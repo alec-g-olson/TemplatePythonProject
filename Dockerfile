@@ -60,8 +60,11 @@ FROM base as pulumi
 
 RUN poetry install --with pulumi
 
+ARG PULUMI_VERSION=3.103.0
+
+ENV PULUMI_VERSION=$PULUMI_VERSION
 ENV PULUMI_HOME="/root/.pulumi/"
 
 ENV PATH="$PULUMI_HOME/bin:$PATH"
 
-RUN curl -fsSL https://get.pulumi.com | sh -s --
+RUN curl -fsSL https://get.pulumi.com | sh -s -- --version $PULUMI_VERSION

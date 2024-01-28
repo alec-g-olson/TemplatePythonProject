@@ -21,6 +21,7 @@ from common_vars import (
     get_git_info_json,
     get_mypy_path_env,
     get_project_version,
+    get_pulumi_version,
     get_pypi_src_and_test,
 )
 from dag_engine import (
@@ -90,7 +91,12 @@ class BuildPulumiEnvironment(TaskNode):
         """Builds a stable environment for running pulumi commands."""
         run_process(
             args=get_docker_build_command(
-                project_root=docker_project_root, target_image=DockerTarget.PULUMI
+                project_root=docker_project_root,
+                target_image=DockerTarget.PULUMI,
+                extra_args={
+                    "--build-arg": "PULUMI_VERSION="
+                    + get_pulumi_version(project_root=docker_project_root)
+                },
             )
         )
 

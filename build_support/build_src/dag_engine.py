@@ -125,10 +125,11 @@ def _resolve_process_results(
     if error:
         print(error.decode("utf-8"), flush=True, end="")
     if return_code != 0:
-        print(
-            f"{command_as_str}\nFailed with code: {return_code}",
-            flush=True,
-        )
+        if silent:
+            print(
+                f"{command_as_str}\nFailed with code: {return_code}",
+                flush=True,
+            )
         exit(return_code)
 
 

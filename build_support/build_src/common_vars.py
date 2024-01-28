@@ -57,6 +57,24 @@ def get_project_version(project_root: Path) -> str:
     )
 
 
+def get_poetry_lock_file(project_root: Path) -> Path:
+    """Get a path to the poetry.lock file in a project."""
+    return project_root.joinpath("poetry.lock")
+
+
+def get_pulumi_version(project_root: Path) -> str:
+    """Get the pulumi version in the poetry.lock file."""
+    lock_file = get_poetry_lock_file(project_root=project_root)
+    lock_data = tomllib.loads(lock_file.read_text())
+    for package in lock_data["package"]:
+        if package["name"] == "pulumi":
+            return package["version"]
+    raise RuntimeError(
+        "poetry.lock does not have a pulumi package installed, "
+        "or is no longer a toml format."
+    )
+
+
 def get_project_name(project_root: Path) -> str:
     """Gets the project name from the pyproject.toml in a project."""
     return get_pyproject_toml_data(project_root=project_root)["tool"]["poetry"]["name"]
@@ -284,9 +302,17 @@ def get_interactive_docker_command_for_image(
 
 
 def get_docker_build_command(
-    project_root: Path, target_image: DockerTarget
+    project_root: Path,
+    target_image: DockerTarget,
+    extra_args: None | dict[str, Any] = None,
 ) -> list[str]:
     """Creates docker build command."""
+    flattened_extra_args = []
+    if extra_args is not None:
+        for extra_arg_key, extra_arg_val in extra_args.items():
+            flattened_extra_args.append(extra_arg_key)
+            if extra_arg_val is not None:
+                flattened_extra_args.append(extra_arg_val)
     return concatenate_args(
         args=[
             "docker",
@@ -297,6 +323,7 @@ def get_docker_build_command(
             target_image.value,
             "--build-arg",
             "BUILDKIT_INLINE_CACHE=1",
+            flattened_extra_args,
             "-t",
             get_docker_image(project_root=project_root, target_image=target_image),
             project_root.absolute(),
