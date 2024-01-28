@@ -1,9 +1,10 @@
 """Shared logic across all tasks and how to run them in a DAG."""
 
 import itertools
+import os
 from abc import ABC, abstractmethod
 from pathlib import Path
-from subprocess import PIPE, Popen, run
+from subprocess import PIPE, Popen
 from typing import Any
 
 
@@ -19,7 +20,12 @@ class TaskNode(ABC):
         """Will return the tasks required to start the current task."""
 
     @abstractmethod
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Will contain the logic of each task."""
 
 
@@ -72,7 +78,10 @@ def _get_task_execution_order(
 
 
 def run_tasks(
-    tasks: list[TaskNode], non_docker_project_root: Path, docker_project_root: Path
+    tasks: list[TaskNode],
+    non_docker_project_root: Path,
+    docker_project_root: Path,
+    local_username: str,
 ) -> None:
     """Builds the DAG required for a task and runs the DAG."""
     all_dag_tasks: dict[str, TaskNode] = {}
@@ -81,14 +90,15 @@ def run_tasks(
     task_execution_order = _get_task_execution_order(
         all_tasks=all_dag_tasks, enforced_task_order=tasks
     )
-    print("Will execute the following tasks:")
+    print("Will execute the following tasks:", flush=True)
     for task in task_execution_order:
-        print(f"  - {task.task_label()}")
+        print(f"  - {task.task_label()}", flush=True)
     for task in task_execution_order:
-        print(f"Starting: {task.task_label()}")
+        print(f"Starting: {task.task_label()}", flush=True)
         task.run(
             non_docker_project_root=non_docker_project_root,
             docker_project_root=docker_project_root,
+            local_username=local_username,
         )
 
 
@@ -103,23 +113,59 @@ def concatenate_args(args: list[Any | list[Any]]) -> list[str]:
     return get_str_args(list(itertools.chain.from_iterable(all_args_as_lists)))
 
 
-def run_process(args: list[Any], silent=False) -> None:
+def _resolve_process_results(
+    command_as_str: str, output: bytes, error: bytes, return_code: int
+) -> None:
+    if output:
+        print(output.decode("utf-8"), flush=True, end="")
+    if error:
+        print(error.decode("utf-8"), flush=True, end="")
+    if return_code != 0:
+        print(
+            f"{command_as_str}\nFailed with code: {return_code}",
+            flush=True,
+        )
+        exit(return_code)
+
+
+def _get_run_as_local_user_command(args: list[Any], local_username: str) -> list[str]:
+    args = get_str_args(args=args)
+    command_as_str = '"' + " ".join(args) + '"'
+    return concatenate_args(args=["su", local_username, "-c", command_as_str])
+
+
+def run_process(args: list[Any], silent=False) -> bytes:
     """Runs a process."""
     args = get_str_args(args=args)
+    command_as_str = " ".join(args)
     if not silent:
-        print(" ".join(args))
-    result = run(args=args)
-    if result.returncode != 0:
-        exit(result.returncode)
+        print(command_as_str, flush=True)
+    p = Popen(args, stdin=PIPE, stdout=PIPE, stderr=PIPE, bufsize=-1)
+    output, error = p.communicate()
+    return_code = p.returncode
+    _resolve_process_results(
+        command_as_str=command_as_str,
+        output=output,
+        error=error,
+        return_code=return_code,
+    )
+    return output
+
+
+def run_process_as_local_user(args: list[Any], local_username: str, silent=False):
+    """Runs a process as the local user."""
+    return_code = os.system(
+        " ".join(
+            _get_run_as_local_user_command(args=args, local_username=local_username)
+        )
+    )
+    if return_code != 0:
+        exit(return_code)
 
 
 def get_output_of_process(args: list[Any], silent=False) -> str:
     """Runs a process and gets the output."""
-    args = get_str_args(args=args)
-    if not silent:
-        print(" ".join(args))
-    p = Popen(args, stdin=PIPE, stdout=PIPE, stderr=PIPE, bufsize=-1)
-    output, _ = p.communicate()
+    output = run_process(args=args, silent=silent)
     return output.decode("utf-8").strip()
 
 
@@ -127,11 +173,11 @@ def run_piped_processes(processes: list[list[Any]], silent=False) -> None:
     """Runs piped processes as they would be on the command line."""
     args_list = [get_str_args(args=args) for args in processes]
     process_strs = [" ".join(args) for args in args_list]
+    command_as_str = " | ".join(process_strs)
     if not silent:
-        print(" | ".join(process_strs))
+        print(command_as_str, flush=True)
     if len(args_list) == 1:
-        result = run(args=processes[0])
-        return_code = result.returncode
+        run_process(args=args_list[0], silent=silent)
     else:
         p1 = Popen(args=args_list[0], stdout=PIPE)
         popen_processes = [p1]  # type: ignore
@@ -140,7 +186,11 @@ def run_piped_processes(processes: list[list[Any]], silent=False) -> None:
             popen_processes.append(
                 Popen(args=args, stdin=last_process.stdout, stdout=PIPE)  # type: ignore
             )
-        popen_processes[-1].communicate()
+        output, error = popen_processes[-1].communicate()
         return_code = popen_processes[-1].returncode
-    if return_code != 0:
-        exit(return_code)
+        _resolve_process_results(
+            command_as_str=command_as_str,
+            output=output,
+            error=error,
+            return_code=return_code,
+        )

@@ -7,46 +7,31 @@ from pathlib import Path
 from common_vars import (
     BRANCH,
     THREADS_AVAILABLE,
+    DockerTarget,
     get_all_python_folders,
     get_all_src_folders,
     get_all_test_folders,
-    get_base_docker_command,
+    get_base_docker_command_for_image,
     get_build_dir,
     get_build_src_dir,
     get_build_test_dir,
-    get_dev_docker_command,
-    get_docker_dev_image,
-    get_dockerfile,
+    get_docker_build_command,
+    get_docker_command_for_image,
+    get_docker_image,
     get_git_info_json,
-    get_interactive_dev_docker_command,
-    get_interactive_prod_docker_command,
-    get_interactive_pulumi_docker_command,
     get_mypy_path_env,
     get_project_settings_json,
     get_project_version,
     get_pypi_src_and_test,
     get_pyproject_toml,
 )
-from dag_engine import TaskNode, concatenate_args, get_output_of_process, run_process
-
-
-def get_docker_build_command(target: str, project_root: Path) -> list[str]:
-    """Creates docker build command."""
-    return concatenate_args(
-        args=[
-            "docker",
-            "build",
-            "-f",
-            get_dockerfile(project_root=project_root),
-            "--target",
-            target,
-            "--build-arg",
-            "BUILDKIT_INLINE_CACHE=1",
-            "-t",
-            get_docker_dev_image(project_root=project_root),
-            project_root.absolute(),
-        ]
-    )
+from dag_engine import (
+    TaskNode,
+    concatenate_args,
+    get_output_of_process,
+    run_process,
+    run_process_as_local_user,
+)
 
 
 class BuildDevEnvironment(TaskNode):
@@ -56,33 +41,16 @@ class BuildDevEnvironment(TaskNode):
         """Check to make sure we are logged into docker."""
         return []
 
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Builds a stable environment for running dev commands."""
         run_process(
             args=get_docker_build_command(
-                target="dev", project_root=docker_project_root
-            )
-        )
-
-
-class OpenDevDockerShell(TaskNode):
-    """Opens a shell in a temporary docker container running the dev environment."""
-
-    def required_tasks(self) -> list[TaskNode]:
-        """Requires we build a dev docker image first."""
-        return [BuildDevEnvironment()]
-
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
-        """Runs an interactive docker command that opens a bash shell."""
-        run_process(
-            args=concatenate_args(
-                args=[
-                    get_interactive_dev_docker_command(
-                        non_docker_project_root=non_docker_project_root,
-                        docker_project_root=docker_project_root,
-                    ),
-                    "/bin/bash",
-                ]
+                project_root=docker_project_root, target_image=DockerTarget.DEV
             )
         )
 
@@ -94,33 +62,16 @@ class BuildProdEnvironment(TaskNode):
         """Check to make sure we are logged into docker."""
         return []
 
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Builds a stable environment for running prod commands."""
         run_process(
             args=get_docker_build_command(
-                target="prod", project_root=docker_project_root
-            )
-        )
-
-
-class OpenProdDockerShell(TaskNode):
-    """Opens a shell in a temporary docker container running the prod environment."""
-
-    def required_tasks(self) -> list[TaskNode]:
-        """Requires we build a prod docker image first."""
-        return [BuildProdEnvironment()]
-
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
-        """Runs an interactive docker command that opens a bash shell."""
-        run_process(
-            args=concatenate_args(
-                args=[
-                    get_interactive_prod_docker_command(
-                        non_docker_project_root=non_docker_project_root,
-                        docker_project_root=docker_project_root,
-                    ),
-                    "/bin/bash",
-                ]
+                project_root=docker_project_root, target_image=DockerTarget.PROD
             )
         )
 
@@ -132,33 +83,16 @@ class BuildPulumiEnvironment(TaskNode):
         """Check to make sure we are logged into docker."""
         return []
 
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Builds a stable environment for running pulumi commands."""
         run_process(
             args=get_docker_build_command(
-                target="pulumi", project_root=docker_project_root
-            )
-        )
-
-
-class OpenPulumiDockerShell(TaskNode):
-    """Opens a shell in a temporary docker container running the pulumi environment."""
-
-    def required_tasks(self) -> list[TaskNode]:
-        """Requires we build a pulumi docker image first."""
-        return [BuildPulumiEnvironment()]
-
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
-        """Runs an interactive docker command that opens a bash shell."""
-        run_process(
-            args=concatenate_args(
-                args=[
-                    get_interactive_pulumi_docker_command(
-                        non_docker_project_root=non_docker_project_root,
-                        docker_project_root=docker_project_root,
-                    ),
-                    "/bin/bash",
-                ]
+                project_root=docker_project_root, target_image=DockerTarget.PULUMI
             )
         )
 
@@ -170,7 +104,12 @@ class Clean(TaskNode):
         """Nothing required."""
         return []
 
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Deletes all the temporary build files."""
         run_process(args=["rm", "-rf", get_build_dir(project_root=docker_project_root)])
 
@@ -200,14 +139,24 @@ class GetGitInfo(TaskNode):
         """Nothing required."""
         return []
 
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Builds a json with required git info."""
+        run_process_as_local_user(
+            args=concatenate_args(args=["git", "fetch"]),
+            local_username=local_username,
+        )
         get_git_info_json(project_root=docker_project_root).parent.mkdir(
             parents=True, exist_ok=True
         )
         get_git_info_json(project_root=docker_project_root).write_text(
             GitInfo(
-                branch=BRANCH, tags=get_output_of_process(["git", "tag"]).split("\n")
+                branch=BRANCH,
+                tags=get_output_of_process(["git", "tag"], silent=True).split("\n"),
             ).to_json()
         )
 
@@ -223,14 +172,20 @@ class TestBuildSanity(TaskNode):
         """Ensures the dev environment is present before running tests."""
         return [GetGitInfo(), BuildDevEnvironment()]
 
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Runs tests in the build_test folder."""
         run_process(
             args=concatenate_args(
                 args=[
-                    get_dev_docker_command(
+                    get_docker_command_for_image(
                         non_docker_project_root=non_docker_project_root,
                         docker_project_root=docker_project_root,
+                        target_image=DockerTarget.DEV,
                     ),
                     "pytest",
                     "-n",
@@ -249,14 +204,20 @@ class TestPythonStyle(TaskNode):
         # Todo: Add in pulumi environment and test once pulumi build doesn't break
         return [BuildDevEnvironment()]  # , BuildPulumiEnvironment()]
 
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Runs all stylistic checks on code."""
         run_process(
             args=concatenate_args(
                 args=[
-                    get_dev_docker_command(
+                    get_docker_command_for_image(
                         non_docker_project_root=non_docker_project_root,
                         docker_project_root=docker_project_root,
+                        target_image=DockerTarget.DEV,
                     ),
                     "isort",
                     "--check-only",
@@ -267,9 +228,10 @@ class TestPythonStyle(TaskNode):
         run_process(
             args=concatenate_args(
                 args=[
-                    get_dev_docker_command(
+                    get_docker_command_for_image(
                         non_docker_project_root=non_docker_project_root,
                         docker_project_root=docker_project_root,
+                        target_image=DockerTarget.DEV,
                     ),
                     "black",
                     "--check",
@@ -280,9 +242,10 @@ class TestPythonStyle(TaskNode):
         run_process(
             args=concatenate_args(
                 args=[
-                    get_dev_docker_command(
+                    get_docker_command_for_image(
                         non_docker_project_root=non_docker_project_root,
                         docker_project_root=docker_project_root,
+                        target_image=DockerTarget.DEV,
                     ),
                     "pydocstyle",
                     get_all_src_folders(project_root=docker_project_root),
@@ -292,9 +255,10 @@ class TestPythonStyle(TaskNode):
         run_process(
             args=concatenate_args(
                 args=[
-                    get_dev_docker_command(
+                    get_docker_command_for_image(
                         non_docker_project_root=non_docker_project_root,
                         docker_project_root=docker_project_root,
+                        target_image=DockerTarget.DEV,
                     ),
                     "pydocstyle",
                     "--add-ignore=D100,D104",
@@ -305,9 +269,10 @@ class TestPythonStyle(TaskNode):
         run_process(
             args=concatenate_args(
                 args=[
-                    get_dev_docker_command(
+                    get_docker_command_for_image(
                         non_docker_project_root=non_docker_project_root,
                         docker_project_root=docker_project_root,
+                        target_image=DockerTarget.DEV,
                     ),
                     "flake8",
                     get_all_python_folders(project_root=docker_project_root),
@@ -316,13 +281,19 @@ class TestPythonStyle(TaskNode):
         )
         mypy_command = concatenate_args(
             args=[
-                get_base_docker_command(
+                get_base_docker_command_for_image(
                     non_docker_project_root=non_docker_project_root,
                     docker_project_root=docker_project_root,
+                    target_image=DockerTarget.DEV,
                 ),
                 "-e",
-                get_mypy_path_env(project_root=docker_project_root),
-                get_docker_dev_image(project_root=docker_project_root),
+                get_mypy_path_env(
+                    docker_project_root=docker_project_root,
+                    target_image=DockerTarget.DEV,
+                ),
+                get_docker_image(
+                    project_root=docker_project_root, target_image=DockerTarget.DEV
+                ),
                 "mypy",
                 "--explicit-package-bases",
             ]
@@ -379,14 +350,20 @@ class Lint(TaskNode):
         """Makes sure dev environment has been built before linting."""
         return [BuildDevEnvironment()]
 
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Lints all python files in project."""
         run_process(
             args=concatenate_args(
                 args=[
-                    get_dev_docker_command(
+                    get_docker_command_for_image(
                         non_docker_project_root=non_docker_project_root,
                         docker_project_root=docker_project_root,
+                        target_image=DockerTarget.DEV,
                     ),
                     "isort",
                     get_all_python_folders(project_root=docker_project_root),
@@ -396,9 +373,10 @@ class Lint(TaskNode):
         run_process(
             args=concatenate_args(
                 args=[
-                    get_dev_docker_command(
+                    get_docker_command_for_image(
                         non_docker_project_root=non_docker_project_root,
                         docker_project_root=docker_project_root,
+                        target_image=DockerTarget.DEV,
                     ),
                     "black",
                     get_all_python_folders(project_root=docker_project_root),
@@ -414,12 +392,43 @@ class PushTags(TaskNode):
         """Checks to see if the version is appropriate for the branch we are on."""
         return [TestBuildSanity()]
 
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Push tags."""
         version = get_project_version(project_root=docker_project_root)
         if (BRANCH == "main") ^ ("dev" in version):
+            current_diff = get_output_of_process(
+                args=concatenate_args(args=["git", "diff"])
+            )
+            if current_diff:
+                run_process_as_local_user(
+                    args=concatenate_args(args=["git", "add", "-u"]),
+                    local_username=local_username,
+                )
+                run_process_as_local_user(
+                    args=concatenate_args(
+                        args=[
+                            "git",
+                            "commit",
+                            "-m",
+                            f"'Committing staged changes for {version}'",
+                        ]
+                    ),
+                    local_username=local_username,
+                )
+                run_process_as_local_user(
+                    args=concatenate_args(args=["git", "push"]),
+                    local_username=local_username,
+                )
             run_process(args=concatenate_args(args=["git", "tag", version]))
-            run_process(args=concatenate_args(args=["git", "push", "--tags"]))
+            run_process_as_local_user(
+                args=concatenate_args(args=["git", "push", "--tags"]),
+                local_username=local_username,
+            )
         else:
             raise Exception(f"Tag {version} is incompatible with branch {BRANCH}.")
 
@@ -448,7 +457,12 @@ class MakeProjectFromTemplate(TaskNode):
         """Nothing required."""
         return [Clean()]
 
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Modifies the appropriate files to start a new project."""
         master_project_settings = ProjectSettings.from_json(
             get_project_settings_json(project_root=docker_project_root).read_text()

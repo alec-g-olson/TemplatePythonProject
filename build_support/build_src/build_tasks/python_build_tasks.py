@@ -10,10 +10,10 @@ from build_tasks.common_build_tasks import (
 )
 from common_vars import (
     THREADS_AVAILABLE,
+    DockerTarget,
     get_build_dir,
-    get_dev_docker_command,
     get_dist_dir,
-    get_prod_docker_command,
+    get_docker_command_for_image,
     get_project_name,
     get_project_version,
     get_pypi_src_and_test,
@@ -114,14 +114,20 @@ class TestPypi(TaskNode):
         """Ensures dev env is built."""
         return [BuildDevEnvironment()]
 
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Tests the PyPi package."""
         run_process(
             args=concatenate_args(
                 args=[
-                    get_dev_docker_command(
+                    get_docker_command_for_image(
                         non_docker_project_root=non_docker_project_root,
                         docker_project_root=docker_project_root,
+                        target_image=DockerTarget.DEV,
                     ),
                     "pytest",
                     "-n",
@@ -144,14 +150,20 @@ class BuildPypi(TaskNode):
             BuildProdEnvironment(),
         ]
 
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Builds PyPi package."""
         run_process(
             args=concatenate_args(
                 args=[
-                    get_prod_docker_command(
+                    get_docker_command_for_image(
                         non_docker_project_root=non_docker_project_root,
                         docker_project_root=docker_project_root,
+                        target_image=DockerTarget.PROD,
                     ),
                     "rm",
                     "-rf",
@@ -162,9 +174,10 @@ class BuildPypi(TaskNode):
         run_process(
             args=concatenate_args(
                 args=[
-                    get_prod_docker_command(
+                    get_docker_command_for_image(
                         non_docker_project_root=non_docker_project_root,
                         docker_project_root=docker_project_root,
+                        target_image=DockerTarget.PROD,
                     ),
                     "poetry",
                     "build",
@@ -175,9 +188,10 @@ class BuildPypi(TaskNode):
         run_process(
             args=concatenate_args(
                 args=[
-                    get_prod_docker_command(
+                    get_docker_command_for_image(
                         non_docker_project_root=non_docker_project_root,
                         docker_project_root=docker_project_root,
+                        target_image=DockerTarget.PROD,
                     ),
                     "mv",
                     get_temp_dist_dir(project_root=docker_project_root),
@@ -194,5 +208,10 @@ class PushPypi(TaskNode):
         """Must build PyPi and push git tags before PyPi is pushed."""
         return [PushTags(), BuildPypi()]
 
-    def run(self, non_docker_project_root: Path, docker_project_root: Path) -> None:
+    def run(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_username: str,
+    ) -> None:
         """Push PyPi."""

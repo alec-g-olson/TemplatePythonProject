@@ -13,9 +13,15 @@ COPY poetry.lock poetry.lock
 COPY pyproject.toml pyproject.toml
 RUN poetry config virtualenvs.create false
 
-FROM base AS build
+FROM base as git_enabled
+
+# Allow for git stuff to work in /usr/dev
+RUN git config --global --add safe.directory /usr/dev
+
+FROM git_enabled AS build
 
 RUN poetry install --with build
+
 # Add Docker's official GPG key:
 RUN apt-get update
 RUN apt-get install ca-certificates curl gnupg
@@ -31,7 +37,18 @@ RUN echo \
 RUN apt-get update
 RUN apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-FROM base AS dev
+# create local user so local permissions can be mounted into the container
+# Should be safe, but never push build images or containers
+ARG CURRENT_USER=default_user
+ARG CURRENT_GROUP=default_group
+ARG CURRENT_USER_ID=1000
+ARG CURRENT_GROUP_ID=1000
+RUN groupadd --gid $CURRENT_GROUP_ID $CURRENT_GROUP || groupadd --gid $CURRENT_GROUP_ID hack-group || true
+RUN adduser --gid $CURRENT_GROUP_ID --uid $CURRENT_USER_ID $CURRENT_USER
+RUN mkdir -p /home/$CURRENT_USER/.ssh
+RUN chown -R $CURRENT_USER_ID:$CURRENT_GROUP_ID /home/$CURRENT_USER/.ssh
+
+FROM git_enabled AS dev
 
 RUN poetry install --with dev
 

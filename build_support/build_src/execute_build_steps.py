@@ -5,13 +5,13 @@ from pathlib import Path
 
 from build_tasks.combined_tasks import Autoflake, Push, Test
 from build_tasks.common_build_tasks import (
+    BuildDevEnvironment,
+    BuildProdEnvironment,
+    BuildPulumiEnvironment,
     Clean,
     GetGitInfo,
     Lint,
     MakeProjectFromTemplate,
-    OpenDevDockerShell,
-    OpenProdDockerShell,
-    OpenPulumiDockerShell,
     TestBuildSanity,
     TestPythonStyle,
 )
@@ -21,9 +21,9 @@ from dag_engine import TaskNode, concatenate_args, run_process, run_tasks
 CLI_ARG_TO_TASK: dict[str, TaskNode] = {
     "make_new_project": MakeProjectFromTemplate(),
     "clean": Clean(),
-    "open_dev_docker_shell": OpenDevDockerShell(),
-    "open_prod_docker_shell": OpenProdDockerShell(),
-    "open_pulumi_docker_shell": OpenPulumiDockerShell(),
+    "build_dev": BuildDevEnvironment(),
+    "build_prod": BuildProdEnvironment(),
+    "build_pulumi": BuildPulumiEnvironment(),
     "get_git_info": GetGitInfo(),
     "test_style": TestPythonStyle(),
     "test_build_sanity": TestBuildSanity(),
@@ -58,7 +58,7 @@ def fix_permissions(local_user: str) -> None:
 
 if __name__ == "__main__":
     parser = ArgumentParser(
-        prog="BuildTools",
+        prog="ExecuteBuildSteps",
         description="This tool exists to facilitate building, testing, "
         "and deploying this project's artifacts",
     )
@@ -95,6 +95,12 @@ if __name__ == "__main__":
         required=True,
         help="User's Group ID, used to return files made by docker to owner.",
     )
+    parser.add_argument(
+        "--local-username",
+        type=str,
+        required=True,
+        help="User's name, used to run commands in docker as the local user.",
+    )
     args = parser.parse_args()
     tasks = [CLI_ARG_TO_TASK[arg] for arg in args.build_tasks]
     try:
@@ -102,6 +108,7 @@ if __name__ == "__main__":
             tasks=tasks,
             non_docker_project_root=args.non_docker_project_root,
             docker_project_root=args.docker_project_root,
+            local_username=args.local_username,
         )
     except Exception as e:
         print(e)

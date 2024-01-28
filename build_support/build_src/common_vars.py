@@ -2,6 +2,7 @@
 
 import multiprocessing
 import tomllib
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +12,15 @@ BRANCH = get_output_of_process(
     args=["git", "rev-parse", "--abbrev-ref", "HEAD"], silent=True
 )
 THREADS_AVAILABLE = multiprocessing.cpu_count()
+
+
+class DockerTarget(Enum):
+    """An Enum to track the possible docker targets and images."""
+
+    BUILD = "build"
+    DEV = "dev"
+    PROD = "prod"
+    PULUMI = "pulumi"
 
 
 def get_pyproject_toml(project_root: Path) -> Path:
@@ -73,19 +83,9 @@ def get_git_info_json(project_root: Path) -> Path:
     return get_build_dir(project_root=project_root).joinpath("git_info.json")
 
 
-def get_docker_dev_image(project_root: Path) -> str:
-    """Gets the dev docker image name."""
-    return ":".join([get_project_name(project_root=project_root), "dev"])
-
-
-def get_docker_prod_image(project_root: Path) -> str:
-    """Gets the prod docker image name."""
-    return ":".join([get_project_name(project_root=project_root), "prod"])
-
-
-def get_docker_pulumi_image(project_root: Path) -> str:
-    """Gets the pulumi docker image name."""
-    return ":".join([get_project_name(project_root=project_root), "pulumi"])
+def get_docker_image(project_root: Path, target_image: DockerTarget) -> str:
+    """Gets the docker image name for a target."""
+    return ":".join([get_project_name(project_root=project_root), target_image.value])
 
 
 def get_dockerfile(project_root: Path) -> Path:
@@ -174,23 +174,42 @@ def get_temp_dist_dir(project_root: Path) -> Path:
     return project_root.joinpath("dist")
 
 
-def get_python_path(project_root: Path) -> str:
+def get_python_path_for_target_image(
+    docker_project_root: Path, target_image: DockerTarget
+) -> str:
     """Gets the python path to use with this project."""
-    return ":".join(str(x) for x in get_all_python_folders(project_root=project_root))
+    match target_image:
+        case DockerTarget.BUILD:
+            python_folders: Path | list[str] = get_build_src_dir(
+                project_root=docker_project_root
+            )
+        case DockerTarget.DEV:
+            python_folders = get_all_python_folders(project_root=docker_project_root)
+        case DockerTarget.PROD:
+            python_folders = get_pypi_src_dir(project_root=docker_project_root)
+        case DockerTarget.PULUMI:
+            python_folders = get_pulumi_dir(project_root=docker_project_root)
+        case _:
+            raise ValueError(f"{repr(target_image)} is not a valid enum of DockerType.")
+    return ":".join(concatenate_args(args=[python_folders]))
 
 
-def get_python_path_env(project_root: Path) -> str:
+def get_python_path_env(docker_project_root: Path, target_image: DockerTarget) -> str:
     """Gets the python path ENV to use with this project."""
-    return "PYTHONPATH=" + get_python_path(project_root=project_root)
+    return "PYTHONPATH=" + get_python_path_for_target_image(
+        docker_project_root=docker_project_root, target_image=target_image
+    )
 
 
-def get_mypy_path_env(project_root: Path) -> str:
+def get_mypy_path_env(docker_project_root: Path, target_image: DockerTarget) -> str:
     """Gets the python path ENV to use with this project."""
-    return "MYPYPATH=" + get_python_path(project_root=project_root)
+    return "MYPYPATH=" + get_python_path_for_target_image(
+        docker_project_root=docker_project_root, target_image=target_image
+    )
 
 
-def get_base_docker_command(
-    non_docker_project_root: Path, docker_project_root: Path
+def get_base_docker_command_for_image(
+    non_docker_project_root: Path, docker_project_root: Path, target_image: DockerTarget
 ) -> list[str]:
     """Basic docker args that are called for every command."""
     return concatenate_args(
@@ -200,101 +219,77 @@ def get_base_docker_command(
             "--rm",
             f"--workdir={docker_project_root.absolute()}",
             "-e",
-            get_python_path_env(project_root=docker_project_root),
+            get_python_path_env(
+                docker_project_root=docker_project_root, target_image=target_image
+            ),
             "-v",
-            f"{non_docker_project_root.absolute()}:{docker_project_root.absolute()}",
+            "/var/run/docker.sock:/var/run/docker.sock",
+            "-v",
+            ":".join(
+                concatenate_args(
+                    args=[
+                        non_docker_project_root.absolute(),
+                        docker_project_root.absolute(),
+                    ]
+                )
+            ),
         ]
     )
 
 
-def get_dev_docker_command(
-    non_docker_project_root: Path, docker_project_root: Path
+def get_docker_command_for_image(
+    non_docker_project_root: Path, docker_project_root: Path, target_image: DockerTarget
 ) -> list[str]:
     """Basic docker args that are called for dev environment commands."""
     return concatenate_args(
         [
-            get_base_docker_command(
+            get_base_docker_command_for_image(
                 non_docker_project_root=non_docker_project_root,
                 docker_project_root=docker_project_root,
+                target_image=target_image,
             ),
-            get_docker_dev_image(project_root=docker_project_root),
+            get_docker_image(
+                project_root=docker_project_root, target_image=target_image
+            ),
         ]
     )
 
 
-def get_interactive_dev_docker_command(
-    non_docker_project_root: Path, docker_project_root: Path
+def get_interactive_docker_command_for_image(
+    non_docker_project_root: Path, docker_project_root: Path, target_image: DockerTarget
 ) -> list[str]:
     """Basic docker args that are called for an interactive dev environment."""
     return concatenate_args(
         [
-            get_base_docker_command(
+            get_base_docker_command_for_image(
                 non_docker_project_root=non_docker_project_root,
                 docker_project_root=docker_project_root,
+                target_image=target_image,
             ),
             "-it",
-            get_docker_dev_image(project_root=docker_project_root),
+            get_docker_image(
+                project_root=docker_project_root, target_image=target_image
+            ),
         ]
     )
 
 
-def get_prod_docker_command(
-    non_docker_project_root: Path, docker_project_root: Path
+def get_docker_build_command(
+    project_root: Path, target_image: DockerTarget
 ) -> list[str]:
-    """Basic docker args that are called for prod environment commands."""
+    """Creates docker build command."""
     return concatenate_args(
-        [
-            get_base_docker_command(
-                non_docker_project_root=non_docker_project_root,
-                docker_project_root=docker_project_root,
-            ),
-            get_docker_prod_image(project_root=docker_project_root),
-        ]
-    )
-
-
-def get_interactive_prod_docker_command(
-    non_docker_project_root: Path, docker_project_root: Path
-) -> list[str]:
-    """Basic docker args that are called for an interactive prod environment."""
-    return concatenate_args(
-        [
-            get_base_docker_command(
-                non_docker_project_root=non_docker_project_root,
-                docker_project_root=docker_project_root,
-            ),
-            "-it",
-            get_docker_prod_image(project_root=docker_project_root),
-        ]
-    )
-
-
-def get_pulumi_docker_command(
-    non_docker_project_root: Path, docker_project_root: Path
-) -> list[str]:
-    """Basic docker args that are called for pulumi environment commands."""
-    return concatenate_args(
-        [
-            get_base_docker_command(
-                non_docker_project_root=non_docker_project_root,
-                docker_project_root=docker_project_root,
-            ),
-            get_docker_pulumi_image(project_root=docker_project_root),
-        ]
-    )
-
-
-def get_interactive_pulumi_docker_command(
-    non_docker_project_root: Path, docker_project_root: Path
-) -> list[str]:
-    """Basic docker args that are called for an interactive pulumi environment."""
-    return concatenate_args(
-        [
-            get_base_docker_command(
-                non_docker_project_root=non_docker_project_root,
-                docker_project_root=docker_project_root,
-            ),
-            "-it",
-            get_docker_pulumi_image(project_root=docker_project_root),
+        args=[
+            "docker",
+            "build",
+            "-f",
+            get_dockerfile(project_root=project_root),
+            "--target",
+            target_image.value,
+            "--build-arg",
+            "BUILDKIT_INLINE_CACHE=1",
+            "-t",
+            get_docker_image(project_root=project_root, target_image=target_image),
+            project_root.absolute(),
         ]
     )
