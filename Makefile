@@ -13,9 +13,10 @@ USER_NAME = $(shell id -un)
 GROUP_NAME = $(shell id -gn)
 USER = $(USER_ID):$(GROUP_ID)
 
-USER_HOME_DIR = $(shell ~)
+USER_HOME_DIR = ${HOME}
+GIT_CONFIG_PATH = $(USER_HOME_DIR)/.gitconfig
 
-ifeq ("$(wildcard $(USER_HOME_DIR)/.gitconfig)","")
+ifneq ("$(wildcard $(GIT_CONFIG_PATH))","")
     GIT_MOUNT = -v ~/.gitconfig:/home/$(USER_NAME)/.gitconfig
 else
     GIT_MOUNT =
