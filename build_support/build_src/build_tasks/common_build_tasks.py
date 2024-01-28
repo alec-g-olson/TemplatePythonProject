@@ -20,9 +20,12 @@ from common_vars import (
     get_docker_image,
     get_git_info_json,
     get_mypy_path_env,
+    get_project_name,
     get_project_version,
+    get_pulumi_dir,
     get_pulumi_version,
     get_pypi_src_and_test,
+    get_pypi_src_dir,
 )
 from dag_engine import (
     TaskNode,
@@ -200,13 +203,63 @@ class TestBuildSanity(TaskNode):
         )
 
 
+def get_bandit_pypi_report_name(project_root: Path) -> str:
+    """Get the name of the pypi bandit security report."""
+    return (
+        get_project_name(project_root=project_root)
+        + "_pypi_bandit_report_"
+        + get_project_version(project_root=project_root)
+        + ".txt"
+    )
+
+
+def get_bandit_pypi_report_path(project_root: Path) -> Path:
+    """Get the path of the pulumi bandit security report."""
+    return get_build_dir(project_root=project_root).joinpath(
+        get_bandit_pypi_report_name(project_root=project_root)
+    )
+
+
+def get_bandit_pulumi_report_name(project_root: Path) -> str:
+    """Get the name of the pypi bandit security report."""
+    return (
+        get_project_name(project_root=project_root)
+        + "_pulumi_bandit_report_"
+        + get_project_version(project_root=project_root)
+        + ".txt"
+    )
+
+
+def get_bandit_pulumi_report_path(project_root: Path) -> Path:
+    """Get the path of the pulumi bandit security report."""
+    return get_build_dir(project_root=project_root).joinpath(
+        get_bandit_pulumi_report_name(project_root=project_root)
+    )
+
+
+def get_bandit_build_support_report_name(project_root: Path) -> str:
+    """Get the name of the pypi bandit security report."""
+    return (
+        get_project_name(project_root=project_root)
+        + "_build_support_bandit_report_"
+        + get_project_version(project_root=project_root)
+        + ".txt"
+    )
+
+
+def get_bandit_build_support_report_path(project_root: Path) -> Path:
+    """Get the path of the pulumi bandit security report."""
+    return get_build_dir(project_root=project_root).joinpath(
+        get_bandit_build_support_report_name(project_root=project_root)
+    )
+
+
 class TestPythonStyle(TaskNode):
     """Task enforcing stylistic checks of python code."""
 
     def required_tasks(self) -> list[TaskNode]:
         """Ensures the dev environment is present before running style checks."""
-        # Todo: Add in pulumi environment and test once pulumi build doesn't break
-        return [BuildDevEnvironment()]  # , BuildPulumiEnvironment()]
+        return [BuildDevEnvironment()]
 
     def run(
         self,
@@ -326,25 +379,64 @@ class TestPythonStyle(TaskNode):
                 ]
             )
         )
-        # Todo: Uncomment once pulumi is working
-        """
         run_process(
             args=concatenate_args(
                 args=[
-                    get_base_docker_command(
-                        external_project_root=external_project_root,
-                    ),
-                    "-e",
-                    "MYPYPATH=" + PYTHON_PATH_TO_INCLUDE,
-                    "--user",
-                    USER,
-                    DOCKER_PULUMI_IMAGE,
-                    "mypy",
-                    "--explicit-package-bases",
-                    DOCKER_REMOTE_PULUMI,
+                    mypy_command,
+                    get_pulumi_dir(project_root=docker_project_root),
                 ]
             )
-        )"""
+        )
+        run_process(
+            args=concatenate_args(
+                args=[
+                    get_docker_command_for_image(
+                        non_docker_project_root=non_docker_project_root,
+                        docker_project_root=docker_project_root,
+                        target_image=DockerTarget.DEV,
+                    ),
+                    "bandit",
+                    "-o",
+                    get_bandit_pypi_report_path(project_root=docker_project_root),
+                    "-r",
+                    get_pypi_src_dir(project_root=docker_project_root),
+                ]
+            )
+        )
+        run_process(
+            args=concatenate_args(
+                args=[
+                    get_docker_command_for_image(
+                        non_docker_project_root=non_docker_project_root,
+                        docker_project_root=docker_project_root,
+                        target_image=DockerTarget.DEV,
+                    ),
+                    "bandit",
+                    "-o",
+                    get_bandit_pulumi_report_path(project_root=docker_project_root),
+                    "-r",
+                    get_pulumi_dir(project_root=docker_project_root),
+                ]
+            )
+        )
+        run_process(
+            args=concatenate_args(
+                args=[
+                    get_docker_command_for_image(
+                        non_docker_project_root=non_docker_project_root,
+                        docker_project_root=docker_project_root,
+                        target_image=DockerTarget.DEV,
+                    ),
+                    "bandit",
+                    "-o",
+                    get_bandit_build_support_report_path(
+                        project_root=docker_project_root
+                    ),
+                    "-r",
+                    get_build_src_dir(project_root=docker_project_root),
+                ]
+            )
+        )
 
 
 class Lint(TaskNode):

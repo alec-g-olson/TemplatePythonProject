@@ -16,7 +16,7 @@ line_length = 88
 
 [tool.poetry]
 name = "template_python_project"
-version = "0.2.11"
+version = "0.2.12"
 license = "unlicense"
 description = "A project that can be used as a template to provide some CI/CD out of the box."
 authors = ["Alexander Olson <alec.g.olson@gmail.com>"]
@@ -42,6 +42,7 @@ optional = true
 
 [tool.poetry.group.dev.dependencies]
 autoflake = "^2.2"
+bandit = {extras = ["baseline", "toml"], version = "^1.7.7"}
 black = "^23.12"
 isort = "^5.13"
 flake8 = "^7.0"

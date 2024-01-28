@@ -1,3 +1,5 @@
+[![security: bandit](https://img.shields.io/badge/security-bandit-yellow.svg)](https://github.com/PyCQA/bandit)
+
 # Template Project
 
 This project exists to give me and anyone else who would like to use it a template to work off of
