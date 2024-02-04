@@ -41,6 +41,7 @@ class TestAll(TaskNode):
         local_username: str,
     ) -> None:
         """Does nothing."""
+        pass
 
 
 class TestBuildSanity(TaskNode):
@@ -48,6 +49,7 @@ class TestBuildSanity(TaskNode):
 
     - Branch and version are coherent.
     - Readme hasn't been wildly reformatted unexpectedly.
+    - All elements of the build pipeline are passing tests.
     """
 
     def required_tasks(self) -> list[TaskNode]:

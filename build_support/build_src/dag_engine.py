@@ -18,9 +18,11 @@ class TaskNode(ABC):
         return self.__class__.__name__
 
     def __eq__(self, other):
-        return self.task_label() == other.task_label()
+        """Checks if this is equal to the other item."""
+        return isinstance(other, TaskNode) and self.task_label() == other.task_label()
 
     def __hash__(self):
+        """Calculates a hash value for use in __eq__."""
         return hash(self.task_label())
 
     @abstractmethod

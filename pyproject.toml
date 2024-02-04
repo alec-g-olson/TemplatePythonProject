@@ -24,7 +24,7 @@ readme = "README.md"
 repository = "https://github.com/alec-g-olson/TemplatePythonProject"
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "3.12.1"  # If changed here change base image in Dockerfile
 Pydantic = "^2.5"
 
 [tool.poetry.group.build]

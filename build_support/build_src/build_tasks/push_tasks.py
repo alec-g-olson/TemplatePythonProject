@@ -4,8 +4,12 @@ from pathlib import Path
 
 from build_tasks.build_tasks import BuildPypi
 from build_tasks.test_tasks import TestAll
-from build_vars.git_status_vars import get_current_branch
-from build_vars.project_setting_vars import get_project_version
+from build_vars.git_status_vars import (
+    current_branch_is_main,
+    get_current_branch,
+    get_git_diff,
+)
+from build_vars.project_setting_vars import get_project_version, is_dev_project_version
 from dag_engine import (
     TaskNode,
     concatenate_args,
@@ -29,6 +33,7 @@ class PushAll(TaskNode):
         local_username: str,
     ) -> None:
         """Does nothing."""
+        pass
 
 
 class PushTags(TaskNode):
@@ -45,12 +50,12 @@ class PushTags(TaskNode):
         local_username: str,
     ) -> None:
         """Push tags."""
-        branch = get_current_branch()
-        version = get_project_version(project_root=docker_project_root)
-        if (branch == "main") ^ ("dev" in version):
-            current_diff = get_output_of_process(
-                args=concatenate_args(args=["git", "diff"])
-            )
+        current_branch = get_current_branch()
+        current_version = get_project_version(project_root=docker_project_root)
+        currently_on_main = current_branch_is_main(current_branch=current_branch)
+        is_dev_version = is_dev_project_version(project_version=current_version)
+        if currently_on_main ^ is_dev_version:
+            current_diff = get_git_diff()
             if current_diff:
                 run_process_as_local_user(
                     args=concatenate_args(args=["git", "add", "-u"]),
@@ -62,7 +67,7 @@ class PushTags(TaskNode):
                             "git",
                             "commit",
                             "-m",
-                            f"'Committing staged changes for {version}'",
+                            f"'Committing staged changes for {current_version}'",
                         ]
                     ),
                     local_username=local_username,
@@ -71,13 +76,15 @@ class PushTags(TaskNode):
                     args=concatenate_args(args=["git", "push"]),
                     local_username=local_username,
                 )
-            run_process(args=concatenate_args(args=["git", "tag", version]))
+            run_process(args=concatenate_args(args=["git", "tag", current_version]))
             run_process_as_local_user(
                 args=concatenate_args(args=["git", "push", "--tags"]),
                 local_username=local_username,
             )
         else:
-            raise Exception(f"Tag {version} is incompatible with branch {branch}.")
+            raise ValueError(
+                f"Tag {current_version} is incompatible with branch {current_branch}."
+            )
 
 
 class PushPypi(TaskNode):
@@ -94,3 +101,4 @@ class PushPypi(TaskNode):
         local_username: str,
     ) -> None:
         """Push PyPi."""
+        pass

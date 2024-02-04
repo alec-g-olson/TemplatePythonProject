@@ -135,8 +135,8 @@ class GitInfo:
         if not all(isinstance(tag, str) for tag in self.tags):
             types = {tag.__class__.__name__ for tag in self.tags}
             raise ValueError(
-                'All elements of "tags" in git info must be a string, '
-                f"found types {','.join(sorted(list(types)))}."
+                'All elements of "tags" in git info must be strings, '
+                f"found types ({','.join(sorted(list(types)))})."
             )
 
 

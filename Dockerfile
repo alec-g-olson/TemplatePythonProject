@@ -1,3 +1,5 @@
+# If python version changed here change in pyproject.toml
+# [tool.poetry.dependencies]
 FROM python:3.12.1 AS base
 
 # make sure to update build.system.requries poetry version in pyproject.toml

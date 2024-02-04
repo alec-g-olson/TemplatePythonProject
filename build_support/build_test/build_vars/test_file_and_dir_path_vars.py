@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from build_vars.file_and_dir_path_vars import (
     get_all_non_pulumi_python_folders,
     get_all_python_folders,

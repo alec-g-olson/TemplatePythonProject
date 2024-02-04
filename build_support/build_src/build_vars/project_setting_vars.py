@@ -1,4 +1,5 @@
 """Collection of all functions and variable that report project level settings."""
+import re
 import tomllib
 from pathlib import Path
 from typing import Any
@@ -15,14 +16,30 @@ def get_pyproject_toml_data(project_root: Path) -> dict[Any, Any]:
     return tomllib.loads(get_pyproject_toml(project_root=project_root).read_text())
 
 
+ALLOWED_VERSION_REGEX = re.compile(r"^\d+\.\d+\.\d+(-dev\.\d+)?$")
+
+
 def get_project_version(project_root: Path) -> str:
-    """Gets the project version from the pyproject.toml in a project."""
-    return (
-        "v"
-        + get_pyproject_toml_data(project_root=project_root)["tool"]["poetry"][
-            "version"
-        ]
-    )
+    version_str = get_pyproject_toml_data(project_root=project_root)["tool"]["poetry"][
+        "version"
+    ]
+    if not ALLOWED_VERSION_REGEX.match(version_str):
+        allowed_regex_str = ALLOWED_VERSION_REGEX.pattern
+        raise ValueError(
+            "Project version in pyproject.toml must match the regex "
+            f"'{allowed_regex_str}', found '{version_str}'."
+        )
+    return "v" + version_str
+
+
+def is_dev_project_version(project_version: str) -> bool:
+    """Determines if the current project version is a dev version."""
+    return "dev" in project_version
+
+
+def is_prod_project_version(project_version: str) -> bool:
+    """Determines if the current project version is a production version."""
+    return "dev" not in project_version
 
 
 def get_project_name(project_root: Path) -> str:

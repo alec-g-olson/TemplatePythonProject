@@ -2,7 +2,7 @@ from pathlib import Path
 from unittest.mock import call, patch
 
 from build_tasks.env_setup_tasks import BuildDevEnvironment
-from build_tasks.lint import Autoflake, Lint
+from build_tasks.lint_tasks import Autoflake, Lint
 from build_tasks.test_tasks import TestBuildSanity, TestPypi
 from build_vars.docker_vars import DockerTarget, get_docker_command_for_image
 from build_vars.file_and_dir_path_vars import get_all_python_folders
@@ -19,7 +19,7 @@ def test_run_lint(
     docker_project_root: Path,
     local_username: str,
 ):
-    with patch("build_tasks.lint.run_process") as run_process_mock:
+    with patch("build_tasks.lint_tasks.run_process") as run_process_mock:
         isort_args = concatenate_args(
             args=[
                 get_docker_command_for_image(
@@ -60,13 +60,13 @@ def test_autoflake_requires():
     assert Autoflake().required_tasks() == [Lint(), TestPypi(), TestBuildSanity()]
 
 
-def test_autoflake_lint(
+def test_run_autoflake(
     mock_project_root: Path,
     mock_docker_pyproject_toml_file: Path,
     docker_project_root: Path,
     local_username: str,
 ):
-    with patch("build_tasks.lint.run_process") as run_process_mock:
+    with patch("build_tasks.lint_tasks.run_process") as run_process_mock:
         autoflake_args = concatenate_args(
             args=[
                 get_docker_command_for_image(

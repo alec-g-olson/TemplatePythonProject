@@ -3,7 +3,6 @@ import tomllib
 from pathlib import Path
 
 import pytest
-from build_tasks.env_setup_tasks import GitInfo
 
 SEMVER_REGEX = re.compile(r"^v\d+\.\d+\.\d+(-dev\.\d+)?$")
 

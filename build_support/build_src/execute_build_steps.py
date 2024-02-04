@@ -11,7 +11,7 @@ from build_tasks.env_setup_tasks import (
     Clean,
     GetGitInfo,
 )
-from build_tasks.lint import Autoflake, Lint
+from build_tasks.lint_tasks import Autoflake, Lint
 from build_tasks.push_tasks import PushAll, PushPypi
 from build_tasks.test_tasks import TestAll, TestBuildSanity, TestPypi, TestPythonStyle
 from build_vars.file_and_dir_path_vars import get_build_dir

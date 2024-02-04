@@ -8,7 +8,10 @@ from build_vars.project_setting_vars import (
     get_project_version,
     get_pulumi_version,
     get_pyproject_toml_data,
+    is_dev_project_version,
+    is_prod_project_version,
 )
+from conftest import other_package_info
 
 
 def test_parse_real_pyproject_toml_file(real_project_root_dir):
@@ -46,6 +49,33 @@ class TestPyprojectToml:
             get_project_version(project_root=mock_project_root) == "v" + project_version
         )
 
+    def test_get_bad_project_version(
+        self,
+        mock_project_root: Path,
+    ):
+        mock_pyproject_toml_file = get_pyproject_toml(project_root=mock_project_root)
+        mock_pyproject_toml_file.write_text(
+            '[tool.poetry]\nname = "some_project_name"\nversion = "AN_INVALID_PROJECT_VERSION"'
+        )
+        with pytest.raises(ValueError):
+            get_project_version(project_root=mock_project_root)
+
+    def test_is_dev_project_version(
+        self,
+        project_version: str,
+    ):
+        assert is_dev_project_version(project_version=project_version) == (
+            "dev" in project_version
+        )
+
+    def test_is_prod_project_version(
+        self,
+        project_version: str,
+    ):
+        assert is_prod_project_version(project_version=project_version) == (
+            "dev" not in project_version
+        )
+
     def test_get_project_name(
         self, mock_project_root: Path, mock_local_pyproject_toml_file, project_name: str
     ):
@@ -55,39 +85,16 @@ class TestPyprojectToml:
 class TestPoetryLock:
     """A class to hold poetry.lock tests and fixtures."""
 
-    pulumi_versions = ["0.0.0", "0.0.1", "0.1.0", "1.0.0"]
-    other_package = '[[package]]\nname = "other_package"\nversion = "1.0.0"\n\n'
-
-    @pytest.fixture(params=pulumi_versions)
-    def pulumi_version(self, request) -> str:
-        """The version contained in the pyproject toml."""
-        return request.param
-
-    @pytest.fixture
-    def poetry_lock_contents(self, pulumi_version: str) -> str:
-        """The contents of a pyproject toml to be used in testing."""
-        return (
-            self.other_package
-            + f'[[package]]\nname = "pulumi"\nversion = "{pulumi_version}"'
-        )
-
-    @pytest.fixture
-    def mock_poetry_lock_file(self, poetry_lock_contents, mock_project_root) -> Path:
-        """Creates a mock pyproject toml file for use in testing."""
-        mock_poetry_lock_file = get_poetry_lock_file(project_root=mock_project_root)
-        mock_poetry_lock_file.write_text(poetry_lock_contents)
-        return mock_poetry_lock_file
-
     def test_get_pulumi_version(
         self,
         mock_project_root: Path,
-        mock_poetry_lock_file: Path,
+        mock_local_poetry_lock_file: Path,
         pulumi_version: str,
     ):
         assert get_pulumi_version(project_root=mock_project_root) == pulumi_version
 
-    def test_get_pulumi_version_not_found(self, mock_project_root: Path):
-        mock_poetry_lock_file = get_poetry_lock_file(project_root=mock_project_root)
-        mock_poetry_lock_file.write_text(self.other_package)
+    def test_get_pulumi_version_not_found(self, docker_project_root: Path):
+        mock_poetry_lock_file = get_poetry_lock_file(project_root=docker_project_root)
+        mock_poetry_lock_file.write_text(other_package_info)
         with pytest.raises(ValueError):
-            get_pulumi_version(project_root=mock_project_root)
+            get_pulumi_version(project_root=docker_project_root)
