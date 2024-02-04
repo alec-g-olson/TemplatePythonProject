@@ -4,7 +4,10 @@ from argparse import ArgumentParser
 from enum import Enum
 from pathlib import Path
 
-from common_vars import DockerTarget, get_interactive_docker_command_for_image
+from build_vars.docker_vars import (
+    DockerTarget,
+    get_interactive_docker_command_for_image,
+)
 
 
 class AllowedCliArgs(Enum):

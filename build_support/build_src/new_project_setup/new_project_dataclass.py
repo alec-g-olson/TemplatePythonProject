@@ -3,6 +3,7 @@
 This module exists to conceptually isolate the serialization and
 deserialization of project_settings.yaml.
 """
+
 from dataclasses import dataclass
 
 from new_project_setup.setup_license import get_licenses_with_templates

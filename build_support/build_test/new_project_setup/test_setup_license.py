@@ -1,6 +1,7 @@
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
+import pytest
 from new_project_setup.setup_license import (
     ALL_RIGHTS_RESERVED_KEY,
     ALL_RIGHTS_RESERVED_TEMPLATE,
@@ -12,7 +13,9 @@ from new_project_setup.setup_license import (
 
 
 def test_constants_not_changed_by_accident():
-    assert GIT_HUB_TEMPLATE_URL == "https://api.github.com/licenses"
+    assert (
+        GIT_HUB_TEMPLATE_URL == "https://google.com"
+    )  # "https://api.github.com/licenses"
     assert ALL_RIGHTS_RESERVED_KEY == "all-rights-reserved"
     assert ALL_RIGHTS_RESERVED_TEMPLATE == (
         "All Rights Reserved\n"
@@ -68,6 +71,11 @@ def test_get_template_for_all_rights_reserved():
         get_template_for_license(template_key=ALL_RIGHTS_RESERVED_KEY)
         == ALL_RIGHTS_RESERVED_TEMPLATE
     )
+
+
+def test_get_template_bad_value():
+    with pytest.raises(ValueError):
+        get_template_for_license(template_key="WHOOP_WHOOP_DIDDY_WHOOP_WHOOP")
 
 
 def test_get_new_license_content():

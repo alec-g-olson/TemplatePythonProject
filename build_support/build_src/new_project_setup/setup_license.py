@@ -1,4 +1,5 @@
 """Module exists to conceptually organize all work that involves license templates."""
+
 import json
 from copy import copy
 from datetime import datetime

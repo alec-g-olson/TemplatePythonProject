@@ -3,19 +3,18 @@
 from argparse import ArgumentParser
 from pathlib import Path
 
-from build_tasks.combined_tasks import Autoflake, Push, Test
-from build_tasks.common_build_tasks import (
+from build_tasks.build_tasks import BuildPypi
+from build_tasks.env_setup_tasks import (
     BuildDevEnvironment,
     BuildProdEnvironment,
     BuildPulumiEnvironment,
     Clean,
     GetGitInfo,
-    Lint,
-    TestBuildSanity,
-    TestPythonStyle,
 )
-from build_tasks.python_build_tasks import BuildPypi, PushPypi, TestPypi
-from common_vars import get_build_dir
+from build_tasks.lint import Autoflake, Lint
+from build_tasks.push_tasks import PushAll, PushPypi
+from build_tasks.test_tasks import TestAll, TestBuildSanity, TestPypi, TestPythonStyle
+from build_vars.file_and_dir_path_vars import get_build_dir
 from dag_engine import TaskNode, concatenate_args, run_process, run_tasks
 from new_project_setup.setup_new_project import MakeProjectFromTemplate
 
@@ -29,12 +28,12 @@ CLI_ARG_TO_TASK: dict[str, TaskNode] = {
     "test_style": TestPythonStyle(),
     "test_build_sanity": TestBuildSanity(),
     "test_without_style": TestPypi(),
-    "test": Test(),
+    "test": TestAll(),
     "lint": Lint(),
     "autoflake": Autoflake(),
     "build_pypi": BuildPypi(),
     "push_pypi": PushPypi(),
-    "push": Push(),
+    "push": PushAll(),
 }
 
 

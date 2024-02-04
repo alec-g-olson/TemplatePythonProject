@@ -17,6 +17,12 @@ class TaskNode(ABC):
         """A unique label for each task, used when building the DAG."""
         return self.__class__.__name__
 
+    def __eq__(self, other):
+        return self.task_label() == other.task_label()
+
+    def __hash__(self):
+        return hash(self.task_label())
+
     @abstractmethod
     def required_tasks(self) -> list["TaskNode"]:
         """Will return the tasks required to start the current task."""
