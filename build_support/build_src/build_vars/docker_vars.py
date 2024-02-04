@@ -9,7 +9,7 @@ from build_vars.file_and_dir_path_vars import (
     get_build_support_src_dir,
     get_dockerfile,
     get_pulumi_dir,
-    get_pypi_src_dir, ProjectContext, get_build_support_src_and_test, get_pypi_src_and_test,
+    get_pypi_src_dir,
 )
 from build_vars.project_setting_vars import get_project_name
 from dag_engine import concatenate_args
@@ -29,24 +29,10 @@ def get_docker_image_name(project_root: Path, target_image: DockerTarget) -> str
     return ":".join([get_project_name(project_root=project_root), target_image.value])
 
 
-def get_python_path_for_project_context_and_image(
-    docker_project_root: Path, target_image: DockerTarget, project_context: ProjectContext
+def get_python_path_for_target_image(
+    docker_project_root: Path, target_image: DockerTarget
 ) -> str:
     """Gets the python path to use with this project."""
-    match project_context:
-        case ProjectContext.BUILD_SUPPORT:
-            allowed_folders: Path | list[str] = get_build_support_src_and_test(project_root=docker_project_root)
-        case ProjectContext.PYPI:
-            allowed_folders = get_pypi_src_and_test(project_root=docker_project_root)
-        case ProjectContext.PULUMI:
-            allowed_folders = get_pulumi_dir(project_root=docker_project_root)
-        case ProjectContext.ALL:
-            allowed_folders = get_all_python_folders(project_root=docker_project_root)
-        case _:  # pragma: no cover - can't hit if all enums are implemented
-            raise ValueError(
-                f"{repr(project_context)} is not a valid enum of PyTestContext."
-            )
-    allowed_folder_set = {folder_path for folder_path in concatenate_args(args=[allowed_folders])}
     match target_image:
         case DockerTarget.BUILD:
             python_folders: Path | list[str] = get_build_support_src_dir(
@@ -60,26 +46,25 @@ def get_python_path_for_project_context_and_image(
             python_folders = get_pulumi_dir(project_root=docker_project_root)
         case _:  # pragma: no cover - can't hit if all enums are implemented
             raise ValueError(f"{repr(target_image)} is not a valid enum of DockerType.")
-    python_folders_list = {folder_path for folder_path in concatenate_args(args=[python_folders]) if folder_path in allowed_folder_set}
-    return ":".join(python_folders_list)
+    return ":".join(concatenate_args(args=[python_folders]))
 
 
-def get_python_path_env(docker_project_root: Path, target_image: DockerTarget, project_context: ProjectContext) -> str:
+def get_python_path_env(docker_project_root: Path, target_image: DockerTarget) -> str:
     """Gets the python path ENV to use with this project."""
-    return "PYTHONPATH=" + get_python_path_for_project_context_and_image(
-        docker_project_root=docker_project_root, target_image=target_image, project_context=project_context
+    return "PYTHONPATH=" + get_python_path_for_target_image(
+        docker_project_root=docker_project_root, target_image=target_image
     )
 
 
-def get_mypy_path_env(docker_project_root: Path, target_image: DockerTarget, project_context: ProjectContext) -> str:
+def get_mypy_path_env(docker_project_root: Path, target_image: DockerTarget) -> str:
     """Gets the python path ENV to use with this project."""
-    return "MYPYPATH=" + get_python_path_for_project_context_and_image(
-        docker_project_root=docker_project_root, target_image=target_image, project_context=project_context
+    return "MYPYPATH=" + get_python_path_for_target_image(
+        docker_project_root=docker_project_root, target_image=target_image
     )
 
 
 def get_base_docker_command_for_image(
-    non_docker_project_root: Path, docker_project_root: Path, target_image: DockerTarget, project_context: ProjectContext
+    non_docker_project_root: Path, docker_project_root: Path, target_image: DockerTarget
 ) -> list[str]:
     """Basic docker args that are called for every command."""
     return concatenate_args(
@@ -90,7 +75,7 @@ def get_base_docker_command_for_image(
             f"--workdir={docker_project_root.absolute()}",
             "-e",
             get_python_path_env(
-                docker_project_root=docker_project_root, target_image=target_image, project_context=project_context
+                docker_project_root=docker_project_root, target_image=target_image
             ),
             "-v",
             "/var/run/docker.sock:/var/run/docker.sock",
@@ -108,7 +93,7 @@ def get_base_docker_command_for_image(
 
 
 def get_docker_command_for_image(
-    non_docker_project_root: Path, docker_project_root: Path, target_image: DockerTarget, project_context: ProjectContext
+    non_docker_project_root: Path, docker_project_root: Path, target_image: DockerTarget
 ) -> list[str]:
     """Basic docker args that are called for dev environment commands."""
     return concatenate_args(
@@ -117,7 +102,6 @@ def get_docker_command_for_image(
                 non_docker_project_root=non_docker_project_root,
                 docker_project_root=docker_project_root,
                 target_image=target_image,
-                project_context=project_context
             ),
             get_docker_image_name(
                 project_root=docker_project_root, target_image=target_image
@@ -127,7 +111,7 @@ def get_docker_command_for_image(
 
 
 def get_interactive_docker_command_for_image(
-    non_docker_project_root: Path, docker_project_root: Path, target_image: DockerTarget, project_context: ProjectContext
+    non_docker_project_root: Path, docker_project_root: Path, target_image: DockerTarget
 ) -> list[str]:
     """Basic docker args that are called for an interactive dev environment."""
     return concatenate_args(
@@ -136,7 +120,6 @@ def get_interactive_docker_command_for_image(
                 non_docker_project_root=non_docker_project_root,
                 docker_project_root=docker_project_root,
                 target_image=target_image,
-                project_context=project_context
             ),
             "-it",
             get_docker_image_name(

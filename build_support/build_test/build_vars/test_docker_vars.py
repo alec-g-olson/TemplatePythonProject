@@ -10,7 +10,7 @@ from build_vars.docker_vars import (
     get_interactive_docker_command_for_image,
     get_mypy_path_env,
     get_python_path_env,
-    get_python_path_for_project_context_and_image,
+    get_python_path_for_target_image,
 )
 from build_vars.file_and_dir_path_vars import (
     get_all_python_folders,
@@ -47,7 +47,7 @@ def test_get_docker_image_name(
 def test_get_python_path_for_target_image(
     docker_project_root: Path, docker_target: DockerTarget
 ):
-    observed_python_path = get_python_path_for_project_context_and_image(
+    observed_python_path = get_python_path_for_target_image(
         docker_project_root=docker_project_root, target_image=docker_target
     )
     if docker_target == DockerTarget.BUILD:
@@ -75,7 +75,7 @@ def test_get_python_path_for_target_image(
 def test_get_python_path_env(docker_project_root: Path, docker_target: DockerTarget):
     assert get_python_path_env(
         docker_project_root=docker_project_root, target_image=docker_target
-    ) == "PYTHONPATH=" + get_python_path_for_project_context_and_image(
+    ) == "PYTHONPATH=" + get_python_path_for_target_image(
         docker_project_root=docker_project_root, target_image=docker_target
     )
 
@@ -83,7 +83,7 @@ def test_get_python_path_env(docker_project_root: Path, docker_target: DockerTar
 def test_get_mypy_path_env(docker_project_root: Path, docker_target: DockerTarget):
     assert get_mypy_path_env(
         docker_project_root=docker_project_root, target_image=docker_target
-    ) == "MYPYPATH=" + get_python_path_for_project_context_and_image(
+    ) == "MYPYPATH=" + get_python_path_for_target_image(
         docker_project_root=docker_project_root, target_image=docker_target
     )
 

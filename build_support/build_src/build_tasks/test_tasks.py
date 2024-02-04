@@ -15,17 +15,15 @@ from build_vars.docker_vars import (
     get_pypi_src_dir,
 )
 from build_vars.file_and_dir_path_vars import (
+    ProjectContext,
     get_all_src_folders,
     get_all_test_folders,
     get_build_support_src_and_test,
     get_build_support_test_dir,
-    get_pypi_src_and_test, ProjectContext,
+    get_pypi_src_and_test,
 )
 from build_vars.machine_introspection_vars import THREADS_AVAILABLE
-from build_vars.python_vars import (
-    get_bandit_report_path,
-    get_test_report_args,
-)
+from build_vars.python_vars import get_bandit_report_path, get_test_report_args
 from dag_engine import TaskNode, concatenate_args, run_process
 
 

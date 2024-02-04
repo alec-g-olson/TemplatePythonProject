@@ -181,6 +181,7 @@ def get_all_test_folders(project_root: Path) -> list[str]:
 # Enum for specifying a sub-project
 ########################################
 
+
 class ProjectContext(Enum):
     """An Enum to track the possible docker targets and images."""
 

@@ -13,9 +13,7 @@ from new_project_setup.setup_license import (
 
 
 def test_constants_not_changed_by_accident():
-    assert (
-        GIT_HUB_TEMPLATE_URL == "https://google.com"
-    )  # "https://api.github.com/licenses"
+    assert GIT_HUB_TEMPLATE_URL == "https://api.github.com/licenses"
     assert ALL_RIGHTS_RESERVED_KEY == "all-rights-reserved"
     assert ALL_RIGHTS_RESERVED_TEMPLATE == (
         "All Rights Reserved\n"

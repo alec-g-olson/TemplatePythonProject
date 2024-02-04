@@ -2,10 +2,11 @@ from pathlib import Path
 
 import pytest
 from build_vars.file_and_dir_path_vars import (
+    ProjectContext,
     get_build_dir,
     get_build_support_dir,
     get_pulumi_dir,
-    get_pypi_dir, ProjectContext,
+    get_pypi_dir,
 )
 from build_vars.project_setting_vars import get_project_name, get_project_version
 from build_vars.python_vars import (
@@ -225,10 +226,12 @@ def test_get_coverage_root(
         assert observed_coverage_root_dir == get_pypi_dir(
             project_root=mock_project_root
         )
-    else:  # assume pulumi if not add the new case
+    elif pytest_context == ProjectContext.PULUMI:
         assert observed_coverage_root_dir == get_pulumi_dir(
             project_root=mock_project_root
         )
+    else:  # assume pulumi if not add the new case
+        assert observed_coverage_root_dir == mock_project_root
 
 
 def test_get_test_report_args(

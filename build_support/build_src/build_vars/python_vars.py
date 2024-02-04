@@ -3,10 +3,11 @@
 from pathlib import Path
 
 from build_vars.file_and_dir_path_vars import (
+    ProjectContext,
     get_build_dir,
     get_build_support_dir,
     get_pulumi_dir,
-    get_pypi_dir, ProjectContext,
+    get_pypi_dir,
 )
 from build_vars.project_setting_vars import get_project_name, get_project_version
 from dag_engine import concatenate_args
@@ -42,7 +43,9 @@ def get_bandit_report_path(project_root: Path, test_context: ProjectContext) -> 
     )
 
 
-def get_pytest_html_report_name(project_root: Path, test_context: ProjectContext) -> str:
+def get_pytest_html_report_name(
+    project_root: Path, test_context: ProjectContext
+) -> str:
     """Get the name of the pytest html report."""
     return get_pytest_report_name(
         project_root=project_root,
@@ -71,7 +74,9 @@ def get_pytest_xml_report_name(project_root: Path, test_context: ProjectContext)
     )
 
 
-def get_pytest_xml_report_path(project_root: Path, test_context: ProjectContext) -> Path:
+def get_pytest_xml_report_path(
+    project_root: Path, test_context: ProjectContext
+) -> Path:
     """Get the path of the pytest xml report."""
     return get_build_dir(project_root=project_root).joinpath(
         get_pytest_xml_report_name(project_root=project_root, test_context=test_context)
@@ -131,6 +136,8 @@ def get_coverage_root(project_root: Path, test_context: ProjectContext) -> Path:
             return get_pypi_dir(project_root=project_root)
         case ProjectContext.PULUMI:
             return get_pulumi_dir(project_root=project_root)
+        case ProjectContext.ALL:
+            return project_root
         case _:  # pragma: no cover - can't hit if all enums are implemented
             raise ValueError(
                 f"{repr(test_context)} is not a valid enum of PyTestContext."

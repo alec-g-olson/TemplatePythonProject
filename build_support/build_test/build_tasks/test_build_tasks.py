@@ -24,11 +24,6 @@ def test_run_build_pypi(
     local_username: str,
 ):
     with patch("build_tasks.build_tasks.run_process") as run_process_mock:
-        BuildPypi().run(
-            non_docker_project_root=mock_project_root,
-            docker_project_root=docker_project_root,
-            local_username=local_username,
-        )
         clean_dist_args = concatenate_args(
             args=[
                 get_docker_command_for_image(
@@ -63,6 +58,11 @@ def test_run_build_pypi(
                 get_temp_dist_dir(project_root=docker_project_root),
                 get_dist_dir(project_root=docker_project_root),
             ]
+        )
+        BuildPypi().run(
+            non_docker_project_root=mock_project_root,
+            docker_project_root=docker_project_root,
+            local_username=local_username,
         )
         assert run_process_mock.call_count == 3
         run_process_mock.assert_has_calls(
