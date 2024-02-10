@@ -1,4 +1,4 @@
-"""A dataclass for managing new project settings.
+"""A data model for managing new project settings.
 
 This module exists to conceptually isolate the serialization and
 deserialization of project_settings.yaml.

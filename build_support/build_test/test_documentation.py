@@ -1,10 +1,10 @@
 import re
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Tuple
 
 import pytest
 import requests
+from pydantic import BaseModel
 
 PROJECT_ROOT_DIR = Path(__file__).parent.parent.parent
 
@@ -39,14 +39,12 @@ def _build_header_regexes(header_level_dict: Dict[str, int]) -> List[str]:
     ]
 
 
-@dataclass
-class ReadmeHeaderInfo:
+class ReadmeHeaderInfo(BaseModel):
     readme_path: Path
     header: str
 
 
-@dataclass
-class BadHyperlinkInfo:
+class BadHyperlinkInfo(BaseModel):
     readme_path: Path
     line_number: int
     hyperlink: str
