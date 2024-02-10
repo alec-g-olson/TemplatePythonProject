@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Any
 
-from new_project_setup.new_project_dataclass import ProjectSettings
+from new_project_setup.new_project_data_models import ProjectSettings
 from tomlkit import dumps, parse
 
 

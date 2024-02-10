@@ -1,6 +1,6 @@
 import pytest
 from template_python_project.calculators.calculator import calculate_result
-from template_python_project.calculators.dataclasses import (
+from template_python_project.calculators.data_models import (
     CalculationType,
     CalculatorInput,
     CalculatorOutput,

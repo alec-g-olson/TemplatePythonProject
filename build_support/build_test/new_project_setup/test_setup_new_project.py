@@ -3,7 +3,7 @@ import tomllib
 from pathlib import Path
 
 from build_tasks.env_setup_tasks import Clean
-from new_project_setup.new_project_dataclass import ProjectSettings
+from new_project_setup.new_project_data_models import ProjectSettings
 from new_project_setup.setup_license import (
     ALL_RIGHTS_RESERVED_KEY,
     get_new_license_content,
