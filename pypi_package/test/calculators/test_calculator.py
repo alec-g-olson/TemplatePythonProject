@@ -1,5 +1,4 @@
 import pytest
-
 from template_python_project.calculators.calculator import calculate_result
 from template_python_project.calculators.dataclasses import (
     CalculationType,

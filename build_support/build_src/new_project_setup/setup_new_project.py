@@ -3,10 +3,15 @@
 This module exists to have a single task and code location where all
 the logic for making a new project is executed from.
 """
+
 from pathlib import Path
 
-from build_tasks.common_build_tasks import Clean
-from common_vars import get_license_file, get_new_project_settings, get_pyproject_toml
+from build_tasks.env_setup_tasks import Clean
+from build_vars.file_and_dir_path_vars import (
+    get_license_file,
+    get_new_project_settings,
+    get_pyproject_toml,
+)
 from dag_engine import TaskNode
 from new_project_setup.new_project_dataclass import ProjectSettings
 from new_project_setup.setup_license import write_new_license_from_template

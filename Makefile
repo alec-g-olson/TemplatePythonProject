@@ -76,19 +76,19 @@ open_build_docker_shell: setup_build_envs
 .PHONY: open_dev_docker_shell
 open_dev_docker_shell: setup_build_envs
 	$(EXECUTE_BUILD_STEPS_COMMAND) build_dev
-	$(eval INTERACTIVE_DEV_COMMAND := $(shell $(GET_BUILD_VAR_COMMAND) get-interactive-dev-docker-command))
+	$(eval INTERACTIVE_DEV_COMMAND := $(shell $(GET_BUILD_VAR_COMMAND) interactive-dev-docker-command))
 	$(INTERACTIVE_DEV_COMMAND) /bin/bash
 
 .PHONY: open_prod_docker_shell
 open_prod_docker_shell: setup_build_envs
 	$(EXECUTE_BUILD_STEPS_COMMAND) build_prod
-	$(eval INTERACTIVE_PROD_COMMAND := $(shell $(GET_BUILD_VAR_COMMAND) get-interactive-prod-docker-command))
+	$(eval INTERACTIVE_PROD_COMMAND := $(shell $(GET_BUILD_VAR_COMMAND) interactive-prod-docker-command))
 	$(INTERACTIVE_PROD_COMMAND) /bin/bash
 
 .PHONY: open_pulumi_docker_shell
 open_pulumi_docker_shell: setup_build_envs
 	$(EXECUTE_BUILD_STEPS_COMMAND) build_pulumi
-	$(eval INTERACTIVE_PULUMI_COMMAND := $(shell $(GET_BUILD_VAR_COMMAND) get-interactive-pulumi-docker-command))
+	$(eval INTERACTIVE_PULUMI_COMMAND := $(shell $(GET_BUILD_VAR_COMMAND) interactive-pulumi-docker-command))
 	$(INTERACTIVE_PULUMI_COMMAND) /bin/bash
 
 .PHONY: clean

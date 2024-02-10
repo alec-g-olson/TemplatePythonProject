@@ -17,6 +17,14 @@ class TaskNode(ABC):
         """A unique label for each task, used when building the DAG."""
         return self.__class__.__name__
 
+    def __eq__(self, other):
+        """Checks if this is equal to the other item."""
+        return isinstance(other, TaskNode) and self.task_label() == other.task_label()
+
+    def __hash__(self):
+        """Calculates a hash value for use in __eq__."""
+        return hash(self.task_label())
+
     @abstractmethod
     def required_tasks(self) -> list["TaskNode"]:
         """Will return the tasks required to start the current task."""
@@ -31,49 +39,30 @@ class TaskNode(ABC):
         """Will contain the logic of each task."""
 
 
-def _build_dict_of_all_dag_tasks(
-    all_tasks: dict[str, TaskNode], task_to_add: TaskNode
-) -> None:
-    if task_to_add.task_label() not in all_tasks:
-        all_tasks[task_to_add.task_label()] = task_to_add
-        for required_task in task_to_add.required_tasks():
-            _build_dict_of_all_dag_tasks(all_tasks=all_tasks, task_to_add=required_task)
-
-
 def _add_tasks_to_list_with_dfs(
     execution_order: list[TaskNode],
-    task_names_added: set[str],
-    task_name_to_required_names: dict[str, list[str]],
+    tasks_added: set[TaskNode],
     task_to_add: TaskNode,
 ) -> None:
-    if task_to_add.task_label() not in task_names_added:
+    if task_to_add not in tasks_added:
         for required_task in task_to_add.required_tasks():
             _add_tasks_to_list_with_dfs(
                 execution_order=execution_order,
-                task_names_added=task_names_added,
-                task_name_to_required_names=task_name_to_required_names,
+                tasks_added=tasks_added,
                 task_to_add=required_task,
             )
-        task_names_added.add(task_to_add.task_label())
+        tasks_added.add(task_to_add)
         execution_order.append(task_to_add)
 
 
-def _get_task_execution_order(
-    all_tasks: dict[str, TaskNode], enforced_task_order: list[TaskNode]
-) -> list[TaskNode]:
+def get_task_execution_order(enforced_task_order: list[TaskNode]) -> list[TaskNode]:
+    """Gets the order that tasks should be executed in."""
     execution_order: list[TaskNode] = []
-    task_names_added: set[str] = set()
-    task_name_to_required_names = {
-        task.task_label(): [
-            required_task.task_label() for required_task in task.required_tasks()
-        ]
-        for task in all_tasks.values()
-    }
+    tasks_added: set[TaskNode] = set()
     for task in enforced_task_order:
         _add_tasks_to_list_with_dfs(
             execution_order=execution_order,
-            task_names_added=task_names_added,
-            task_name_to_required_names=task_name_to_required_names,
+            tasks_added=tasks_added,
             task_to_add=task,
         )
     return execution_order
@@ -86,12 +75,7 @@ def run_tasks(
     local_username: str,
 ) -> None:
     """Builds the DAG required for a task and runs the DAG."""
-    all_dag_tasks: dict[str, TaskNode] = {}
-    for task in tasks:
-        _build_dict_of_all_dag_tasks(all_tasks=all_dag_tasks, task_to_add=task)
-    task_execution_order = _get_task_execution_order(
-        all_tasks=all_dag_tasks, enforced_task_order=tasks
-    )
+    task_execution_order = get_task_execution_order(enforced_task_order=tasks)
     print("Will execute the following tasks:", flush=True)
     for task in task_execution_order:
         print(f"  - {task.task_label()}", flush=True)
@@ -115,13 +99,14 @@ def concatenate_args(args: list[Any | list[Any]]) -> list[str]:
     return get_str_args(list(itertools.chain.from_iterable(all_args_as_lists)))
 
 
-def _resolve_process_results(
+def resolve_process_results(
     command_as_str: str,
     output: bytes,
     error: bytes,
     return_code: int,
     silent: bool = False,
 ) -> None:
+    """Prints outputs and errors and exits as appropriate when a command exits."""
     if output and not silent:
         print(output.decode("utf-8"), flush=True, end="")
     if error:
@@ -147,13 +132,13 @@ def run_process(args: list[Any], silent=False) -> bytes:
     command_as_str = " ".join(args)
     if not silent:
         print(command_as_str, flush=True)
-    # As this is currently setup args are never injected by external users, safe
+    # As this is currently setup, commands are never injected by external users
     p = Popen(
         args, stdin=PIPE, stdout=PIPE, stderr=PIPE, bufsize=-1, shell=False
     )  # nosec: B603
     output, error = p.communicate()
     return_code = p.returncode
-    _resolve_process_results(
+    resolve_process_results(
         command_as_str=command_as_str,
         output=output,
         error=error,
@@ -191,27 +176,24 @@ def run_piped_processes(processes: list[list[Any]], silent=False) -> None:
     command_as_str = " | ".join(process_strs)
     if not silent:
         print(command_as_str, flush=True)
-    if len(args_list) == 1:
-        run_process(args=args_list[0], silent=silent)
-    else:
+    # As this is currently setup args are never injected by external users, safe
+    p1 = Popen(args=args_list[0], stdout=PIPE)  # nosec: B603
+    popen_processes = [p1]
+    for args in args_list[1:]:
+        last_process = popen_processes[-1]
         # As this is currently setup args are never injected by external users, safe
-        p1 = Popen(args=args_list[0], stdout=PIPE)  # nosec: B603
-        popen_processes = [p1]
-        for args in args_list[1:]:
-            last_process = popen_processes[-1]
-            # As this is currently setup args are never injected by external users, safe
-            next_process = Popen(  # nosec: B603
-                args=args,
-                stdin=last_process.stdout,
-                stdout=PIPE,
-            )
-            popen_processes.append(next_process)
-        output, error = popen_processes[-1].communicate()
-        return_code = popen_processes[-1].returncode
-        _resolve_process_results(
-            command_as_str=command_as_str,
-            output=output,
-            error=error,
-            return_code=return_code,
-            silent=silent,
+        next_process = Popen(  # nosec: B603
+            args=args,
+            stdin=last_process.stdout,
+            stdout=PIPE,
         )
+        popen_processes.append(next_process)
+    output, error = popen_processes[-1].communicate()
+    return_code = popen_processes[-1].returncode
+    resolve_process_results(
+        command_as_str=command_as_str,
+        output=output,
+        error=error,
+        return_code=return_code,
+        silent=silent,
+    )
