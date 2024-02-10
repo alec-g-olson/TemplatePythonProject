@@ -2,6 +2,7 @@
 
 import itertools
 import os
+import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
 
@@ -110,12 +111,13 @@ def resolve_process_results(
     if output and not silent:
         print(output.decode("utf-8"), flush=True, end="")
     if error:
-        print(error.decode("utf-8"), flush=True, end="")
+        print(error.decode("utf-8"), flush=True, end="", file=sys.stderr)
     if return_code != 0:
         if silent:
             print(
                 f"{command_as_str}\nFailed with code: {return_code}",
                 flush=True,
+                file=sys.stderr,
             )
         exit(return_code)
 

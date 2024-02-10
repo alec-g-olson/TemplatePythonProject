@@ -14,7 +14,6 @@ from build_tasks.env_setup_tasks import (
 from build_tasks.lint_tasks import Autoflake, Lint
 from build_tasks.push_tasks import PushAll, PushPypi
 from build_tasks.test_tasks import TestAll, TestBuildSanity, TestPypi, TestPythonStyle
-from build_vars.file_and_dir_path_vars import get_build_dir
 from dag_engine import TaskNode, concatenate_args, run_process, run_tasks
 from new_project_setup.setup_new_project import MakeProjectFromTemplate
 
@@ -111,8 +110,6 @@ def run_main(args: Namespace) -> None:
     docker_project_root = args.docker_project_root
     tasks = [CLI_ARG_TO_TASK[arg] for arg in args.build_tasks]
     try:
-        build_dir = get_build_dir(project_root=docker_project_root)
-        build_dir.mkdir(parents=True, exist_ok=True)
         run_tasks(
             tasks=tasks,
             non_docker_project_root=non_docker_project_root,

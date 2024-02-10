@@ -14,7 +14,6 @@ from build_tasks.env_setup_tasks import (
 from build_tasks.lint_tasks import Autoflake, Lint
 from build_tasks.push_tasks import PushAll, PushPypi
 from build_tasks.test_tasks import TestAll, TestBuildSanity, TestPypi, TestPythonStyle
-from build_vars.file_and_dir_path_vars import get_build_dir
 from dag_engine import concatenate_args
 from execute_build_steps import CLI_ARG_TO_TASK, fix_permissions, parse_args, run_main
 from new_project_setup.setup_new_project import MakeProjectFromTemplate
@@ -324,7 +323,6 @@ def test_run_main_success(
         "execute_build_steps.fix_permissions"
     ) as mock_fix_permissions:
         run_main(args)
-        assert get_build_dir(project_root=docker_project_root).is_dir()
         mock_run_tasks.assert_called_once_with(
             tasks=[Clean()],
             non_docker_project_root=mock_project_root,
@@ -360,7 +358,6 @@ def test_run_main_exception(
         error_to_raise = RuntimeError("error_message")
         mock_run_tasks.side_effect = error_to_raise
         run_main(args)
-        assert get_build_dir(project_root=docker_project_root).is_dir()
         mock_run_tasks.assert_called_once_with(
             tasks=[CLI_ARG_TO_TASK[arg] for arg in all_task_list],
             non_docker_project_root=mock_project_root,

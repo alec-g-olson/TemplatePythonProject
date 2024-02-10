@@ -177,7 +177,6 @@ def test_run_get_git_info(
         get_branch_mock.return_value = branch_name
         get_tags_mock.return_value = tags
         git_info_yaml_dest = get_git_info_yaml(project_root=docker_project_root)
-        git_info_yaml_dest.parent.mkdir(exist_ok=True, parents=True)
         assert not git_info_yaml_dest.exists()
         GetGitInfo().run(
             non_docker_project_root=mock_project_root,

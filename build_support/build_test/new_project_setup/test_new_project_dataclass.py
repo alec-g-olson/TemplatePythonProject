@@ -17,7 +17,7 @@ def project_yaml_str() -> str:
 
 
 def test_load(project_yaml_str: str):
-    project_setting = ProjectSettings.from_yaml(project_yaml_str)
+    project_setting = ProjectSettings.from_yaml(yaml_str=project_yaml_str)
     assert project_setting == ProjectSettings(**project_settings_data_dict)
 
 
@@ -26,7 +26,7 @@ def test_load_bad_name():
     bad_dict["name"] = 4
     project_yaml_str = yaml.dump(bad_dict)
     with pytest.raises(ValueError):
-        ProjectSettings.from_yaml(project_yaml_str)
+        ProjectSettings.from_yaml(yaml_str=project_yaml_str)
 
 
 def test_load_bad_license():
@@ -34,7 +34,7 @@ def test_load_bad_license():
     bad_dict["license"] = 4
     project_yaml_str = yaml.dump(bad_dict)
     with pytest.raises(ValueError):
-        ProjectSettings.from_yaml(project_yaml_str)
+        ProjectSettings.from_yaml(yaml_str=project_yaml_str)
 
 
 def test_load_invalid_license():
@@ -42,7 +42,7 @@ def test_load_invalid_license():
     bad_dict["license"] = "INVALID_LICENSE"
     project_yaml_str = yaml.dump(bad_dict)
     with pytest.raises(ValueError):
-        ProjectSettings.from_yaml(project_yaml_str)
+        ProjectSettings.from_yaml(yaml_str=project_yaml_str)
 
 
 def test_load_bad_organization():
@@ -50,7 +50,7 @@ def test_load_bad_organization():
     bad_dict["organization"] = 4
     project_yaml_str = yaml.dump(bad_dict)
     with pytest.raises(ValueError):
-        ProjectSettings.from_yaml(project_yaml_str)
+        ProjectSettings.from_yaml(yaml_str=project_yaml_str)
 
 
 def test_dump(project_yaml_str: str):
