@@ -13,7 +13,6 @@ from build_vars.project_setting_vars import get_project_version, is_dev_project_
 from dag_engine import (
     TaskNode,
     concatenate_args,
-    get_output_of_process,
     run_process,
     run_process_as_local_user,
 )
@@ -33,7 +32,6 @@ class PushAll(TaskNode):
         local_username: str,
     ) -> None:
         """Does nothing."""
-        pass
 
 
 class PushTags(TaskNode):
@@ -101,4 +99,3 @@ class PushPypi(TaskNode):
         local_username: str,
     ) -> None:
         """Push PyPi."""
-        pass

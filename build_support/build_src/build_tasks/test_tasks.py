@@ -41,7 +41,6 @@ class TestAll(TaskNode):
         local_username: str,
     ) -> None:
         """Does nothing."""
-        pass
 
 
 class TestBuildSanity(TaskNode):

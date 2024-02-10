@@ -1,6 +1,6 @@
 """The entry point into running build tools."""
 
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 from pathlib import Path
 
 from build_tasks.build_tasks import BuildPypi
@@ -27,7 +27,7 @@ CLI_ARG_TO_TASK: dict[str, TaskNode] = {
     "get_git_info": GetGitInfo(),
     "test_style": TestPythonStyle(),
     "test_build_sanity": TestBuildSanity(),
-    "test_without_style": TestPypi(),
+    "test_pypi": TestPypi(),
     "test": TestAll(),
     "lint": Lint(),
     "autoflake": Autoflake(),
@@ -38,7 +38,7 @@ CLI_ARG_TO_TASK: dict[str, TaskNode] = {
 
 
 def fix_permissions(local_user: str) -> None:
-    """Builds a stable environment for running prod commands."""
+    """Resets all file ownership to the local user after running processes."""
     run_process(
         args=concatenate_args(
             args=[
@@ -56,7 +56,8 @@ def fix_permissions(local_user: str) -> None:
     )
 
 
-if __name__ == "__main__":
+def parse_args(args: list[str] | None = None) -> Namespace:
+    """Builds the argument parser for main method."""
     parser = ArgumentParser(
         prog="ExecuteBuildSteps",
         description="This tool exists to facilitate building, testing, "
@@ -101,7 +102,11 @@ if __name__ == "__main__":
         required=True,
         help="User's name, used to run commands in docker as the local user.",
     )
-    args = parser.parse_args()
+    return parser.parse_args(args=args)
+
+
+def run_main(args: Namespace) -> None:
+    """Runs the logic for the execute_build_steps main."""
     non_docker_project_root = args.non_docker_project_root
     docker_project_root = args.docker_project_root
     tasks = [CLI_ARG_TO_TASK[arg] for arg in args.build_tasks]
@@ -118,3 +123,7 @@ if __name__ == "__main__":
         print(e)
     finally:
         fix_permissions(local_user=":".join([args.user_id, args.group_id]))
+
+
+if __name__ == "__main__":  # pragma: no cover - main
+    run_main(args=parse_args())

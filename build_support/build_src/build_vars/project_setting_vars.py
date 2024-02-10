@@ -20,6 +20,7 @@ ALLOWED_VERSION_REGEX = re.compile(r"^\d+\.\d+\.\d+(-dev\.\d+)?$")
 
 
 def get_project_version(project_root: Path) -> str:
+    """Gets the project version from the pyproject.toml in a project."""
     version_str = get_pyproject_toml_data(project_root=project_root)["tool"]["poetry"][
         "version"
     ]
