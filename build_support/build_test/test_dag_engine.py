@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 from subprocess import PIPE
 from unittest.mock import MagicMock, call, patch
@@ -202,7 +203,7 @@ def test_resolve_process_results_normal_process_has_error_text():
         mock_print.assert_has_calls(
             calls=[
                 call("output", flush=True, end=""),
-                call("error", flush=True, end=""),
+                call("error", flush=True, end="", file=sys.stderr),
             ]
         )
 
@@ -220,7 +221,7 @@ def test_resolve_process_results_normal_process_has_error_text_exit_1():
         mock_print.assert_has_calls(
             calls=[
                 call("output", flush=True, end=""),
-                call("error", flush=True, end=""),
+                call("error", flush=True, end="", file=sys.stderr),
             ]
         )
         mock_exit.assert_called_once_with(1)
@@ -236,7 +237,7 @@ def test_resolve_process_results_normal_process_silent():
             silent=True,
         )
         assert mock_print.call_count == 1
-        mock_print.assert_called_once_with("error", flush=True, end="")
+        mock_print.assert_called_once_with("error", flush=True, end="", file=sys.stderr)
 
 
 def test_resolve_process_results_normal_process_silent_exit_1():
@@ -251,8 +252,8 @@ def test_resolve_process_results_normal_process_silent_exit_1():
         assert mock_print.call_count == 2
         mock_print.assert_has_calls(
             calls=[
-                call("error", flush=True, end=""),
-                call("run a process\nFailed with code: 1", flush=True),
+                call("error", flush=True, end="", file=sys.stderr),
+                call("run a process\nFailed with code: 1", flush=True, file=sys.stderr),
             ]
         )
         mock_exit.assert_called_once_with(1)

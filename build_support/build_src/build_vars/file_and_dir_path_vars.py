@@ -4,6 +4,13 @@ from pathlib import Path
 
 from dag_engine import concatenate_args
 
+
+def maybe_build_dir(dir_to_build: Path) -> Path:
+    """Builds a directory and returns it's path."""
+    dir_to_build.mkdir(parents=True, exist_ok=True)
+    return dir_to_build
+
+
 ########################################
 # Top level files and folders
 ########################################
@@ -26,7 +33,7 @@ def get_poetry_lock_file(project_root: Path) -> Path:
 
 def get_build_dir(project_root: Path) -> Path:
     """Gets the build dir for the project."""
-    return project_root.joinpath("build")
+    return maybe_build_dir(dir_to_build=project_root.joinpath("build"))
 
 
 def get_build_support_dir(project_root: Path) -> Path:
@@ -117,8 +124,26 @@ def get_pypi_src_and_test(project_root: Path) -> list[str]:
 
 
 def get_dist_dir(project_root: Path) -> Path:
-    """Gets the build dir for the project."""
-    return get_build_dir(project_root=project_root).joinpath("dist")
+    """Gets the dir where the pypi distribution will be located for the project."""
+    return maybe_build_dir(
+        dir_to_build=get_build_dir(project_root=project_root).joinpath("dist")
+    )
+
+
+def get_build_reports_dir(project_root: Path) -> Path:
+    """Gets the dir that will contain the projects reports."""
+    return maybe_build_dir(
+        dir_to_build=get_build_dir(project_root=project_root).joinpath("reports")
+    )
+
+
+def get_license_templates_dir(project_root: Path) -> Path:
+    """Gets the dir that will contain license templates used in building a new project."""
+    return maybe_build_dir(
+        dir_to_build=get_build_dir(project_root=project_root).joinpath(
+            "license_templates"
+        )
+    )
 
 
 def get_git_info_yaml(project_root: Path) -> Path:
@@ -128,7 +153,7 @@ def get_git_info_yaml(project_root: Path) -> Path:
 
 def get_temp_dist_dir(project_root: Path) -> Path:
     """Gets the temporary dist dir for the project."""
-    return project_root.joinpath("dist")
+    return maybe_build_dir(dir_to_build=project_root.joinpath("dist"))
 
 
 ########################################

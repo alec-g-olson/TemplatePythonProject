@@ -81,7 +81,6 @@ def mock_docker_pyproject_toml_file(
 ) -> Path:
     """Creates a mock pyproject toml file for use in testing."""
     mock_pyproject_toml_file = get_pyproject_toml(project_root=docker_project_root)
-    mock_pyproject_toml_file.parent.mkdir(parents=True, exist_ok=True)
     mock_pyproject_toml_file.write_text(pyproject_toml_contents)
     return mock_pyproject_toml_file
 

@@ -33,7 +33,9 @@ class MakeProjectFromTemplate(TaskNode):
     ) -> None:
         """Modifies the appropriate files to start a new project."""
         new_project_settings = ProjectSettings.from_yaml(
-            get_new_project_settings(project_root=docker_project_root).read_text()
+            yaml_str=get_new_project_settings(
+                project_root=docker_project_root
+            ).read_text()
         )
         update_pyproject_toml(
             path_to_pyproject_toml=get_pyproject_toml(project_root=docker_project_root),

@@ -16,7 +16,7 @@ line_length = 88
 
 [tool.poetry]
 name = "template_python_project"
-version = "0.2.13"
+version = "0.2.14"
 license = "unlicense"
 description = "A project that can be used as a template to provide some CI/CD out of the box."
 authors = ["Alexander Olson <alec.g.olson@gmail.com>"]
@@ -52,6 +52,7 @@ pytest = "^7.4"
 pytest-cov = "^4.1"
 pytest-html = "^4.1"
 pytest-xdist = "^3.5"
+responses = "^0.24"
 requests = "^2.31"
 types-requests = "^2.31"
 

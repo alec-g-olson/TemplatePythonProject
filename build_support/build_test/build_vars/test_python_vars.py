@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from build_vars.file_and_dir_path_vars import (
     ProjectContext,
-    get_build_dir,
+    get_build_reports_dir,
     get_build_support_dir,
     get_pulumi_dir,
     get_pypi_dir,
@@ -78,7 +78,7 @@ def test_get_bandit_report_path(
     assert get_bandit_report_path(
         project_root=mock_project_root,
         test_context=pytest_context,
-    ) == get_build_dir(project_root=mock_project_root).joinpath(
+    ) == get_build_reports_dir(project_root=mock_project_root).joinpath(
         get_bandit_report_name(
             project_root=mock_project_root,
             test_context=pytest_context,
@@ -109,7 +109,7 @@ def test_get_pytest_html_report_path(
     assert get_pytest_html_report_path(
         project_root=mock_project_root,
         test_context=pytest_context,
-    ) == get_build_dir(project_root=mock_project_root).joinpath(
+    ) == get_build_reports_dir(project_root=mock_project_root).joinpath(
         get_pytest_html_report_name(
             project_root=mock_project_root,
             test_context=pytest_context,
@@ -140,7 +140,7 @@ def test_get_pytest_xml_report_path(
     assert get_pytest_xml_report_path(
         project_root=mock_project_root,
         test_context=pytest_context,
-    ) == get_build_dir(project_root=mock_project_root).joinpath(
+    ) == get_build_reports_dir(project_root=mock_project_root).joinpath(
         get_pytest_xml_report_name(
             project_root=mock_project_root,
             test_context=pytest_context,
@@ -171,7 +171,7 @@ def test_get_pytest_xml_coverage_report_path(
     assert get_pytest_xml_coverage_report_path(
         project_root=mock_project_root,
         test_context=pytest_context,
-    ) == get_build_dir(project_root=mock_project_root).joinpath(
+    ) == get_build_reports_dir(project_root=mock_project_root).joinpath(
         get_pytest_xml_coverage_report_name(
             project_root=mock_project_root,
             test_context=pytest_context,
@@ -202,7 +202,7 @@ def test_get_pytest_html_coverage_report_path(
     assert get_pytest_html_coverage_report_path(
         project_root=mock_project_root,
         test_context=pytest_context,
-    ) == get_build_dir(project_root=mock_project_root).joinpath(
+    ) == get_build_reports_dir(project_root=mock_project_root).joinpath(
         get_pytest_html_coverage_report_name(
             project_root=mock_project_root,
             test_context=pytest_context,
