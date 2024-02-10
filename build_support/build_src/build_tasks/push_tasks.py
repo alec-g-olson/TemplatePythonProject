@@ -50,6 +50,18 @@ class PushTags(TaskNode):
         currently_on_main = current_branch_is_main(current_branch=current_branch)
         is_dev_version = is_dev_project_version(project_version=current_version)
         if currently_on_main ^ is_dev_version:
+            local_user = f"{local_user_uid}:{local_user_gid}"
+            run_process(
+                args=concatenate_args(
+                    args=[
+                        "chown",
+                        "-R",
+                        local_user,
+                        "/root/.gitconfig",
+                    ]
+                ),
+                silent=True,
+            )
             current_diff = get_git_diff()
             if current_diff:
                 run_process(

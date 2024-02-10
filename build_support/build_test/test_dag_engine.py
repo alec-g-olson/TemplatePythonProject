@@ -434,12 +434,14 @@ def test_run_piped_processes():
                 call(
                     args=["command", "0", "1.5", "/usr/dev"],
                     stdout=PIPE,
+                    shell=False,
                     preexec_fn=None,
                 ),
                 call(
                     args=["second_command", "1337"],
                     stdin=process_mock.stdout,
                     stdout=PIPE,
+                    shell=False,
                     preexec_fn=None,
                 ),
             ]
@@ -476,12 +478,14 @@ def test_run_piped_processes_silent():
                 call(
                     args=["command", "0", "1.5", "/usr/dev"],
                     stdout=PIPE,
+                    shell=False,
                     preexec_fn=None,
                 ),
                 call(
                     args=["second_command", "1337"],
                     stdin=process_mock.stdout,
                     stdout=PIPE,
+                    shell=False,
                     preexec_fn=None,
                 ),
             ]
@@ -519,12 +523,14 @@ def test_run_piped_processes_as_user():
                 call(
                     args=["command", "0", "1.5", "/usr/dev"],
                     stdout=PIPE,
+                    shell=False,
                     preexec_fn=demote_process_to_user(user_uid=1337, user_gid=42),
                 ),
                 call(
                     args=["second_command", "1337"],
                     stdin=process_mock.stdout,
                     stdout=PIPE,
+                    shell=False,
                     preexec_fn=demote_process_to_user(user_uid=1337, user_gid=42),
                 ),
             ]
@@ -563,12 +569,14 @@ def test_run_piped_processes_silent_as_user():
                 call(
                     args=["command", "0", "1.5", "/usr/dev"],
                     stdout=PIPE,
+                    shell=False,
                     preexec_fn=demote_process_to_user(user_uid=1337, user_gid=42),
                 ),
                 call(
                     args=["second_command", "1337"],
                     stdin=process_mock.stdout,
                     stdout=PIPE,
+                    shell=False,
                     preexec_fn=demote_process_to_user(user_uid=1337, user_gid=42),
                 ),
             ]
@@ -597,7 +605,10 @@ def test_run_piped_processes_one_process():
         run_piped_processes(processes=[["command", 0, 1.5, Path("/usr/dev")]])
         command_as_str = "command 0 1.5 /usr/dev"
         mock_popen.assert_called_once_with(
-            args=["command", "0", "1.5", "/usr/dev"], stdout=PIPE, preexec_fn=None
+            args=["command", "0", "1.5", "/usr/dev"],
+            stdout=PIPE,
+            shell=False,
+            preexec_fn=None,
         )
         mock_resolve_process_results.assert_called_once_with(
             command_as_str=command_as_str,
@@ -625,7 +636,10 @@ def test_run_piped_processes_one_process_silent():
         )
         command_as_str = "command 0 1.5 /usr/dev"
         mock_popen.assert_called_once_with(
-            args=["command", "0", "1.5", "/usr/dev"], stdout=PIPE, preexec_fn=None
+            args=["command", "0", "1.5", "/usr/dev"],
+            stdout=PIPE,
+            shell=False,
+            preexec_fn=None,
         )
         mock_resolve_process_results.assert_called_once_with(
             command_as_str=command_as_str,

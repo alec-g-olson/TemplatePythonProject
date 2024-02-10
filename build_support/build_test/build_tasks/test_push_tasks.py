@@ -92,11 +92,20 @@ def test_run_push_tags_allowed_no_diff(
             local_user_uid=local_uid,
             local_user_gid=local_gid,
         )
+        fix_git_permissions_args = concatenate_args(
+            args=[
+                "chown",
+                "-R",
+                f"{local_uid}:{local_gid}",
+                "/root/.gitconfig",
+            ]
+        )
         git_tag_args = concatenate_args(args=["git", "tag", current_version])
         git_push_tags_args = concatenate_args(args=["git", "push", "--tags"])
-        assert run_process_mock.call_count == 2
+        assert run_process_mock.call_count == 3
         run_process_mock.assert_has_calls(
-            calls=[
+            calls=[call(args=fix_git_permissions_args, silent=True)]
+            + [
                 call(args=args, local_user_uid=local_uid, local_user_gid=local_gid)
                 for args in [
                     git_tag_args,
@@ -137,6 +146,14 @@ def test_run_push_tags_allowed_with_diff(
             local_user_uid=local_uid,
             local_user_gid=local_gid,
         )
+        fix_git_permissions_args = concatenate_args(
+            args=[
+                "chown",
+                "-R",
+                f"{local_uid}:{local_gid}",
+                "/root/.gitconfig",
+            ]
+        )
         git_add_args = concatenate_args(args=["git", "add", "-u"])
         git_commit_args = concatenate_args(
             args=[
@@ -149,9 +166,10 @@ def test_run_push_tags_allowed_with_diff(
         git_push_args = concatenate_args(args=["git", "push"])
         git_tag_args = concatenate_args(args=["git", "tag", current_version])
         git_push_tags_args = concatenate_args(args=["git", "push", "--tags"])
-        assert run_process_mock.call_count == 5
+        assert run_process_mock.call_count == 6
         run_process_mock.assert_has_calls(
-            calls=[
+            calls=[call(args=fix_git_permissions_args, silent=True)]
+            + [
                 call(args=args, local_user_uid=local_uid, local_user_gid=local_gid)
                 for args in [
                     git_add_args,

@@ -207,7 +207,7 @@ def run_piped_processes(
         )
     # As this is currently setup, commands are never injected by external users
     p1 = Popen(
-        args=args_list[0], stdout=PIPE, preexec_fn=run_as_user_func
+        args=args_list[0], stdout=PIPE, shell=False, preexec_fn=run_as_user_func
     )  # nosec: B603
     popen_processes = [p1]
     for args in args_list[1:]:
@@ -217,6 +217,7 @@ def run_piped_processes(
             args=args,
             stdin=last_process.stdout,
             stdout=PIPE,
+            shell=False,
             preexec_fn=run_as_user_func,
         )
         popen_processes.append(next_process)
