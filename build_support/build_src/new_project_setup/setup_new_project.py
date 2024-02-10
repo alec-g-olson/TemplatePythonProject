@@ -13,7 +13,7 @@ from build_vars.file_and_dir_path_vars import (
     get_pyproject_toml,
 )
 from dag_engine import TaskNode
-from new_project_setup.new_project_dataclass import ProjectSettings
+from new_project_setup.new_project_data_models import ProjectSettings
 from new_project_setup.setup_license import write_new_license_from_template
 from new_project_setup.update_pyproject import update_pyproject_toml
 

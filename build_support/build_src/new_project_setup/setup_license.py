@@ -67,14 +67,20 @@ def get_licenses_with_templates() -> list[str]:
     return supported_github_licenses + [ALL_RIGHTS_RESERVED_KEY]
 
 
+def is_valid_license_template(template_key: str) -> bool:
+    """Checks to see if the template_key is valid."""
+    template_key_lower = template_key.lower()
+    licenses_with_templates = get_licenses_with_templates()
+    return template_key_lower in licenses_with_templates
+
+
 def get_template_for_license(template_key: str) -> str:
     """Gets the template for a license."""
     template_key_lower = template_key.lower()
-    licenses_with_templates = get_licenses_with_templates()
-    if template_key_lower not in licenses_with_templates:
+    if not is_valid_license_template(template_key=template_key):
         raise ValueError(
             '"template_key" must be one of:\n  '
-            + "  \n".join(sorted(licenses_with_templates))
+            + "  \n".join(sorted(get_licenses_with_templates()))
             + f"found {template_key_lower} instead."
         )
     if template_key_lower == ALL_RIGHTS_RESERVED_KEY:

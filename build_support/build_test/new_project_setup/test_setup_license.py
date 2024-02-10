@@ -19,6 +19,7 @@ from new_project_setup.setup_license import (
     get_licenses_with_templates,
     get_new_license_content,
     get_template_for_license,
+    is_valid_license_template,
 )
 
 
@@ -93,6 +94,22 @@ def test_get_template_for_all_rights_reserved():
 def test_get_template_bad_value():
     with pytest.raises(ValueError):
         get_template_for_license(template_key="WHOOP_WHOOP_DIDDY_WHOOP_WHOOP")
+
+
+@pytest.mark.parametrize(
+    "template_key, is_valid",
+    [
+        (ALL_RIGHTS_RESERVED_KEY.lower(), True),
+        (ALL_RIGHTS_RESERVED_KEY.upper(), True),
+        ("MIT", True),
+        ("Mit", True),
+        ("mit", True),
+        ("mit license", False),
+        ("WHOOP_WHOOP_DIDDY_WHOOP_WHOOP", False),
+    ],
+)
+def test_is_valid_license_template(template_key, is_valid):
+    assert is_valid_license_template(template_key=template_key) == is_valid
 
 
 def test_get_new_license_content():

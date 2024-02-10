@@ -2,7 +2,7 @@ from copy import copy
 
 import pytest
 import yaml
-from new_project_setup.new_project_dataclass import ProjectSettings
+from new_project_setup.new_project_data_models import ProjectSettings
 
 project_settings_data_dict = {
     "name": "test_project_name",
