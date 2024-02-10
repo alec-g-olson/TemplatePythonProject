@@ -36,8 +36,9 @@ CLI_ARG_TO_TASK: dict[str, TaskNode] = {
 }
 
 
-def fix_permissions(local_user: str) -> None:
+def fix_permissions(local_user_uid: int, local_user_gid: int) -> None:
     """Resets all file ownership to the local user after running processes."""
+    local_user = f"{local_user_uid}:{local_user_gid}"
     run_process(
         args=concatenate_args(
             args=[
@@ -85,21 +86,15 @@ def parse_args(args: list[str] | None = None) -> Namespace:
     )
     parser.add_argument(
         "--user-id",
-        type=str,
+        type=int,
         required=True,
         help="User ID, used to return files made by docker to owner.",
     )
     parser.add_argument(
         "--group-id",
-        type=str,
+        type=int,
         required=True,
         help="User's Group ID, used to return files made by docker to owner.",
-    )
-    parser.add_argument(
-        "--local-username",
-        type=str,
-        required=True,
-        help="User's name, used to run commands in docker as the local user.",
     )
     return parser.parse_args(args=args)
 
@@ -114,12 +109,13 @@ def run_main(args: Namespace) -> None:
             tasks=tasks,
             non_docker_project_root=non_docker_project_root,
             docker_project_root=docker_project_root,
-            local_username=args.local_username,
+            local_user_uid=args.user_id,
+            local_user_gid=args.group_id,
         )
     except Exception as e:
         print(e)
     finally:
-        fix_permissions(local_user=":".join([args.user_id, args.group_id]))
+        fix_permissions(local_user_uid=args.user_id, local_user_gid=args.group_id)
 
 
 if __name__ == "__main__":  # pragma: no cover - main

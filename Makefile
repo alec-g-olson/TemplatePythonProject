@@ -36,7 +36,7 @@ INTERACTIVE_DOCKER_BUILD_ENV_COMMAND = $(BASE_DOCKER_BUILD_ENV_COMMAND) -it $(DO
 SHARED_BUILD_VARS = --non-docker-project-root $(MAKEFILE_DIR) --docker-project-root $(DOCKER_REMOTE_PROJECT_ROOT)
 
 EXECUTE_BUILD_STEPS_COMMAND = $(DOCKER_BUILD_ENV_COMMAND) python build_support/build_src/execute_build_steps.py \
-$(SHARED_BUILD_VARS) --user-id $(USER_ID) --group-id $(GROUP_ID) --local-username $(USER_NAME)
+$(SHARED_BUILD_VARS) --user-id $(USER_ID) --group-id $(GROUP_ID)
 
 GET_BUILD_VAR_COMMAND = $(DOCKER_BUILD_ENV_COMMAND) python build_support/build_src/report_build_var.py \
 $(SHARED_BUILD_VARS) --build-variable-to-report

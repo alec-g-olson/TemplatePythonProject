@@ -27,7 +27,8 @@ def test_run_build_dev_env(
     mock_project_root: Path,
     mock_docker_pyproject_toml_file: Path,
     docker_project_root: Path,
-    local_username: str,
+    local_uid: int,
+    local_gid: int,
 ):
     with patch("build_tasks.env_setup_tasks.run_process") as run_process_mock:
         build_dev_env_args = get_docker_build_command(
@@ -36,7 +37,8 @@ def test_run_build_dev_env(
         BuildDevEnvironment().run(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
-            local_username=local_username,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
         )
         run_process_mock.assert_called_once_with(args=build_dev_env_args)
 
@@ -49,7 +51,8 @@ def test_run_build_prod_env(
     mock_project_root: Path,
     mock_docker_pyproject_toml_file: Path,
     docker_project_root: Path,
-    local_username: str,
+    local_uid: int,
+    local_gid: int,
 ):
     with patch("build_tasks.env_setup_tasks.run_process") as run_process_mock:
         build_prod_env_args = get_docker_build_command(
@@ -58,7 +61,8 @@ def test_run_build_prod_env(
         BuildProdEnvironment().run(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
-            local_username=local_username,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
         )
         run_process_mock.assert_called_once_with(args=build_prod_env_args)
 
@@ -72,7 +76,8 @@ def test_run_build_pulumi_env(
     mock_docker_pyproject_toml_file: Path,
     mock_docker_poetry_lock_file: Path,
     docker_project_root: Path,
-    local_username: str,
+    local_uid: int,
+    local_gid: int,
 ):
     with patch("build_tasks.env_setup_tasks.run_process") as run_process_mock:
         build_pulumi_env_args = get_docker_build_command(
@@ -86,7 +91,8 @@ def test_run_build_pulumi_env(
         BuildPulumiEnvironment().run(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
-            local_username=local_username,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
         )
         run_process_mock.assert_called_once_with(args=build_pulumi_env_args)
 
@@ -98,14 +104,16 @@ def test_clean_requires():
 def test_run_clean(
     mock_project_root: Path,
     docker_project_root: Path,
-    local_username: str,
+    local_uid: int,
+    local_gid: int,
 ):
     with patch("build_tasks.env_setup_tasks.run_process") as run_process_mock:
         clean_args = ["rm", "-rf", get_build_dir(project_root=docker_project_root)]
         Clean().run(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
-            local_username=local_username,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
         )
         run_process_mock.assert_called_once_with(args=clean_args)
 
@@ -162,11 +170,10 @@ def test_get_git_info_requires():
 def test_run_get_git_info(
     mock_project_root: Path,
     docker_project_root: Path,
-    local_username: str,
+    local_uid: int,
+    local_gid: int,
 ):
-    with patch(
-        "build_tasks.env_setup_tasks.run_process_as_local_user"
-    ) as run_process_as_user_mock, patch(
+    with patch("build_tasks.env_setup_tasks.run_process") as run_process_mock, patch(
         "build_tasks.env_setup_tasks.get_current_branch"
     ) as get_branch_mock, patch(
         "build_tasks.env_setup_tasks.get_local_tags"
@@ -181,10 +188,13 @@ def test_run_get_git_info(
         GetGitInfo().run(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
-            local_username=local_username,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
         )
-        run_process_as_user_mock.assert_called_once_with(
-            args=get_fetch_args, local_username=local_username
+        run_process_mock.assert_called_once_with(
+            args=get_fetch_args,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
         )
         observed_git_info = GitInfo.from_yaml(git_info_yaml_dest.read_text())
         expected_git_info = GitInfo(branch=branch_name, tags=tags)

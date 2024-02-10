@@ -68,7 +68,8 @@ def test_make_new_project(tmp_path: Path, real_project_root_dir):
     make_project_task.run(
         non_docker_project_root=tmp_project_path,
         docker_project_root=tmp_project_path,
-        local_username="Not used",
+        local_user_uid=1337,
+        local_user_gid=42,
     )
     _ensure_project_folder_matches_settings(
         project_folder=tmp_project_path,
@@ -85,7 +86,8 @@ def test_make_new_project(tmp_path: Path, real_project_root_dir):
     make_project_task.run(
         non_docker_project_root=tmp_project_path,
         docker_project_root=tmp_project_path,
-        local_username="Not used",
+        local_user_uid=1337,
+        local_user_gid=42,
     )
     _ensure_project_folder_matches_settings(
         project_folder=tmp_project_path,

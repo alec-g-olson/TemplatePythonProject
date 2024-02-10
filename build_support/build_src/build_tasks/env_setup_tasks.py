@@ -7,12 +7,7 @@ from build_vars.docker_vars import DockerTarget, get_docker_build_command
 from build_vars.file_and_dir_path_vars import get_build_dir, get_git_info_yaml
 from build_vars.git_status_vars import get_current_branch, get_local_tags
 from build_vars.project_setting_vars import get_pulumi_version
-from dag_engine import (
-    TaskNode,
-    concatenate_args,
-    run_process,
-    run_process_as_local_user,
-)
+from dag_engine import TaskNode, concatenate_args, run_process
 from yaml import safe_dump, safe_load
 
 
@@ -27,7 +22,8 @@ class BuildDevEnvironment(TaskNode):
         self,
         non_docker_project_root: Path,
         docker_project_root: Path,
-        local_username: str,
+        local_user_uid: int,
+        local_user_gid: int,
     ) -> None:
         """Builds a stable environment for running dev commands."""
         run_process(
@@ -48,7 +44,8 @@ class BuildProdEnvironment(TaskNode):
         self,
         non_docker_project_root: Path,
         docker_project_root: Path,
-        local_username: str,
+        local_user_uid: int,
+        local_user_gid: int,
     ) -> None:
         """Builds a stable environment for running prod commands."""
         run_process(
@@ -69,7 +66,8 @@ class BuildPulumiEnvironment(TaskNode):
         self,
         non_docker_project_root: Path,
         docker_project_root: Path,
-        local_username: str,
+        local_user_uid: int,
+        local_user_gid: int,
     ) -> None:
         """Builds a stable environment for running pulumi commands."""
         run_process(
@@ -95,7 +93,8 @@ class Clean(TaskNode):
         self,
         non_docker_project_root: Path,
         docker_project_root: Path,
-        local_username: str,
+        local_user_uid: int,
+        local_user_gid: int,
     ) -> None:
         """Deletes all the temporary build files."""
         run_process(args=["rm", "-rf", get_build_dir(project_root=docker_project_root)])
@@ -151,12 +150,14 @@ class GetGitInfo(TaskNode):
         self,
         non_docker_project_root: Path,
         docker_project_root: Path,
-        local_username: str,
+        local_user_uid: int,
+        local_user_gid: int,
     ) -> None:
         """Builds a json with required git info."""
-        run_process_as_local_user(
+        run_process(
             args=concatenate_args(args=["git", "fetch"]),
-            local_username=local_username,
+            local_user_uid=local_user_uid,
+            local_user_gid=local_user_gid,
         )
         get_git_info_yaml(project_root=docker_project_root).write_text(
             GitInfo(

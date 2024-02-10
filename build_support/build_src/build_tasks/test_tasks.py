@@ -38,7 +38,8 @@ class TestAll(TaskNode):
         self,
         non_docker_project_root: Path,
         docker_project_root: Path,
-        local_username: str,
+        local_user_uid: int,
+        local_user_gid: int,
     ) -> None:
         """Does nothing."""
 
@@ -59,7 +60,8 @@ class TestBuildSanity(TaskNode):
         self,
         non_docker_project_root: Path,
         docker_project_root: Path,
-        local_username: str,
+        local_user_uid: int,
+        local_user_gid: int,
     ) -> None:
         """Runs tests in the build_test folder."""
         run_process(
@@ -94,7 +96,8 @@ class TestPythonStyle(TaskNode):
         self,
         non_docker_project_root: Path,
         docker_project_root: Path,
-        local_username: str,
+        local_user_uid: int,
+        local_user_gid: int,
     ) -> None:
         """Runs all stylistic checks on code."""
         run_process(
@@ -286,7 +289,8 @@ class TestPypi(TaskNode):
         self,
         non_docker_project_root: Path,
         docker_project_root: Path,
-        local_username: str,
+        local_user_uid: int,
+        local_user_gid: int,
     ) -> None:
         """Tests the PyPi package."""
         run_process(

@@ -24,7 +24,7 @@ def mock_project_root(tmp_path: Path) -> Path:
 
 mock_project_versions = ["0.0.0", "0.0.1", "0.1.0", "1.0.0", "1.0.0-dev.1"]
 mock_project_names = ["project_one", "project_two"]
-mock_local_usernames = ["user_one", "other_user"]
+mock_local_user_ids = [(1, 20), (1337, 42)]
 
 
 @pytest.fixture(params=mock_project_versions, scope="session")
@@ -39,10 +39,16 @@ def project_name(request) -> str:
     return request.param
 
 
-@pytest.fixture(params=mock_local_usernames, scope="session")
-def local_username(request) -> str:
+@pytest.fixture(params=mock_local_user_ids, scope="session")
+def local_uid(request) -> str:
     """The name of the local user."""
-    return request.param
+    return request.param[0]
+
+
+@pytest.fixture(params=mock_local_user_ids, scope="session")
+def local_gid(request) -> str:
+    """The name of the local user."""
+    return request.param[1]
 
 
 @pytest.fixture

@@ -29,7 +29,8 @@ class MakeProjectFromTemplate(TaskNode):
         self,
         non_docker_project_root: Path,
         docker_project_root: Path,
-        local_username: str,
+        local_user_uid: int,
+        local_user_gid: int,
     ) -> None:
         """Modifies the appropriate files to start a new project."""
         new_project_settings = ProjectSettings.from_yaml(
