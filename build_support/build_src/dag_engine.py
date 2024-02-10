@@ -4,8 +4,9 @@ import itertools
 import sys
 from abc import ABC, abstractmethod
 from functools import cache
-from os import setgid, setuid
+from os import environ, setgid, setuid
 from pathlib import Path
+from pwd import getpwuid
 
 # The purpose of this module is to make subprocess calls
 from subprocess import PIPE, Popen  # nosec: B404
@@ -133,6 +134,7 @@ def demote_process_to_user(user_uid: int, user_gid: int):
     def demote_to_specific_user():
         setgid(user_gid)
         setuid(user_uid)
+        environ["HOME"] = f"/home/{getpwuid(user_uid)[0]}/"
 
     return demote_to_specific_user
 

@@ -268,10 +268,15 @@ def test_demote_process_to_user():
     demote_process = demote_process_to_user(user_uid=user_id, user_gid=group_id)
     with patch("dag_engine.setgid") as mock_setgid, patch(
         "dag_engine.setuid"
-    ) as mock_setuid:
+    ) as mock_setuid, patch("dag_engine.environ", {}) as mock_environ, patch(
+        "dag_engine.getpwuid"
+    ) as mock_getpwuid:
+        mock_getpwuid.return_value = ["local_username"]
         demote_process()
         mock_setuid.assert_called_once_with(user_id)
         mock_setgid.assert_called_once_with(group_id)
+        mock_getpwuid.assert_called_once_with(user_id)
+        assert mock_environ["HOME"] == "/home/local_username/"
 
 
 def test_run_process():
