@@ -1,9 +1,10 @@
 """Shared logic across all tasks and how to run them in a DAG."""
 
 import itertools
-import os
 import sys
 from abc import ABC, abstractmethod
+from functools import cache
+from os import setgid, setuid
 from pathlib import Path
 
 # The purpose of this module is to make subprocess calls
@@ -35,7 +36,8 @@ class TaskNode(ABC):
         self,
         non_docker_project_root: Path,
         docker_project_root: Path,
-        local_username: str,
+        local_user_uid: int,
+        local_user_gid: int,
     ) -> None:
         """Will contain the logic of each task."""
 
@@ -73,7 +75,8 @@ def run_tasks(
     tasks: list[TaskNode],
     non_docker_project_root: Path,
     docker_project_root: Path,
-    local_username: str,
+    local_user_uid: int,
+    local_user_gid: int,
 ) -> None:
     """Builds the DAG required for a task and runs the DAG."""
     task_execution_order = get_task_execution_order(enforced_task_order=tasks)
@@ -85,7 +88,8 @@ def run_tasks(
         task.run(
             non_docker_project_root=non_docker_project_root,
             docker_project_root=docker_project_root,
-            local_username=local_username,
+            local_user_uid=local_user_uid,
+            local_user_gid=local_user_gid,
         )
 
 
@@ -122,21 +126,39 @@ def resolve_process_results(
         exit(return_code)
 
 
-def _get_run_as_local_user_command(args: list[Any], local_username: str) -> list[str]:
-    args = get_str_args(args=args)
-    command_as_str = '"' + " ".join(args) + '"'
-    return concatenate_args(args=["su", local_username, "-c", command_as_str])
+@cache
+def demote_process_to_user(user_uid: int, user_gid: int):
+    """Creates a function that changes the user."""
+
+    def demote_to_specific_user():
+        setgid(user_gid)
+        setuid(user_uid)
+
+    return demote_to_specific_user
 
 
-def run_process(args: list[Any], silent=False) -> bytes:
+def run_process(
+    args: list[Any], local_user_uid: int = 0, local_user_gid: int = 0, silent=False
+) -> bytes:
     """Runs a process."""
     args = get_str_args(args=args)
     command_as_str = " ".join(args)
     if not silent:
         print(command_as_str, flush=True)
+    run_as_user_func = None
+    if local_user_uid or local_user_gid:
+        run_as_user_func = demote_process_to_user(
+            user_uid=local_user_uid, user_gid=local_user_gid
+        )
     # As this is currently setup, commands are never injected by external users
     p = Popen(
-        args, stdin=PIPE, stdout=PIPE, stderr=PIPE, bufsize=-1, shell=False
+        args,
+        stdin=PIPE,
+        stdout=PIPE,
+        stderr=PIPE,
+        bufsize=-1,
+        shell=False,
+        preexec_fn=run_as_user_func,
     )  # nosec: B603
     output, error = p.communicate()
     return_code = p.returncode
@@ -150,44 +172,52 @@ def run_process(args: list[Any], silent=False) -> bytes:
     return output
 
 
-def run_process_as_local_user(args: list[Any], local_username: str, silent=False):
-    """Runs a process as the local user."""
-    command = " ".join(
-        _get_run_as_local_user_command(args=args, local_username=local_username)
-    )
-    if not silent:
-        print(command)
-    # As this is currently setup args are never injected by external users
-    # However, this would be vulnerable to shell attacks
-    # Todo: Figure out how to pass "some list of args" through subprocess
-    return_code = os.system(command)  # nosec B605
-    if return_code != 0:
-        exit(return_code)
-
-
-def get_output_of_process(args: list[Any], silent=False) -> str:
+def get_output_of_process(
+    args: list[Any],
+    local_user_uid: int = 0,
+    local_user_gid: int = 0,
+    silent=False,
+) -> str:
     """Runs a process and gets the output."""
-    output = run_process(args=args, silent=silent)
+    output = run_process(
+        args=args,
+        local_user_uid=local_user_uid,
+        local_user_gid=local_user_gid,
+        silent=silent,
+    )
     return output.decode("utf-8").strip()
 
 
-def run_piped_processes(processes: list[list[Any]], silent=False) -> None:
+def run_piped_processes(
+    processes: list[list[Any]],
+    local_user_uid: int = 0,
+    local_user_gid: int = 0,
+    silent=False,
+) -> None:
     """Runs piped processes as they would be on the command line."""
     args_list = [get_str_args(args=args) for args in processes]
     process_strs = [" ".join(args) for args in args_list]
     command_as_str = " | ".join(process_strs)
     if not silent:
         print(command_as_str, flush=True)
-    # As this is currently setup args are never injected by external users, safe
-    p1 = Popen(args=args_list[0], stdout=PIPE)  # nosec: B603
+    run_as_user_func = None
+    if local_user_uid or local_user_gid:
+        run_as_user_func = demote_process_to_user(
+            user_uid=local_user_uid, user_gid=local_user_gid
+        )
+    # As this is currently setup, commands are never injected by external users
+    p1 = Popen(
+        args=args_list[0], stdout=PIPE, preexec_fn=run_as_user_func
+    )  # nosec: B603
     popen_processes = [p1]
     for args in args_list[1:]:
         last_process = popen_processes[-1]
-        # As this is currently setup args are never injected by external users, safe
+        # As this is currently setup, commands are never injected by external users
         next_process = Popen(  # nosec: B603
             args=args,
             stdin=last_process.stdout,
             stdout=PIPE,
+            preexec_fn=run_as_user_func,
         )
         popen_processes.append(next_process)
     output, error = popen_processes[-1].communicate()

@@ -23,7 +23,8 @@ class Lint(TaskNode):
         self,
         non_docker_project_root: Path,
         docker_project_root: Path,
-        local_username: str,
+        local_user_uid: int,
+        local_user_gid: int,
     ) -> None:
         """Lints all python files in project."""
         run_process(
@@ -69,7 +70,8 @@ class Autoflake(TaskNode):
         self,
         non_docker_project_root: Path,
         docker_project_root: Path,
-        local_username: str,
+        local_user_uid: int,
+        local_user_gid: int,
     ) -> None:
         """Runs autoflake on all python files."""
         run_process(

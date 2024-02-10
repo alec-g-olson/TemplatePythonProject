@@ -16,18 +16,17 @@ def test_push_all_requires():
 def test_run_push_all(
     mock_project_root: Path,
     docker_project_root: Path,
-    local_username: str,
+    local_uid: int,
+    local_gid: int,
 ):
-    with patch("build_tasks.push_tasks.run_process") as run_process_mock, patch(
-        "build_tasks.push_tasks.run_process_as_local_user"
-    ) as run_process_as_user_mock:
+    with patch("build_tasks.push_tasks.run_process") as run_process_mock:
         PushAll().run(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
-            local_username=local_username,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
         )
         assert run_process_mock.call_count == 0
-        assert run_process_as_user_mock.call_count == 0
 
 
 def test_push_tags_requires():
@@ -44,7 +43,8 @@ def test_push_tags_requires():
 def test_run_push_tags_not_allowed(
     mock_project_root: Path,
     docker_project_root: Path,
-    local_username: str,
+    local_uid: int,
+    local_gid: int,
     branch_name: str,
     current_version: str,
 ):
@@ -56,7 +56,8 @@ def test_run_push_tags_not_allowed(
         PushTags().run(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
-            local_username=local_username,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
         )
 
 
@@ -70,13 +71,12 @@ def test_run_push_tags_not_allowed(
 def test_run_push_tags_allowed_no_diff(
     mock_project_root: Path,
     docker_project_root: Path,
-    local_username: str,
+    local_uid: int,
+    local_gid: int,
     branch_name: str,
     current_version: str,
 ):
     with patch("build_tasks.push_tasks.run_process") as run_process_mock, patch(
-        "build_tasks.push_tasks.run_process_as_local_user"
-    ) as run_process_as_user_mock, patch(
         "build_tasks.push_tasks.get_git_diff"
     ) as get_git_diff_mock, patch(
         "build_tasks.push_tasks.get_current_branch"
@@ -89,13 +89,20 @@ def test_run_push_tags_allowed_no_diff(
         PushTags().run(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
-            local_username=local_username,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
         )
         git_tag_args = concatenate_args(args=["git", "tag", current_version])
         git_push_tags_args = concatenate_args(args=["git", "push", "--tags"])
-        run_process_mock.assert_called_once_with(args=git_tag_args)
-        run_process_as_user_mock.assert_called_once_with(
-            args=git_push_tags_args, local_username=local_username
+        assert run_process_mock.call_count == 2
+        run_process_mock.assert_has_calls(
+            calls=[
+                call(args=args, local_user_uid=local_uid, local_user_gid=local_gid)
+                for args in [
+                    git_tag_args,
+                    git_push_tags_args,
+                ]
+            ]
         )
 
 
@@ -109,13 +116,12 @@ def test_run_push_tags_allowed_no_diff(
 def test_run_push_tags_allowed_with_diff(
     mock_project_root: Path,
     docker_project_root: Path,
-    local_username: str,
+    local_uid: int,
+    local_gid: int,
     branch_name: str,
     current_version: str,
 ):
     with patch("build_tasks.push_tasks.run_process") as run_process_mock, patch(
-        "build_tasks.push_tasks.run_process_as_local_user"
-    ) as run_process_as_user_mock, patch(
         "build_tasks.push_tasks.get_git_diff"
     ) as get_git_diff_mock, patch(
         "build_tasks.push_tasks.get_current_branch"
@@ -128,7 +134,8 @@ def test_run_push_tags_allowed_with_diff(
         PushTags().run(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
-            local_username=local_username,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
         )
         git_add_args = concatenate_args(args=["git", "add", "-u"])
         git_commit_args = concatenate_args(
@@ -142,15 +149,15 @@ def test_run_push_tags_allowed_with_diff(
         git_push_args = concatenate_args(args=["git", "push"])
         git_tag_args = concatenate_args(args=["git", "tag", current_version])
         git_push_tags_args = concatenate_args(args=["git", "push", "--tags"])
-        run_process_mock.assert_called_once_with(args=git_tag_args)
-        assert run_process_as_user_mock.call_count == 4
-        run_process_as_user_mock.assert_has_calls(
+        assert run_process_mock.call_count == 5
+        run_process_mock.assert_has_calls(
             calls=[
-                call(args=args, local_username=local_username)
+                call(args=args, local_user_uid=local_uid, local_user_gid=local_gid)
                 for args in [
                     git_add_args,
                     git_commit_args,
                     git_push_args,
+                    git_tag_args,
                     git_push_tags_args,
                 ]
             ]
@@ -165,15 +172,14 @@ def test_run_push_pypi(
     mock_project_root: Path,
     mock_docker_pyproject_toml_file: Path,
     docker_project_root: Path,
-    local_username: str,
+    local_uid: int,
+    local_gid: int,
 ):
-    with patch("build_tasks.push_tasks.run_process") as run_process_mock, patch(
-        "build_tasks.push_tasks.run_process_as_local_user"
-    ) as run_process_as_user_mock:
+    with patch("build_tasks.push_tasks.run_process") as run_process_mock:
         PushPypi().run(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
-            local_username=local_username,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
         )
         assert run_process_mock.call_count == 0
-        assert run_process_as_user_mock.call_count == 0

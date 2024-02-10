@@ -38,13 +38,15 @@ def test_test_all_requires():
 def test_run_test_all(
     mock_project_root: Path,
     docker_project_root: Path,
-    local_username: str,
+    local_uid: int,
+    local_gid: int,
 ):
     with patch("build_tasks.test_tasks.run_process") as run_process_mock:
         TestAll().run(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
-            local_username=local_username,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
         )
         assert run_process_mock.call_count == 0
 
@@ -57,13 +59,15 @@ def test_run_test_build_sanity(
     mock_project_root: Path,
     mock_docker_pyproject_toml_file: Path,
     docker_project_root: Path,
-    local_username: str,
+    local_uid: int,
+    local_gid: int,
 ):
     with patch("build_tasks.test_tasks.run_process") as run_process_mock:
         TestBuildSanity().run(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
-            local_username=local_username,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
         )
         test_build_sanity_args = concatenate_args(
             args=[
@@ -93,13 +97,15 @@ def test_run_test_python_style(
     mock_project_root: Path,
     mock_docker_pyproject_toml_file: Path,
     docker_project_root: Path,
-    local_username: str,
+    local_uid: int,
+    local_gid: int,
 ):
     with patch("build_tasks.test_tasks.run_process") as run_process_mock:
         TestPythonStyle().run(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
-            local_username=local_username,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
         )
         test_isort_args = concatenate_args(
             args=[
@@ -282,13 +288,15 @@ def test_run_test_pypi(
     mock_project_root: Path,
     mock_docker_pyproject_toml_file: Path,
     docker_project_root: Path,
-    local_username: str,
+    local_uid: int,
+    local_gid: int,
 ):
     with patch("build_tasks.test_tasks.run_process") as run_process_mock:
         TestPypi().run(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
-            local_username=local_username,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
         )
         test_build_sanity_args = concatenate_args(
             args=[

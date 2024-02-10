@@ -10,12 +10,7 @@ from build_vars.git_status_vars import (
     get_git_diff,
 )
 from build_vars.project_setting_vars import get_project_version, is_dev_project_version
-from dag_engine import (
-    TaskNode,
-    concatenate_args,
-    run_process,
-    run_process_as_local_user,
-)
+from dag_engine import TaskNode, concatenate_args, run_process
 
 
 class PushAll(TaskNode):
@@ -29,7 +24,8 @@ class PushAll(TaskNode):
         self,
         non_docker_project_root: Path,
         docker_project_root: Path,
-        local_username: str,
+        local_user_uid: int,
+        local_user_gid: int,
     ) -> None:
         """Does nothing."""
 
@@ -45,7 +41,8 @@ class PushTags(TaskNode):
         self,
         non_docker_project_root: Path,
         docker_project_root: Path,
-        local_username: str,
+        local_user_uid: int,
+        local_user_gid: int,
     ) -> None:
         """Push tags."""
         current_branch = get_current_branch()
@@ -55,11 +52,12 @@ class PushTags(TaskNode):
         if currently_on_main ^ is_dev_version:
             current_diff = get_git_diff()
             if current_diff:
-                run_process_as_local_user(
+                run_process(
                     args=concatenate_args(args=["git", "add", "-u"]),
-                    local_username=local_username,
+                    local_user_uid=local_user_uid,
+                    local_user_gid=local_user_gid,
                 )
-                run_process_as_local_user(
+                run_process(
                     args=concatenate_args(
                         args=[
                             "git",
@@ -68,16 +66,23 @@ class PushTags(TaskNode):
                             f"'Committing staged changes for {current_version}'",
                         ]
                     ),
-                    local_username=local_username,
+                    local_user_uid=local_user_uid,
+                    local_user_gid=local_user_gid,
                 )
-                run_process_as_local_user(
+                run_process(
                     args=concatenate_args(args=["git", "push"]),
-                    local_username=local_username,
+                    local_user_uid=local_user_uid,
+                    local_user_gid=local_user_gid,
                 )
-            run_process(args=concatenate_args(args=["git", "tag", current_version]))
-            run_process_as_local_user(
+            run_process(
+                args=concatenate_args(args=["git", "tag", current_version]),
+                local_user_uid=local_user_uid,
+                local_user_gid=local_user_gid,
+            )
+            run_process(
                 args=concatenate_args(args=["git", "push", "--tags"]),
-                local_username=local_username,
+                local_user_uid=local_user_uid,
+                local_user_gid=local_user_gid,
             )
         else:
             raise ValueError(
@@ -96,6 +101,7 @@ class PushPypi(TaskNode):
         self,
         non_docker_project_root: Path,
         docker_project_root: Path,
-        local_username: str,
+        local_user_uid: int,
+        local_user_gid: int,
     ) -> None:
         """Push PyPi."""

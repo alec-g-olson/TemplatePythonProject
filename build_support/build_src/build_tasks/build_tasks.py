@@ -24,7 +24,8 @@ class BuildPypi(TaskNode):
         self,
         non_docker_project_root: Path,
         docker_project_root: Path,
-        local_username: str,
+        local_user_uid: int,
+        local_user_gid: int,
     ) -> None:
         """Builds PyPi package."""
         run_process(

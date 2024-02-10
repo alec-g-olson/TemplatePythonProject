@@ -117,21 +117,34 @@ def test_get_new_license_content():
         )
 
 
-def test_all_templates_supported():
-    known_fields_to_skip = [
-        "[This is the first released version of the Lesser GPL.  It also counts\n"
-        " as the successor of the GNU Library Public License, version 2, hence\n"
-        " the version number 2.1.]"
-    ]
-    template_field_regex = re.compile(r"\[[^]]+]")
-    allowed_fields = (
-        YEAR_TEMPLATE_FIELDS + COPYRIGHT_OWNER_TEMPLATE_FIELDS + known_fields_to_skip
-    )
-    for template_key in get_licenses_with_templates():
-        template_text = get_template_for_license(template_key=template_key)
-        fields_to_fill = re.findall(template_field_regex, template_text)
-        for field_to_fill in fields_to_fill:
-            assert field_to_fill in allowed_fields
+@pytest.fixture
+def check_template_compatability(is_on_main):
+    # We only want to check template compatability if we are
+    # on a working branch.  If we are on main and something goes
+    # stale it won't be fixable.  Also reduces the number of calls
+    # made to the GitHub API during building.
+    return not is_on_main
+
+
+def test_all_templates_supported(check_template_compatability: bool):
+    # won't hit if check_template_compatability is false
+    if check_template_compatability:  # pragma: no cover
+        known_fields_to_skip = [
+            "[This is the first released version of the Lesser GPL.  It also counts\n"
+            " as the successor of the GNU Library Public License, version 2, hence\n"
+            " the version number 2.1.]"
+        ]
+        template_field_regex = re.compile(r"\[[^]]+]")
+        allowed_fields = (
+            YEAR_TEMPLATE_FIELDS
+            + COPYRIGHT_OWNER_TEMPLATE_FIELDS
+            + known_fields_to_skip
+        )
+        for template_key in get_licenses_with_templates():
+            template_text = get_template_for_license(template_key=template_key)
+            fields_to_fill = re.findall(template_field_regex, template_text)
+            for field_to_fill in fields_to_fill:
+                assert field_to_fill in allowed_fields
 
 
 #######################################################################################

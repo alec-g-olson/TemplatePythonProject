@@ -21,7 +21,8 @@ def test_run_build_pypi(
     mock_project_root: Path,
     mock_docker_pyproject_toml_file: Path,
     docker_project_root: Path,
-    local_username: str,
+    local_uid: int,
+    local_gid: int,
 ):
     with patch("build_tasks.build_tasks.run_process") as run_process_mock:
         clean_dist_args = concatenate_args(
@@ -62,7 +63,8 @@ def test_run_build_pypi(
         BuildPypi().run(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
-            local_username=local_username,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
         )
         assert run_process_mock.call_count == 3
         run_process_mock.assert_has_calls(

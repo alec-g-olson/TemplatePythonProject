@@ -41,7 +41,7 @@ def test_constants_not_changed_by_accident():
 
 def test_fix_permissions():
     with patch("execute_build_steps.run_process") as run_process_mock:
-        local_user = "local_user"
+        local_user = "1337:42"
         args = [
             "chown",
             "-R",
@@ -52,7 +52,7 @@ def test_fix_permissions():
                 if path.name != ".git"
             ],
         ]
-        fix_permissions(local_user=local_user)
+        fix_permissions(local_user_uid=1337, local_user_gid=42)
         run_process_mock.assert_called_once_with(
             args=concatenate_args(args=args), silent=True
         )
@@ -68,16 +68,6 @@ def non_docker_project_root_arg(request) -> Path:
     return request.param
 
 
-@pytest.fixture(params=["20", "500"])
-def user_id(request) -> str:
-    return request.param
-
-
-@pytest.fixture(params=["1", "1337"])
-def group_id(request) -> str:
-    return request.param
-
-
 @pytest.fixture(params=CLI_ARG_TO_TASK.keys())
 def build_task(request) -> str:
     return request.param
@@ -87,9 +77,8 @@ def build_task(request) -> str:
 def args_to_test_single_task(
     docker_project_root_arg: Path,
     non_docker_project_root_arg: Path,
-    local_username: str,
-    user_id: str,
-    group_id: str,
+    local_uid: int,
+    local_gid: int,
     build_task: str,
 ) -> list[str]:
     return [
@@ -100,11 +89,9 @@ def args_to_test_single_task(
             "--docker-project-root",
             docker_project_root_arg,
             "--user-id",
-            user_id,
+            local_uid,
             "--group-id",
-            group_id,
-            "--local-username",
-            local_username,
+            local_gid,
             build_task,
         ]
     ]
@@ -114,17 +101,15 @@ def args_to_test_single_task(
 def expected_namespace_single_task(
     docker_project_root_arg: Path,
     non_docker_project_root_arg: Path,
-    local_username: str,
-    user_id: str,
-    group_id: str,
+    local_uid: int,
+    local_gid: int,
     build_task: str,
 ) -> Namespace:
     return Namespace(
         non_docker_project_root=non_docker_project_root_arg,
         docker_project_root=docker_project_root_arg,
-        local_username=local_username,
-        user_id=user_id,
-        group_id=group_id,
+        user_id=local_uid,
+        group_id=local_gid,
         build_tasks=[build_task],
     )
 
@@ -139,9 +124,8 @@ def test_parse_args_single_task(
 def args_to_test_all_tasks(
     docker_project_root_arg: Path,
     non_docker_project_root_arg: Path,
-    local_username: str,
-    user_id: str,
-    group_id: str,
+    local_uid: int,
+    local_gid: int,
 ) -> list[str]:
     return [
         str(x)
@@ -151,11 +135,9 @@ def args_to_test_all_tasks(
             "--docker-project-root",
             docker_project_root_arg,
             "--user-id",
-            user_id,
+            local_uid,
             "--group-id",
-            group_id,
-            "--local-username",
-            local_username,
+            local_gid,
         ]
     ] + list(CLI_ARG_TO_TASK.keys())
 
@@ -164,16 +146,14 @@ def args_to_test_all_tasks(
 def expected_namespace_all_tasks(
     docker_project_root_arg: Path,
     non_docker_project_root_arg: Path,
-    local_username: str,
-    user_id: str,
-    group_id: str,
+    local_uid: int,
+    local_gid: int,
 ) -> Namespace:
     return Namespace(
         non_docker_project_root=non_docker_project_root_arg,
         docker_project_root=docker_project_root_arg,
-        local_username=local_username,
-        user_id=user_id,
-        group_id=group_id,
+        user_id=local_uid,
+        group_id=local_gid,
         build_tasks=list(CLI_ARG_TO_TASK.keys()),
     )
 
@@ -194,8 +174,6 @@ def test_parse_args_no_task():
                 "20",
                 "--group-id",
                 "101",
-                "--local-username",
-                "local_username",
             ]
         )
 
@@ -212,26 +190,7 @@ def test_parse_args_bad_task():
                 "20",
                 "--group-id",
                 "101",
-                "--local-username",
-                "local_username",
                 "INVALID_TASK_NAME",
-            ]
-        )
-
-
-def test_parse_args_no_username():
-    with pytest.raises(SystemExit):
-        parse_args(
-            args=[
-                "--non-docker-project-root",
-                "non_docker_project_root",
-                "--docker-project-root",
-                "docker_project_root",
-                "--user-id",
-                "20",
-                "--group-id",
-                "101",
-                "clean",
             ]
         )
 
@@ -246,8 +205,6 @@ def test_parse_args_no_group_id():
                 "docker_project_root",
                 "--user-id",
                 "20",
-                "--local-username",
-                "local_username",
                 "clean",
             ]
         )
@@ -263,8 +220,6 @@ def test_parse_args_no_user_id():
                 "docker_project_root",
                 "--group-id",
                 "101",
-                "--local-username",
-                "local_username",
                 "clean",
             ]
         )
@@ -280,8 +235,6 @@ def test_parse_args_no_docker_project_root():
                 "20",
                 "--group-id",
                 "101",
-                "--local-username",
-                "local_username",
                 "clean",
             ]
         )
@@ -297,8 +250,6 @@ def test_parse_args_no_non_docker_project_root():
                 "20",
                 "--group-id",
                 "101",
-                "--local-username",
-                "local_username",
                 "clean",
             ]
         )
@@ -307,16 +258,14 @@ def test_parse_args_no_non_docker_project_root():
 def test_run_main_success(
     mock_project_root: Path,
     docker_project_root: Path,
-    local_username: str,
-    user_id: str,
-    group_id: str,
+    local_uid: int,
+    local_gid: int,
 ):
     args = Namespace(
         non_docker_project_root=mock_project_root,
         docker_project_root=docker_project_root,
-        local_username=local_username,
-        user_id=user_id,
-        group_id=group_id,
+        user_id=local_uid,
+        group_id=local_gid,
         build_tasks=["clean"],
     )
     with patch("execute_build_steps.run_tasks") as mock_run_tasks, patch(
@@ -327,27 +276,26 @@ def test_run_main_success(
             tasks=[Clean()],
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
-            local_username=local_username,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
         )
         mock_fix_permissions.assert_called_once_with(
-            local_user=":".join([user_id, group_id])
+            local_user_uid=local_uid, local_user_gid=local_gid
         )
 
 
 def test_run_main_exception(
     mock_project_root: Path,
     docker_project_root: Path,
-    local_username: str,
-    user_id: str,
-    group_id: str,
+    local_uid: int,
+    local_gid: int,
 ):
     all_task_list = list(CLI_ARG_TO_TASK.keys())
     args = Namespace(
         non_docker_project_root=mock_project_root,
         docker_project_root=docker_project_root,
-        local_username=local_username,
-        user_id=user_id,
-        group_id=group_id,
+        user_id=local_uid,
+        group_id=local_gid,
         build_tasks=all_task_list,
     )
     with patch("execute_build_steps.run_tasks") as mock_run_tasks, patch(
@@ -362,9 +310,10 @@ def test_run_main_exception(
             tasks=[CLI_ARG_TO_TASK[arg] for arg in all_task_list],
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
-            local_username=local_username,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
         )
         mock_print.assert_called_once_with(error_to_raise)
         mock_fix_permissions.assert_called_once_with(
-            local_user=":".join([user_id, group_id])
+            local_user_uid=local_uid, local_user_gid=local_gid
         )

@@ -17,7 +17,8 @@ def test_run_lint(
     mock_project_root: Path,
     mock_docker_pyproject_toml_file: Path,
     docker_project_root: Path,
-    local_username: str,
+    local_uid: int,
+    local_gid: int,
 ):
     with patch("build_tasks.lint_tasks.run_process") as run_process_mock:
         isort_args = concatenate_args(
@@ -45,7 +46,8 @@ def test_run_lint(
         Lint().run(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
-            local_username=local_username,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
         )
         assert run_process_mock.call_count == 2
         run_process_mock.assert_has_calls(
@@ -64,7 +66,8 @@ def test_run_autoflake(
     mock_project_root: Path,
     mock_docker_pyproject_toml_file: Path,
     docker_project_root: Path,
-    local_username: str,
+    local_uid: int,
+    local_gid: int,
 ):
     with patch("build_tasks.lint_tasks.run_process") as run_process_mock:
         autoflake_args = concatenate_args(
@@ -85,6 +88,7 @@ def test_run_autoflake(
         Autoflake().run(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
-            local_username=local_username,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
         )
         run_process_mock.assert_called_once_with(args=autoflake_args)
