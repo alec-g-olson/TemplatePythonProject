@@ -7,7 +7,7 @@ from new_project_setup.new_project_data_models import ProjectSettings
 project_settings_data_dict = {
     "name": "test_project_name",
     "license": "gpl-3.0",
-    "organization": "Someone Nice",
+    "organization": {"name": "Someone Nice", "contact_email": "someone@nice.com"},
 }
 
 

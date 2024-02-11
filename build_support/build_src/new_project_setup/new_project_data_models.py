@@ -3,7 +3,7 @@
 This module exists to conceptually isolate the serialization and
 deserialization of project_settings.yaml.
 """
-from new_project_setup.setup_license import (
+from new_project_setup.license_templates import (
     get_licenses_with_templates,
     is_valid_license_template,
 )
@@ -25,12 +25,23 @@ def validate_license(template_key: str) -> str:
     return template_key
 
 
+class Organization(BaseModel):
+    """An object containing the information about an organization."""
+
+    name: str
+    contact_email: str
+
+    def formatted_name_and_email(self) -> str:
+        """Builds a label for the organization name and contact email."""
+        return f"{self.name} <{self.contact_email}>"
+
+
 class ProjectSettings(BaseModel):
     """An object containing the project settings for this project."""
 
     name: str
     license: Annotated[str, AfterValidator(validate_license)]
-    organization: str
+    organization: Organization
 
     @classmethod
     def from_yaml(cls, yaml_str: str) -> "ProjectSettings":
