@@ -9,7 +9,7 @@ new_project_data_models.py: Contains the data models that can parse project_sett
     Once parsed it is available in code.
 setup_license.py: Contains the logic for setting up a new license based on the values
     in project_settings.yaml.
-update_pyproject.py: Contains the logic for updating pyproject.toml based on the
+update_pyproject_toml.py: Contains the logic for updating pyproject.toml based on the
     project_settings.yaml.
 setup_new_project.py: Contains the MakeProjectFromTemplate Task.
 """
