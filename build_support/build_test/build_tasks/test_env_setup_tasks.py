@@ -131,7 +131,7 @@ def git_info_yaml_str() -> str:
 
 def test_load_git_info(git_info_yaml_str: str):
     git_info = GitInfo.from_yaml(git_info_yaml_str)
-    assert git_info == GitInfo(**git_info_data_dict)
+    assert git_info == GitInfo.model_validate(git_info_data_dict)
 
 
 def test_load_git_info_bad_branch():
@@ -159,7 +159,7 @@ def test_load_git_info_bad_tags_not_list_of_str():
 
 
 def test_dump_git_info(git_info_yaml_str: str):
-    git_info = GitInfo(**git_info_data_dict)
+    git_info = GitInfo.model_validate(git_info_data_dict)
     assert git_info.to_yaml() == git_info_yaml_str
 
 
