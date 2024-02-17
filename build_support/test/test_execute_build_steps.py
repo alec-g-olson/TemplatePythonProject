@@ -3,7 +3,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from build_support.ci_cd_tasks.build_tasks import BuildDocs, BuildPypi
+from build_support.ci_cd_tasks.build_tasks import BuildAll, BuildDocs, BuildPypi
 from build_support.ci_cd_tasks.env_setup_tasks import (
     BuildDevEnvironment,
     BuildProdEnvironment,
@@ -43,6 +43,7 @@ def test_constants_not_changed_by_accident():
         "autoflake": Autoflake(),
         "build_pypi": BuildPypi(),
         "build_docs": BuildDocs(),
+        "build": BuildAll(),
         "push_pypi": PushPypi(),
         "push": PushAll(),
     }

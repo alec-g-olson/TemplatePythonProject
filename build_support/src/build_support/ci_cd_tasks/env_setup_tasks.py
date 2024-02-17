@@ -1,6 +1,5 @@
 """env_setup_tasks should hold all tasks that setup environments during the build process."""
 
-from dataclasses import dataclass
 from pathlib import Path
 
 from build_support.ci_cd_vars.docker_vars import DockerTarget, get_docker_build_command
@@ -15,6 +14,7 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
 from build_support.ci_cd_vars.git_status_vars import get_current_branch, get_local_tags
 from build_support.ci_cd_vars.project_setting_vars import get_pulumi_version
 from build_support.dag_engine import TaskNode, concatenate_args, run_process
+from pydantic import BaseModel
 from yaml import safe_dump, safe_load
 
 
@@ -124,8 +124,7 @@ class Clean(TaskNode):
             )
 
 
-@dataclass
-class GitInfo:
+class GitInfo(BaseModel):
     """An object containing the current git information."""
 
     branch: str
@@ -134,33 +133,11 @@ class GitInfo:
     @classmethod
     def from_yaml(cls, yaml_str: str) -> "GitInfo":
         """Builds an object from a json str."""
-        yaml_vals = safe_load(yaml_str)
-        git_info = GitInfo(**yaml_vals)
-        git_info._validate_settings()
-        return git_info
+        return GitInfo.model_validate(safe_load(yaml_str))
 
     def to_yaml(self) -> str:
         """Dumps object as a yaml str."""
-        return safe_dump(self.__dict__)
-
-    def _validate_settings(self):
-        """Validates the values in this instance of GitInfo."""
-        if not isinstance(self.branch, str):
-            raise ValueError(
-                '"branch" in git info must have a string value, '
-                f"found type {self.branch.__class__.__name__}."
-            )
-        if not isinstance(self.tags, list):
-            raise ValueError(
-                '"tags" in git info must be a list, '
-                f"found type {self.tags.__class__.__name__}."
-            )
-        if not all(isinstance(tag, str) for tag in self.tags):
-            types = {tag.__class__.__name__ for tag in self.tags}
-            raise ValueError(
-                'All elements of "tags" in git info must be strings, '
-                f"found types ({','.join(sorted(list(types)))})."
-            )
+        return safe_dump(self.model_dump())
 
 
 class GetGitInfo(TaskNode):

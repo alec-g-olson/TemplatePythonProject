@@ -1,4 +1,4 @@
-"""Dataclasses used for calculations."""
+"""Data models used for calculations."""
 
 from enum import Enum
 

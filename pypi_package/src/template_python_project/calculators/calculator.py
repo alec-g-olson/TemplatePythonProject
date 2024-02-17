@@ -1,6 +1,6 @@
 """Module implementing calculator logic."""
 
-from template_python_project.calculators.dataclasses import (
+from template_python_project.calculators.data_models import (
     CalculationType,
     CalculatorInput,
     CalculatorOutput,

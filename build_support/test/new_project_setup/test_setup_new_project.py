@@ -3,11 +3,13 @@ import tomllib
 from pathlib import Path
 
 from build_support.ci_cd_tasks.env_setup_tasks import Clean
-from build_support.new_project_setup.new_project_dataclass import ProjectSettings
-from build_support.new_project_setup.setup_license import (
-    ALL_RIGHTS_RESERVED_KEY,
-    get_new_license_content,
+from build_support.ci_cd_vars.file_and_dir_path_vars import get_pypi_src_dir
+from build_support.new_project_setup.license_templates import ALL_RIGHTS_RESERVED_KEY
+from build_support.new_project_setup.new_project_data_models import (
+    Organization,
+    ProjectSettings,
 )
+from build_support.new_project_setup.setup_license import get_new_license_content
 from build_support.new_project_setup.setup_new_project import MakeProjectFromTemplate
 
 
@@ -20,7 +22,13 @@ def _check_pyproject_toml(
         pyproject_toml_data["tool"]["poetry"]["version"] == "0.0.0"
     ) == version_reset
     assert pyproject_toml_data["tool"]["poetry"]["license"] == settings.license
-    assert pyproject_toml_data["tool"]["poetry"]["authors"] == [settings.organization]
+    assert pyproject_toml_data["tool"]["poetry"]["authors"] == [
+        settings.organization.formatted_name_and_email()
+    ]
+    assert len(pyproject_toml_data["tool"]["poetry"]["packages"]) == 1
+    assert (
+        pyproject_toml_data["tool"]["poetry"]["packages"][0]["include"] == settings.name
+    )
 
 
 def _check_license_file(license_path: Path, settings: ProjectSettings):
@@ -29,6 +37,12 @@ def _check_license_file(license_path: Path, settings: ProjectSettings):
     )
     observed_license_content = license_path.read_text()
     assert observed_license_content == expected_license_content
+
+
+def _check_folder_names(project_folder: Path, settings: ProjectSettings):
+    assert (
+        get_pypi_src_dir(project_root=project_folder).joinpath(settings.name).exists()
+    )
 
 
 def _ensure_project_folder_matches_settings(
@@ -42,6 +56,7 @@ def _ensure_project_folder_matches_settings(
     _check_license_file(
         license_path=project_folder.joinpath("LICENSE"), settings=settings
     )
+    _check_folder_names(project_folder=project_folder, settings=settings)
 
 
 def test_make_new_project(tmp_path: Path, real_project_root_dir):
@@ -61,7 +76,10 @@ def test_make_new_project(tmp_path: Path, real_project_root_dir):
     modified_project_settings = ProjectSettings(
         name="open_source_project",
         license="mit",
-        organization="A Very Nice Person <tastefully.zanny.email@selfhosted.com>",
+        organization=Organization(
+            name="A Very Nice Person",
+            contact_email="tastefully.zanny.email@selfhosted.com",
+        ),
     )
     project_settings_path.write_text(modified_project_settings.to_yaml())
     make_project_task = MakeProjectFromTemplate()
@@ -79,7 +97,10 @@ def test_make_new_project(tmp_path: Path, real_project_root_dir):
     modified_project_settings = ProjectSettings(
         name="closed_source_project",
         license=ALL_RIGHTS_RESERVED_KEY,
-        organization="Soulless Corp. 3000 <our.lawyers.are.mean@soulless.io>",
+        organization=Organization(
+            name="Soulless Corp. 3000",
+            contact_email="our.lawyers.are.mean@soulless.io",
+        ),
     )
     project_settings_path.write_text(modified_project_settings.to_yaml())
     make_project_task = MakeProjectFromTemplate()

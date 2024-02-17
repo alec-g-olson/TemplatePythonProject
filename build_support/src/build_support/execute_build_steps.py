@@ -3,7 +3,7 @@
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 
-from build_support.ci_cd_tasks.build_tasks import BuildDocs, BuildPypi
+from build_support.ci_cd_tasks.build_tasks import BuildAll, BuildDocs, BuildPypi
 from build_support.ci_cd_tasks.env_setup_tasks import (
     BuildDevEnvironment,
     BuildProdEnvironment,
@@ -35,6 +35,7 @@ CLI_ARG_TO_TASK: dict[str, TaskNode] = {
     "autoflake": Autoflake(),
     "build_pypi": BuildPypi(),
     "build_docs": BuildDocs(),
+    "build": BuildAll(),
     "push_pypi": PushPypi(),
     "push": PushAll(),
 }

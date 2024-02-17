@@ -1,6 +1,6 @@
 from argparse import Namespace
 
-from template_python_project.calculators.dataclasses import CalculatorOutput
+from template_python_project.calculators.data_models import CalculatorOutput
 from template_python_project.main import build_parser, main
 
 
