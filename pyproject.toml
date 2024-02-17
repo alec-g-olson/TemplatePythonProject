@@ -16,7 +16,7 @@ line_length = 88
 
 [tool.poetry]
 name = "template_python_project"
-version = "0.2.18"
+version = "0.2.19"
 license = "unlicense"
 packages = [{include = "template_python_project", from="pypi_package/src"}]
 description = "A project that can be used as a template to provide some CI/CD out of the box."
@@ -55,6 +55,8 @@ pytest-html = "^4.1"
 pytest-xdist = "^3.5"
 responses = "^0.24"
 requests = "^2.31"
+sphinx = "^7.2"
+sphinx-rtd-theme = "^2.0.0"
 types-requests = "^2.31"
 
 [tool.poetry.group.pulumi]

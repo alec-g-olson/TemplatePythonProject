@@ -1,5 +1,7 @@
-build/
-dist/
-pyproject.toml
+/build/
+/dist/
+**/docs/source/
+**/docs/build/
+!**/docs/source/index.rst
 .idea
 .coverage
