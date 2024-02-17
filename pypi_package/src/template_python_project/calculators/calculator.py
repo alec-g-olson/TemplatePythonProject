@@ -8,7 +8,14 @@ from template_python_project.calculators.dataclasses import (
 
 
 def calculate_result(args: CalculatorInput) -> CalculatorOutput:
-    """Perform calculation based on the inputs."""
+    """Perform calculation based on the inputs.
+
+    Args:
+      args (CalculatorInput): Input for calculation.
+
+    Returns:
+      CalculatorOutput: Output of the calculation.
+    """
     if args.typeOfCalc == CalculationType.ADD:
         result = args.value1 + args.value2
     elif args.typeOfCalc == CalculationType.SUBTRACT:

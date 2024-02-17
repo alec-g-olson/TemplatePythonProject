@@ -10,8 +10,12 @@ from template_python_project.calculators.dataclasses import (
 )
 
 
-def build_parser():
-    """Build the argument parser used by this program's main method."""
+def build_parser() -> ArgumentParser:
+    """Build the argument parser used by this program's main method.
+
+    :return: A parser.
+    :rtype: ArgumentParser
+    """
     parser = ArgumentParser(
         description="Takes 2 numbers and a calculation type to report the result."
     )
