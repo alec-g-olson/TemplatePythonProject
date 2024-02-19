@@ -124,11 +124,6 @@ def get_element_name(
         )
 
 
-required_package_sections = ["Arguments", ["Returns", "Yields"]]
-required_module_sections = ["Arguments", ["Returns", "Yields"]]
-required_class_sections = ["Arguments", ["Returns", "Yields"]]
-required_method_sections = ["Arguments", ["Returns", "Yields"]]
-
 convention_checker = ConventionChecker()
 
 
@@ -143,18 +138,6 @@ SectionContext = namedtuple(
         "is_last_section",
     ),
 )
-
-
-def get_docstring_contexts(
-    docstring: str, sections_to_consider: list[str]
-) -> dict[str, SectionContext]:
-    lines = docstring.split("\n")
-    return {
-        context.section_name: normalize_context(context=context)
-        for context in convention_checker._get_section_contexts(
-            lines, sections_to_consider
-        )
-    }
 
 
 def normalize_context(context: SectionContext) -> SectionContext:
@@ -179,6 +162,18 @@ def normalize_context(context: SectionContext) -> SectionContext:
         original_index=context.original_index,
         is_last_section=context.is_last_section,
     )
+
+
+def get_docstring_contexts(
+    docstring: str, sections_to_consider: list[str]
+) -> dict[str, SectionContext]:
+    lines = docstring.split("\n")
+    return {
+        context.section_name: normalize_context(context=context)
+        for context in convention_checker._get_section_contexts(
+            lines, sections_to_consider
+        )
+    }
 
 
 POSSIBLE_ARGUMENTS_SECTIONS = ["Arguments"]
