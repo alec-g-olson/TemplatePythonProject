@@ -56,9 +56,9 @@ def get_pulumi_dir(project_root: Path) -> Path:
     return project_root.joinpath("pulumi")
 
 
-def get_sphinx_conf_dir(project_root: Path) -> Path:
-    """Gets the sphinx config file for the project."""
-    return project_root.joinpath("sphinx_conf")
+def get_documentation_enforcement_dir(project_root: Path) -> Path:
+    """Gets the documentation enforcement dir for the project."""
+    return project_root.joinpath("documentation_enforcement")
 
 
 ########################################
@@ -93,6 +93,23 @@ def get_subproject_docs_build_dir(subproject_root: Path) -> Path:
             "build"
         )
     )
+
+
+########################################
+# Files and folders contained in documentation_enforcement
+########################################
+
+
+def get_sphinx_conf_dir(project_root: Path) -> Path:
+    """Gets the sphinx config file for the project."""
+    return get_documentation_enforcement_dir(project_root=project_root).joinpath(
+        "sphinx_conf"
+    )
+
+
+def get_documentation_tests_dir(project_root: Path) -> Path:
+    """Gets the documentation tests dir for the project."""
+    return get_documentation_enforcement_dir(project_root=project_root).joinpath("test")
 
 
 ########################################
@@ -242,6 +259,7 @@ def get_all_non_pulumi_python_folders(project_root: Path) -> list[str]:
         args=[
             get_build_support_src_and_test(project_root=project_root),
             get_pypi_src_and_test(project_root=project_root),
+            get_documentation_tests_dir(project_root=project_root),
         ]
     )
 
@@ -274,6 +292,7 @@ def get_all_test_folders(project_root: Path) -> list[str]:
         args=[
             get_build_support_test_dir(project_root=project_root),
             get_pypi_test_dir(project_root=project_root),
+            get_documentation_tests_dir(project_root=project_root),
         ]
     )
 
@@ -289,4 +308,5 @@ class ProjectContext(Enum):
     PYPI = "pypi_package"
     BUILD_SUPPORT = "build_support"
     PULUMI = "pulumi"
+    DOCUMENTATION_ENFORCEMENT = "documentation_enforcement"
     ALL = "all"

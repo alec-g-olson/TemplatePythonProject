@@ -20,6 +20,7 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_all_test_folders,
     get_build_support_src_and_test,
     get_build_support_test_dir,
+    get_documentation_tests_dir,
     get_pypi_src_and_test,
 )
 from build_support.ci_cd_vars.machine_introspection_vars import THREADS_AVAILABLE
@@ -35,7 +36,7 @@ class TestAll(TaskNode):
 
     def required_tasks(self) -> list[TaskNode]:
         """Adds all required "subtests" to the DAG."""
-        return [TestPypi(), TestBuildSanity(), TestPythonStyle()]
+        return [TestPypi(), TestBuildSupport(), TestPythonStyle()]
 
     def run(
         self,
@@ -47,7 +48,7 @@ class TestAll(TaskNode):
         """Does nothing."""
 
 
-class TestBuildSanity(TaskNode):
+class TestBuildSupport(TaskNode):
     """Runs tests to ensure the following.
 
     - Branch and version are coherent.
@@ -57,7 +58,7 @@ class TestBuildSanity(TaskNode):
 
     def required_tasks(self) -> list[TaskNode]:
         """Ensures the dev environment is present before running tests."""
-        return [GetGitInfo(), BuildDevEnvironment()]
+        return [BuildDevEnvironment()]
 
     def run(
         self,
@@ -93,7 +94,7 @@ class TestPythonStyle(TaskNode):
 
     def required_tasks(self) -> list[TaskNode]:
         """Ensures the dev environment is present before running style checks."""
-        return [BuildDevEnvironment()]
+        return [GetGitInfo(), BuildDevEnvironment()]
 
     def run(
         self,
@@ -155,6 +156,25 @@ class TestPythonStyle(TaskNode):
                     "pydocstyle",
                     "--add-ignore=D100,D104",
                     get_all_test_folders(project_root=docker_project_root),
+                ]
+            )
+        )
+        run_process(
+            args=concatenate_args(
+                args=[
+                    get_docker_command_for_image(
+                        non_docker_project_root=non_docker_project_root,
+                        docker_project_root=docker_project_root,
+                        target_image=DockerTarget.DEV,
+                    ),
+                    "pytest",
+                    "-n",
+                    THREADS_AVAILABLE,
+                    get_test_report_args(
+                        project_root=docker_project_root,
+                        test_context=ProjectContext.DOCUMENTATION_ENFORCEMENT,
+                    ),
+                    get_documentation_tests_dir(project_root=docker_project_root),
                 ]
             )
         )

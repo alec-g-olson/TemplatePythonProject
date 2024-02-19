@@ -14,7 +14,7 @@ from build_support.ci_cd_tasks.lint_tasks import Autoflake, Lint
 from build_support.ci_cd_tasks.push_tasks import PushAll, PushPypi
 from build_support.ci_cd_tasks.test_tasks import (
     TestAll,
-    TestBuildSanity,
+    TestBuildSupport,
     TestPypi,
     TestPythonStyle,
 )
@@ -28,7 +28,7 @@ CLI_ARG_TO_TASK: dict[str, TaskNode] = {
     "build_prod": BuildProdEnvironment(),
     "build_pulumi": BuildPulumiEnvironment(),
     "test_style": TestPythonStyle(),
-    "test_build_sanity": TestBuildSanity(),
+    "test_build_sanity": TestBuildSupport(),
     "test_pypi": TestPypi(),
     "test": TestAll(),
     "lint": Lint(),

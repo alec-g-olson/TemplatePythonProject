@@ -10,7 +10,7 @@ from template_python_project.calculators.data_models import (
 def calculate_result(args: CalculatorInput) -> CalculatorOutput:
     """Perform calculation based on the inputs.
 
-    Args:
+    Arguments:
       args (CalculatorInput): Input for calculation.
 
     Returns:

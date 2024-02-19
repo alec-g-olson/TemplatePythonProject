@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from build_support.ci_cd_tasks.env_setup_tasks import BuildDevEnvironment
-from build_support.ci_cd_tasks.test_tasks import TestBuildSanity, TestPypi
+from build_support.ci_cd_tasks.test_tasks import TestBuildSupport, TestPypi
 from build_support.ci_cd_vars.docker_vars import (
     DockerTarget,
     get_all_python_folders,
@@ -64,7 +64,7 @@ class Autoflake(TaskNode):
         We must ensure that all domain specific tests are passing.
         Autoflake can cause cascading rewrites if some code has errors.
         """
-        return [Lint(), TestPypi(), TestBuildSanity()]
+        return [Lint(), TestPypi(), TestBuildSupport()]
 
     def run(
         self,

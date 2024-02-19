@@ -4,7 +4,7 @@ from unittest.mock import call, patch
 from build_support.ci_cd_tasks.env_setup_tasks import BuildDevEnvironment, GetGitInfo
 from build_support.ci_cd_tasks.test_tasks import (
     TestAll,
-    TestBuildSanity,
+    TestBuildSupport,
     TestPypi,
     TestPythonStyle,
 )
@@ -38,7 +38,7 @@ from build_support.dag_engine import concatenate_args
 def test_test_all_requires():
     assert TestAll().required_tasks() == [
         TestPypi(),
-        TestBuildSanity(),
+        TestBuildSupport(),
         TestPythonStyle(),
     ]
 
@@ -60,7 +60,7 @@ def test_run_test_all(
 
 
 def test_test_build_sanity_requires():
-    assert TestBuildSanity().required_tasks() == [GetGitInfo(), BuildDevEnvironment()]
+    assert TestBuildSupport().required_tasks() == [GetGitInfo(), BuildDevEnvironment()]
 
 
 def test_run_test_build_sanity(
@@ -71,7 +71,7 @@ def test_run_test_build_sanity(
     local_gid: int,
 ):
     with patch("build_support.ci_cd_tasks.test_tasks.run_process") as run_process_mock:
-        TestBuildSanity().run(
+        TestBuildSupport().run(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
             local_user_uid=local_uid,
