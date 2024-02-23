@@ -17,20 +17,40 @@ class TaskNode(ABC):
     """An abstract representation of a task that can be run in a DAG."""
 
     def task_label(self) -> str:
-        """A unique label for each task, used when building the DAG."""
+        """A unique label for each task, used when building the DAG.
+
+        Returns:
+            str: The class name of the task.
+        """
         return self.__class__.__name__
 
-    def __eq__(self, other):
-        """Checks if this is equal to the other item."""
+    def __eq__(self, other: "TaskNode") -> bool:
+        """Checks if this is equal to the other item.
+
+        Arguments:
+            other (TaskNode): The other object to compare equality with.
+
+        Returns:
+            bool: True if equal, otherwise false.
+        """
         return isinstance(other, TaskNode) and self.task_label() == other.task_label()
 
-    def __hash__(self):
-        """Calculates a hash value for use in __eq__."""
+    def __hash__(self) -> int:
+        """Calculates a hash value for use in dictionaries.
+
+        Returns:
+            int: The hash value of this task.
+        """
         return hash(self.task_label())
 
     @abstractmethod
     def required_tasks(self) -> list["TaskNode"]:
-        """Will return the tasks required to start the current task."""
+        """Will return the tasks required to start the current task.
+
+        Returns:
+            list[TaskNode]: A list of the tasks that must be completed
+                before this one can be run.
+        """
 
     @abstractmethod
     def run(
@@ -40,7 +60,21 @@ class TaskNode(ABC):
         local_user_uid: int,
         local_user_gid: int,
     ) -> None:
-        """Will contain the logic of each task."""
+        """Will contain the logic of each task.
+
+        Arguments:
+            non_docker_project_root (Path): Path to this project's root when running
+                in docker containers.
+            docker_project_root (Path): Path to this project's root on the local
+                machine.
+            local_user_uid (int): The local user's users id, used when tasks need to be
+                run by the local user.
+            local_user_gid (int): The local user's group id, used when tasks need to be
+                run by the local user.
+
+        Returns:
+            None
+        """
 
 
 def _add_tasks_to_list_with_dfs(

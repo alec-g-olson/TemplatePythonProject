@@ -1,4 +1,8 @@
-"""Collection of all functions and variable that report git information."""
+"""Collection of all functions and variable that report git information.
+
+Attributes:
+    | MAIN_BRANCH_NAME: The name of the main branch for this repo.
+"""
 from build_support.dag_engine import get_output_of_process
 
 

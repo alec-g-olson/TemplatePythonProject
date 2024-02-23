@@ -1,4 +1,8 @@
-"""The entry point into running build tools."""
+"""The entry point into running build tools.
+
+Attributes:
+    | CLI_ARG_TO_TASK: A dictionary of the CLI arg to the corresponding task to run.
+"""
 
 from argparse import ArgumentParser, Namespace
 from pathlib import Path

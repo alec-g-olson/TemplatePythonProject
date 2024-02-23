@@ -1,3 +1,4 @@
+import ast
 from collections import namedtuple
 from dataclasses import dataclass
 from pathlib import Path
@@ -9,7 +10,7 @@ import pytest
 from pydocstyle import ConventionChecker
 from pydocstyle.parser import Class, Function, Method, Module, Package, Parser
 
-sub_projects_to_enforce_docstrings = ["pypi_package"]  # , "build_support"]
+sub_projects_to_enforce_docstrings = ["pypi_package", "build_support"]
 
 
 @pytest.fixture(params=sub_projects_to_enforce_docstrings)
@@ -176,6 +177,7 @@ def get_docstring_contexts(
     }
 
 
+POSSIBLE_ATTRIBUTES_SECTIONS = ["Attributes"]
 POSSIBLE_ARGUMENTS_SECTIONS = ["Arguments"]
 POSSIBLE_RESULTS_SECTIONS = ["Returns", "Yields"]
 POSSIBLE_SUB_PACKAGE_SECTIONS = ["SubPackages"]
@@ -185,8 +187,9 @@ LOOSE_REGEX = compile(r"^\s*(\|\s)?([^\s:]+)\s*.*")
 
 ENFORCED_SUB_PACKAGE_REGEX = compile(r"^\s*\|\s([^\s:]+)\s*:\n?\s*(.+)")
 ENFORCED_MODULE_REGEX = compile(r"^\s*\|\s([^\s:]+)\s*:\n?\s*(.+)")
+ENFORCED_ATTRIBUTE_REGEX = compile(r"^\s*\|\s([^\s:]+)\s*:\n?\s*(.+)")
 ENFORCED_GOOGLE_ARGS_REGEX = compile(r"^\s*(\w+)\s*(\(.*\))\s*:\n?\s*(.+)")
-GOOGLE_RESULT_REGEX = compile(r"^\s*((\w+)\s*:\s*(.+)|None)")
+GOOGLE_RESULT_REGEX = compile(r"^\s*(([\w\[\]]+)\s*:\s*(.+)|None)")
 
 
 def check_all_elements_in_section_context(
@@ -425,9 +428,118 @@ def test_all_package_docstrings(package_to_test: Path):
     assert packages_with_issues_in_docstrings == []
 
 
+def import_element(full_module_path: str, full_element_path: str | None = None):
+    imported_element = __import__(full_module_path)
+    for path_element in full_module_path.split(".")[1:]:
+        imported_element = getattr(imported_element, path_element)
+    if full_element_path is not None:  # pragma: no cover - might not have element path
+        for path_element in full_element_path.split("."):
+            imported_element = getattr(imported_element, path_element)
+    return imported_element
+
+
+def get_list_of_imported_names(module_source_text: str) -> set[str]:
+    names_imported = set()
+    parsed_module = ast.parse(module_source_text)
+    for node in ast.iter_child_nodes(parsed_module):
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            for name in node.names:
+                names_imported.add(name.asname if name.asname else name.name)
+    return names_imported
+
+
+def get_module_attributes_section_info(
+    parsed_object: Module,
+    possible_attributes_sections: list[str],
+    contexts: dict[str, SectionContext],
+    missing_sections: list[str],
+    clashing_sections: list[list[str]],
+    element_docs_malformed_in_section: list[str],
+    extra_elements_in_section: list[str],
+    elements_missing_from_section: list[str],
+) -> None:
+    # remove ".py"
+    module_path = get_source_file_name(parsed_element=parsed_object)[:-3].replace(
+        "/", "."
+    )
+    imported_module = import_element(full_module_path=module_path)
+    names_imported_by_module = get_list_of_imported_names(
+        module_source_text=parsed_object.source
+    )
+    module_child_names = {child.name for child in parsed_object.children}
+    attributes_to_document = [
+        name
+        for name in dir(imported_module)
+        if not (
+            name.startswith("_")
+            or name.startswith("@")
+            or name in names_imported_by_module
+            or name in module_child_names
+        )
+    ]
+    check_for_section_with_elements_in_contexts(
+        contexts=contexts,
+        section_group_to_check_for=possible_attributes_sections,
+        required_context_elements=attributes_to_document,
+        enforced_element_regex=ENFORCED_ATTRIBUTE_REGEX,
+        missing_sections=missing_sections,
+        clashing_sections=clashing_sections,
+        element_doc_malformed_in_section=element_docs_malformed_in_section,
+        extra_elements_in_section=extra_elements_in_section,
+        elements_missing_from_section=elements_missing_from_section,
+    )
+
+
+@dataclass
+class ModuleDocstringData:
+    module_name: str
+    missing_sections: list[str]
+    clashing_sections: list[str]
+    missing_attributes: list[str]
+    extra_attributes: list[str]
+    malformed_attributes_docs: list[str]
+
+
 def test_all_module_docstrings(package_to_test: Path):
+    modules_with_issues_in_docstrings = []
     for parsed_module in get_all_modules_in(package_to_test=package_to_test):
-        assert parsed_module is not None
+        contexts = get_docstring_contexts(
+            docstring=parsed_module.docstring,
+            sections_to_consider=POSSIBLE_ATTRIBUTES_SECTIONS,
+        )
+        missing_sections = []
+        clashing_sections = []
+        malformed_attributes_docs = []
+        extra_attributes = []
+        missing_attributes = []
+        get_module_attributes_section_info(
+            parsed_object=parsed_module,
+            possible_attributes_sections=POSSIBLE_ATTRIBUTES_SECTIONS,
+            contexts=contexts,
+            missing_sections=missing_sections,
+            clashing_sections=clashing_sections,
+            element_docs_malformed_in_section=malformed_attributes_docs,
+            extra_elements_in_section=extra_attributes,
+            elements_missing_from_section=missing_attributes,
+        )
+        if (
+            missing_sections
+            or clashing_sections
+            or malformed_attributes_docs
+            or extra_attributes
+            or missing_attributes
+        ):  # pragma: no cover if all pass
+            modules_with_issues_in_docstrings.append(
+                ModuleDocstringData(
+                    module_name=get_source_file_name(parsed_element=parsed_module),
+                    missing_sections=missing_sections,
+                    clashing_sections=clashing_sections,
+                    missing_attributes=missing_attributes,
+                    extra_attributes=extra_attributes,
+                    malformed_attributes_docs=malformed_attributes_docs,
+                )
+            )
+    assert modules_with_issues_in_docstrings == []
 
 
 def test_all_class_docstrings(package_to_test: Path):

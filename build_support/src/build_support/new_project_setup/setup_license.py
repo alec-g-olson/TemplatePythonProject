@@ -1,4 +1,11 @@
-"""Module exists to make a new license from templates."""
+"""Module exists to make a new license from templates.
+
+Attributes:
+    | YEAR_TEMPLATE_FIELDS: A list of template fields which we should replace
+        with the year the new project is made.
+    | COPYRIGHT_OWNER_TEMPLATE_FIELDS: A list of template fields which we should
+        replace with the owner of the project when the new project is made.
+"""
 
 from copy import copy
 from datetime import datetime

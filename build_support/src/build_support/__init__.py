@@ -1,11 +1,16 @@
 """Package for managing build plans.
 
-- dag_engine.py has the basic logic for running Tasks.
-- execute_build_steps.py is a "main" that runs tasks.
-- report_build_var.py is a "main" that reports variables.
-- ci_cd_tasks is where most tasks should be implemented.
-- new_project_setup holds the logic for the MakeProjectFromTemplate task.
-    It is a particularly complex task that is conceptually different from
-    the other build tasks.
-- ci_cd_vars is where build variables can be calculated.
+SubPackages:
+    | ci_cd_tasks: All tasks that are part of the standard build pipeline should be
+        implemented within this package.
+    | ci_cd_vars: All variable used in the standard build pipeline should be
+        calculated within this package.  This is done to prevent circular dependencies.
+    | new_project_setup: This package contains the logic needed for setting up a new
+        project that is not part of the standard pipeline.
+
+Modules:
+    | dag_engine.py: Contains the logic for resolving task dependencies and running
+        tasks in a coherent order.
+    | execute_build_steps.py: A "main" that runs tasks.
+    | report_build_var.py: A "main" that reports variables.
 """

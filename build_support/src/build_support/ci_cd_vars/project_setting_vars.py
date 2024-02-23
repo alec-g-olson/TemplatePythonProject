@@ -1,4 +1,8 @@
-"""Collection of all functions and variable that report project level settings."""
+"""Collection of all functions and variable that report project level settings.
+
+Attributes:
+    | ALLOWED_VERSION_REGEX: A regex for allowed version numbers for this project.
+"""
 import re
 import tomllib
 from pathlib import Path
