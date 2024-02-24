@@ -13,8 +13,12 @@ class CalculationType(Enum):
     MULTIPLY = 3
     DIVIDE = 4
 
-    def __str__(self):
-        """Return the name of this enum to represent it as a string."""
+    def __str__(self) -> str:
+        """Return the name of this enum to represent it as a string.
+
+        Returns:
+            str: A string representation of the enum. (name)
+        """
         return self.name
 
 

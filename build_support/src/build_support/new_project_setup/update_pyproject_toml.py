@@ -11,7 +11,16 @@ from tomlkit import dumps, parse
 def update_pyproject_toml(
     project_root: Path, new_project_settings: ProjectSettings
 ) -> None:
-    """Updates the pyproject toml based on the new project settings."""
+    """Updates the pyproject toml based on the new project settings.
+
+    Args:
+        project_root (Path): Path to this project's root.
+        new_project_settings (ProjectSettings): The information needed to create a new
+            project.
+
+    Returns:
+        None
+    """
     path_to_pyproject_toml = get_pyproject_toml(project_root=project_root)
     # Forced type because mypy can't recognize TOMLDocument properties
     pyproject_data: dict[Any, Any] = parse(path_to_pyproject_toml.read_text())

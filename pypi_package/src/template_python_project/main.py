@@ -1,6 +1,6 @@
 """Module that provides a CLI for calculations."""
 
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 from pathlib import Path
 
 from template_python_project.calculators.calculator import calculate_result
@@ -10,11 +10,15 @@ from template_python_project.calculators.data_models import (
 )
 
 
-def build_parser() -> ArgumentParser:
+def parse_args(args: list[str] | None = None) -> Namespace:
     """Build the argument parser used by this program's main method.
 
-    :return: A parser.
-    :rtype: ArgumentParser
+    Args:
+        args (list[str] | None): Args to parse.  Defaults to None, causing
+            sys.argv[1:] to be used.  This arg exists to make testing easy.
+
+    Returns:
+        Namespace: An object with fields parsed from the command line.
     """
     parser = ArgumentParser(
         description="Takes 2 numbers and a calculation type to report the result."
@@ -38,13 +42,20 @@ def build_parser() -> ArgumentParser:
     parser.add_argument(
         "--out-file", type=Path, help="The location of the output file."
     )
-    return parser
+    return parser.parse_args(args=args)
 
 
-def main(args):
+def run_main(args: Namespace) -> None:
     """Run this program.
 
     In reality this is a "sub-main" method that we broke out in order to test.
+
+    Args:
+        args (Namespace): A namespace that has been parsed from the command line.
+
+    Returns:
+        None
+
     """
     input_vals = CalculatorInput(
         typeOfCalc=CalculationType[args.type], value1=args.val1, value2=args.val2
@@ -55,5 +66,4 @@ def main(args):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    parsed_args = build_parser().parse_args()
-    main(args=parsed_args)
+    run_main(args=parse_args())

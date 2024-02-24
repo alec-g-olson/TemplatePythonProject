@@ -206,6 +206,7 @@ TOP_LEVEL_README_HEADER_LEVEL_DICT = {
     "PyCharm: Setting the Python Interpreter": 4,
     "PyCharm: Setting Src and Test Folders": 4,
     "PyCharm: Configuring PyCharm to Use Pytest": 4,
+    "PyCharm: Adjusting Docstring Settings": 4,
     "PyCharm: Checking Your Work by Running the Tests": 4,
     "VS Code": 3,
     "VS Code: Setting the Python Interpreter": 4,

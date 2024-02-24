@@ -2,9 +2,10 @@ from pathlib import Path
 
 import pytest
 from build_support.ci_cd_vars.file_and_dir_path_vars import (
-    ProjectContext,
+    SubprojectContext,
     get_build_reports_dir,
     get_build_support_dir,
+    get_documentation_enforcement_dir,
     get_pulumi_dir,
     get_pypi_dir,
 )
@@ -20,20 +21,20 @@ from build_support.ci_cd_vars.python_vars import (
     get_pytest_html_coverage_report_path,
     get_pytest_html_report_name,
     get_pytest_html_report_path,
-    get_pytest_report_name,
+    get_pytest_report_args,
     get_pytest_xml_coverage_report_name,
     get_pytest_xml_coverage_report_path,
     get_pytest_xml_report_name,
     get_pytest_xml_report_path,
-    get_test_report_args,
+    get_test_report_name,
 )
 from build_support.dag_engine import concatenate_args
 
-pytest_contexts = [target for target in ProjectContext]
+pytest_contexts = [target for target in SubprojectContext]
 
 
 @pytest.fixture(params=pytest_contexts)
-def pytest_context(request) -> ProjectContext:
+def pytest_context(request) -> SubprojectContext:
     return request.param
 
 
@@ -41,10 +42,10 @@ def pytest_context(request) -> ProjectContext:
 def test_get_pytest_report_name(
     mock_project_root: Path,
     mock_local_pyproject_toml_file,
-    pytest_context: ProjectContext,
+    pytest_context: SubprojectContext,
     report_extension: str,
 ):
-    assert get_pytest_report_name(
+    assert get_test_report_name(
         project_root=mock_project_root,
         test_context=pytest_context,
         report_extension=report_extension,
@@ -61,12 +62,12 @@ def test_get_pytest_report_name(
 def test_get_bandit_report_name(
     mock_project_root: Path,
     mock_local_pyproject_toml_file,
-    pytest_context: ProjectContext,
+    pytest_context: SubprojectContext,
 ):
     assert get_bandit_report_name(
         project_root=mock_project_root,
         test_context=pytest_context,
-    ) == get_pytest_report_name(
+    ) == get_test_report_name(
         project_root=mock_project_root,
         test_context=pytest_context,
         report_extension="bandit_report.txt",
@@ -76,7 +77,7 @@ def test_get_bandit_report_name(
 def test_get_bandit_report_path(
     mock_project_root: Path,
     mock_local_pyproject_toml_file,
-    pytest_context: ProjectContext,
+    pytest_context: SubprojectContext,
 ):
     assert get_bandit_report_path(
         project_root=mock_project_root,
@@ -92,12 +93,12 @@ def test_get_bandit_report_path(
 def test_get_pytest_html_report_name(
     mock_project_root: Path,
     mock_local_pyproject_toml_file,
-    pytest_context: ProjectContext,
+    pytest_context: SubprojectContext,
 ):
     assert get_pytest_html_report_name(
         project_root=mock_project_root,
         test_context=pytest_context,
-    ) == get_pytest_report_name(
+    ) == get_test_report_name(
         project_root=mock_project_root,
         test_context=pytest_context,
         report_extension="pytest_report.html",
@@ -107,7 +108,7 @@ def test_get_pytest_html_report_name(
 def test_get_pytest_html_report_path(
     mock_project_root: Path,
     mock_local_pyproject_toml_file,
-    pytest_context: ProjectContext,
+    pytest_context: SubprojectContext,
 ):
     assert get_pytest_html_report_path(
         project_root=mock_project_root,
@@ -123,12 +124,12 @@ def test_get_pytest_html_report_path(
 def test_get_pytest_xml_report_name(
     mock_project_root: Path,
     mock_local_pyproject_toml_file,
-    pytest_context: ProjectContext,
+    pytest_context: SubprojectContext,
 ):
     assert get_pytest_xml_report_name(
         project_root=mock_project_root,
         test_context=pytest_context,
-    ) == get_pytest_report_name(
+    ) == get_test_report_name(
         project_root=mock_project_root,
         test_context=pytest_context,
         report_extension="pytest_report.xml",
@@ -138,7 +139,7 @@ def test_get_pytest_xml_report_name(
 def test_get_pytest_xml_report_path(
     mock_project_root: Path,
     mock_local_pyproject_toml_file,
-    pytest_context: ProjectContext,
+    pytest_context: SubprojectContext,
 ):
     assert get_pytest_xml_report_path(
         project_root=mock_project_root,
@@ -154,12 +155,12 @@ def test_get_pytest_xml_report_path(
 def test_get_pytest_xml_coverage_report_name(
     mock_project_root: Path,
     mock_local_pyproject_toml_file,
-    pytest_context: ProjectContext,
+    pytest_context: SubprojectContext,
 ):
     assert get_pytest_xml_coverage_report_name(
         project_root=mock_project_root,
         test_context=pytest_context,
-    ) == get_pytest_report_name(
+    ) == get_test_report_name(
         project_root=mock_project_root,
         test_context=pytest_context,
         report_extension="pytest_coverage_report.xml",
@@ -169,7 +170,7 @@ def test_get_pytest_xml_coverage_report_name(
 def test_get_pytest_xml_coverage_report_path(
     mock_project_root: Path,
     mock_local_pyproject_toml_file,
-    pytest_context: ProjectContext,
+    pytest_context: SubprojectContext,
 ):
     assert get_pytest_xml_coverage_report_path(
         project_root=mock_project_root,
@@ -185,12 +186,12 @@ def test_get_pytest_xml_coverage_report_path(
 def test_get_pytest_html_coverage_report_name(
     mock_project_root: Path,
     mock_local_pyproject_toml_file,
-    pytest_context: ProjectContext,
+    pytest_context: SubprojectContext,
 ):
     assert get_pytest_html_coverage_report_name(
         project_root=mock_project_root,
         test_context=pytest_context,
-    ) == get_pytest_report_name(
+    ) == get_test_report_name(
         project_root=mock_project_root,
         test_context=pytest_context,
         report_extension="pytest_coverage_report",
@@ -200,7 +201,7 @@ def test_get_pytest_html_coverage_report_name(
 def test_get_pytest_html_coverage_report_path(
     mock_project_root: Path,
     mock_local_pyproject_toml_file,
-    pytest_context: ProjectContext,
+    pytest_context: SubprojectContext,
 ):
     assert get_pytest_html_coverage_report_path(
         project_root=mock_project_root,
@@ -216,20 +217,24 @@ def test_get_pytest_html_coverage_report_path(
 def test_get_coverage_root(
     mock_project_root: Path,
     mock_local_pyproject_toml_file,
-    pytest_context: ProjectContext,
+    pytest_context: SubprojectContext,
 ):
     observed_coverage_root_dir = get_coverage_root(
         project_root=mock_project_root, test_context=pytest_context
     )
-    if pytest_context == ProjectContext.BUILD_SUPPORT:
+    if pytest_context == SubprojectContext.BUILD_SUPPORT:
         assert observed_coverage_root_dir == get_build_support_dir(
             project_root=mock_project_root
         )
-    elif pytest_context == ProjectContext.PYPI:
+    elif pytest_context == SubprojectContext.PYPI:
         assert observed_coverage_root_dir == get_pypi_dir(
             project_root=mock_project_root
         )
-    elif pytest_context == ProjectContext.PULUMI:
+    elif pytest_context == SubprojectContext.DOCUMENTATION_ENFORCEMENT:
+        assert observed_coverage_root_dir == get_documentation_enforcement_dir(
+            project_root=mock_project_root
+        )
+    elif pytest_context == SubprojectContext.PULUMI:
         assert observed_coverage_root_dir == get_pulumi_dir(
             project_root=mock_project_root
         )
@@ -237,10 +242,10 @@ def test_get_coverage_root(
         assert observed_coverage_root_dir == mock_project_root
 
 
-def test_get_test_report_args(
+def test_get_pytest_report_args(
     mock_project_root: Path,
     mock_local_pyproject_toml_file,
-    pytest_context: ProjectContext,
+    pytest_context: SubprojectContext,
 ):
     coverage_xml = get_pytest_xml_coverage_report_path(
         project_root=mock_project_root, test_context=pytest_context
@@ -257,7 +262,7 @@ def test_get_test_report_args(
     coverage_root_dir = get_coverage_root(
         project_root=mock_project_root, test_context=pytest_context
     )
-    assert get_test_report_args(
+    assert get_pytest_report_args(
         project_root=mock_project_root, test_context=pytest_context
     ) == concatenate_args(
         args=[

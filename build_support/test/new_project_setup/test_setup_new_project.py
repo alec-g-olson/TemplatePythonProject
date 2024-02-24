@@ -63,7 +63,7 @@ def test_make_new_project(tmp_path: Path, real_project_root_dir):
     tmp_project_path = tmp_path.joinpath("template_python_project")
     shutil.copytree(real_project_root_dir, tmp_project_path)
     project_settings_path = tmp_project_path.joinpath(
-        "build_support", "project_settings.yaml"
+        "build_support", "new_project_settings.yaml"
     )
     original_project_settings = ProjectSettings.from_yaml(
         project_settings_path.read_text()

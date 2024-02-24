@@ -15,17 +15,18 @@ from build_support.ci_cd_vars.docker_vars import (
     get_pypi_src_dir,
 )
 from build_support.ci_cd_vars.file_and_dir_path_vars import (
-    ProjectContext,
+    SubprojectContext,
     get_all_src_folders,
     get_all_test_folders,
     get_build_support_src_and_test,
     get_build_support_test_dir,
+    get_documentation_tests_dir,
     get_pypi_src_and_test,
 )
 from build_support.ci_cd_vars.machine_introspection_vars import THREADS_AVAILABLE
 from build_support.ci_cd_vars.python_vars import (
     get_bandit_report_path,
-    get_test_report_args,
+    get_pytest_report_args,
 )
 from build_support.dag_engine import TaskNode, concatenate_args, run_process
 
@@ -34,8 +35,12 @@ class TestAll(TaskNode):
     """A collective test task used to test all elements of the project."""
 
     def required_tasks(self) -> list[TaskNode]:
-        """Adds all required "subtests" to the DAG."""
-        return [TestPypi(), TestBuildSanity(), TestPythonStyle()]
+        """Lists all "subtests" to add to the DAG.
+
+        Returns:
+            list[TaskNode]: A list of all build tasks.
+        """
+        return [TestPypi(), TestBuildSupport(), TestPythonStyle()]
 
     def run(
         self,
@@ -44,19 +49,35 @@ class TestAll(TaskNode):
         local_user_uid: int,
         local_user_gid: int,
     ) -> None:
-        """Does nothing."""
+        """Does nothing.
+
+        Arguments are inherited from sub-class.
+
+        Args:
+            non_docker_project_root (Path): Path to this project's root on the local
+                machine.
+            docker_project_root (Path): Path to this project's root when running
+                in docker containers.
+            local_user_uid (int): The local user's users id, used when tasks need to be
+                run by the local user.
+            local_user_gid (int): The local user's group id, used when tasks need to be
+                run by the local user.
+
+        Returns:
+            None
+        """
 
 
-class TestBuildSanity(TaskNode):
-    """Runs tests to ensure the following.
-
-    - Branch and version are coherent.
-    - Readme hasn't been wildly reformatted unexpectedly.
-    - All elements of the build pipeline are passing tests.
-    """
+class TestBuildSupport(TaskNode):
+    """Runs tests to ensure all elements of the build pipeline are passing tests."""
 
     def required_tasks(self) -> list[TaskNode]:
-        """Ensures the dev environment is present before running tests."""
+        """Get the list of tasks that need to be run before we can test the build pipeline.
+
+        Returns:
+            list[TaskNode]: A list of tasks required to test the build pipeline.
+        """
+        # Needs git info to tell if we are on main for some tests that could go stale
         return [GetGitInfo(), BuildDevEnvironment()]
 
     def run(
@@ -66,7 +87,21 @@ class TestBuildSanity(TaskNode):
         local_user_uid: int,
         local_user_gid: int,
     ) -> None:
-        """Runs tests in the build_test folder."""
+        """Runs tests in the build_support/test folder.
+
+        Args:
+            non_docker_project_root (Path): Path to this project's root on the local
+                machine.
+            docker_project_root (Path): Path to this project's root when running
+                in docker containers.
+            local_user_uid (int): The local user's users id, used when tasks need to be
+                run by the local user.
+            local_user_gid (int): The local user's group id, used when tasks need to be
+                run by the local user.
+
+        Returns:
+            None
+        """
         run_process(
             args=concatenate_args(
                 args=[
@@ -78,9 +113,9 @@ class TestBuildSanity(TaskNode):
                     "pytest",
                     "-n",
                     THREADS_AVAILABLE,
-                    get_test_report_args(
+                    get_pytest_report_args(
                         project_root=docker_project_root,
-                        test_context=ProjectContext.BUILD_SUPPORT,
+                        test_context=SubprojectContext.BUILD_SUPPORT,
                     ),
                     get_build_support_src_and_test(project_root=docker_project_root),
                 ]
@@ -89,11 +124,15 @@ class TestBuildSanity(TaskNode):
 
 
 class TestPythonStyle(TaskNode):
-    """Task enforcing stylistic checks of python code."""
+    """Task enforcing stylistic checks of python code and project version."""
 
     def required_tasks(self) -> list[TaskNode]:
-        """Ensures the dev environment is present before running style checks."""
-        return [BuildDevEnvironment()]
+        """Get the list of tasks that need to be run before we can test python style.
+
+        Returns:
+            list[TaskNode]: A list of tasks required to test python style.
+        """
+        return [GetGitInfo(), BuildDevEnvironment()]
 
     def run(
         self,
@@ -102,7 +141,21 @@ class TestPythonStyle(TaskNode):
         local_user_uid: int,
         local_user_gid: int,
     ) -> None:
-        """Runs all stylistic checks on code."""
+        """Runs all stylistic checks on code.
+
+        Args:
+            non_docker_project_root (Path): Path to this project's root on the local
+                machine.
+            docker_project_root (Path): Path to this project's root when running
+                in docker containers.
+            local_user_uid (int): The local user's users id, used when tasks need to be
+                run by the local user.
+            local_user_gid (int): The local user's group id, used when tasks need to be
+                run by the local user.
+
+        Returns:
+            None
+        """
         run_process(
             args=concatenate_args(
                 args=[
@@ -155,6 +208,25 @@ class TestPythonStyle(TaskNode):
                     "pydocstyle",
                     "--add-ignore=D100,D104",
                     get_all_test_folders(project_root=docker_project_root),
+                ]
+            )
+        )
+        run_process(
+            args=concatenate_args(
+                args=[
+                    get_docker_command_for_image(
+                        non_docker_project_root=non_docker_project_root,
+                        docker_project_root=docker_project_root,
+                        target_image=DockerTarget.DEV,
+                    ),
+                    "pytest",
+                    "-n",
+                    THREADS_AVAILABLE,
+                    get_pytest_report_args(
+                        project_root=docker_project_root,
+                        test_context=SubprojectContext.DOCUMENTATION_ENFORCEMENT,
+                    ),
+                    get_documentation_tests_dir(project_root=docker_project_root),
                 ]
             )
         )
@@ -234,7 +306,7 @@ class TestPythonStyle(TaskNode):
                     "-o",
                     get_bandit_report_path(
                         project_root=docker_project_root,
-                        test_context=ProjectContext.PYPI,
+                        test_context=SubprojectContext.PYPI,
                     ),
                     "-r",
                     get_pypi_src_dir(project_root=docker_project_root),
@@ -253,7 +325,7 @@ class TestPythonStyle(TaskNode):
                     "-o",
                     get_bandit_report_path(
                         project_root=docker_project_root,
-                        test_context=ProjectContext.PULUMI,
+                        test_context=SubprojectContext.PULUMI,
                     ),
                     "-r",
                     get_pulumi_dir(project_root=docker_project_root),
@@ -272,7 +344,7 @@ class TestPythonStyle(TaskNode):
                     "-o",
                     get_bandit_report_path(
                         project_root=docker_project_root,
-                        test_context=ProjectContext.BUILD_SUPPORT,
+                        test_context=SubprojectContext.BUILD_SUPPORT,
                     ),
                     "-r",
                     get_build_support_src_dir(project_root=docker_project_root),
@@ -285,7 +357,11 @@ class TestPypi(TaskNode):
     """Task for testing PyPi package."""
 
     def required_tasks(self) -> list[TaskNode]:
-        """Ensures dev env is built."""
+        """Get the list of tasks that need to be run before we can test the pypi package.
+
+        Returns:
+            list[TaskNode]: A list of tasks required to test the pypi package.
+        """
         return [BuildDevEnvironment()]
 
     def run(
@@ -295,7 +371,21 @@ class TestPypi(TaskNode):
         local_user_uid: int,
         local_user_gid: int,
     ) -> None:
-        """Tests the PyPi package."""
+        """Tests the PyPi package.
+
+        Args:
+            non_docker_project_root (Path): Path to this project's root on the local
+                machine.
+            docker_project_root (Path): Path to this project's root when running
+                in docker containers.
+            local_user_uid (int): The local user's users id, used when tasks need to be
+                run by the local user.
+            local_user_gid (int): The local user's group id, used when tasks need to be
+                run by the local user.
+
+        Returns:
+            None
+        """
         run_process(
             args=concatenate_args(
                 args=[
@@ -307,9 +397,9 @@ class TestPypi(TaskNode):
                     "pytest",
                     "-n",
                     THREADS_AVAILABLE,
-                    get_test_report_args(
+                    get_pytest_report_args(
                         project_root=docker_project_root,
-                        test_context=ProjectContext.PYPI,
+                        test_context=SubprojectContext.PYPI,
                     ),
                     get_pypi_src_and_test(project_root=docker_project_root),
                 ]

@@ -43,7 +43,7 @@ strives to give as much of that functionality out of the box as possible.
 ### Creating a New Project From This Template
 
 In order to create a new project from this template first modify the fields in the 
-[project_settings.yaml](build_support/project_settings.yaml) to what ever values you need and then run 
+[project_settings.yaml](build_support/new_project_settings.yaml) to what ever values you need and then run 
 `make make_new_project`.  This will do the following:
  - PyPi:
    - Rename the [pyproject.toml](pyproject.toml) project name.
@@ -97,20 +97,27 @@ something else you must build a new image and reset the interpreter.  You'll als
 
 #### PyCharm: Setting Src and Test Folders
 
-There are two source folders in this project, `src` and `build_support/build_src`.  For each of them you need to 
-right-click on the folder in the project view.  There will be a `Mark Directory as` option.  Hover over that and then
-select `Sources Root`.
+There are two source folders in this project, [pypi_package/src](pypi_package/src) and 
+[build_support/src](build_support/src).  For each of them you need to right-click on the folder in the project view.  
+There will be a `Mark Directory as` option.  Hover over that and then select `Sources Root`.
 
-There are two test folders in this project, `test`, and `build_support/build_test`.  For each of them you will repeat
-the process described for the source folders, but instead of selecting `Sources Root`, you will mark these as `Test
-Sources Root`.
+There are three test folders in this project, [pypi_package/test](pypi_package/test), 
+[documentation_enforcement/test](documentation_enforcement/test), and [build_support/test](build_support/test).  For 
+each of them you will repeat the process described for the source folders, but instead of selecting `Sources Root`, you
+will mark these as `Test Sources Root`.
 
 #### PyCharm: Configuring PyCharm to Use Pytest
 
 By default, PyCharm uses `unittest`.  This project uses `pytest` and PyCharm needs to be configured to default to it.
-To do this go to PyCharm's Settings and on the left side select "Tools" and then "Python Integration Tools".  On this
-pane there should be a "testing" section with a drop-down menu.  Select `pytest` from the drop-down and click "Apply"
-and then "OK".
+To do this go to PyCharm's Settings and navigate to `Tools | Python Integrated Tools | Testing` where you should see
+a drop-down menu.  Select `pytest` from the drop-down and click "Apply" and then "OK".
+
+#### PyCharm: Adjusting Docstring Settings
+
+By default, Pycharm uses `Plain` docstring formats, but this project uses Google style docstrings. PyCharm can be 
+configured to enable stub generation using the Google docstring format.  Go to PyCharms Settings and navigate to
+`Tools | Python Integrated Tools | Docstring format` where you should see a drop-down menu.  Select `Google` from the
+drop-down and click "Apply" and then "OK".
 
 #### PyCharm: Checking Your Work by Running the Tests
 

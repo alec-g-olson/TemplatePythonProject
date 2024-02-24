@@ -3,7 +3,7 @@ from unittest.mock import call, patch
 
 from build_support.ci_cd_tasks.env_setup_tasks import BuildDevEnvironment
 from build_support.ci_cd_tasks.lint_tasks import Autoflake, Lint
-from build_support.ci_cd_tasks.test_tasks import TestBuildSanity, TestPypi
+from build_support.ci_cd_tasks.test_tasks import TestBuildSupport, TestPypi
 from build_support.ci_cd_vars.docker_vars import (
     DockerTarget,
     get_docker_command_for_image,
@@ -62,7 +62,7 @@ def test_run_lint(
 
 
 def test_autoflake_requires():
-    assert Autoflake().required_tasks() == [Lint(), TestPypi(), TestBuildSanity()]
+    assert Autoflake().required_tasks() == [Lint(), TestPypi(), TestBuildSupport()]
 
 
 def test_run_autoflake(
