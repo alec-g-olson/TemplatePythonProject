@@ -43,11 +43,11 @@ class MakeProjectFromTemplate(TaskNode):
     ) -> None:
         """Modifies the appropriate files to start a new project.
 
-        Arguments:
-            non_docker_project_root (Path): Path to this project's root when running
-                in docker containers.
-            docker_project_root (Path): Path to this project's root on the local
+        Args:
+            non_docker_project_root (Path): Path to this project's root on the local
                 machine.
+            docker_project_root (Path): Path to this project's root when running
+                in docker containers.
             local_user_uid (int): The local user's users id, used when tasks need to be
                 run by the local user.
             local_user_gid (int): The local user's group id, used when tasks need to be
@@ -56,7 +56,6 @@ class MakeProjectFromTemplate(TaskNode):
         Returns:
             None
         """
-
         original_project_name = get_project_name(project_root=docker_project_root)
         new_project_settings = ProjectSettings.from_yaml(
             yaml_str=get_new_project_settings(

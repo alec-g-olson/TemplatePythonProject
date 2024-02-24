@@ -11,6 +11,7 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_build_support_test_dir,
     get_dist_dir,
     get_dockerfile,
+    get_documentation_tests_dir,
     get_git_info_yaml,
     get_license_file,
     get_new_project_settings,
@@ -92,7 +93,7 @@ def test_get_new_project_settings(mock_project_root):
     assert get_new_project_settings(
         project_root=mock_project_root
     ) == get_build_support_dir(project_root=mock_project_root).joinpath(
-        "project_settings.yaml"
+        "new_project_settings.yaml"
     )
 
 
@@ -182,6 +183,7 @@ def test_get_all_non_pulumi_python_folders(mock_project_root):
             get_build_support_test_dir(project_root=mock_project_root),
             get_pypi_src_dir(project_root=mock_project_root),
             get_pypi_test_dir(project_root=mock_project_root),
+            get_documentation_tests_dir(project_root=mock_project_root),
         ]
     )
 
@@ -193,6 +195,7 @@ def test_get_all_python_folders(mock_project_root):
             get_build_support_test_dir(project_root=mock_project_root),
             get_pypi_src_dir(project_root=mock_project_root),
             get_pypi_test_dir(project_root=mock_project_root),
+            get_documentation_tests_dir(project_root=mock_project_root),
             get_pulumi_dir(project_root=mock_project_root),
             get_sphinx_conf_dir(project_root=mock_project_root),
         ]
@@ -214,5 +217,6 @@ def test_get_all_test_folders(mock_project_root):
         args=[
             get_build_support_test_dir(project_root=mock_project_root),
             get_pypi_test_dir(project_root=mock_project_root),
+            get_documentation_tests_dir(project_root=mock_project_root),
         ]
     )

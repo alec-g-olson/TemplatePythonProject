@@ -115,7 +115,7 @@ def test_add_task_and_all_required_tasks_to_dict(
     tasks_requested: list[TaskNode],
     task_execution_order: list[TaskNode],
 ):
-    observed_results = get_task_execution_order(enforced_task_order=tasks_requested)
+    observed_results = get_task_execution_order(requested_tasks=tasks_requested)
     assert observed_results == task_execution_order
 
 

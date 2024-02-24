@@ -15,7 +15,7 @@ from build_support.ci_cd_vars.docker_vars import (
     get_pypi_src_dir,
 )
 from build_support.ci_cd_vars.file_and_dir_path_vars import (
-    ProjectContext,
+    SubprojectContext,
     get_all_src_folders,
     get_all_test_folders,
     get_build_support_src_and_test,
@@ -26,7 +26,7 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
 from build_support.ci_cd_vars.machine_introspection_vars import THREADS_AVAILABLE
 from build_support.ci_cd_vars.python_vars import (
     get_bandit_report_path,
-    get_test_report_args,
+    get_pytest_report_args,
 )
 from build_support.dag_engine import TaskNode, concatenate_args, run_process
 
@@ -53,11 +53,11 @@ class TestAll(TaskNode):
 
         Arguments are inherited from sub-class.
 
-        Arguments:
-            non_docker_project_root (Path): Path to this project's root when running
-                in docker containers.
-            docker_project_root (Path): Path to this project's root on the local
+        Args:
+            non_docker_project_root (Path): Path to this project's root on the local
                 machine.
+            docker_project_root (Path): Path to this project's root when running
+                in docker containers.
             local_user_uid (int): The local user's users id, used when tasks need to be
                 run by the local user.
             local_user_gid (int): The local user's group id, used when tasks need to be
@@ -88,11 +88,11 @@ class TestBuildSupport(TaskNode):
     ) -> None:
         """Runs tests in the build_support/test folder.
 
-        Arguments:
-            non_docker_project_root (Path): Path to this project's root when running
-                in docker containers.
-            docker_project_root (Path): Path to this project's root on the local
+        Args:
+            non_docker_project_root (Path): Path to this project's root on the local
                 machine.
+            docker_project_root (Path): Path to this project's root when running
+                in docker containers.
             local_user_uid (int): The local user's users id, used when tasks need to be
                 run by the local user.
             local_user_gid (int): The local user's group id, used when tasks need to be
@@ -112,9 +112,9 @@ class TestBuildSupport(TaskNode):
                     "pytest",
                     "-n",
                     THREADS_AVAILABLE,
-                    get_test_report_args(
+                    get_pytest_report_args(
                         project_root=docker_project_root,
-                        test_context=ProjectContext.BUILD_SUPPORT,
+                        test_context=SubprojectContext.BUILD_SUPPORT,
                     ),
                     get_build_support_src_and_test(project_root=docker_project_root),
                 ]
@@ -142,11 +142,11 @@ class TestPythonStyle(TaskNode):
     ) -> None:
         """Runs all stylistic checks on code.
 
-        Arguments:
-            non_docker_project_root (Path): Path to this project's root when running
-                in docker containers.
-            docker_project_root (Path): Path to this project's root on the local
+        Args:
+            non_docker_project_root (Path): Path to this project's root on the local
                 machine.
+            docker_project_root (Path): Path to this project's root when running
+                in docker containers.
             local_user_uid (int): The local user's users id, used when tasks need to be
                 run by the local user.
             local_user_gid (int): The local user's group id, used when tasks need to be
@@ -221,9 +221,9 @@ class TestPythonStyle(TaskNode):
                     "pytest",
                     "-n",
                     THREADS_AVAILABLE,
-                    get_test_report_args(
+                    get_pytest_report_args(
                         project_root=docker_project_root,
-                        test_context=ProjectContext.DOCUMENTATION_ENFORCEMENT,
+                        test_context=SubprojectContext.DOCUMENTATION_ENFORCEMENT,
                     ),
                     get_documentation_tests_dir(project_root=docker_project_root),
                 ]
@@ -305,7 +305,7 @@ class TestPythonStyle(TaskNode):
                     "-o",
                     get_bandit_report_path(
                         project_root=docker_project_root,
-                        test_context=ProjectContext.PYPI,
+                        test_context=SubprojectContext.PYPI,
                     ),
                     "-r",
                     get_pypi_src_dir(project_root=docker_project_root),
@@ -324,7 +324,7 @@ class TestPythonStyle(TaskNode):
                     "-o",
                     get_bandit_report_path(
                         project_root=docker_project_root,
-                        test_context=ProjectContext.PULUMI,
+                        test_context=SubprojectContext.PULUMI,
                     ),
                     "-r",
                     get_pulumi_dir(project_root=docker_project_root),
@@ -343,7 +343,7 @@ class TestPythonStyle(TaskNode):
                     "-o",
                     get_bandit_report_path(
                         project_root=docker_project_root,
-                        test_context=ProjectContext.BUILD_SUPPORT,
+                        test_context=SubprojectContext.BUILD_SUPPORT,
                     ),
                     "-r",
                     get_build_support_src_dir(project_root=docker_project_root),
@@ -372,11 +372,11 @@ class TestPypi(TaskNode):
     ) -> None:
         """Tests the PyPi package.
 
-        Arguments:
-            non_docker_project_root (Path): Path to this project's root when running
-                in docker containers.
-            docker_project_root (Path): Path to this project's root on the local
+        Args:
+            non_docker_project_root (Path): Path to this project's root on the local
                 machine.
+            docker_project_root (Path): Path to this project's root when running
+                in docker containers.
             local_user_uid (int): The local user's users id, used when tasks need to be
                 run by the local user.
             local_user_gid (int): The local user's group id, used when tasks need to be
@@ -396,9 +396,9 @@ class TestPypi(TaskNode):
                     "pytest",
                     "-n",
                     THREADS_AVAILABLE,
-                    get_test_report_args(
+                    get_pytest_report_args(
                         project_root=docker_project_root,
-                        test_context=ProjectContext.PYPI,
+                        test_context=SubprojectContext.PYPI,
                     ),
                     get_pypi_src_and_test(project_root=docker_project_root),
                 ]

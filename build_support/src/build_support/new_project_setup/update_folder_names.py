@@ -10,7 +10,18 @@ def update_folders_in_project(
     original_project_name: str,
     new_project_settings: ProjectSettings,
 ) -> None:
-    """Updates the pyproject toml based on the new project settings."""
+    """Updates the names of some folders based on the new project settings.
+
+    Args:
+        project_root (Path): Path to this project's root.
+        original_project_name (str): The project name of the template being used to
+            create a new project.
+        new_project_settings (ProjectSettings): The information needed to create a new
+            project.
+
+    Returns:
+        None
+    """
     pypi_src_dir = get_pypi_src_dir(project_root=project_root)
     original_package_dir = pypi_src_dir.joinpath(original_project_name)
     new_package_dir = pypi_src_dir.joinpath(new_project_settings.name)

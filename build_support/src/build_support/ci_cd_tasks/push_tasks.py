@@ -38,11 +38,11 @@ class PushAll(TaskNode):
 
         Arguments are inherited from sub-class.
 
-        Arguments:
-            non_docker_project_root (Path): Path to this project's root when running
-                in docker containers.
-            docker_project_root (Path): Path to this project's root on the local
+        Args:
+            non_docker_project_root (Path): Path to this project's root on the local
                 machine.
+            docker_project_root (Path): Path to this project's root when running
+                in docker containers.
             local_user_uid (int): The local user's users id, used when tasks need to be
                 run by the local user.
             local_user_gid (int): The local user's group id, used when tasks need to be
@@ -81,11 +81,11 @@ class PushTags(TaskNode):
         because there could previously pushed artifacts for a version that passes
         that test.
 
-        Arguments:
-            non_docker_project_root (Path): Path to this project's root when running
-                in docker containers.
-            docker_project_root (Path): Path to this project's root on the local
+        Args:
+            non_docker_project_root (Path): Path to this project's root on the local
                 machine.
+            docker_project_root (Path): Path to this project's root when running
+                in docker containers.
             local_user_uid (int): The local user's users id, used when tasks need to be
                 run by the local user.
             local_user_gid (int): The local user's group id, used when tasks need to be
@@ -171,11 +171,11 @@ class PushPypi(TaskNode):
     ) -> None:
         """Push PyPi.
 
-        Arguments:
-            non_docker_project_root (Path): Path to this project's root when running
-                in docker containers.
-            docker_project_root (Path): Path to this project's root on the local
+        Args:
+            non_docker_project_root (Path): Path to this project's root on the local
                 machine.
+            docker_project_root (Path): Path to this project's root when running
+                in docker containers.
             local_user_uid (int): The local user's users id, used when tasks need to be
                 run by the local user.
             local_user_gid (int): The local user's group id, used when tasks need to be

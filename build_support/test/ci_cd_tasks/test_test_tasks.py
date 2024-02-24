@@ -16,13 +16,14 @@ from build_support.ci_cd_vars.docker_vars import (
     get_mypy_path_env,
 )
 from build_support.ci_cd_vars.file_and_dir_path_vars import (
-    ProjectContext,
+    SubprojectContext,
     get_all_python_folders,
     get_all_src_folders,
     get_all_test_folders,
     get_build_support_src_and_test,
     get_build_support_src_dir,
     get_build_support_test_dir,
+    get_documentation_tests_dir,
     get_pulumi_dir,
     get_pypi_src_and_test,
     get_pypi_src_dir,
@@ -30,7 +31,7 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
 from build_support.ci_cd_vars.machine_introspection_vars import THREADS_AVAILABLE
 from build_support.ci_cd_vars.python_vars import (
     get_bandit_report_path,
-    get_test_report_args,
+    get_pytest_report_args,
 )
 from build_support.dag_engine import concatenate_args
 
@@ -59,11 +60,11 @@ def test_run_test_all(
         assert run_process_mock.call_count == 0
 
 
-def test_test_build_sanity_requires():
-    assert TestBuildSupport().required_tasks() == [GetGitInfo(), BuildDevEnvironment()]
+def test_test_build_support_requires():
+    assert TestBuildSupport().required_tasks() == [BuildDevEnvironment()]
 
 
-def test_run_test_build_sanity(
+def test_run_test_build_support(
     mock_project_root: Path,
     mock_docker_pyproject_toml_file: Path,
     docker_project_root: Path,
@@ -87,9 +88,9 @@ def test_run_test_build_sanity(
                 "pytest",
                 "-n",
                 THREADS_AVAILABLE,
-                get_test_report_args(
+                get_pytest_report_args(
                     project_root=docker_project_root,
-                    test_context=ProjectContext.BUILD_SUPPORT,
+                    test_context=SubprojectContext.BUILD_SUPPORT,
                 ),
                 get_build_support_src_and_test(project_root=docker_project_root),
             ]
@@ -98,7 +99,7 @@ def test_run_test_build_sanity(
 
 
 def test_test_python_style_requires():
-    assert TestPythonStyle().required_tasks() == [BuildDevEnvironment()]
+    assert TestPythonStyle().required_tasks() == [GetGitInfo(), BuildDevEnvironment()]
 
 
 def test_run_test_python_style(
@@ -160,6 +161,23 @@ def test_run_test_python_style(
                 "pydocstyle",
                 "--add-ignore=D100,D104",
                 get_all_test_folders(project_root=docker_project_root),
+            ]
+        )
+        test_documentation_enforcement_args = concatenate_args(
+            args=[
+                get_docker_command_for_image(
+                    non_docker_project_root=mock_project_root,
+                    docker_project_root=docker_project_root,
+                    target_image=DockerTarget.DEV,
+                ),
+                "pytest",
+                "-n",
+                THREADS_AVAILABLE,
+                get_pytest_report_args(
+                    project_root=docker_project_root,
+                    test_context=SubprojectContext.DOCUMENTATION_ENFORCEMENT,
+                ),
+                get_documentation_tests_dir(project_root=docker_project_root),
             ]
         )
         test_flake8_args = concatenate_args(
@@ -227,7 +245,7 @@ def test_run_test_python_style(
                 "-o",
                 get_bandit_report_path(
                     project_root=docker_project_root,
-                    test_context=ProjectContext.PYPI,
+                    test_context=SubprojectContext.PYPI,
                 ),
                 "-r",
                 get_pypi_src_dir(project_root=docker_project_root),
@@ -244,7 +262,7 @@ def test_run_test_python_style(
                 "-o",
                 get_bandit_report_path(
                     project_root=docker_project_root,
-                    test_context=ProjectContext.PULUMI,
+                    test_context=SubprojectContext.PULUMI,
                 ),
                 "-r",
                 get_pulumi_dir(project_root=docker_project_root),
@@ -261,7 +279,7 @@ def test_run_test_python_style(
                 "-o",
                 get_bandit_report_path(
                     project_root=docker_project_root,
-                    test_context=ProjectContext.BUILD_SUPPORT,
+                    test_context=SubprojectContext.BUILD_SUPPORT,
                 ),
                 "-r",
                 get_build_support_src_dir(project_root=docker_project_root),
@@ -273,6 +291,7 @@ def test_run_test_python_style(
             test_black_args,
             test_pydocstyle_src_folders_args,
             test_pydocstyle_test_folders_args,
+            test_documentation_enforcement_args,
             test_flake8_args,
             test_mypy_pypi_args,
             test_mypy_build_support_src_args,
@@ -316,9 +335,9 @@ def test_run_test_pypi(
                 "pytest",
                 "-n",
                 THREADS_AVAILABLE,
-                get_test_report_args(
+                get_pytest_report_args(
                     project_root=docker_project_root,
-                    test_context=ProjectContext.PYPI,
+                    test_context=SubprojectContext.PYPI,
                 ),
                 get_pypi_src_and_test(project_root=docker_project_root),
             ]

@@ -35,7 +35,7 @@ ALL_RIGHTS_RESERVED_TEMPLATE = (
 
 
 #######################################################################################
-# To avoid rate limiting we are caching any call made to GitHub as a file.  The
+# To avoid rate limiting we are caching the calls made to GitHub as files.  The
 # "@cache" decorator is not as clean as a solution as it would initially appear,
 # because each test calls it again in a new context.  To ensure that we don't call
 # out to GitHub during each test, we have "hard coded" the real project root so that
@@ -46,7 +46,11 @@ REAL_LICENSE_TEMPLATE_DIR = get_license_templates_dir(project_root=REAL_PROJECT_
 
 
 def get_github_license_template_info_blobs() -> list[dict[str, str]]:
-    """Gets all the info for GitHub license templates."""
+    """Gets all the info for GitHub license templates.
+
+    Returns:
+        list[dict[str, str]]: The GitHub license template information.
+    """
     license_template_info_blobs = REAL_LICENSE_TEMPLATE_DIR.joinpath(
         "license_template_info_blobs.json"
     )
@@ -64,21 +68,39 @@ def get_github_license_template_info_blobs() -> list[dict[str, str]]:
 
 
 def get_licenses_with_templates() -> list[str]:
-    """Gets a list of licenses with templates."""
+    """Gets a list of licenses with templates.
+
+    Returns:
+        list[str]: A list of all valid template names.
+    """
     supported_github_license_data = get_github_license_template_info_blobs()
     supported_github_licenses = [blob["key"] for blob in supported_github_license_data]
     return supported_github_licenses + [ALL_RIGHTS_RESERVED_KEY]
 
 
 def is_valid_license_template(template_key: str) -> bool:
-    """Checks to see if the template_key is valid."""
+    """Checks to see if the template_key is valid.
+
+    Args:
+        template_key (str): The name of a license template.
+
+    Returns:
+        bool: Is there a template for the provided template_key.
+    """
     template_key_lower = template_key.lower()
     licenses_with_templates = get_licenses_with_templates()
     return template_key_lower in licenses_with_templates
 
 
 def get_template_for_license(template_key: str) -> str:
-    """Gets the template for a license."""
+    """Gets the template for a license.
+
+    Args:
+        template_key (str): The name of a license template.
+
+    Returns:
+          str: The license template for the key provided.
+    """
     template_key_lower = template_key.lower()
     if not is_valid_license_template(template_key=template_key):
         raise ValueError(

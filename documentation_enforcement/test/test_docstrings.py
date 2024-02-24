@@ -1,4 +1,5 @@
 import ast
+import inspect
 from collections import namedtuple
 from dataclasses import dataclass
 from pathlib import Path
@@ -165,23 +166,41 @@ def normalize_context(context: SectionContext) -> SectionContext:
     )
 
 
-def get_docstring_contexts(
-    docstring: str, sections_to_consider: list[str]
-) -> dict[str, SectionContext]:
+def get_docstring_contexts(docstring: str) -> dict[str, SectionContext]:
     lines = docstring.split("\n")
     return {
         context.section_name: normalize_context(context=context)
         for context in convention_checker._get_section_contexts(
-            lines, sections_to_consider
+            lines,
+            sorted(
+                set(
+                    list(convention_checker.GOOGLE_SECTION_NAMES)
+                    + PROJECT_SPECIFIC_SECTIONS
+                )
+            ),
         )
     }
 
 
 POSSIBLE_ATTRIBUTES_SECTIONS = ["Attributes"]
-POSSIBLE_ARGUMENTS_SECTIONS = ["Arguments"]
+POSSIBLE_ARGUMENTS_SECTIONS = ["Args"]
 POSSIBLE_RESULTS_SECTIONS = ["Returns", "Yields"]
 POSSIBLE_SUB_PACKAGE_SECTIONS = ["SubPackages"]
 POSSIBLE_MODULES_SECTIONS = ["Modules"]
+
+PROJECT_SPECIFIC_SECTIONS = sorted(
+    set(
+        section_name
+        for list_of_sections in [
+            POSSIBLE_ATTRIBUTES_SECTIONS,
+            POSSIBLE_ARGUMENTS_SECTIONS,
+            POSSIBLE_RESULTS_SECTIONS,
+            POSSIBLE_SUB_PACKAGE_SECTIONS,
+            POSSIBLE_MODULES_SECTIONS,
+        ]
+        for section_name in list_of_sections
+    )
+)
 
 LOOSE_REGEX = compile(r"^\s*(\|\s)?([^\s:]+)\s*.*")
 
@@ -189,7 +208,7 @@ ENFORCED_SUB_PACKAGE_REGEX = compile(r"^\s*\|\s([^\s:]+)\s*:\n?\s*(.+)")
 ENFORCED_MODULE_REGEX = compile(r"^\s*\|\s([^\s:]+)\s*:\n?\s*(.+)")
 ENFORCED_ATTRIBUTE_REGEX = compile(r"^\s*\|\s([^\s:]+)\s*:\n?\s*(.+)")
 ENFORCED_GOOGLE_ARGS_REGEX = compile(r"^\s*(\w+)\s*(\(.*\))\s*:\n?\s*(.+)")
-GOOGLE_RESULT_REGEX = compile(r"^\s*(([\w\[\]]+)\s*:\s*(.+)|None)")
+GOOGLE_RESULT_REGEX = compile(r"^\s*(([\w\[\],\s]+)\s*:\s*(.+)|None)")
 
 
 def check_all_elements_in_section_context(
@@ -367,11 +386,7 @@ class PackageDocstringData:
 def test_all_package_docstrings(package_to_test: Path):
     packages_with_issues_in_docstrings = []
     for parsed_package in get_all_packages_in(package_to_test=package_to_test):
-        contexts = get_docstring_contexts(
-            docstring=parsed_package.docstring,
-            sections_to_consider=POSSIBLE_SUB_PACKAGE_SECTIONS
-            + POSSIBLE_MODULES_SECTIONS,
-        )
+        contexts = get_docstring_contexts(docstring=parsed_package.docstring)
         missing_sections = []
         clashing_sections = []
         malformed_sub_package_docs = []
@@ -503,10 +518,7 @@ class ModuleDocstringData:
 def test_all_module_docstrings(package_to_test: Path):
     modules_with_issues_in_docstrings = []
     for parsed_module in get_all_modules_in(package_to_test=package_to_test):
-        contexts = get_docstring_contexts(
-            docstring=parsed_module.docstring,
-            sections_to_consider=POSSIBLE_ATTRIBUTES_SECTIONS,
-        )
+        contexts = get_docstring_contexts(docstring=parsed_module.docstring)
         missing_sections = []
         clashing_sections = []
         malformed_attributes_docs = []
@@ -557,8 +569,21 @@ def get_function_args_section_info(
     extra_elements_in_section: list[str],
     elements_missing_from_section: list[str],
 ) -> None:
+    # remove ".py"
+    module_path = get_source_file_name(parsed_element=parsed_object)[:-3].replace(
+        "/", "."
+    )
+    imported_function = import_element(
+        full_module_path=module_path,
+        full_element_path=get_element_name(parsed_element=parsed_object),
+    )
+    parameters = list(inspect.signature(imported_function).parameters)
     required_arg_docs = [
-        x for x in parsed_object.callable_args if x not in ["self", "cls"]
+        x
+        for x in parsed_object.callable_args
+        # We have to check against real parameters because sometimes
+        # the parsed object lists complex type hints as callable args
+        if x not in ["self", "cls"] and x in parameters
     ]
     check_for_section_with_elements_in_contexts(
         contexts=contexts,
@@ -608,11 +633,7 @@ class MethodDocstringData(FunctionDocstringData):
 def test_all_method_docstrings(package_to_test: Path):
     method_with_issues_in_docstrings = []
     for parsed_method in get_all_methods_in(package_to_test=package_to_test):
-        contexts = get_docstring_contexts(
-            docstring=parsed_method.docstring,
-            sections_to_consider=POSSIBLE_ARGUMENTS_SECTIONS
-            + POSSIBLE_RESULTS_SECTIONS,
-        )
+        contexts = get_docstring_contexts(docstring=parsed_method.docstring)
         missing_sections = []
         clashing_sections = []
         malformed_arg_docs = []
@@ -661,11 +682,7 @@ def test_all_method_docstrings(package_to_test: Path):
 def test_all_function_docstrings(package_to_test: Path):
     functions_with_issues_in_docstrings = []
     for parsed_function in get_all_functions_in(package_to_test=package_to_test):
-        contexts = get_docstring_contexts(
-            docstring=parsed_function.docstring,
-            sections_to_consider=POSSIBLE_ARGUMENTS_SECTIONS
-            + POSSIBLE_RESULTS_SECTIONS,
-        )
+        contexts = get_docstring_contexts(docstring=parsed_function.docstring)
         missing_sections = []
         clashing_sections = []
         malformed_arg_docs = []
@@ -692,6 +709,7 @@ def test_all_function_docstrings(package_to_test: Path):
             or clashing_sections
             or malformed_arg_docs
             or extra_args
+            or missing_args
             or result_badly_formatted
         ):  # pragma: no cover if all pass
             functions_with_issues_in_docstrings.append(

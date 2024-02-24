@@ -38,11 +38,11 @@ class BuildDevEnvironment(TaskNode):
     ) -> None:
         """Builds a stable environment for running dev commands.
 
-        Arguments:
-            non_docker_project_root (Path): Path to this project's root when running
-                in docker containers.
-            docker_project_root (Path): Path to this project's root on the local
+        Args:
+            non_docker_project_root (Path): Path to this project's root on the local
                 machine.
+            docker_project_root (Path): Path to this project's root when running
+                in docker containers.
             local_user_uid (int): The local user's users id, used when tasks need to be
                 run by the local user.
             local_user_gid (int): The local user's group id, used when tasks need to be
@@ -78,11 +78,11 @@ class BuildProdEnvironment(TaskNode):
     ) -> None:
         """Builds a stable environment for running prod commands.
 
-        Arguments:
-            non_docker_project_root (Path): Path to this project's root when running
-                in docker containers.
-            docker_project_root (Path): Path to this project's root on the local
+        Args:
+            non_docker_project_root (Path): Path to this project's root on the local
                 machine.
+            docker_project_root (Path): Path to this project's root when running
+                in docker containers.
             local_user_uid (int): The local user's users id, used when tasks need to be
                 run by the local user.
             local_user_gid (int): The local user's group id, used when tasks need to be
@@ -118,11 +118,11 @@ class BuildPulumiEnvironment(TaskNode):
     ) -> None:
         """Builds a stable environment for running pulumi commands.
 
-        Arguments:
-            non_docker_project_root (Path): Path to this project's root when running
-                in docker containers.
-            docker_project_root (Path): Path to this project's root on the local
+        Args:
+            non_docker_project_root (Path): Path to this project's root on the local
                 machine.
+            docker_project_root (Path): Path to this project's root when running
+                in docker containers.
             local_user_uid (int): The local user's users id, used when tasks need to be
                 run by the local user.
             local_user_gid (int): The local user's group id, used when tasks need to be
@@ -163,11 +163,11 @@ class Clean(TaskNode):
     ) -> None:
         """Deletes all the temporary build files.
 
-        Arguments:
-            non_docker_project_root (Path): Path to this project's root when running
-                in docker containers.
-            docker_project_root (Path): Path to this project's root on the local
+        Args:
+            non_docker_project_root (Path): Path to this project's root on the local
                 machine.
+            docker_project_root (Path): Path to this project's root when running
+                in docker containers.
             local_user_uid (int): The local user's users id, used when tasks need to be
                 run by the local user.
             local_user_gid (int): The local user's group id, used when tasks need to be
@@ -206,7 +206,7 @@ class GitInfo(BaseModel):
     def from_yaml(cls, yaml_str: str) -> "GitInfo":
         """Builds an object from a json str.
 
-        Arguments:
+        Args:
             yaml_str (str): String of the YAML representation of a GitInfo instance.
 
         Returns:
@@ -243,11 +243,11 @@ class GetGitInfo(TaskNode):
     ) -> None:
         """Builds a yaml with required git info.
 
-        Arguments:
-            non_docker_project_root (Path): Path to this project's root when running
-                in docker containers.
-            docker_project_root (Path): Path to this project's root on the local
+        Args:
+            non_docker_project_root (Path): Path to this project's root on the local
                 machine.
+            docker_project_root (Path): Path to this project's root when running
+                in docker containers.
             local_user_uid (int): The local user's users id, used when tasks need to be
                 run by the local user.
             local_user_gid (int): The local user's group id, used when tasks need to be

@@ -10,8 +10,12 @@ from template_python_project.calculators.data_models import (
 )
 
 
-def build_parser() -> Namespace:
+def parse_args(args: list[str] | None = None) -> Namespace:
     """Build the argument parser used by this program's main method.
+
+    Args:
+        args (list[str] | None): Args to parse.  Defaults to None, causing
+            sys.argv[1:] to be used.  This arg exists to make testing easy.
 
     Returns:
         Namespace: An object with fields parsed from the command line.
@@ -38,15 +42,15 @@ def build_parser() -> Namespace:
     parser.add_argument(
         "--out-file", type=Path, help="The location of the output file."
     )
-    return parser.parse_args()
+    return parser.parse_args(args=args)
 
 
-def main(args: Namespace) -> None:
+def run_main(args: Namespace) -> None:
     """Run this program.
 
     In reality this is a "sub-main" method that we broke out in order to test.
 
-    Arguments:
+    Args:
         args (Namespace): A namespace that has been parsed from the command line.
 
     Returns:
@@ -62,4 +66,4 @@ def main(args: Namespace) -> None:
 
 
 if __name__ == "__main__":  # pragma: no cover
-    main(args=build_parser())
+    run_main(args=parse_args())

@@ -49,6 +49,10 @@ push: setup_build_envs
 push_pypi: setup_build_envs
 	$(EXECUTE_BUILD_STEPS_COMMAND) push_pypi
 
+.PHONY: build
+build: setup_build_envs
+	$(EXECUTE_BUILD_STEPS_COMMAND) build
+
 .PHONY: build_docs
 build_docs: setup_build_envs
 	$(EXECUTE_BUILD_STEPS_COMMAND) build_docs

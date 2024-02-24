@@ -46,13 +46,13 @@ class BuildAll(TaskNode):
     ) -> None:
         """Does nothing.
 
-        Arguments are inherited from sub-class.
+        Arguments are inherited from subclass.
 
-        Arguments:
-            non_docker_project_root (Path): Path to this project's root when running
-                in docker containers.
-            docker_project_root (Path): Path to this project's root on the local
+        Args:
+            non_docker_project_root (Path): Path to this project's root on the local
                 machine.
+            docker_project_root (Path): Path to this project's root when running
+                in docker containers.
             local_user_uid (int): The local user's users id, used when tasks need to be
                 run by the local user.
             local_user_gid (int): The local user's group id, used when tasks need to be
@@ -87,11 +87,11 @@ class BuildPypi(TaskNode):
     ) -> None:
         """Builds PyPi package.
 
-        Arguments:
-            non_docker_project_root (Path): Path to this project's root when running
-                in docker containers.
-            docker_project_root (Path): Path to this project's root on the local
+        Args:
+            non_docker_project_root (Path): Path to this project's root on the local
                 machine.
+            docker_project_root (Path): Path to this project's root when running
+                in docker containers.
             local_user_uid (int): The local user's users id, used when tasks need to be
                 run by the local user.
             local_user_gid (int): The local user's group id, used when tasks need to be
@@ -150,8 +150,24 @@ def build_docs_for_subproject(
     subproject_src_dir: Path,
     docs_src_dir: Path,
     docs_build_dir: Path,
-):
-    """Builds the docs for a subprocess."""
+) -> None:
+    """Builds the docs for a subproject.
+
+    Args:
+        non_docker_project_root (Path): Path to this project's root on the local
+                machine.
+        docker_project_root (Path): Path to this project's root when running in docker
+            containers.
+        subproject_src_dir (Path): Path to the subproject's src dir on the dev docker
+            container.
+        docs_src_dir (Path): Path to the subproject's documentation source directory
+            on the dev docker container.
+        docs_build_dir (Path): Path to the subproject's documentation build directory
+            on the dev docker container.
+
+    Returns:
+        None
+    """
     run_process(
         args=concatenate_args(
             [
@@ -213,11 +229,11 @@ class BuildDocs(TaskNode):
     ) -> None:
         """Builds sphinx docs.
 
-        Arguments:
-            non_docker_project_root (Path): Path to this project's root when running
-                in docker containers.
-            docker_project_root (Path): Path to this project's root on the local
+        Args:
+            non_docker_project_root (Path): Path to this project's root on the local
                 machine.
+            docker_project_root (Path): Path to this project's root when running
+                in docker containers.
             local_user_uid (int): The local user's users id, used when tasks need to be
                 run by the local user.
             local_user_gid (int): The local user's group id, used when tasks need to be
