@@ -73,9 +73,9 @@ autoflake: setup_build_envs
 lint: setup_build_envs
 	$(EXECUTE_BUILD_STEPS_COMMAND) lint
 
-.PHONY: test_build_sanity
-test_build_sanity: setup_build_envs
-	$(EXECUTE_BUILD_STEPS_COMMAND) test_build_sanity
+.PHONY: test_build_support
+test_build_support: setup_build_envs
+	$(EXECUTE_BUILD_STEPS_COMMAND) test_build_support
 
 .PHONY: test_pypi
 test_pypi: setup_build_envs

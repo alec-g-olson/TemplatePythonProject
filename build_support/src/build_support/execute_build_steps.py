@@ -32,7 +32,7 @@ CLI_ARG_TO_TASK: dict[str, TaskNode] = {
     "build_prod": BuildProdEnvironment(),
     "build_pulumi": BuildPulumiEnvironment(),
     "test_style": TestPythonStyle(),
-    "test_build_sanity": TestBuildSupport(),
+    "test_build_support": TestBuildSupport(),
     "test_pypi": TestPypi(),
     "test": TestAll(),
     "lint": Lint(),

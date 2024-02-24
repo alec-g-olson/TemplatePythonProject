@@ -77,7 +77,8 @@ class TestBuildSupport(TaskNode):
         Returns:
             list[TaskNode]: A list of tasks required to test the build pipeline.
         """
-        return [BuildDevEnvironment()]
+        # Needs git info to tell if we are on main for some tests that could go stale
+        return [GetGitInfo(), BuildDevEnvironment()]
 
     def run(
         self,

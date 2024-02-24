@@ -36,7 +36,7 @@ def test_constants_not_changed_by_accident():
         "build_prod": BuildProdEnvironment(),
         "build_pulumi": BuildPulumiEnvironment(),
         "test_style": TestPythonStyle(),
-        "test_build_sanity": TestBuildSupport(),
+        "test_build_support": TestBuildSupport(),
         "test_pypi": TestPypi(),
         "test": TestAll(),
         "lint": Lint(),

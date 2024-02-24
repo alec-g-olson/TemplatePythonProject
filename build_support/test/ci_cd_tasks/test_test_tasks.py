@@ -61,7 +61,7 @@ def test_run_test_all(
 
 
 def test_test_build_support_requires():
-    assert TestBuildSupport().required_tasks() == [BuildDevEnvironment()]
+    assert TestBuildSupport().required_tasks() == [GetGitInfo(), BuildDevEnvironment()]
 
 
 def test_run_test_build_support(
