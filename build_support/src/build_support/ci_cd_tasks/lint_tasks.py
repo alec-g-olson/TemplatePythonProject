@@ -16,7 +16,11 @@ class Lint(TaskNode):
     """Linting task."""
 
     def required_tasks(self) -> list[TaskNode]:
-        """Makes sure dev environment has been built before linting."""
+        """Gets the tasks that have to be run before linting the project.
+
+        Returns:
+            list[TaskNode]: A list of tasks required to lint project.
+        """
         return [BuildDevEnvironment()]
 
     def run(
@@ -26,7 +30,21 @@ class Lint(TaskNode):
         local_user_uid: int,
         local_user_gid: int,
     ) -> None:
-        """Lints all python files in project."""
+        """Lints all python files in project.
+
+        Arguments:
+            non_docker_project_root (Path): Path to this project's root when running
+                in docker containers.
+            docker_project_root (Path): Path to this project's root on the local
+                machine.
+            local_user_uid (int): The local user's users id, used when tasks need to be
+                run by the local user.
+            local_user_gid (int): The local user's group id, used when tasks need to be
+                run by the local user.
+
+        Returns:
+            None
+        """
         run_process(
             args=concatenate_args(
                 args=[
@@ -59,10 +77,13 @@ class Autoflake(TaskNode):
     """Task for running autoflake on all python files in project."""
 
     def required_tasks(self) -> list[TaskNode]:
-        """Run required tasks, including domain specific tests.
+        """Gets the tasks that have to be run before running autoflake on the project.
 
-        We must ensure that all domain specific tests are passing.
-        Autoflake can cause cascading rewrites if some code has errors.
+        We must ensure that all domain specific tests are passing.  Autoflake can
+        cause cascading rewrites if some code has errors.
+
+        Returns:
+            list[TaskNode]: A list of tasks required to lint project.
         """
         return [Lint(), TestPypi(), TestBuildSupport()]
 
@@ -73,7 +94,21 @@ class Autoflake(TaskNode):
         local_user_uid: int,
         local_user_gid: int,
     ) -> None:
-        """Runs autoflake on all python files."""
+        """Runs autoflake on all python files.
+
+        Arguments:
+            non_docker_project_root (Path): Path to this project's root when running
+                in docker containers.
+            docker_project_root (Path): Path to this project's root on the local
+                machine.
+            local_user_uid (int): The local user's users id, used when tasks need to be
+                run by the local user.
+            local_user_gid (int): The local user's group id, used when tasks need to be
+                run by the local user.
+
+        Returns:
+            None
+        """
         run_process(
             args=concatenate_args(
                 args=[

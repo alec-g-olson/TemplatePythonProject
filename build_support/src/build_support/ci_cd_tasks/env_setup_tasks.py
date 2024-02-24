@@ -22,7 +22,11 @@ class BuildDevEnvironment(TaskNode):
     """Builds a docker image with a stable environment for running dev commands."""
 
     def required_tasks(self) -> list[TaskNode]:
-        """Check to make sure we are logged into docker."""
+        """Get the list of task that need to be run before we can build a dev environment.
+
+        Returns:
+            list[TaskNode]: A list of tasks required to build a dev env. (Empty)
+        """
         return []
 
     def run(
@@ -32,7 +36,21 @@ class BuildDevEnvironment(TaskNode):
         local_user_uid: int,
         local_user_gid: int,
     ) -> None:
-        """Builds a stable environment for running dev commands."""
+        """Builds a stable environment for running dev commands.
+
+        Arguments:
+            non_docker_project_root (Path): Path to this project's root when running
+                in docker containers.
+            docker_project_root (Path): Path to this project's root on the local
+                machine.
+            local_user_uid (int): The local user's users id, used when tasks need to be
+                run by the local user.
+            local_user_gid (int): The local user's group id, used when tasks need to be
+                run by the local user.
+
+        Returns:
+            None
+        """
         run_process(
             args=get_docker_build_command(
                 project_root=docker_project_root, target_image=DockerTarget.DEV
@@ -44,7 +62,11 @@ class BuildProdEnvironment(TaskNode):
     """Builds a docker image with a stable environment for running prod commands."""
 
     def required_tasks(self) -> list[TaskNode]:
-        """Check to make sure we are logged into docker."""
+        """Get the list of task that need to be run before we can build a prod environment.
+
+        Returns:
+            list[TaskNode]: A list of tasks required to build a prod env. (Empty)
+        """
         return []
 
     def run(
@@ -54,7 +76,21 @@ class BuildProdEnvironment(TaskNode):
         local_user_uid: int,
         local_user_gid: int,
     ) -> None:
-        """Builds a stable environment for running prod commands."""
+        """Builds a stable environment for running prod commands.
+
+        Arguments:
+            non_docker_project_root (Path): Path to this project's root when running
+                in docker containers.
+            docker_project_root (Path): Path to this project's root on the local
+                machine.
+            local_user_uid (int): The local user's users id, used when tasks need to be
+                run by the local user.
+            local_user_gid (int): The local user's group id, used when tasks need to be
+                run by the local user.
+
+        Returns:
+            None
+        """
         run_process(
             args=get_docker_build_command(
                 project_root=docker_project_root, target_image=DockerTarget.PROD
@@ -66,7 +102,11 @@ class BuildPulumiEnvironment(TaskNode):
     """Builds a docker image with a stable environment for running pulumi commands."""
 
     def required_tasks(self) -> list[TaskNode]:
-        """Check to make sure we are logged into docker."""
+        """Get the list of task that need to be run before we can build a pulumi environment.
+
+        Returns:
+            list[TaskNode]: A list of tasks required to build a pulumi env. (Empty)
+        """
         return []
 
     def run(
@@ -76,7 +116,21 @@ class BuildPulumiEnvironment(TaskNode):
         local_user_uid: int,
         local_user_gid: int,
     ) -> None:
-        """Builds a stable environment for running pulumi commands."""
+        """Builds a stable environment for running pulumi commands.
+
+        Arguments:
+            non_docker_project_root (Path): Path to this project's root when running
+                in docker containers.
+            docker_project_root (Path): Path to this project's root on the local
+                machine.
+            local_user_uid (int): The local user's users id, used when tasks need to be
+                run by the local user.
+            local_user_gid (int): The local user's group id, used when tasks need to be
+                run by the local user.
+
+        Returns:
+            None
+        """
         run_process(
             args=get_docker_build_command(
                 project_root=docker_project_root,
@@ -93,7 +147,11 @@ class Clean(TaskNode):
     """Removes all temporary files for a clean build environment."""
 
     def required_tasks(self) -> list[TaskNode]:
-        """Nothing required."""
+        """Gets the list of tasks to run before cleaning.
+
+        Returns:
+            list[TaskNode]: A list of tasks required to clean project. (Empty)
+        """
         return []
 
     def run(
@@ -103,7 +161,21 @@ class Clean(TaskNode):
         local_user_uid: int,
         local_user_gid: int,
     ) -> None:
-        """Deletes all the temporary build files."""
+        """Deletes all the temporary build files.
+
+        Arguments:
+            non_docker_project_root (Path): Path to this project's root when running
+                in docker containers.
+            docker_project_root (Path): Path to this project's root on the local
+                machine.
+            local_user_uid (int): The local user's users id, used when tasks need to be
+                run by the local user.
+            local_user_gid (int): The local user's group id, used when tasks need to be
+                run by the local user.
+
+        Returns:
+            None
+        """
         run_process(args=["rm", "-rf", get_build_dir(project_root=docker_project_root)])
         for docs_build_dir in [
             get_build_support_docs_build_dir(project_root=docker_project_root),
@@ -132,11 +204,22 @@ class GitInfo(BaseModel):
 
     @classmethod
     def from_yaml(cls, yaml_str: str) -> "GitInfo":
-        """Builds an object from a json str."""
+        """Builds an object from a json str.
+
+        Arguments:
+            yaml_str (str): String of the YAML representation of a GitInfo instance.
+
+        Returns:
+            GitInfo: A GitInfo object parsed from the YAML.
+        """
         return GitInfo.model_validate(safe_load(yaml_str))
 
     def to_yaml(self) -> str:
-        """Dumps object as a yaml str."""
+        """Dumps object as a yaml str.
+
+        Returns:
+            str: A YAML representation of this GitInfo instance.
+        """
         return safe_dump(self.model_dump())
 
 
@@ -144,7 +227,11 @@ class GetGitInfo(TaskNode):
     """Gets all git info we could need for checks during building."""
 
     def required_tasks(self) -> list[TaskNode]:
-        """Nothing required."""
+        """Gets the list of tasks to run before getting git info.
+
+        Returns:
+            list[TaskNode]: A list of tasks required to get git info. (Empty)
+        """
         return []
 
     def run(
@@ -154,7 +241,21 @@ class GetGitInfo(TaskNode):
         local_user_uid: int,
         local_user_gid: int,
     ) -> None:
-        """Builds a json with required git info."""
+        """Builds a yaml with required git info.
+
+        Arguments:
+            non_docker_project_root (Path): Path to this project's root when running
+                in docker containers.
+            docker_project_root (Path): Path to this project's root on the local
+                machine.
+            local_user_uid (int): The local user's users id, used when tasks need to be
+                run by the local user.
+            local_user_gid (int): The local user's group id, used when tasks need to be
+                run by the local user.
+
+        Returns:
+            None
+        """
         run_process(
             args=concatenate_args(args=["git", "fetch"]),
             local_user_uid=local_user_uid,

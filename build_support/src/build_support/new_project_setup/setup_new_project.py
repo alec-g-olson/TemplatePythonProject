@@ -27,7 +27,11 @@ class MakeProjectFromTemplate(TaskNode):
     """Updates project based on the project settings yaml."""
 
     def required_tasks(self) -> list[TaskNode]:
-        """Nothing required."""
+        """Gets the list of tasks to run before setting up a new project.
+
+        Returns:
+            list[TaskNode]: A list of tasks required to build a new project. [Clean]
+        """
         return [Clean()]
 
     def run(
@@ -37,7 +41,22 @@ class MakeProjectFromTemplate(TaskNode):
         local_user_uid: int,
         local_user_gid: int,
     ) -> None:
-        """Modifies the appropriate files to start a new project."""
+        """Modifies the appropriate files to start a new project.
+
+        Arguments:
+            non_docker_project_root (Path): Path to this project's root when running
+                in docker containers.
+            docker_project_root (Path): Path to this project's root on the local
+                machine.
+            local_user_uid (int): The local user's users id, used when tasks need to be
+                run by the local user.
+            local_user_gid (int): The local user's group id, used when tasks need to be
+                run by the local user.
+
+        Returns:
+            None
+        """
+
         original_project_name = get_project_name(project_root=docker_project_root)
         new_project_settings = ProjectSettings.from_yaml(
             yaml_str=get_new_project_settings(

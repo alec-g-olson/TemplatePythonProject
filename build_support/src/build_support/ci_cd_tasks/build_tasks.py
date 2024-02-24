@@ -30,7 +30,7 @@ class BuildAll(TaskNode):
     """Task for building all artifacts."""
 
     def required_tasks(self) -> list[TaskNode]:
-        """Adds all required "sub-builds" to the DAG.
+        """Lists all "sub-builds" to add to the DAG.
 
         Returns:
             list[TaskNode]: A list of all build tasks.
@@ -67,7 +67,7 @@ class BuildPypi(TaskNode):
     """Task for building PyPi package."""
 
     def required_tasks(self) -> list[TaskNode]:
-        """Makes sure all python checks are passing and prod env exists.
+        """Get the list of task that need to be run before we can build a pypi package.
 
         Returns:
             list[TaskNode]: A list of tasks required to build Pypi package.
@@ -197,7 +197,7 @@ class BuildDocs(TaskNode):
     """Task for building the sphinx docs for this project."""
 
     def required_tasks(self) -> list[TaskNode]:
-        """Makes sure that style tests are passing.
+        """Get the list of task that need to be run before we can build docs.
 
         Returns:
             list[TaskNode]: A list of tasks required to build documentation.

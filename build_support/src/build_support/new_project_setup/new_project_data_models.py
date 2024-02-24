@@ -32,7 +32,11 @@ class Organization(BaseModel):
     contact_email: str
 
     def formatted_name_and_email(self) -> str:
-        """Builds a label for the organization name and contact email."""
+        """Builds a label for the organization name and contact email.
+
+        Returns:
+            str: A formatted string with the name and contact info of the org.
+        """
         return f"{self.name} <{self.contact_email}>"
 
 
@@ -45,9 +49,20 @@ class ProjectSettings(BaseModel):
 
     @classmethod
     def from_yaml(cls, yaml_str: str) -> "ProjectSettings":
-        """Builds an object from a json str."""
+        """Builds an object from a YAML str.
+
+        Arguments:
+            yaml_str (str): String of the YAML representation of a ProjectSettings instance.
+
+        Returns:
+            GitInfo: A ProjectSettings object parsed from the YAML.
+        """
         return ProjectSettings.model_validate(safe_load(yaml_str))
 
     def to_yaml(self) -> str:
-        """Dumps object as a yaml str."""
+        """Dumps object as a yaml str.
+
+        Returns:
+            str: A YAML representation of this ProjectSettings instance.
+        """
         return safe_dump(self.model_dump())
