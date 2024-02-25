@@ -16,11 +16,11 @@ def calculate_result(args: CalculatorInput) -> CalculatorOutput:
     Returns:
       CalculatorOutput: Output of the calculation.
     """
-    if args.typeOfCalc == CalculationType.ADD:
+    if args.type_of_calc == CalculationType.ADD:
         result = args.value1 + args.value2
-    elif args.typeOfCalc == CalculationType.SUBTRACT:
+    elif args.type_of_calc == CalculationType.SUBTRACT:
         result = args.value1 - args.value2
-    elif args.typeOfCalc == CalculationType.MULTIPLY:
+    elif args.type_of_calc == CalculationType.MULTIPLY:
         result = args.value1 * args.value2
     else:
         result = args.value1 / args.value2

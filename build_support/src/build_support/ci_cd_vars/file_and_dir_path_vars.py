@@ -196,8 +196,8 @@ def get_subproject_docs_build_dir(subproject_root: Path) -> Path:
     """
     return maybe_build_dir(
         dir_to_build=get_subproject_docs_dir(subproject_root=subproject_root).joinpath(
-            "build"
-        )
+            "build",
+        ),
     )
 
 
@@ -216,7 +216,7 @@ def get_sphinx_conf_dir(project_root: Path) -> Path:
         Path: Path to the sphinx config directory in this project.
     """
     return get_documentation_enforcement_dir(project_root=project_root).joinpath(
-        "sphinx_conf"
+        "sphinx_conf",
     )
 
 
@@ -247,7 +247,7 @@ def get_new_project_settings(project_root: Path) -> Path:
         Path: Path to the new_project_settings.yaml file in this project.
     """
     return get_build_support_dir(project_root=project_root).joinpath(
-        "new_project_settings.yaml"
+        "new_project_settings.yaml",
     )
 
 
@@ -261,7 +261,7 @@ def get_build_support_src_dir(project_root: Path) -> Path:
         Path: Path to the build_support src dir in this project.
     """
     return get_subproject_src_dir(
-        subproject_root=get_build_support_dir(project_root=project_root)
+        subproject_root=get_build_support_dir(project_root=project_root),
     )
 
 
@@ -275,7 +275,7 @@ def get_build_support_test_dir(project_root: Path) -> Path:
         Path: Path to the build_support test dir in this project.
     """
     return get_subproject_test_dir(
-        subproject_root=get_build_support_dir(project_root=project_root)
+        subproject_root=get_build_support_dir(project_root=project_root),
     )
 
 
@@ -289,7 +289,7 @@ def get_build_support_docs_src_dir(project_root: Path) -> Path:
         Path: Path to the build_support documents source dir in this project.
     """
     return get_subproject_docs_source_dir(
-        subproject_root=get_build_support_dir(project_root=project_root)
+        subproject_root=get_build_support_dir(project_root=project_root),
     )
 
 
@@ -303,7 +303,7 @@ def get_build_support_docs_build_dir(project_root: Path) -> Path:
         Path: Path to the build_support documents build dir in this project.
     """
     return get_subproject_docs_build_dir(
-        subproject_root=get_build_support_dir(project_root=project_root)
+        subproject_root=get_build_support_dir(project_root=project_root),
     )
 
 
@@ -320,7 +320,7 @@ def get_build_support_src_and_test(project_root: Path) -> list[str]:
         args=[
             get_build_support_src_dir(project_root=project_root),
             get_build_support_test_dir(project_root=project_root),
-        ]
+        ],
     )
 
 
@@ -344,7 +344,7 @@ def get_pypi_src_dir(project_root: Path) -> Path:
         Path: Path to the PyPi src dir in this project.
     """
     return get_subproject_src_dir(
-        subproject_root=get_pypi_dir(project_root=project_root)
+        subproject_root=get_pypi_dir(project_root=project_root),
     )
 
 
@@ -358,7 +358,7 @@ def get_pypi_test_dir(project_root: Path) -> Path:
         Path: Path to the PyPi test dir in this project.
     """
     return get_subproject_test_dir(
-        subproject_root=get_pypi_dir(project_root=project_root)
+        subproject_root=get_pypi_dir(project_root=project_root),
     )
 
 
@@ -372,7 +372,7 @@ def get_pypi_docs_src_dir(project_root: Path) -> Path:
         Path: Path to the PyPi documents source dir in this project.
     """
     return get_subproject_docs_source_dir(
-        subproject_root=get_pypi_dir(project_root=project_root)
+        subproject_root=get_pypi_dir(project_root=project_root),
     )
 
 
@@ -386,7 +386,7 @@ def get_pypi_docs_build_dir(project_root: Path) -> Path:
         Path: Path to the PyPi documents build dir in this project.
     """
     return get_subproject_docs_build_dir(
-        subproject_root=get_pypi_dir(project_root=project_root)
+        subproject_root=get_pypi_dir(project_root=project_root),
     )
 
 
@@ -403,7 +403,7 @@ def get_pypi_src_and_test(project_root: Path) -> list[str]:
         args=[
             get_pypi_src_dir(project_root=project_root),
             get_pypi_test_dir(project_root=project_root),
-        ]
+        ],
     )
 
 
@@ -422,7 +422,7 @@ def get_dist_dir(project_root: Path) -> Path:
         Path: Path to the PyPi dist directory for this project.
     """
     return maybe_build_dir(
-        dir_to_build=get_build_dir(project_root=project_root).joinpath("dist")
+        dir_to_build=get_build_dir(project_root=project_root).joinpath("dist"),
     )
 
 
@@ -436,7 +436,7 @@ def get_build_reports_dir(project_root: Path) -> Path:
         Path: Path to the directory that will contain the project's reports.
     """
     return maybe_build_dir(
-        dir_to_build=get_build_dir(project_root=project_root).joinpath("reports")
+        dir_to_build=get_build_dir(project_root=project_root).joinpath("reports"),
     )
 
 
@@ -452,8 +452,8 @@ def get_license_templates_dir(project_root: Path) -> Path:
     """
     return maybe_build_dir(
         dir_to_build=get_build_dir(project_root=project_root).joinpath(
-            "license_templates"
-        )
+            "license_templates",
+        ),
     )
 
 
@@ -500,7 +500,7 @@ def get_all_non_pulumi_python_folders(project_root: Path) -> list[str]:
             get_build_support_src_and_test(project_root=project_root),
             get_pypi_src_and_test(project_root=project_root),
             get_documentation_tests_dir(project_root=project_root),
-        ]
+        ],
     )
 
 
@@ -518,7 +518,7 @@ def get_all_python_folders(project_root: Path) -> list[str]:
             get_all_non_pulumi_python_folders(project_root=project_root),
             get_pulumi_dir(project_root=project_root),
             get_sphinx_conf_dir(project_root=project_root),
-        ]
+        ],
     )
 
 
@@ -536,7 +536,7 @@ def get_all_src_folders(project_root: Path) -> list[str]:
             get_build_support_src_dir(project_root=project_root),
             get_pypi_src_dir(project_root=project_root),
             get_pulumi_dir(project_root=project_root),
-        ]
+        ],
     )
 
 
@@ -554,7 +554,7 @@ def get_all_test_folders(project_root: Path) -> list[str]:
             get_build_support_test_dir(project_root=project_root),
             get_pypi_test_dir(project_root=project_root),
             get_documentation_tests_dir(project_root=project_root),
-        ]
+        ],
     )
 
 

@@ -77,7 +77,7 @@ def test_parse_args_no_task():
                 "non_docker_project_root",
                 "--docker-project-root",
                 "docker_project_root",
-            ]
+            ],
         )
 
 
@@ -91,7 +91,7 @@ def test_parse_args_bad_var():
                 "docker_project_root",
                 "--build-variable-to-report",
                 "INVALID_VARIABLE_NAME",
-            ]
+            ],
         )
 
 
@@ -103,7 +103,7 @@ def test_parse_args_no_docker_project_root():
                 "non_docker_project_root",
                 "--build-variable-to-report",
                 "get-interactive-dev-docker-command",
-            ]
+            ],
         )
 
 
@@ -115,7 +115,7 @@ def test_parse_args_no_non_docker_project_root():
                 "docker_project_root",
                 "--build-variable-to-report",
                 "get-interactive-dev-docker-command",
-            ]
+            ],
         )
 
 
@@ -124,7 +124,7 @@ def test_run_main_for_each_var_in_enum(
     mock_docker_pyproject_toml_file: Path,
     docker_project_root: Path,
 ):
-    for var_to_report in [arg for arg in AllowedCliArgs]:
+    for var_to_report in AllowedCliArgs:
         args = Namespace(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
@@ -151,8 +151,8 @@ def test_run_main_for_get_interactive_dev(
                     non_docker_project_root=mock_project_root,
                     docker_project_root=docker_project_root,
                     target_image=DockerTarget.DEV,
-                )
-            )
+                ),
+            ),
         )
 
 
@@ -174,8 +174,8 @@ def test_run_main_for_get_interactive_prod(
                     non_docker_project_root=mock_project_root,
                     docker_project_root=docker_project_root,
                     target_image=DockerTarget.PROD,
-                )
-            )
+                ),
+            ),
         )
 
 
@@ -197,6 +197,6 @@ def test_run_main_for_get_interactive_pulumi(
                     non_docker_project_root=mock_project_root,
                     docker_project_root=docker_project_root,
                     target_image=DockerTarget.PULUMI,
-                )
-            )
+                ),
+            ),
         )

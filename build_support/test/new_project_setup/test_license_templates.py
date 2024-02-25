@@ -36,7 +36,7 @@ def test_constants_not_changed_by_accident():
     )
     assert REAL_PROJECT_ROOT == Path(__file__).parent.parent.parent.parent
     assert REAL_LICENSE_TEMPLATE_DIR == get_license_templates_dir(
-        project_root=REAL_PROJECT_ROOT
+        project_root=REAL_PROJECT_ROOT,
     )
 
 
@@ -112,7 +112,7 @@ def test_is_valid_license_template(template_key, is_valid):
 @responses.activate
 def test_get_github_license_template_info_blobs(mock_project_root):
     license_template_info_blobs = get_license_templates_dir(
-        project_root=mock_project_root
+        project_root=mock_project_root,
     ).joinpath("license_template_info_blobs.json")
     json_data = [{"someKey": "someVal"}]
     get_response = responses.get(url=GIT_HUB_TEMPLATE_URL, json=json_data)
@@ -134,13 +134,13 @@ def test_get_github_license_template_info_blobs(mock_project_root):
 def test_get_template_for_license(mock_project_root):
     fake_license_name = "some-fake-license"
     license_template_file = get_license_templates_dir(
-        project_root=mock_project_root
+        project_root=mock_project_root,
     ).joinpath(fake_license_name)
     template_text = "some template text"
     json_data = {"body": template_text}
     template_info_url = f"https://api.github.com/licenses/{fake_license_name}"
     license_template_info_blobs = get_license_templates_dir(
-        project_root=mock_project_root
+        project_root=mock_project_root,
     ).joinpath("license_template_info_blobs.json")
     blob_data = [{"key": fake_license_name, "url": template_info_url}]
     license_template_info_blobs.write_text(json.dumps(blob_data))

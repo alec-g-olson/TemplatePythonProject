@@ -1,5 +1,5 @@
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -26,13 +26,15 @@ def test_constants_not_changed_by_accident():
 
 def test_get_new_license_content():
     with patch(
-        "build_support.new_project_setup.setup_license.datetime"
+        "build_support.new_project_setup.setup_license.datetime",
     ) as mock_datetime:
-        mock_datetime.now = MagicMock(return_value=datetime(year=2024, month=1, day=28))
+        mock_datetime.now = MagicMock(
+            return_value=datetime(year=2024, month=1, day=28, tzinfo=timezone.utc)
+        )
         new_license_content = get_new_license_content(
             template_key=ALL_RIGHTS_RESERVED_KEY,
             organization=Organization.model_validate(
-                {"name": "Some small group", "contact_email": "an.email@gmail.com"}
+                {"name": "Some small group", "contact_email": "an.email@gmail.com"},
             ),
         )
         assert new_license_content == (
@@ -65,7 +67,7 @@ def test_all_templates_supported(check_template_compatability: bool):
         known_fields_to_skip = [
             "[This is the first released version of the Lesser GPL.  It also counts\n"
             " as the successor of the GNU Library Public License, version 2, hence\n"
-            " the version number 2.1.]"
+            " the version number 2.1.]",
         ]
         template_field_regex = re.compile(r"\[[^]]+]")
         allowed_fields = (

@@ -1,4 +1,4 @@
-FROM python:3.12.1 AS base
+FROM python:3.12.2 AS base
 # If python version changed here change in pyproject.toml
 # [tool.poetry.dependencies]
 

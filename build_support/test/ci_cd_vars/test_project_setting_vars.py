@@ -58,7 +58,7 @@ class TestPyprojectToml:
     ):
         mock_pyproject_toml_file = get_pyproject_toml(project_root=mock_project_root)
         mock_pyproject_toml_file.write_text(
-            '[tool.poetry]\nname = "some_project_name"\nversion = "AN_INVALID_PROJECT_VERSION"'
+            '[tool.poetry]\nname = "some_project_name"\nversion = "AN_INVALID_PROJECT_VERSION"',
         )
         with pytest.raises(ValueError):
             get_project_version(project_root=mock_project_root)
@@ -80,7 +80,10 @@ class TestPyprojectToml:
         )
 
     def test_get_project_name(
-        self, mock_project_root: Path, mock_local_pyproject_toml_file, project_name: str
+        self,
+        mock_project_root: Path,
+        mock_local_pyproject_toml_file,
+        project_name: str,
     ):
         assert get_project_name(project_root=mock_project_root) == project_name
 

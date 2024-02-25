@@ -31,8 +31,31 @@ from build_support.ci_cd_vars.project_setting_vars import (
 from build_support.dag_engine import concatenate_args
 
 
-def test_build_all_requires():
-    assert BuildAll().required_tasks() == [BuildPypi(), BuildDocs()]
+def test_build_all_requires(
+    mock_project_root: Path,
+    docker_project_root: Path,
+    local_uid: int,
+    local_gid: int,
+):
+    assert BuildAll(
+        non_docker_project_root=mock_project_root,
+        docker_project_root=docker_project_root,
+        local_user_uid=local_uid,
+        local_user_gid=local_gid,
+    ).required_tasks() == [
+        BuildPypi(
+            non_docker_project_root=mock_project_root,
+            docker_project_root=docker_project_root,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
+        ),
+        BuildDocs(
+            non_docker_project_root=mock_project_root,
+            docker_project_root=docker_project_root,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
+        ),
+    ]
 
 
 def test_run_build_all(
@@ -42,20 +65,45 @@ def test_run_build_all(
     local_gid: int,
 ):
     with patch("build_support.ci_cd_tasks.build_tasks.run_process") as run_process_mock:
-        BuildAll().run(
+        BuildAll(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
             local_user_uid=local_uid,
             local_user_gid=local_gid,
-        )
+        ).run()
         assert run_process_mock.call_count == 0
 
 
-def test_build_pypi_requires():
-    assert BuildPypi().required_tasks() == [
-        TestPypi(),
-        TestPythonStyle(),
-        BuildProdEnvironment(),
+def test_build_pypi_requires(
+    mock_project_root: Path,
+    docker_project_root: Path,
+    local_uid: int,
+    local_gid: int,
+):
+    assert BuildPypi(
+        non_docker_project_root=mock_project_root,
+        docker_project_root=docker_project_root,
+        local_user_uid=local_uid,
+        local_user_gid=local_gid,
+    ).required_tasks() == [
+        TestPypi(
+            non_docker_project_root=mock_project_root,
+            docker_project_root=docker_project_root,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
+        ),
+        TestPythonStyle(
+            non_docker_project_root=mock_project_root,
+            docker_project_root=docker_project_root,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
+        ),
+        BuildProdEnvironment(
+            non_docker_project_root=mock_project_root,
+            docker_project_root=docker_project_root,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
+        ),
     ]
 
 
@@ -77,7 +125,7 @@ def test_run_build_pypi(
                 "rm",
                 "-rf",
                 get_dist_dir(project_root=docker_project_root),
-            ]
+            ],
         )
         poetry_build_args = concatenate_args(
             args=[
@@ -88,7 +136,7 @@ def test_run_build_pypi(
                 ),
                 "poetry",
                 "build",
-            ]
+            ],
         )
         mv_dist_to_final_location_args = concatenate_args(
             args=[
@@ -100,21 +148,21 @@ def test_run_build_pypi(
                 "mv",
                 get_temp_dist_dir(project_root=docker_project_root),
                 get_dist_dir(project_root=docker_project_root),
-            ]
+            ],
         )
-        BuildPypi().run(
+        BuildPypi(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
             local_user_uid=local_uid,
             local_user_gid=local_gid,
-        )
+        ).run()
         assert run_process_mock.call_count == 3
         run_process_mock.assert_has_calls(
             calls=[
                 call(args=clean_dist_args),
                 call(args=poetry_build_args),
                 call(args=mv_dist_to_final_location_args),
-            ]
+            ],
         )
 
 
@@ -150,7 +198,7 @@ def test_build_docs_for_subproject(
                 "-o",
                 subproject_docs_src_dir,
                 subproject_src_dir,
-            ]
+            ],
         )
         sphinx_build_args = concatenate_args(
             [
@@ -164,7 +212,7 @@ def test_build_docs_for_subproject(
                 subproject_docs_build_dir,
                 "-c",
                 get_sphinx_conf_dir(project_root=docker_project_root),
-            ]
+            ],
         )
         build_docs_for_subproject(
             non_docker_project_root=mock_project_root,
@@ -178,12 +226,29 @@ def test_build_docs_for_subproject(
             calls=[
                 call(args=sphinx_api_doc_args),
                 call(args=sphinx_build_args),
-            ]
+            ],
         )
 
 
-def test_build_docs_requires():
-    assert BuildDocs().required_tasks() == [TestPythonStyle()]
+def test_build_docs_requires(
+    mock_project_root: Path,
+    docker_project_root: Path,
+    local_uid: int,
+    local_gid: int,
+):
+    assert BuildDocs(
+        non_docker_project_root=mock_project_root,
+        docker_project_root=docker_project_root,
+        local_user_uid=local_uid,
+        local_user_gid=local_gid,
+    ).required_tasks() == [
+        TestPythonStyle(
+            non_docker_project_root=mock_project_root,
+            docker_project_root=docker_project_root,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
+        )
+    ]
 
 
 def test_run_build_docs(
@@ -213,7 +278,7 @@ def test_run_build_docs(
                 "-o",
                 get_pypi_docs_src_dir(project_root=docker_project_root),
                 get_pypi_src_dir(project_root=docker_project_root),
-            ]
+            ],
         )
         pypi_sphinx_build_args = concatenate_args(
             [
@@ -227,7 +292,7 @@ def test_run_build_docs(
                 get_pypi_docs_build_dir(project_root=docker_project_root),
                 "-c",
                 get_sphinx_conf_dir(project_root=docker_project_root),
-            ]
+            ],
         )
         build_support_sphinx_api_doc_args = concatenate_args(
             [
@@ -248,7 +313,7 @@ def test_run_build_docs(
                 "-o",
                 get_build_support_docs_src_dir(project_root=docker_project_root),
                 get_build_support_src_dir(project_root=docker_project_root),
-            ]
+            ],
         )
         build_support_sphinx_build_args = concatenate_args(
             [
@@ -262,14 +327,14 @@ def test_run_build_docs(
                 get_build_support_docs_build_dir(project_root=docker_project_root),
                 "-c",
                 get_sphinx_conf_dir(project_root=docker_project_root),
-            ]
+            ],
         )
-        BuildDocs().run(
+        BuildDocs(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
             local_user_uid=local_uid,
             local_user_gid=local_gid,
-        )
+        ).run()
         assert run_process_mock.call_count == 4
         run_process_mock.assert_has_calls(
             calls=[
@@ -277,5 +342,5 @@ def test_run_build_docs(
                 call(args=pypi_sphinx_build_args),
                 call(args=build_support_sphinx_api_doc_args),
                 call(args=build_support_sphinx_build_args),
-            ]
+            ],
         )

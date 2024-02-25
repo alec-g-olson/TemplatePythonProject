@@ -1,6 +1,5 @@
 """Should hold all tasks that perform automated formatting of code."""
 
-from pathlib import Path
 
 from build_support.ci_cd_tasks.env_setup_tasks import BuildDevEnvironment
 from build_support.ci_cd_tasks.test_tasks import TestBuildSupport, TestPypi
@@ -21,26 +20,17 @@ class Lint(TaskNode):
         Returns:
             list[TaskNode]: A list of tasks required to lint project.
         """
-        return [BuildDevEnvironment()]
+        return [
+            BuildDevEnvironment(
+                non_docker_project_root=self.non_docker_project_root,
+                docker_project_root=self.docker_project_root,
+                local_user_uid=self.local_user_uid,
+                local_user_gid=self.local_user_gid,
+            ),
+        ]
 
-    def run(
-        self,
-        non_docker_project_root: Path,
-        docker_project_root: Path,
-        local_user_uid: int,
-        local_user_gid: int,
-    ) -> None:
+    def run(self) -> None:
         """Lints all python files in project.
-
-        Args:
-            non_docker_project_root (Path): Path to this project's root on the local
-                machine.
-            docker_project_root (Path): Path to this project's root when running
-                in docker containers.
-            local_user_uid (int): The local user's users id, used when tasks need to be
-                run by the local user.
-            local_user_gid (int): The local user's group id, used when tasks need to be
-                run by the local user.
 
         Returns:
             None
@@ -49,27 +39,27 @@ class Lint(TaskNode):
             args=concatenate_args(
                 args=[
                     get_docker_command_for_image(
-                        non_docker_project_root=non_docker_project_root,
-                        docker_project_root=docker_project_root,
+                        non_docker_project_root=self.non_docker_project_root,
+                        docker_project_root=self.docker_project_root,
                         target_image=DockerTarget.DEV,
                     ),
                     "isort",
-                    get_all_python_folders(project_root=docker_project_root),
-                ]
-            )
+                    get_all_python_folders(project_root=self.docker_project_root),
+                ],
+            ),
         )
         run_process(
             args=concatenate_args(
                 args=[
                     get_docker_command_for_image(
-                        non_docker_project_root=non_docker_project_root,
-                        docker_project_root=docker_project_root,
+                        non_docker_project_root=self.non_docker_project_root,
+                        docker_project_root=self.docker_project_root,
                         target_image=DockerTarget.DEV,
                     ),
                     "black",
-                    get_all_python_folders(project_root=docker_project_root),
-                ]
-            )
+                    get_all_python_folders(project_root=self.docker_project_root),
+                ],
+            ),
         )
 
 
@@ -85,26 +75,29 @@ class Autoflake(TaskNode):
         Returns:
             list[TaskNode]: A list of tasks required to lint project.
         """
-        return [Lint(), TestPypi(), TestBuildSupport()]
+        return [
+            Lint(
+                non_docker_project_root=self.non_docker_project_root,
+                docker_project_root=self.docker_project_root,
+                local_user_uid=self.local_user_uid,
+                local_user_gid=self.local_user_gid,
+            ),
+            TestPypi(
+                non_docker_project_root=self.non_docker_project_root,
+                docker_project_root=self.docker_project_root,
+                local_user_uid=self.local_user_uid,
+                local_user_gid=self.local_user_gid,
+            ),
+            TestBuildSupport(
+                non_docker_project_root=self.non_docker_project_root,
+                docker_project_root=self.docker_project_root,
+                local_user_uid=self.local_user_uid,
+                local_user_gid=self.local_user_gid,
+            ),
+        ]
 
-    def run(
-        self,
-        non_docker_project_root: Path,
-        docker_project_root: Path,
-        local_user_uid: int,
-        local_user_gid: int,
-    ) -> None:
+    def run(self) -> None:
         """Runs autoflake on all python files.
-
-        Args:
-            non_docker_project_root (Path): Path to this project's root on the local
-                machine.
-            docker_project_root (Path): Path to this project's root when running
-                in docker containers.
-            local_user_uid (int): The local user's users id, used when tasks need to be
-                run by the local user.
-            local_user_gid (int): The local user's group id, used when tasks need to be
-                run by the local user.
 
         Returns:
             None
@@ -113,8 +106,8 @@ class Autoflake(TaskNode):
             args=concatenate_args(
                 args=[
                     get_docker_command_for_image(
-                        non_docker_project_root=non_docker_project_root,
-                        docker_project_root=docker_project_root,
+                        non_docker_project_root=self.non_docker_project_root,
+                        docker_project_root=self.docker_project_root,
                         target_image=DockerTarget.DEV,
                     ),
                     "autoflake",
@@ -122,7 +115,7 @@ class Autoflake(TaskNode):
                     "--remove-duplicate-keys",
                     "--in-place",
                     "--recursive",
-                    get_all_python_folders(project_root=docker_project_root),
-                ]
-            )
+                    get_all_python_folders(project_root=self.docker_project_root),
+                ],
+            ),
         )

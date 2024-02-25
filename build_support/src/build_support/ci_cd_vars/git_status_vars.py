@@ -6,14 +6,26 @@ Attributes:
 from build_support.dag_engine import get_output_of_process
 
 
-def get_current_branch() -> str:
+def get_current_branch(
+    local_user_uid: int = 0,
+    local_user_gid: int = 0,
+) -> str:
     """Gets the branch that is currently checked out.
+
+    Args:
+        local_user_uid (int): The local user's users id, used when tasks need to be
+            run by the local user.
+        local_user_gid (int): The local user's group id, used when tasks need to be
+            run by the local user.
 
     Returns:
         str: The name of the git branch that is currently checked out.
     """
     return get_output_of_process(
-        args=["git", "rev-parse", "--abbrev-ref", "HEAD"], silent=True
+        args=["git", "rev-parse", "--abbrev-ref", "HEAD"],
+        user_uid=local_user_uid,
+        user_gid=local_user_gid,
+        silent=True,
     )
 
 
@@ -32,15 +44,29 @@ def current_branch_is_main(current_branch: str) -> bool:
     return current_branch == MAIN_BRANCH_NAME
 
 
-def get_local_tags() -> list[str]:
+def get_local_tags(
+    local_user_uid: int = 0,
+    local_user_gid: int = 0,
+) -> list[str]:
     """Gets the tags on your local git instance.
 
     To get up-to-date remote tags run `git fetch` before this function.
 
+    Args:
+        local_user_uid (int): The local user's users id, used when tasks need to be
+            run by the local user.
+        local_user_gid (int): The local user's group id, used when tasks need to be
+            run by the local user.
+
     Returns:
         list[str]: The list of all tags on the local version of your git repo.
     """
-    return get_output_of_process(args=["git", "tag"], silent=True).split("\n")
+    return get_output_of_process(
+        args=["git", "tag"],
+        user_uid=local_user_uid,
+        user_gid=local_user_gid,
+        silent=True,
+    ).split("\n")
 
 
 def get_git_diff() -> str:

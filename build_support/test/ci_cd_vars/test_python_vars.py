@@ -55,7 +55,7 @@ def test_get_pytest_report_name(
             get_project_version(project_root=mock_project_root),
             pytest_context.value,
             report_extension,
-        ]
+        ],
     )
 
 
@@ -86,7 +86,7 @@ def test_get_bandit_report_path(
         get_bandit_report_name(
             project_root=mock_project_root,
             test_context=pytest_context,
-        )
+        ),
     )
 
 
@@ -117,7 +117,7 @@ def test_get_pytest_html_report_path(
         get_pytest_html_report_name(
             project_root=mock_project_root,
             test_context=pytest_context,
-        )
+        ),
     )
 
 
@@ -148,7 +148,7 @@ def test_get_pytest_xml_report_path(
         get_pytest_xml_report_name(
             project_root=mock_project_root,
             test_context=pytest_context,
-        )
+        ),
     )
 
 
@@ -179,7 +179,7 @@ def test_get_pytest_xml_coverage_report_path(
         get_pytest_xml_coverage_report_name(
             project_root=mock_project_root,
             test_context=pytest_context,
-        )
+        ),
     )
 
 
@@ -210,7 +210,7 @@ def test_get_pytest_html_coverage_report_path(
         get_pytest_html_coverage_report_name(
             project_root=mock_project_root,
             test_context=pytest_context,
-        )
+        ),
     )
 
 
@@ -220,23 +220,24 @@ def test_get_coverage_root(
     pytest_context: SubprojectContext,
 ):
     observed_coverage_root_dir = get_coverage_root(
-        project_root=mock_project_root, test_context=pytest_context
+        project_root=mock_project_root,
+        test_context=pytest_context,
     )
     if pytest_context == SubprojectContext.BUILD_SUPPORT:
         assert observed_coverage_root_dir == get_build_support_dir(
-            project_root=mock_project_root
+            project_root=mock_project_root,
         )
     elif pytest_context == SubprojectContext.PYPI:
         assert observed_coverage_root_dir == get_pypi_dir(
-            project_root=mock_project_root
+            project_root=mock_project_root,
         )
     elif pytest_context == SubprojectContext.DOCUMENTATION_ENFORCEMENT:
         assert observed_coverage_root_dir == get_documentation_enforcement_dir(
-            project_root=mock_project_root
+            project_root=mock_project_root,
         )
     elif pytest_context == SubprojectContext.PULUMI:
         assert observed_coverage_root_dir == get_pulumi_dir(
-            project_root=mock_project_root
+            project_root=mock_project_root,
         )
     else:  # assume pulumi if not add the new case
         assert observed_coverage_root_dir == mock_project_root
@@ -248,22 +249,28 @@ def test_get_pytest_report_args(
     pytest_context: SubprojectContext,
 ):
     coverage_xml = get_pytest_xml_coverage_report_path(
-        project_root=mock_project_root, test_context=pytest_context
+        project_root=mock_project_root,
+        test_context=pytest_context,
     )
     coverage_html = get_pytest_html_coverage_report_path(
-        project_root=mock_project_root, test_context=pytest_context
+        project_root=mock_project_root,
+        test_context=pytest_context,
     )
     test_xml = get_pytest_xml_report_path(
-        project_root=mock_project_root, test_context=pytest_context
+        project_root=mock_project_root,
+        test_context=pytest_context,
     )
     test_html = get_pytest_html_report_path(
-        project_root=mock_project_root, test_context=pytest_context
+        project_root=mock_project_root,
+        test_context=pytest_context,
     )
     coverage_root_dir = get_coverage_root(
-        project_root=mock_project_root, test_context=pytest_context
+        project_root=mock_project_root,
+        test_context=pytest_context,
     )
     assert get_pytest_report_args(
-        project_root=mock_project_root, test_context=pytest_context
+        project_root=mock_project_root,
+        test_context=pytest_context,
     ) == concatenate_args(
         args=[
             "--cov-report",
@@ -276,5 +283,5 @@ def test_get_pytest_report_args(
             f"--junitxml={test_xml}",
             f"--html={test_html}",
             "--self-contained-html",
-        ]
+        ],
     )

@@ -12,8 +12,25 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import get_all_python_folde
 from build_support.dag_engine import concatenate_args
 
 
-def test_lint_requires():
-    assert Lint().required_tasks() == [BuildDevEnvironment()]
+def test_lint_requires(
+    mock_project_root: Path,
+    docker_project_root: Path,
+    local_uid: int,
+    local_gid: int,
+):
+    assert Lint(
+        non_docker_project_root=mock_project_root,
+        docker_project_root=docker_project_root,
+        local_user_uid=local_uid,
+        local_user_gid=local_gid,
+    ).required_tasks() == [
+        BuildDevEnvironment(
+            non_docker_project_root=mock_project_root,
+            docker_project_root=docker_project_root,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
+        )
+    ]
 
 
 def test_run_lint(
@@ -33,7 +50,7 @@ def test_run_lint(
                 ),
                 "isort",
                 get_all_python_folders(project_root=docker_project_root),
-            ]
+            ],
         )
         black_args = concatenate_args(
             args=[
@@ -44,25 +61,54 @@ def test_run_lint(
                 ),
                 "black",
                 get_all_python_folders(project_root=docker_project_root),
-            ]
+            ],
         )
-        Lint().run(
+        Lint(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
             local_user_uid=local_uid,
             local_user_gid=local_gid,
-        )
+        ).run()
         assert run_process_mock.call_count == 2
         run_process_mock.assert_has_calls(
             calls=[
                 call(args=isort_args),
                 call(args=black_args),
-            ]
+            ],
         )
 
 
-def test_autoflake_requires():
-    assert Autoflake().required_tasks() == [Lint(), TestPypi(), TestBuildSupport()]
+def test_autoflake_requires(
+    mock_project_root: Path,
+    docker_project_root: Path,
+    local_uid: int,
+    local_gid: int,
+):
+    assert Autoflake(
+        non_docker_project_root=mock_project_root,
+        docker_project_root=docker_project_root,
+        local_user_uid=local_uid,
+        local_user_gid=local_gid,
+    ).required_tasks() == [
+        Lint(
+            non_docker_project_root=mock_project_root,
+            docker_project_root=docker_project_root,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
+        ),
+        TestPypi(
+            non_docker_project_root=mock_project_root,
+            docker_project_root=docker_project_root,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
+        ),
+        TestBuildSupport(
+            non_docker_project_root=mock_project_root,
+            docker_project_root=docker_project_root,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
+        ),
+    ]
 
 
 def test_run_autoflake(
@@ -86,12 +132,12 @@ def test_run_autoflake(
                 "--in-place",
                 "--recursive",
                 get_all_python_folders(project_root=docker_project_root),
-            ]
+            ],
         )
-        Autoflake().run(
+        Autoflake(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
             local_user_uid=local_uid,
             local_user_gid=local_gid,
-        )
+        ).run()
         run_process_mock.assert_called_once_with(args=autoflake_args)

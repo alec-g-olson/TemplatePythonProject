@@ -73,7 +73,8 @@ def pyproject_toml_contents(project_version: str, project_name: str) -> str:
 
 @pytest.fixture
 def mock_local_pyproject_toml_file(
-    pyproject_toml_contents: str, mock_project_root: Path
+    pyproject_toml_contents: str,
+    mock_project_root: Path,
 ) -> Path:
     """Creates a mock pyproject toml file for use in testing."""
     mock_pyproject_toml_file = get_pyproject_toml(project_root=mock_project_root)
@@ -83,7 +84,8 @@ def mock_local_pyproject_toml_file(
 
 @pytest.fixture
 def mock_docker_pyproject_toml_file(
-    pyproject_toml_contents: str, docker_project_root: Path
+    pyproject_toml_contents: str,
+    docker_project_root: Path,
 ) -> Path:
     """Creates a mock pyproject toml file for use in testing."""
     mock_pyproject_toml_file = get_pyproject_toml(project_root=docker_project_root)
@@ -112,7 +114,8 @@ def poetry_lock_contents(pulumi_version: str) -> str:
 
 @pytest.fixture
 def mock_local_poetry_lock_file(
-    poetry_lock_contents: str, mock_project_root: Path
+    poetry_lock_contents: str,
+    mock_project_root: Path,
 ) -> Path:
     """Creates a mock pyproject toml file for use in testing."""
     mock_poetry_lock_file = get_poetry_lock_file(project_root=mock_project_root)
@@ -122,7 +125,8 @@ def mock_local_poetry_lock_file(
 
 @pytest.fixture
 def mock_docker_poetry_lock_file(
-    poetry_lock_contents: str, docker_project_root: Path
+    poetry_lock_contents: str,
+    docker_project_root: Path,
 ) -> Path:
     """Creates a mock pyproject toml file for use in testing."""
     mock_poetry_lock_file = get_poetry_lock_file(project_root=docker_project_root)
@@ -134,7 +138,7 @@ def mock_docker_poetry_lock_file(
 def real_git_info(real_project_root_dir: Path) -> GitInfo:
     """Return the git information at the time of this test."""
     return GitInfo.from_yaml(
-        get_git_info_yaml(project_root=real_project_root_dir).read_text()
+        get_git_info_yaml(project_root=real_project_root_dir).read_text(),
     )
 
 

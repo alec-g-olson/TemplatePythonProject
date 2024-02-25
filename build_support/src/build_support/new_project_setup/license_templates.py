@@ -15,6 +15,7 @@ from pathlib import Path
 from time import sleep
 
 import requests
+
 from build_support.ci_cd_vars.file_and_dir_path_vars import get_license_templates_dir
 
 GIT_HUB_TEMPLATE_URL = "https://api.github.com/licenses"
@@ -52,17 +53,17 @@ def get_github_license_template_info_blobs() -> list[dict[str, str]]:
         list[dict[str, str]]: The GitHub license template information.
     """
     license_template_info_blobs = REAL_LICENSE_TEMPLATE_DIR.joinpath(
-        "license_template_info_blobs.json"
+        "license_template_info_blobs.json",
     )
     if license_template_info_blobs.exists():
         template_info_blobs = json.loads(license_template_info_blobs.read_text())
     else:
         sleep(0.1)  # avoid rate limiting
         template_info_blobs = json.loads(
-            requests.get(url=GIT_HUB_TEMPLATE_URL, timeout=30).text
+            requests.get(url=GIT_HUB_TEMPLATE_URL, timeout=30).text,
         )
         license_template_info_blobs.write_text(
-            json.dumps(template_info_blobs, indent=2)
+            json.dumps(template_info_blobs, indent=2),
         )
     return template_info_blobs
 
@@ -73,9 +74,12 @@ def get_licenses_with_templates() -> list[str]:
     Returns:
         list[str]: A list of all valid template names.
     """
+    licenses_with_templates = [ALL_RIGHTS_RESERVED_KEY]
     supported_github_license_data = get_github_license_template_info_blobs()
-    supported_github_licenses = [blob["key"] for blob in supported_github_license_data]
-    return supported_github_licenses + [ALL_RIGHTS_RESERVED_KEY]
+    licenses_with_templates.extend(
+        blob["key"] for blob in supported_github_license_data
+    )
+    return licenses_with_templates
 
 
 def is_valid_license_template(template_key: str) -> bool:
@@ -106,21 +110,20 @@ def get_template_for_license(template_key: str) -> str:
         raise ValueError(
             '"template_key" must be one of:\n  '
             + "  \n".join(sorted(get_licenses_with_templates()))
-            + f"found {template_key_lower} instead."
+            + f"found {template_key_lower} instead.",
         )
     if template_key_lower == ALL_RIGHTS_RESERVED_KEY:
         return ALL_RIGHTS_RESERVED_TEMPLATE
+    license_template_file = REAL_LICENSE_TEMPLATE_DIR.joinpath(template_key_lower)
+    if license_template_file.exists():
+        template = license_template_file.read_text()
     else:
-        license_template_file = REAL_LICENSE_TEMPLATE_DIR.joinpath(template_key_lower)
-        if license_template_file.exists():
-            template = license_template_file.read_text()
-        else:
-            supported_github_license_data = get_github_license_template_info_blobs()
-            blob_by_key = {blob["key"]: blob for blob in supported_github_license_data}
-            template_info = blob_by_key[template_key_lower]
-            sleep(0.1)  # avoid rate limiting
-            template = json.loads(
-                requests.get(url=template_info["url"], timeout=30).text
-            )["body"]
-            license_template_file.write_text(template)
-        return template
+        supported_github_license_data = get_github_license_template_info_blobs()
+        blob_by_key = {blob["key"]: blob for blob in supported_github_license_data}
+        template_info = blob_by_key[template_key_lower]
+        sleep(0.1)  # avoid rate limiting
+        template = json.loads(
+            requests.get(url=template_info["url"], timeout=30).text,
+        )["body"]
+        license_template_file.write_text(template)
+    return template

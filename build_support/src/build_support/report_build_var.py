@@ -88,10 +88,9 @@ def run_main(args: Namespace) -> None:
                 target_image=DockerTarget.PULUMI,
             )
         case _:  # pragma: no cover - can't hit if all enums are implemented
-            raise ValueError(
-                f"{repr(command)} is not a supported enum of AllowedCliArgs."
-            )
-    print(" ".join(values))
+            msg = f"{command!r} is not a supported enum of AllowedCliArgs."
+            raise ValueError(msg)
+    print(" ".join(values))  # noqa: T201
 
 
 if __name__ == "__main__":  # pragma: no cover - main

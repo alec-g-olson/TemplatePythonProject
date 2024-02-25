@@ -3,13 +3,15 @@
 from pathlib import Path
 from typing import Any
 
+from tomlkit import dumps, parse
+
 from build_support.ci_cd_vars.file_and_dir_path_vars import get_pyproject_toml
 from build_support.new_project_setup.new_project_data_models import ProjectSettings
-from tomlkit import dumps, parse
 
 
 def update_pyproject_toml(
-    project_root: Path, new_project_settings: ProjectSettings
+    project_root: Path,
+    new_project_settings: ProjectSettings,
 ) -> None:
     """Updates the pyproject toml based on the new project settings.
 
@@ -28,7 +30,7 @@ def update_pyproject_toml(
     pyproject_data["tool"]["poetry"]["version"] = "0.0.0"
     pyproject_data["tool"]["poetry"]["license"] = new_project_settings.license
     pyproject_data["tool"]["poetry"]["authors"] = [
-        new_project_settings.organization.formatted_name_and_email()
+        new_project_settings.organization.formatted_name_and_email(),
     ]
     pyproject_data["tool"]["poetry"]["packages"][0][
         "include"

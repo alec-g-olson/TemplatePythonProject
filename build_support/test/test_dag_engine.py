@@ -4,10 +4,10 @@ from subprocess import PIPE
 from unittest.mock import MagicMock, call, patch
 
 import pytest
+from build_support.ci_cd_tasks.env_setup_tasks import Clean
 from build_support.dag_engine import (
     TaskNode,
     concatenate_args,
-    demote_process_to_user,
     get_output_of_process,
     get_str_args,
     get_task_execution_order,
@@ -111,6 +111,16 @@ def task_execution_order(run_info, all_task_lookup) -> list[TaskNode]:
     return [all_task_lookup[task_name] for task_name in run_info[1]]
 
 
+def test_task_hash():
+    task = Clean(
+        non_docker_project_root=Path(""),
+        docker_project_root=Path(""),
+        local_user_uid=0,
+        local_user_gid=0,
+    )
+    assert task.__hash__() == hash(task.task_label())
+
+
 def test_add_task_and_all_required_tasks_to_dict(
     tasks_requested: list[TaskNode],
     task_execution_order: list[TaskNode],
@@ -128,25 +138,16 @@ def test_run_tasks(
     local_uid: int,
     local_gid: int,
 ):
-    run_tasks(
-        tasks=tasks_requested,
-        non_docker_project_root=mock_project_root,
-        docker_project_root=docker_project_root,
-        local_user_uid=local_uid,
-        local_user_gid=local_gid,
-    )
+    run_tasks(tasks=tasks_requested)
     for mock_task in all_tasks:
-        if mock_task in task_execution_order:
-            # MagicMock and mypy aren't playing nice.
-            mock_task.run.assert_called_once_with(  # type: ignore
-                non_docker_project_root=mock_project_root,
-                docker_project_root=docker_project_root,
-                local_user_uid=local_uid,
-                local_user_gid=local_gid,
-            )
-        else:
-            # MagicMock and mypy aren't playing nice.
-            assert mock_task.run.call_count == 0  # type: ignore
+        # need this line to make MyPy play nice with MagicMock
+        if isinstance(mock_task, MagicMock):
+            if mock_task in task_execution_order:
+                mock_task.run.assert_called_once_with()
+            else:
+                assert mock_task.run.call_count == 0
+        else:  # pragma: no cover - not hit if test passes
+            assert False
 
 
 def test_get_str_args():
@@ -181,7 +182,9 @@ def test_resolve_process_results_normal_process():
 
 
 def test_resolve_process_results_normal_process_exit_1():
-    with patch("builtins.print") as mock_print, patch("builtins.exit") as mock_exit:
+    with patch("builtins.print") as mock_print, patch(
+        "build_support.dag_engine.sys.exit"
+    ) as mock_exit:
         resolve_process_results(
             command_as_str="run a process",
             output=b"output",
@@ -207,12 +210,14 @@ def test_resolve_process_results_normal_process_has_error_text():
             calls=[
                 call("output", flush=True, end=""),
                 call("error", flush=True, end="", file=sys.stderr),
-            ]
+            ],
         )
 
 
 def test_resolve_process_results_normal_process_has_error_text_exit_1():
-    with patch("builtins.print") as mock_print, patch("builtins.exit") as mock_exit:
+    with patch("builtins.print") as mock_print, patch(
+        "build_support.dag_engine.sys.exit"
+    ) as mock_exit:
         resolve_process_results(
             command_as_str="run a process",
             output=b"output",
@@ -225,7 +230,7 @@ def test_resolve_process_results_normal_process_has_error_text_exit_1():
             calls=[
                 call("output", flush=True, end=""),
                 call("error", flush=True, end="", file=sys.stderr),
-            ]
+            ],
         )
         mock_exit.assert_called_once_with(1)
 
@@ -244,7 +249,9 @@ def test_resolve_process_results_normal_process_silent():
 
 
 def test_resolve_process_results_normal_process_silent_exit_1():
-    with patch("builtins.print") as mock_print, patch("builtins.exit") as mock_exit:
+    with patch("builtins.print") as mock_print, patch(
+        "build_support.dag_engine.sys.exit"
+    ) as mock_exit:
         resolve_process_results(
             command_as_str="run a process",
             output=b"output",
@@ -257,33 +264,14 @@ def test_resolve_process_results_normal_process_silent_exit_1():
             calls=[
                 call("error", flush=True, end="", file=sys.stderr),
                 call("run a process\nFailed with code: 1", flush=True, file=sys.stderr),
-            ]
+            ],
         )
         mock_exit.assert_called_once_with(1)
 
 
-def test_demote_process_to_user():
-    user_id = 1337
-    group_id = 42
-    demote_process = demote_process_to_user(user_uid=user_id, user_gid=group_id)
-    with patch("build_support.dag_engine.setgid") as mock_setgid, patch(
-        "build_support.dag_engine.setuid"
-    ) as mock_setuid, patch(
-        "build_support.dag_engine.environ", {}
-    ) as mock_environ, patch(
-        "build_support.dag_engine.getpwuid"
-    ) as mock_getpwuid:
-        mock_getpwuid.return_value = ["local_username"]
-        demote_process()
-        mock_setuid.assert_called_once_with(user_id)
-        mock_setgid.assert_called_once_with(group_id)
-        mock_getpwuid.assert_called_once_with(user_id)
-        assert mock_environ["HOME"] == "/home/local_username/"
-
-
 def test_run_process():
     with patch("build_support.dag_engine.Popen") as mock_popen, patch(
-        "build_support.dag_engine.resolve_process_results"
+        "build_support.dag_engine.resolve_process_results",
     ) as mock_resolve_process_results:
         process_mock = MagicMock()
         process_mock.communicate = MagicMock()
@@ -292,13 +280,13 @@ def test_run_process():
         mock_popen.return_value = process_mock
         assert run_process(args=["command", 0, 1.5, Path("/usr/dev")]) == b"output"
         mock_popen.assert_called_once_with(
-            ["command", "0", "1.5", "/usr/dev"],
-            stdin=PIPE,
+            args=["command", "0", "1.5", "/usr/dev"],
+            stdin=None,
             stdout=PIPE,
             stderr=PIPE,
-            bufsize=-1,
-            shell=False,
-            preexec_fn=None,
+            user=None,
+            group=None,
+            env=None,
         )
         mock_resolve_process_results.assert_called_once_with(
             command_as_str="command 0 1.5 /usr/dev",
@@ -311,7 +299,7 @@ def test_run_process():
 
 def test_run_process_silent():
     with patch("build_support.dag_engine.Popen") as mock_popen, patch(
-        "build_support.dag_engine.resolve_process_results"
+        "build_support.dag_engine.resolve_process_results",
     ) as mock_resolve_process_results:
         process_mock = MagicMock()
         process_mock.communicate = MagicMock()
@@ -323,13 +311,13 @@ def test_run_process_silent():
             == b"output"
         )
         mock_popen.assert_called_once_with(
-            ["command", "0", "1.5", "/usr/dev"],
-            stdin=PIPE,
+            args=["command", "0", "1.5", "/usr/dev"],
+            stdin=None,
             stdout=PIPE,
             stderr=PIPE,
-            bufsize=-1,
-            shell=False,
-            preexec_fn=None,
+            user=None,
+            group=None,
+            env=None,
         )
         mock_resolve_process_results.assert_called_once_with(
             command_as_str="command 0 1.5 /usr/dev",
@@ -342,8 +330,17 @@ def test_run_process_silent():
 
 def test_run_process_as_user():
     with patch("build_support.dag_engine.Popen") as mock_popen, patch(
-        "build_support.dag_engine.resolve_process_results"
-    ) as mock_resolve_process_results:
+        "build_support.dag_engine.resolve_process_results",
+    ) as mock_resolve_process_results, patch(
+        "build_support.dag_engine.getpwuid"
+    ) as mock_getpwuid, patch(
+        "build_support.dag_engine.environ", {"initial_key": "initial_val"}
+    ) as mock_environ:
+        user_name = "user_name"
+        mock_getpwuid.return_value = [user_name]
+        home_path = f"/home/{user_name}/"
+        expected_new_env = mock_environ.copy()
+        expected_new_env["HOME"] = home_path
         process_mock = MagicMock()
         process_mock.communicate = MagicMock()
         process_mock.communicate.return_value = b"output", b"error"
@@ -352,19 +349,20 @@ def test_run_process_as_user():
         assert (
             run_process(
                 args=["command", 0, 1.5, Path("/usr/dev")],
-                local_user_uid=1337,
-                local_user_gid=42,
+                user_uid=1337,
+                user_gid=42,
             )
             == b"output"
         )
+        assert len(mock_environ) == 1
         mock_popen.assert_called_once_with(
-            ["command", "0", "1.5", "/usr/dev"],
-            stdin=PIPE,
+            args=["command", "0", "1.5", "/usr/dev"],
+            stdin=None,
             stdout=PIPE,
             stderr=PIPE,
-            bufsize=-1,
-            shell=False,
-            preexec_fn=demote_process_to_user(user_uid=1337, user_gid=42),
+            user=1337,
+            group=42,
+            env=expected_new_env,
         )
         mock_resolve_process_results.assert_called_once_with(
             command_as_str="command 0 1.5 /usr/dev",
@@ -377,8 +375,17 @@ def test_run_process_as_user():
 
 def test_run_process_silent_as_user():
     with patch("build_support.dag_engine.Popen") as mock_popen, patch(
-        "build_support.dag_engine.resolve_process_results"
-    ) as mock_resolve_process_results:
+        "build_support.dag_engine.resolve_process_results",
+    ) as mock_resolve_process_results, patch(
+        "build_support.dag_engine.getpwuid"
+    ) as mock_getpwuid, patch(
+        "build_support.dag_engine.environ", {"initial_key": "initial_val"}
+    ) as mock_environ:
+        user_name = "user_name"
+        mock_getpwuid.return_value = [user_name]
+        home_path = f"/home/{user_name}/"
+        expected_new_env = mock_environ.copy()
+        expected_new_env["HOME"] = home_path
         process_mock = MagicMock()
         process_mock.communicate = MagicMock()
         process_mock.communicate.return_value = b"output", b"error"
@@ -387,20 +394,21 @@ def test_run_process_silent_as_user():
         assert (
             run_process(
                 args=["command", 0, 1.5, Path("/usr/dev")],
-                local_user_uid=1337,
-                local_user_gid=42,
+                user_uid=1337,
+                user_gid=42,
                 silent=True,
             )
             == b"output"
         )
+        assert len(mock_environ) == 1
         mock_popen.assert_called_once_with(
-            ["command", "0", "1.5", "/usr/dev"],
-            stdin=PIPE,
+            args=["command", "0", "1.5", "/usr/dev"],
+            stdin=None,
             stdout=PIPE,
             stderr=PIPE,
-            bufsize=-1,
-            shell=False,
-            preexec_fn=demote_process_to_user(user_uid=1337, user_gid=42),
+            user=1337,
+            group=42,
+            env=expected_new_env,
         )
         mock_resolve_process_results.assert_called_once_with(
             command_as_str="command 0 1.5 /usr/dev",
@@ -422,9 +430,9 @@ def test_get_output_of_process():
 
 def test_run_piped_processes():
     with patch("build_support.dag_engine.Popen") as mock_popen, patch(
-        "builtins.print"
+        "builtins.print",
     ) as mock_print, patch(
-        "build_support.dag_engine.resolve_process_results"
+        "build_support.dag_engine.resolve_process_results",
     ) as mock_resolve_process_results:
         process_mock = MagicMock()
         process_mock.communicate = MagicMock()
@@ -432,7 +440,7 @@ def test_run_piped_processes():
         process_mock.returncode = 0
         mock_popen.return_value = process_mock
         run_piped_processes(
-            processes=[["command", 0, 1.5, Path("/usr/dev")], ["second_command", 1337]]
+            processes=[["command", 0, 1.5, Path("/usr/dev")], ["second_command", 1337]],
         )
         command_as_str = "command 0 1.5 /usr/dev | second_command 1337"
         assert mock_popen.call_count == 2
@@ -440,18 +448,23 @@ def test_run_piped_processes():
             calls=[
                 call(
                     args=["command", "0", "1.5", "/usr/dev"],
+                    stdin=None,
                     stdout=PIPE,
-                    shell=False,
-                    preexec_fn=None,
+                    stderr=PIPE,
+                    user=None,
+                    group=None,
+                    env=None,
                 ),
                 call(
                     args=["second_command", "1337"],
                     stdin=process_mock.stdout,
                     stdout=PIPE,
-                    shell=False,
-                    preexec_fn=None,
+                    stderr=PIPE,
+                    user=None,
+                    group=None,
+                    env=None,
                 ),
-            ]
+            ],
         )
         mock_resolve_process_results.assert_called_once_with(
             command_as_str=command_as_str,
@@ -465,9 +478,9 @@ def test_run_piped_processes():
 
 def test_run_piped_processes_silent():
     with patch("build_support.dag_engine.Popen") as mock_popen, patch(
-        "builtins.print"
+        "builtins.print",
     ) as mock_print, patch(
-        "build_support.dag_engine.resolve_process_results"
+        "build_support.dag_engine.resolve_process_results",
     ) as mock_resolve_process_results:
         process_mock = MagicMock()
         process_mock.communicate = MagicMock()
@@ -484,18 +497,23 @@ def test_run_piped_processes_silent():
             calls=[
                 call(
                     args=["command", "0", "1.5", "/usr/dev"],
+                    stdin=None,
                     stdout=PIPE,
-                    shell=False,
-                    preexec_fn=None,
+                    stderr=PIPE,
+                    user=None,
+                    group=None,
+                    env=None,
                 ),
                 call(
                     args=["second_command", "1337"],
                     stdin=process_mock.stdout,
                     stdout=PIPE,
-                    shell=False,
-                    preexec_fn=None,
+                    stderr=PIPE,
+                    user=None,
+                    group=None,
+                    env=None,
                 ),
-            ]
+            ],
         )
         mock_resolve_process_results.assert_called_once_with(
             command_as_str=command_as_str,
@@ -509,10 +527,19 @@ def test_run_piped_processes_silent():
 
 def test_run_piped_processes_as_user():
     with patch("build_support.dag_engine.Popen") as mock_popen, patch(
-        "builtins.print"
+        "builtins.print",
     ) as mock_print, patch(
-        "build_support.dag_engine.resolve_process_results"
-    ) as mock_resolve_process_results:
+        "build_support.dag_engine.resolve_process_results",
+    ) as mock_resolve_process_results, patch(
+        "build_support.dag_engine.getpwuid"
+    ) as mock_getpwuid, patch(
+        "build_support.dag_engine.environ", {"initial_key": "initial_val"}
+    ) as mock_environ:
+        user_name = "user_name"
+        mock_getpwuid.return_value = [user_name]
+        home_path = f"/home/{user_name}/"
+        expected_new_env = mock_environ.copy()
+        expected_new_env["HOME"] = home_path
         process_mock = MagicMock()
         process_mock.communicate = MagicMock()
         process_mock.communicate.return_value = b"output", b"error"
@@ -520,27 +547,33 @@ def test_run_piped_processes_as_user():
         mock_popen.return_value = process_mock
         run_piped_processes(
             processes=[["command", 0, 1.5, Path("/usr/dev")], ["second_command", 1337]],
-            local_user_uid=1337,
-            local_user_gid=42,
+            user_uid=1337,
+            user_gid=42,
         )
+        assert len(mock_environ) == 1
         command_as_str = "command 0 1.5 /usr/dev | second_command 1337"
         assert mock_popen.call_count == 2
         mock_popen.assert_has_calls(
             calls=[
                 call(
                     args=["command", "0", "1.5", "/usr/dev"],
+                    stdin=None,
                     stdout=PIPE,
-                    shell=False,
-                    preexec_fn=demote_process_to_user(user_uid=1337, user_gid=42),
+                    stderr=PIPE,
+                    user=1337,
+                    group=42,
+                    env=expected_new_env,
                 ),
                 call(
                     args=["second_command", "1337"],
                     stdin=process_mock.stdout,
                     stdout=PIPE,
-                    shell=False,
-                    preexec_fn=demote_process_to_user(user_uid=1337, user_gid=42),
+                    stderr=PIPE,
+                    user=1337,
+                    group=42,
+                    env=expected_new_env,
                 ),
-            ]
+            ],
         )
         mock_resolve_process_results.assert_called_once_with(
             command_as_str=command_as_str,
@@ -554,10 +587,19 @@ def test_run_piped_processes_as_user():
 
 def test_run_piped_processes_silent_as_user():
     with patch("build_support.dag_engine.Popen") as mock_popen, patch(
-        "builtins.print"
+        "builtins.print",
     ) as mock_print, patch(
-        "build_support.dag_engine.resolve_process_results"
-    ) as mock_resolve_process_results:
+        "build_support.dag_engine.resolve_process_results",
+    ) as mock_resolve_process_results, patch(
+        "build_support.dag_engine.getpwuid"
+    ) as mock_getpwuid, patch(
+        "build_support.dag_engine.environ", {"initial_key": "initial_val"}
+    ) as mock_environ:
+        user_name = "user_name"
+        mock_getpwuid.return_value = [user_name]
+        home_path = f"/home/{user_name}/"
+        expected_new_env = mock_environ.copy()
+        expected_new_env["HOME"] = home_path
         process_mock = MagicMock()
         process_mock.communicate = MagicMock()
         process_mock.communicate.return_value = b"output", b"error"
@@ -565,28 +607,34 @@ def test_run_piped_processes_silent_as_user():
         mock_popen.return_value = process_mock
         run_piped_processes(
             processes=[["command", 0, 1.5, Path("/usr/dev")], ["second_command", 1337]],
-            local_user_uid=1337,
-            local_user_gid=42,
+            user_uid=1337,
+            user_gid=42,
             silent=True,
         )
+        assert len(mock_environ) == 1
         command_as_str = "command 0 1.5 /usr/dev | second_command 1337"
         assert mock_popen.call_count == 2
         mock_popen.assert_has_calls(
             calls=[
                 call(
                     args=["command", "0", "1.5", "/usr/dev"],
+                    stdin=None,
                     stdout=PIPE,
-                    shell=False,
-                    preexec_fn=demote_process_to_user(user_uid=1337, user_gid=42),
+                    stderr=PIPE,
+                    user=1337,
+                    group=42,
+                    env=expected_new_env,
                 ),
                 call(
                     args=["second_command", "1337"],
                     stdin=process_mock.stdout,
                     stdout=PIPE,
-                    shell=False,
-                    preexec_fn=demote_process_to_user(user_uid=1337, user_gid=42),
+                    stderr=PIPE,
+                    user=1337,
+                    group=42,
+                    env=expected_new_env,
                 ),
-            ]
+            ],
         )
         mock_resolve_process_results.assert_called_once_with(
             command_as_str=command_as_str,
@@ -600,9 +648,9 @@ def test_run_piped_processes_silent_as_user():
 
 def test_run_piped_processes_one_process():
     with patch("build_support.dag_engine.Popen") as mock_popen, patch(
-        "builtins.print"
+        "builtins.print",
     ) as mock_print, patch(
-        "build_support.dag_engine.resolve_process_results"
+        "build_support.dag_engine.resolve_process_results",
     ) as mock_resolve_process_results:
         process_mock = MagicMock()
         process_mock.communicate = MagicMock()
@@ -613,9 +661,12 @@ def test_run_piped_processes_one_process():
         command_as_str = "command 0 1.5 /usr/dev"
         mock_popen.assert_called_once_with(
             args=["command", "0", "1.5", "/usr/dev"],
+            stdin=None,
             stdout=PIPE,
-            shell=False,
-            preexec_fn=None,
+            stderr=PIPE,
+            user=None,
+            group=None,
+            env=None,
         )
         mock_resolve_process_results.assert_called_once_with(
             command_as_str=command_as_str,
@@ -629,9 +680,9 @@ def test_run_piped_processes_one_process():
 
 def test_run_piped_processes_one_process_silent():
     with patch("build_support.dag_engine.Popen") as mock_popen, patch(
-        "builtins.print"
+        "builtins.print",
     ) as mock_print, patch(
-        "build_support.dag_engine.resolve_process_results"
+        "build_support.dag_engine.resolve_process_results",
     ) as mock_resolve_process_results:
         process_mock = MagicMock()
         process_mock.communicate = MagicMock()
@@ -639,14 +690,18 @@ def test_run_piped_processes_one_process_silent():
         process_mock.returncode = 0
         mock_popen.return_value = process_mock
         run_piped_processes(
-            processes=[["command", 0, 1.5, Path("/usr/dev")]], silent=True
+            processes=[["command", 0, 1.5, Path("/usr/dev")]],
+            silent=True,
         )
         command_as_str = "command 0 1.5 /usr/dev"
         mock_popen.assert_called_once_with(
             args=["command", "0", "1.5", "/usr/dev"],
+            stdin=None,
             stdout=PIPE,
-            shell=False,
-            preexec_fn=None,
+            stderr=PIPE,
+            user=None,
+            group=None,
+            env=None,
         )
         mock_resolve_process_results.assert_called_once_with(
             command_as_str=command_as_str,

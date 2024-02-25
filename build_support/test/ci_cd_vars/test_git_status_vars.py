@@ -12,12 +12,33 @@ from build_support.ci_cd_vars.git_status_vars import (
 def test_get_current_branch():
     patch_branch_name = "some_branch_name"
     with patch(
-        "build_support.ci_cd_vars.git_status_vars.get_output_of_process"
+        "build_support.ci_cd_vars.git_status_vars.get_output_of_process",
     ) as get_output_patch:
         get_output_patch.return_value = patch_branch_name
         assert get_current_branch() == patch_branch_name
         get_output_patch.assert_called_once_with(
-            args=["git", "rev-parse", "--abbrev-ref", "HEAD"], silent=True
+            args=["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            user_uid=0,
+            user_gid=0,
+            silent=True,
+        )
+
+
+def test_get_current_branch_as_user():
+    patch_branch_name = "some_branch_name"
+    with patch(
+        "build_support.ci_cd_vars.git_status_vars.get_output_of_process",
+    ) as get_output_patch:
+        get_output_patch.return_value = patch_branch_name
+        assert (
+            get_current_branch(local_user_uid=1337, local_user_gid=42)
+            == patch_branch_name
+        )
+        get_output_patch.assert_called_once_with(
+            args=["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            user_uid=1337,
+            user_gid=42,
+            silent=True,
         )
 
 
@@ -36,17 +57,36 @@ def test_current_branch_is_not_main():
 def test_get_local_tags():
     patch_tag_values = "v0.0.0\nv0.0.1\nv0.1.0\nv1.0.0"
     with patch(
-        "build_support.ci_cd_vars.git_status_vars.get_output_of_process"
+        "build_support.ci_cd_vars.git_status_vars.get_output_of_process",
     ) as get_output_patch:
         get_output_patch.return_value = patch_tag_values
         assert get_local_tags() == ["v0.0.0", "v0.0.1", "v0.1.0", "v1.0.0"]
-        get_output_patch.assert_called_once_with(args=["git", "tag"], silent=True)
+        get_output_patch.assert_called_once_with(
+            args=["git", "tag"], user_uid=0, user_gid=0, silent=True
+        )
+
+
+def test_get_local_tags_as_user():
+    patch_tag_values = "v0.0.0\nv0.0.1\nv0.1.0\nv1.0.0"
+    with patch(
+        "build_support.ci_cd_vars.git_status_vars.get_output_of_process",
+    ) as get_output_patch:
+        get_output_patch.return_value = patch_tag_values
+        assert get_local_tags(local_user_uid=1337, local_user_gid=42) == [
+            "v0.0.0",
+            "v0.0.1",
+            "v0.1.0",
+            "v1.0.0",
+        ]
+        get_output_patch.assert_called_once_with(
+            args=["git", "tag"], user_uid=1337, user_gid=42, silent=True
+        )
 
 
 def test_get_git_diff():
     patch_diff_result = "some_diff"
     with patch(
-        "build_support.ci_cd_vars.git_status_vars.get_output_of_process"
+        "build_support.ci_cd_vars.git_status_vars.get_output_of_process",
     ) as get_output_patch:
         get_output_patch.return_value = patch_diff_result
         assert get_git_diff() == patch_diff_result
