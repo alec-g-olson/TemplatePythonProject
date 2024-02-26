@@ -1,21 +1,23 @@
 import ast
 import inspect
-from collections import namedtuple
 from dataclasses import dataclass
 from pathlib import Path
 from re import compile
 from textwrap import dedent
-from typing import Any, Pattern
+from typing import NamedTuple, Pattern, TypeAlias
 
 import pytest
+from _pytest.fixtures import SubRequest
 from pydocstyle import ConventionChecker
 from pydocstyle.parser import Class, Function, Method, Module, Package, Parser
+
+DocumentationElement: TypeAlias = Class | Function | Method | Module | Package
 
 sub_projects_to_enforce_docstrings = ["pypi_package", "build_support"]
 
 
 @pytest.fixture(params=sub_projects_to_enforce_docstrings)
-def package_to_test(real_project_root_dir: Path, request) -> Path:
+def package_to_test(real_project_root_dir: Path, request: SubRequest) -> Path:
     return real_project_root_dir.joinpath(request.param, "src")
 
 
@@ -38,7 +40,9 @@ def get_all_module_paths(top_package: Path) -> list[Path]:
     return all_modules_to_test
 
 
-def get_flattened_public_children(element_to_flatten: Any) -> list[Any]:
+def get_flattened_public_children(
+    element_to_flatten: DocumentationElement,
+) -> list[DocumentationElement]:
     flattened_list = [element_to_flatten]
     for child in element_to_flatten.children:
         if child.is_public:  # pragma: no cover - branching, all could be public
@@ -46,7 +50,7 @@ def get_flattened_public_children(element_to_flatten: Any) -> list[Any]:
     return flattened_list
 
 
-def parse_all_objects(package_to_test: Path) -> list[Any]:
+def parse_all_objects(package_to_test: Path) -> list[DocumentationElement]:
     all_modules_to_test = get_all_module_paths(top_package=package_to_test)
     pydocstyle_parser = Parser()
     all_objects = []
@@ -104,8 +108,7 @@ def get_source_file_name(
 ) -> str:  # pragma: no cover if all pass
     if isinstance(parsed_element, (Package, Module)):
         return parsed_element.name
-    else:
-        return get_source_file_name(parsed_element=parsed_element.parent)
+    return get_source_file_name(parsed_element=parsed_element.parent)
 
 
 def get_element_name(
@@ -116,30 +119,25 @@ def get_element_name(
         suffix_to_add = ""
     if isinstance(parsed_element, (Package, Module)):
         return suffix_to_add
+    if suffix_to_add:
+        suffix_to_add = parsed_element.name + "." + suffix_to_add
     else:
-        if suffix_to_add:
-            suffix_to_add = parsed_element.name + "." + suffix_to_add
-        else:
-            suffix_to_add = parsed_element.name
-        return get_element_name(
-            parsed_element=parsed_element.parent, suffix_to_add=suffix_to_add
-        )
+        suffix_to_add = parsed_element.name
+    return get_element_name(
+        parsed_element=parsed_element.parent, suffix_to_add=suffix_to_add
+    )
 
 
 convention_checker = ConventionChecker()
 
 
-SectionContext = namedtuple(
-    "SectionContext",
-    (
-        "section_name",
-        "previous_line",
-        "line",
-        "following_lines",
-        "original_index",
-        "is_last_section",
-    ),
-)
+class SectionContext(NamedTuple):
+    section_name: str
+    previous_line: str
+    line: int
+    following_lines: list[str]
+    original_index: int
+    is_last_section: bool
 
 
 def normalize_context(context: SectionContext) -> SectionContext:
@@ -170,7 +168,7 @@ def get_docstring_contexts(docstring: str) -> dict[str, SectionContext]:
     lines = docstring.split("\n")
     return {
         context.section_name: normalize_context(context=context)
-        for context in convention_checker._get_section_contexts(
+        for context in convention_checker._get_section_contexts(  # noqa: SLF001
             lines,
             sorted(
                 set(
@@ -189,17 +187,17 @@ POSSIBLE_SUB_PACKAGE_SECTIONS = ["SubPackages"]
 POSSIBLE_MODULES_SECTIONS = ["Modules"]
 
 PROJECT_SPECIFIC_SECTIONS = sorted(
-    set(
+    {
         section_name
-        for list_of_sections in [
+        for list_of_sections in (
             POSSIBLE_ATTRIBUTES_SECTIONS,
             POSSIBLE_ARGUMENTS_SECTIONS,
             POSSIBLE_RESULTS_SECTIONS,
             POSSIBLE_SUB_PACKAGE_SECTIONS,
             POSSIBLE_MODULES_SECTIONS,
-        ]
+        )
         for section_name in list_of_sections
-    )
+    }
 )
 
 LOOSE_REGEX = compile(r"^\s*(\|\s)?([^\s:]+)\s*.*")
@@ -211,13 +209,51 @@ ENFORCED_GOOGLE_ARGS_REGEX = compile(r"^\s*(\w+)\s*(\(.*\))\s*:\n?\s*(.+)")
 GOOGLE_RESULT_REGEX = compile(r"^\s*(([\w\[\],\s]+)\s*:\s*(.+)|None)")
 
 
+@dataclass
+class SectionElementData:
+    possible_section_names: list[str]
+    required_context_elements: list[str]
+    enforced_element_regex: Pattern[str] | None
+
+    extra_elements: list[str]
+    missing_elements: list[str]
+    malformed_element_docs: list[str]
+
+    def has_issues(self) -> bool:
+        if (
+            self.extra_elements or self.missing_elements or self.malformed_element_docs
+        ):  # pragma: no cover if all tests pass
+            return True
+        return False
+
+
+@dataclass
+class GenericDocstringData:
+    module_name: str
+    missing_sections: list[str]
+    clashing_sections: list[str]
+    sections: dict[str, SectionElementData]
+
+    def has_issues(self) -> bool:
+        if (
+            self.missing_sections
+            or self.clashing_sections
+            or any(section.has_issues() for section in self.sections.values())
+        ):  # pragma: no cover if all tests pass
+            return True
+        return False
+
+
+@dataclass
+class ElementDocstringData(GenericDocstringData):
+    name: str
+
+
 def check_all_elements_in_section_context(
     context: SectionContext,
     required_context_elements: list[str],
     enforced_element_regex: Pattern[str],
-    element_doc_malformed_in_section: list[str],
-    extra_elements_in_section: list[str],
-    elements_missing_from_section: list[str],
+    section_element_data: SectionElementData,
 ) -> None:
     element_docs = []
     for line in context.following_lines:
@@ -234,41 +270,37 @@ def check_all_elements_in_section_context(
                 missing_elements.remove(element)
                 enforced_match = enforced_element_regex.match(element_doc)
                 if not enforced_match:
-                    element_doc_malformed_in_section.append(element)
+                    section_element_data.malformed_element_docs.append(element)
             else:
-                extra_elements_in_section.append(element)
-    elements_missing_from_section += sorted(list(missing_elements))
+                section_element_data.extra_elements.append(element)
+    section_element_data.missing_elements += sorted(missing_elements)
 
 
 def check_for_section_with_elements_in_contexts(
     contexts: dict[str, SectionContext],
-    section_group_to_check_for: list[str],
-    required_context_elements: list[str],
-    enforced_element_regex: Pattern[str],
-    missing_sections: list[str],
-    clashing_sections: list[list[str]],
-    element_doc_malformed_in_section: list[str],
-    extra_elements_in_section: list[str],
-    elements_missing_from_section: list[str],
+    docstring_data: GenericDocstringData,
+    section_name: str,
 ) -> None:
-    if required_context_elements:
-        sections_founds = []
-        for section in section_group_to_check_for:
-            if section in contexts:  # pragma: no cover branch if section group len==1
-                sections_founds.append(section)
+    section_element_data = docstring_data.sections[section_name]
+    if section_element_data.required_context_elements:
+        sections_founds = [
+            section
+            for section in section_element_data.possible_section_names
+            if section in contexts
+        ]
         if len(sections_founds) == 0:  # pragma: no cover if all pass
-            missing_sections.append("|".join(section_group_to_check_for))
+            docstring_data.missing_sections.append(
+                "|".join(section_element_data.possible_section_names)
+            )
         elif len(sections_founds) == 1:
             check_all_elements_in_section_context(
                 context=contexts[sections_founds[0]],
-                required_context_elements=required_context_elements,
-                enforced_element_regex=enforced_element_regex,
-                element_doc_malformed_in_section=element_doc_malformed_in_section,
-                extra_elements_in_section=extra_elements_in_section,
-                elements_missing_from_section=elements_missing_from_section,
+                required_context_elements=section_element_data.required_context_elements,
+                enforced_element_regex=section_element_data.enforced_element_regex,
+                section_element_data=section_element_data,
             )
         else:  # pragma: no cover if all pass
-            clashing_sections.append(sections_founds)
+            docstring_data.clashing_sections.append("|".join(sections_founds))
 
 
 def check_section_context_has_single_element_with_pattern(
@@ -283,167 +315,127 @@ def check_section_context_has_single_element_with_pattern(
             element_docs[-1] += line
     if len(element_docs) != 1:  # pragma: no cover if all pass
         return False
-    else:
-        return bool(enforced_element_regex.match(element_docs[0]))
+    return bool(enforced_element_regex.match(element_docs[0]))
 
 
 def check_for_section_with_single_element_in_contexts(
     contexts: dict[str, SectionContext],
-    section_group_to_check_for: list[str],
-    enforced_element_regex: Pattern[str],
-    missing_sections: list[str],
-    clashing_sections: list[list[str]],
+    docstring_data: GenericDocstringData,
+    section_name: str,
 ) -> bool:
-    sections_founds = []
-    for section in section_group_to_check_for:
-        if section in contexts:
-            sections_founds.append(section)
+    section_element_data = docstring_data.sections[section_name]
+    section_group_to_check_for = section_element_data.possible_section_names
+    sections_founds = [
+        section for section in section_group_to_check_for if section in contexts
+    ]
     if len(sections_founds) == 0:  # pragma: no cover if all pass
-        missing_sections.append("|".join(section_group_to_check_for))
+        docstring_data.missing_sections.append("|".join(section_group_to_check_for))
     elif len(sections_founds) == 1:
         return check_section_context_has_single_element_with_pattern(
             context=contexts[sections_founds[0]],
-            enforced_element_regex=enforced_element_regex,
+            enforced_element_regex=section_element_data.enforced_element_regex,
         )
     else:  # pragma: no cover if all pass
-        clashing_sections.append(sections_founds)
+        docstring_data.clashing_sections.append("|".join(sections_founds))
     return False  # pragma: no cover if all pass
 
 
 def get_package_sub_package_section_info(
     root_of_package_to_test: Path,
     parsed_object: Package,
-    possible_sub_packages_sections: list[str],
     contexts: dict[str, SectionContext],
-    missing_sections: list[str],
-    clashing_sections: list[list[str]],
-    element_docs_malformed_in_section: list[str],
-    extra_elements_in_section: list[str],
-    elements_missing_from_section: list[str],
+    docstring_data: GenericDocstringData,
+    section_name: str,
 ) -> None:
+    section_element_data = docstring_data.sections[section_name]
     current_package_path = root_of_package_to_test.joinpath(parsed_object.name).parent
-    required_sub_packages = [
+    section_element_data.required_context_elements = [
         x.name
         for x in current_package_path.glob("*")
         if x.is_dir() and x.name != "__pycache__"
     ]
     check_for_section_with_elements_in_contexts(
         contexts=contexts,
-        section_group_to_check_for=possible_sub_packages_sections,
-        required_context_elements=required_sub_packages,
-        enforced_element_regex=ENFORCED_SUB_PACKAGE_REGEX,
-        missing_sections=missing_sections,
-        clashing_sections=clashing_sections,
-        element_doc_malformed_in_section=element_docs_malformed_in_section,
-        extra_elements_in_section=extra_elements_in_section,
-        elements_missing_from_section=elements_missing_from_section,
+        docstring_data=docstring_data,
+        section_name=section_name,
     )
 
 
 def get_package_module_section_info(
     root_of_package_to_test: Path,
     parsed_object: Package,
-    possible_sub_packages_sections: list[str],
     contexts: dict[str, SectionContext],
-    missing_sections: list[str],
-    clashing_sections: list[list[str]],
-    element_docs_malformed_in_section: list[str],
-    extra_elements_in_section: list[str],
-    elements_missing_from_section: list[str],
+    docstring_data: GenericDocstringData,
+    section_name: str,
 ) -> None:
+    section_element_data = docstring_data.sections[section_name]
     current_package_path = root_of_package_to_test.joinpath(parsed_object.name).parent
-    required_modules = [
+    section_element_data.required_context_elements = [
         x.name
         for x in current_package_path.glob("*")
         if x.is_file() and x.name != "__init__.py" and x.name.endswith(".py")
     ]
     check_for_section_with_elements_in_contexts(
         contexts=contexts,
-        section_group_to_check_for=possible_sub_packages_sections,
-        required_context_elements=required_modules,
-        enforced_element_regex=ENFORCED_MODULE_REGEX,
-        missing_sections=missing_sections,
-        clashing_sections=clashing_sections,
-        element_doc_malformed_in_section=element_docs_malformed_in_section,
-        extra_elements_in_section=extra_elements_in_section,
-        elements_missing_from_section=elements_missing_from_section,
+        docstring_data=docstring_data,
+        section_name=section_name,
     )
 
 
 @dataclass
-class PackageDocstringData:
-    module_name: str
-    missing_sections: list[str]
-    clashing_sections: list[str]
-    extra_sub_packages: list[str]
-    missing_sub_packages: list[str]
-    malformed_sub_package_docs: list[str]
-    extra_modules: list[str]
-    missing_modules: list[str]
-    malformed_module_docs: list[str]
+class PackageDocstringData(GenericDocstringData):
+    pass
 
 
-def test_all_package_docstrings(package_to_test: Path):
+def test_all_package_docstrings(package_to_test: Path) -> None:
     packages_with_issues_in_docstrings = []
     for parsed_package in get_all_packages_in(package_to_test=package_to_test):
         contexts = get_docstring_contexts(docstring=parsed_package.docstring)
-        missing_sections = []
-        clashing_sections = []
-        malformed_sub_package_docs = []
-        extra_sub_packages = []
-        missing_sub_packages = []
+        package_docstring_data = PackageDocstringData(
+            module_name=get_source_file_name(parsed_element=parsed_package),
+            missing_sections=[],
+            clashing_sections=[],
+            sections={
+                "sub_packages": SectionElementData(
+                    possible_section_names=POSSIBLE_SUB_PACKAGE_SECTIONS,
+                    required_context_elements=[],
+                    enforced_element_regex=ENFORCED_SUB_PACKAGE_REGEX,
+                    extra_elements=[],
+                    missing_elements=[],
+                    malformed_element_docs=[],
+                ),
+                "modules": SectionElementData(
+                    possible_section_names=POSSIBLE_MODULES_SECTIONS,
+                    required_context_elements=[],
+                    enforced_element_regex=ENFORCED_MODULE_REGEX,
+                    extra_elements=[],
+                    missing_elements=[],
+                    malformed_element_docs=[],
+                ),
+            },
+        )
         get_package_sub_package_section_info(
             root_of_package_to_test=package_to_test,
             parsed_object=parsed_package,
-            possible_sub_packages_sections=POSSIBLE_SUB_PACKAGE_SECTIONS,
             contexts=contexts,
-            missing_sections=missing_sections,
-            clashing_sections=clashing_sections,
-            element_docs_malformed_in_section=malformed_sub_package_docs,
-            extra_elements_in_section=extra_sub_packages,
-            elements_missing_from_section=missing_sub_packages,
+            docstring_data=package_docstring_data,
+            section_name="sub_packages",
         )
-        malformed_module_docs = []
-        extra_modules = []
-        missing_modules = []
         get_package_module_section_info(
             root_of_package_to_test=package_to_test,
             parsed_object=parsed_package,
-            possible_sub_packages_sections=POSSIBLE_MODULES_SECTIONS,
             contexts=contexts,
-            missing_sections=missing_sections,
-            clashing_sections=clashing_sections,
-            element_docs_malformed_in_section=malformed_module_docs,
-            extra_elements_in_section=extra_modules,
-            elements_missing_from_section=missing_modules,
+            docstring_data=package_docstring_data,
+            section_name="modules",
         )
-        if (
-            missing_sections
-            or clashing_sections
-            or malformed_sub_package_docs
-            or extra_sub_packages
-            or missing_modules
-            or malformed_module_docs
-            or extra_modules
-            or missing_modules
-        ):  # pragma: no cover if all pass
-            packages_with_issues_in_docstrings.append(
-                PackageDocstringData(
-                    module_name=get_source_file_name(parsed_element=parsed_package),
-                    missing_sections=missing_sections,
-                    clashing_sections=clashing_sections,
-                    extra_sub_packages=extra_sub_packages,
-                    missing_sub_packages=missing_sub_packages,
-                    malformed_sub_package_docs=malformed_sub_package_docs,
-                    extra_modules=extra_modules,
-                    missing_modules=missing_modules,
-                    malformed_module_docs=malformed_module_docs,
-                )
-            )
+        if package_docstring_data.has_issues():  # pragma: no cover if all pass
+            packages_with_issues_in_docstrings.append(package_docstring_data)
     assert packages_with_issues_in_docstrings == []
 
 
-def import_element(full_module_path: str, full_element_path: str | None = None):
+def import_element(
+    full_module_path: str, full_element_path: str | None = None
+) -> DocumentationElement:
     imported_element = __import__(full_module_path)
     for path_element in full_module_path.split(".")[1:]:
         imported_element = getattr(imported_element, path_element)
@@ -465,13 +457,9 @@ def get_list_of_imported_names(module_source_text: str) -> set[str]:
 
 def get_module_attributes_section_info(
     parsed_object: Module,
-    possible_attributes_sections: list[str],
     contexts: dict[str, SectionContext],
-    missing_sections: list[str],
-    clashing_sections: list[list[str]],
-    element_docs_malformed_in_section: list[str],
-    extra_elements_in_section: list[str],
-    elements_missing_from_section: list[str],
+    docstring_data: GenericDocstringData,
+    section_name: str,
 ) -> None:
     # remove ".py"
     module_path = get_source_file_name(parsed_element=parsed_object)[:-3].replace(
@@ -482,92 +470,68 @@ def get_module_attributes_section_info(
         module_source_text=parsed_object.source
     )
     module_child_names = {child.name for child in parsed_object.children}
-    attributes_to_document = [
+    section_element_data = docstring_data.sections[section_name]
+    section_element_data.required_context_elements = [
         name
         for name in dir(imported_module)
         if not (
-            name.startswith("_")
-            or name.startswith("@")
+            name.startswith(("_", "@"))
             or name in names_imported_by_module
             or name in module_child_names
         )
     ]
     check_for_section_with_elements_in_contexts(
         contexts=contexts,
-        section_group_to_check_for=possible_attributes_sections,
-        required_context_elements=attributes_to_document,
-        enforced_element_regex=ENFORCED_ATTRIBUTE_REGEX,
-        missing_sections=missing_sections,
-        clashing_sections=clashing_sections,
-        element_doc_malformed_in_section=element_docs_malformed_in_section,
-        extra_elements_in_section=extra_elements_in_section,
-        elements_missing_from_section=elements_missing_from_section,
+        docstring_data=docstring_data,
+        section_name=section_name,
     )
 
 
 @dataclass
-class ModuleDocstringData:
-    module_name: str
-    missing_sections: list[str]
-    clashing_sections: list[str]
-    missing_attributes: list[str]
-    extra_attributes: list[str]
-    malformed_attributes_docs: list[str]
+class ModuleDocstringData(GenericDocstringData):
+    pass
 
 
-def test_all_module_docstrings(package_to_test: Path):
+def test_all_module_docstrings(package_to_test: Path) -> None:
     modules_with_issues_in_docstrings = []
     for parsed_module in get_all_modules_in(package_to_test=package_to_test):
         contexts = get_docstring_contexts(docstring=parsed_module.docstring)
-        missing_sections = []
-        clashing_sections = []
-        malformed_attributes_docs = []
-        extra_attributes = []
-        missing_attributes = []
+        module_docstring_data = ModuleDocstringData(
+            module_name=get_source_file_name(parsed_element=parsed_module),
+            missing_sections=[],
+            clashing_sections=[],
+            sections={
+                "attributes": SectionElementData(
+                    possible_section_names=POSSIBLE_ATTRIBUTES_SECTIONS,
+                    required_context_elements=[],
+                    enforced_element_regex=ENFORCED_ATTRIBUTE_REGEX,
+                    extra_elements=[],
+                    missing_elements=[],
+                    malformed_element_docs=[],
+                ),
+            },
+        )
         get_module_attributes_section_info(
             parsed_object=parsed_module,
-            possible_attributes_sections=POSSIBLE_ATTRIBUTES_SECTIONS,
             contexts=contexts,
-            missing_sections=missing_sections,
-            clashing_sections=clashing_sections,
-            element_docs_malformed_in_section=malformed_attributes_docs,
-            extra_elements_in_section=extra_attributes,
-            elements_missing_from_section=missing_attributes,
+            docstring_data=module_docstring_data,
+            section_name="attributes",
         )
-        if (
-            missing_sections
-            or clashing_sections
-            or malformed_attributes_docs
-            or extra_attributes
-            or missing_attributes
-        ):  # pragma: no cover if all pass
-            modules_with_issues_in_docstrings.append(
-                ModuleDocstringData(
-                    module_name=get_source_file_name(parsed_element=parsed_module),
-                    missing_sections=missing_sections,
-                    clashing_sections=clashing_sections,
-                    missing_attributes=missing_attributes,
-                    extra_attributes=extra_attributes,
-                    malformed_attributes_docs=malformed_attributes_docs,
-                )
-            )
+        if module_docstring_data.has_issues():  # pragma: no cover if all pass
+            modules_with_issues_in_docstrings.append(module_docstring_data)
     assert modules_with_issues_in_docstrings == []
 
 
-def test_all_class_docstrings(package_to_test: Path):
+def test_all_class_docstrings(package_to_test: Path) -> None:
     for parsed_class in get_all_classes_in(package_to_test=package_to_test):
         assert parsed_class is not None
 
 
 def get_function_args_section_info(
     parsed_object: Method | Function,
-    possible_arguments_sections: list[str],
     contexts: dict[str, SectionContext],
-    missing_sections: list[str],
-    clashing_sections: list[list[str]],
-    element_docs_malformed_in_section: list[str],
-    extra_elements_in_section: list[str],
-    elements_missing_from_section: list[str],
+    docstring_data: GenericDocstringData,
+    section_name: str,
 ) -> None:
     # remove ".py"
     module_path = get_source_file_name(parsed_element=parsed_object)[:-3].replace(
@@ -578,7 +542,8 @@ def get_function_args_section_info(
         full_element_path=get_element_name(parsed_element=parsed_object),
     )
     parameters = list(inspect.signature(imported_function).parameters)
-    required_arg_docs = [
+    section_element_data = docstring_data.sections[section_name]
+    section_element_data.required_context_elements = [
         x
         for x in parsed_object.callable_args
         # We have to check against real parameters because sometimes
@@ -587,142 +552,129 @@ def get_function_args_section_info(
     ]
     check_for_section_with_elements_in_contexts(
         contexts=contexts,
-        section_group_to_check_for=possible_arguments_sections,
-        required_context_elements=required_arg_docs,
-        enforced_element_regex=ENFORCED_GOOGLE_ARGS_REGEX,
-        missing_sections=missing_sections,
-        clashing_sections=clashing_sections,
-        element_doc_malformed_in_section=element_docs_malformed_in_section,
-        extra_elements_in_section=extra_elements_in_section,
-        elements_missing_from_section=elements_missing_from_section,
+        docstring_data=docstring_data,
+        section_name=section_name,
     )
 
 
-def get_function_results_section_info(
+def get_error_in_function_results_section_info(
     contexts: dict[str, SectionContext],
-    possible_result_sections: list[str],
-    missing_sections: list[str],
-    clashing_sections: list[list[str]],
+    docstring_data: GenericDocstringData,
+    section_name: str,
 ) -> bool:
-    return check_for_section_with_single_element_in_contexts(
+    return not check_for_section_with_single_element_in_contexts(
         contexts=contexts,
-        section_group_to_check_for=possible_result_sections,
-        enforced_element_regex=GOOGLE_RESULT_REGEX,
-        missing_sections=missing_sections,
-        clashing_sections=clashing_sections,
+        docstring_data=docstring_data,
+        section_name=section_name,
     )
 
 
 @dataclass
-class FunctionDocstringData:
-    module_name: str
-    function_name: str
-    missing_sections: list[str]
-    clashing_sections: list[str]
-    missing_args: list[str]
-    extra_args: list[str]
-    malformed_arg_docs: list[str]
-    result_missing_type_or_description: bool
+class FunctionDocstringData(ElementDocstringData):
+    result_missing_type_or_description: bool | None
+
+    def has_issues(self) -> bool:
+        if (
+            super().has_issues() or self.result_missing_type_or_description
+        ):  # pragma: no cover if all tests pass
+            return True
+        return False
 
 
 @dataclass
 class MethodDocstringData(FunctionDocstringData):
-    pass
+    """Different name for convenience."""
 
 
-def test_all_method_docstrings(package_to_test: Path):
+def test_all_method_docstrings(package_to_test: Path) -> None:
     method_with_issues_in_docstrings = []
     for parsed_method in get_all_methods_in(package_to_test=package_to_test):
         contexts = get_docstring_contexts(docstring=parsed_method.docstring)
-        missing_sections = []
-        clashing_sections = []
-        malformed_arg_docs = []
-        extra_args = []
-        missing_args = []
+        method_docstring_data = MethodDocstringData(
+            module_name=get_source_file_name(parsed_element=parsed_method),
+            name=get_element_name(parsed_element=parsed_method),
+            missing_sections=[],
+            clashing_sections=[],
+            sections={
+                "args": SectionElementData(
+                    possible_section_names=POSSIBLE_ARGUMENTS_SECTIONS,
+                    required_context_elements=[],
+                    enforced_element_regex=ENFORCED_GOOGLE_ARGS_REGEX,
+                    extra_elements=[],
+                    missing_elements=[],
+                    malformed_element_docs=[],
+                ),
+                "results": SectionElementData(
+                    possible_section_names=POSSIBLE_RESULTS_SECTIONS,
+                    required_context_elements=[],
+                    enforced_element_regex=GOOGLE_RESULT_REGEX,
+                    extra_elements=[],
+                    missing_elements=[],
+                    malformed_element_docs=[],
+                ),
+            },
+            result_missing_type_or_description=None,
+        )
         get_function_args_section_info(
             parsed_object=parsed_method,
-            possible_arguments_sections=POSSIBLE_ARGUMENTS_SECTIONS,
             contexts=contexts,
-            missing_sections=missing_sections,
-            clashing_sections=clashing_sections,
-            element_docs_malformed_in_section=malformed_arg_docs,
-            extra_elements_in_section=extra_args,
-            elements_missing_from_section=missing_args,
+            docstring_data=method_docstring_data,
+            section_name="args",
         )
-        result_badly_formatted = not get_function_results_section_info(
-            contexts=contexts,
-            possible_result_sections=POSSIBLE_RESULTS_SECTIONS,
-            missing_sections=missing_sections,
-            clashing_sections=clashing_sections,
-        )
-        if (
-            missing_sections
-            or clashing_sections
-            or malformed_arg_docs
-            or extra_args
-            or missing_args
-            or result_badly_formatted
-        ):  # pragma: no cover if all pass
-            method_with_issues_in_docstrings.append(
-                MethodDocstringData(
-                    module_name=get_source_file_name(parsed_element=parsed_method),
-                    function_name=get_element_name(parsed_element=parsed_method),
-                    missing_sections=missing_sections,
-                    clashing_sections=clashing_sections,
-                    missing_args=missing_args,
-                    extra_args=extra_args,
-                    malformed_arg_docs=malformed_arg_docs,
-                    result_missing_type_or_description=result_badly_formatted,
-                )
+        method_docstring_data.result_missing_type_or_description = (
+            get_error_in_function_results_section_info(
+                contexts=contexts,
+                docstring_data=method_docstring_data,
+                section_name="results",
             )
-
+        )
+        if method_docstring_data.has_issues():  # pragma: no cover if all pass
+            method_with_issues_in_docstrings.append(method_docstring_data)
     assert method_with_issues_in_docstrings == []
 
 
-def test_all_function_docstrings(package_to_test: Path):
+def test_all_function_docstrings(package_to_test: Path) -> None:
     functions_with_issues_in_docstrings = []
     for parsed_function in get_all_functions_in(package_to_test=package_to_test):
         contexts = get_docstring_contexts(docstring=parsed_function.docstring)
-        missing_sections = []
-        clashing_sections = []
-        malformed_arg_docs = []
-        extra_args = []
-        missing_args = []
+        function_docstring_data = FunctionDocstringData(
+            module_name=get_source_file_name(parsed_element=parsed_function),
+            name=get_element_name(parsed_element=parsed_function),
+            missing_sections=[],
+            clashing_sections=[],
+            sections={
+                "args": SectionElementData(
+                    possible_section_names=POSSIBLE_ARGUMENTS_SECTIONS,
+                    required_context_elements=[],
+                    enforced_element_regex=ENFORCED_GOOGLE_ARGS_REGEX,
+                    extra_elements=[],
+                    missing_elements=[],
+                    malformed_element_docs=[],
+                ),
+                "results": SectionElementData(
+                    possible_section_names=POSSIBLE_RESULTS_SECTIONS,
+                    required_context_elements=[],
+                    enforced_element_regex=GOOGLE_RESULT_REGEX,
+                    extra_elements=[],
+                    missing_elements=[],
+                    malformed_element_docs=[],
+                ),
+            },
+            result_missing_type_or_description=None,
+        )
         get_function_args_section_info(
             parsed_object=parsed_function,
-            possible_arguments_sections=POSSIBLE_ARGUMENTS_SECTIONS,
             contexts=contexts,
-            missing_sections=missing_sections,
-            clashing_sections=clashing_sections,
-            element_docs_malformed_in_section=malformed_arg_docs,
-            extra_elements_in_section=extra_args,
-            elements_missing_from_section=missing_args,
+            docstring_data=function_docstring_data,
+            section_name="args",
         )
-        result_badly_formatted = not get_function_results_section_info(
-            contexts=contexts,
-            possible_result_sections=POSSIBLE_RESULTS_SECTIONS,
-            missing_sections=missing_sections,
-            clashing_sections=clashing_sections,
-        )
-        if (
-            missing_sections
-            or clashing_sections
-            or malformed_arg_docs
-            or extra_args
-            or missing_args
-            or result_badly_formatted
-        ):  # pragma: no cover if all pass
-            functions_with_issues_in_docstrings.append(
-                FunctionDocstringData(
-                    module_name=get_source_file_name(parsed_element=parsed_function),
-                    function_name=get_element_name(parsed_element=parsed_function),
-                    missing_sections=missing_sections,
-                    clashing_sections=clashing_sections,
-                    missing_args=missing_args,
-                    extra_args=extra_args,
-                    malformed_arg_docs=malformed_arg_docs,
-                    result_missing_type_or_description=result_badly_formatted,
-                )
+        function_docstring_data.result_missing_type_or_description = (
+            get_error_in_function_results_section_info(
+                contexts=contexts,
+                docstring_data=function_docstring_data,
+                section_name="results",
             )
-
+        )
+        if function_docstring_data.has_issues():  # pragma: no cover if all pass
+            functions_with_issues_in_docstrings.append(function_docstring_data)
     assert functions_with_issues_in_docstrings == []

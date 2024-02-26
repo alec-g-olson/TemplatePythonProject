@@ -1,13 +1,12 @@
 """Should hold all tasks that push artifacts after testing."""
 
-from pathlib import Path
 
 from build_support.ci_cd_tasks.build_tasks import BuildPypi
-from build_support.ci_cd_tasks.test_tasks import TestAll
+from build_support.ci_cd_tasks.validation_tasks import ValidateAll
 from build_support.ci_cd_vars.git_status_vars import (
+    commit_changes_if_diff,
     current_branch_is_main,
     get_current_branch,
-    get_git_diff,
 )
 from build_support.ci_cd_vars.project_setting_vars import (
     get_project_version,
@@ -25,28 +24,25 @@ class PushAll(TaskNode):
         Returns:
             list[TaskNode]: A list of all build tasks.
         """
-        return [PushTags(), PushPypi()]
+        return [
+            PushTags(
+                non_docker_project_root=self.non_docker_project_root,
+                docker_project_root=self.docker_project_root,
+                local_user_uid=self.local_user_uid,
+                local_user_gid=self.local_user_gid,
+            ),
+            PushPypi(
+                non_docker_project_root=self.non_docker_project_root,
+                docker_project_root=self.docker_project_root,
+                local_user_uid=self.local_user_uid,
+                local_user_gid=self.local_user_gid,
+            ),
+        ]
 
-    def run(
-        self,
-        non_docker_project_root: Path,
-        docker_project_root: Path,
-        local_user_uid: int,
-        local_user_gid: int,
-    ) -> None:
+    def run(self) -> None:
         """Does nothing.
 
-        Arguments are inherited from sub-class.
-
-        Args:
-            non_docker_project_root (Path): Path to this project's root on the local
-                machine.
-            docker_project_root (Path): Path to this project's root when running
-                in docker containers.
-            local_user_uid (int): The local user's users id, used when tasks need to be
-                run by the local user.
-            local_user_gid (int): The local user's group id, used when tasks need to be
-                run by the local user.
+        Arguments are inherited from subclass.
 
         Returns:
             None
@@ -62,15 +58,16 @@ class PushTags(TaskNode):
         Returns:
             list[TaskNode]: A list of tasks required to push version tags.
         """
-        return [TestAll()]
+        return [
+            ValidateAll(
+                non_docker_project_root=self.non_docker_project_root,
+                docker_project_root=self.docker_project_root,
+                local_user_uid=self.local_user_uid,
+                local_user_gid=self.local_user_gid,
+            ),
+        ]
 
-    def run(
-        self,
-        non_docker_project_root: Path,
-        docker_project_root: Path,
-        local_user_uid: int,
-        local_user_gid: int,
-    ) -> None:
+    def run(self) -> None:
         """Tags commit with versio and pushes tag to origin.
 
         This task must be run before any other artifacts are pushed.  This is so
@@ -81,78 +78,41 @@ class PushTags(TaskNode):
         because there could previously pushed artifacts for a version that passes
         that test.
 
-        Args:
-            non_docker_project_root (Path): Path to this project's root on the local
-                machine.
-            docker_project_root (Path): Path to this project's root when running
-                in docker containers.
-            local_user_uid (int): The local user's users id, used when tasks need to be
-                run by the local user.
-            local_user_gid (int): The local user's group id, used when tasks need to be
-                run by the local user.
-
         Returns:
             None
         """
-        current_branch = get_current_branch()
-        current_version = get_project_version(project_root=docker_project_root)
+        current_branch = get_current_branch(
+            local_user_uid=self.local_user_uid,
+            local_user_gid=self.local_user_gid,
+        )
+        current_version = get_project_version(project_root=self.docker_project_root)
         currently_on_main = current_branch_is_main(current_branch=current_branch)
         is_dev_version = is_dev_project_version(project_version=current_version)
         if currently_on_main ^ is_dev_version:
-            local_user = f"{local_user_uid}:{local_user_gid}"
-            run_process(
-                args=concatenate_args(
-                    args=[
-                        "chown",
-                        "-R",
-                        local_user,
-                        "/root/.gitconfig",
-                    ]
+            commit_changes_if_diff(
+                commit_message_no_quotes=(
+                    f"Committing staged changes for {current_version}"
                 ),
-                silent=True,
+                local_user_uid=self.local_user_uid,
+                local_user_gid=self.local_user_gid,
             )
-            current_diff = get_git_diff()
-            if current_diff:
-                run_process(
-                    args=concatenate_args(args=["git", "add", "-u"]),
-                    local_user_uid=local_user_uid,
-                    local_user_gid=local_user_gid,
-                )
-                run_process(
-                    args=concatenate_args(
-                        args=[
-                            "git",
-                            "commit",
-                            "-m",
-                            f"'Committing staged changes for {current_version}'",
-                        ]
-                    ),
-                    local_user_uid=local_user_uid,
-                    local_user_gid=local_user_gid,
-                )
-                run_process(
-                    args=concatenate_args(args=["git", "push"]),
-                    local_user_uid=local_user_uid,
-                    local_user_gid=local_user_gid,
-                )
             run_process(
                 args=concatenate_args(args=["git", "tag", current_version]),
-                local_user_uid=local_user_uid,
-                local_user_gid=local_user_gid,
+                user_uid=self.local_user_uid,
+                user_gid=self.local_user_gid,
             )
             run_process(
                 args=concatenate_args(args=["git", "push", "--tags"]),
-                local_user_uid=local_user_uid,
-                local_user_gid=local_user_gid,
+                user_uid=self.local_user_uid,
+                user_gid=self.local_user_gid,
             )
         else:
-            raise ValueError(
-                f"Tag {current_version} is incompatible with branch {current_branch}."
-            )
+            msg = f"Tag {current_version} is incompatible with branch {current_branch}."
+            raise ValueError(msg)
 
 
 class PushPypi(TaskNode):
-    """Pushes the PyPi package.  Will move to combined once a repo is managed in Pulumi."""
+    """Pushes the PyPi package."""
 
     def required_tasks(self) -> list[TaskNode]:
         """Get the list of task that need to be run before we can push a pypi package.
@@ -160,26 +120,23 @@ class PushPypi(TaskNode):
         Returns:
             list[TaskNode]: A list of tasks required to push the Pypi package.
         """
-        return [PushTags(), BuildPypi()]
+        return [
+            PushTags(
+                non_docker_project_root=self.non_docker_project_root,
+                docker_project_root=self.docker_project_root,
+                local_user_uid=self.local_user_uid,
+                local_user_gid=self.local_user_gid,
+            ),
+            BuildPypi(
+                non_docker_project_root=self.non_docker_project_root,
+                docker_project_root=self.docker_project_root,
+                local_user_uid=self.local_user_uid,
+                local_user_gid=self.local_user_gid,
+            ),
+        ]
 
-    def run(
-        self,
-        non_docker_project_root: Path,
-        docker_project_root: Path,
-        local_user_uid: int,
-        local_user_gid: int,
-    ) -> None:
+    def run(self) -> None:
         """Push PyPi.
-
-        Args:
-            non_docker_project_root (Path): Path to this project's root on the local
-                machine.
-            docker_project_root (Path): Path to this project's root when running
-                in docker containers.
-            local_user_uid (int): The local user's users id, used when tasks need to be
-                run by the local user.
-            local_user_gid (int): The local user's group id, used when tasks need to be
-                run by the local user.
 
         Returns:
             None

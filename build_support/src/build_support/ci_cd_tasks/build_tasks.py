@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from build_support.ci_cd_tasks.env_setup_tasks import BuildProdEnvironment
-from build_support.ci_cd_tasks.test_tasks import TestPypi, TestPythonStyle
+from build_support.ci_cd_tasks.validation_tasks import ValidatePypi, ValidatePythonStyle
 from build_support.ci_cd_vars.docker_vars import (
     DockerTarget,
     get_docker_command_for_image,
@@ -35,28 +35,25 @@ class BuildAll(TaskNode):
         Returns:
             list[TaskNode]: A list of all build tasks.
         """
-        return [BuildPypi(), BuildDocs()]
+        return [
+            BuildPypi(
+                non_docker_project_root=self.non_docker_project_root,
+                docker_project_root=self.docker_project_root,
+                local_user_uid=self.local_user_uid,
+                local_user_gid=self.local_user_gid,
+            ),
+            BuildDocs(
+                non_docker_project_root=self.non_docker_project_root,
+                docker_project_root=self.docker_project_root,
+                local_user_uid=self.local_user_uid,
+                local_user_gid=self.local_user_gid,
+            ),
+        ]
 
-    def run(
-        self,
-        non_docker_project_root: Path,
-        docker_project_root: Path,
-        local_user_uid: int,
-        local_user_gid: int,
-    ) -> None:
+    def run(self) -> None:
         """Does nothing.
 
         Arguments are inherited from subclass.
-
-        Args:
-            non_docker_project_root (Path): Path to this project's root on the local
-                machine.
-            docker_project_root (Path): Path to this project's root when running
-                in docker containers.
-            local_user_uid (int): The local user's users id, used when tasks need to be
-                run by the local user.
-            local_user_gid (int): The local user's group id, used when tasks need to be
-                run by the local user.
 
         Returns:
             None
@@ -73,29 +70,28 @@ class BuildPypi(TaskNode):
             list[TaskNode]: A list of tasks required to build Pypi package.
         """
         return [
-            TestPypi(),
-            TestPythonStyle(),
-            BuildProdEnvironment(),
+            ValidatePypi(
+                non_docker_project_root=self.non_docker_project_root,
+                docker_project_root=self.docker_project_root,
+                local_user_uid=self.local_user_uid,
+                local_user_gid=self.local_user_gid,
+            ),
+            ValidatePythonStyle(
+                non_docker_project_root=self.non_docker_project_root,
+                docker_project_root=self.docker_project_root,
+                local_user_uid=self.local_user_uid,
+                local_user_gid=self.local_user_gid,
+            ),
+            BuildProdEnvironment(
+                non_docker_project_root=self.non_docker_project_root,
+                docker_project_root=self.docker_project_root,
+                local_user_uid=self.local_user_uid,
+                local_user_gid=self.local_user_gid,
+            ),
         ]
 
-    def run(
-        self,
-        non_docker_project_root: Path,
-        docker_project_root: Path,
-        local_user_uid: int,
-        local_user_gid: int,
-    ) -> None:
+    def run(self) -> None:
         """Builds PyPi package.
-
-        Args:
-            non_docker_project_root (Path): Path to this project's root on the local
-                machine.
-            docker_project_root (Path): Path to this project's root when running
-                in docker containers.
-            local_user_uid (int): The local user's users id, used when tasks need to be
-                run by the local user.
-            local_user_gid (int): The local user's group id, used when tasks need to be
-                run by the local user.
 
         Returns:
             None
@@ -104,43 +100,45 @@ class BuildPypi(TaskNode):
             args=concatenate_args(
                 args=[
                     get_docker_command_for_image(
-                        non_docker_project_root=non_docker_project_root,
-                        docker_project_root=docker_project_root,
+                        non_docker_project_root=self.non_docker_project_root,
+                        docker_project_root=self.docker_project_root,
                         target_image=DockerTarget.PROD,
                     ),
                     "rm",
                     "-rf",
-                    get_dist_dir(project_root=docker_project_root),
-                ]
-            )
+                    get_dist_dir(project_root=self.docker_project_root),
+                ],
+            ),
         )
         run_process(
             args=concatenate_args(
                 args=[
                     get_docker_command_for_image(
-                        non_docker_project_root=non_docker_project_root,
-                        docker_project_root=docker_project_root,
+                        non_docker_project_root=self.non_docker_project_root,
+                        docker_project_root=self.docker_project_root,
                         target_image=DockerTarget.PROD,
                     ),
                     "poetry",
                     "build",
-                ]
-            )
+                ],
+            ),
         )
-        # Todo: clean this up once a new version of poetry supporting "-o" is released
+        # TODO @Alec: clean this up once a new version of poetry supporting "-o" is
+        #  released
+        # https://github.com/alec-g-olson/TemplatePythonProject/issues/64
         run_process(
             args=concatenate_args(
                 args=[
                     get_docker_command_for_image(
-                        non_docker_project_root=non_docker_project_root,
-                        docker_project_root=docker_project_root,
+                        non_docker_project_root=self.non_docker_project_root,
+                        docker_project_root=self.docker_project_root,
                         target_image=DockerTarget.PROD,
                     ),
                     "mv",
-                    get_temp_dist_dir(project_root=docker_project_root),
-                    get_dist_dir(project_root=docker_project_root),
-                ]
-            )
+                    get_temp_dist_dir(project_root=self.docker_project_root),
+                    get_dist_dir(project_root=self.docker_project_root),
+                ],
+            ),
         )
 
 
@@ -188,8 +186,8 @@ def build_docs_for_subproject(
                 "-o",
                 docs_src_dir,
                 subproject_src_dir,
-            ]
-        )
+            ],
+        ),
     )
     run_process(
         args=concatenate_args(
@@ -204,8 +202,8 @@ def build_docs_for_subproject(
                 docs_build_dir,
                 "-c",
                 get_sphinx_conf_dir(project_root=docker_project_root),
-            ]
-        )
+            ],
+        ),
     )
 
 
@@ -218,47 +216,40 @@ class BuildDocs(TaskNode):
         Returns:
             list[TaskNode]: A list of tasks required to build documentation.
         """
-        return [TestPythonStyle()]
+        return [
+            ValidatePythonStyle(
+                non_docker_project_root=self.non_docker_project_root,
+                docker_project_root=self.docker_project_root,
+                local_user_uid=self.local_user_uid,
+                local_user_gid=self.local_user_gid,
+            ),
+        ]
 
-    def run(
-        self,
-        non_docker_project_root: Path,
-        docker_project_root: Path,
-        local_user_uid: int,
-        local_user_gid: int,
-    ) -> None:
+    def run(self) -> None:
         """Builds sphinx docs.
-
-        Args:
-            non_docker_project_root (Path): Path to this project's root on the local
-                machine.
-            docker_project_root (Path): Path to this project's root when running
-                in docker containers.
-            local_user_uid (int): The local user's users id, used when tasks need to be
-                run by the local user.
-            local_user_gid (int): The local user's group id, used when tasks need to be
-                run by the local user.
 
         Returns:
             None
         """
         build_docs_for_subproject(
-            non_docker_project_root=non_docker_project_root,
-            docker_project_root=docker_project_root,
-            subproject_src_dir=get_pypi_src_dir(project_root=docker_project_root),
-            docs_src_dir=get_pypi_docs_src_dir(project_root=docker_project_root),
-            docs_build_dir=get_pypi_docs_build_dir(project_root=docker_project_root),
+            non_docker_project_root=self.non_docker_project_root,
+            docker_project_root=self.docker_project_root,
+            subproject_src_dir=get_pypi_src_dir(project_root=self.docker_project_root),
+            docs_src_dir=get_pypi_docs_src_dir(project_root=self.docker_project_root),
+            docs_build_dir=get_pypi_docs_build_dir(
+                project_root=self.docker_project_root,
+            ),
         )
         build_docs_for_subproject(
-            non_docker_project_root=non_docker_project_root,
-            docker_project_root=docker_project_root,
+            non_docker_project_root=self.non_docker_project_root,
+            docker_project_root=self.docker_project_root,
             subproject_src_dir=get_build_support_src_dir(
-                project_root=docker_project_root
+                project_root=self.docker_project_root,
             ),
             docs_src_dir=get_build_support_docs_src_dir(
-                project_root=docker_project_root
+                project_root=self.docker_project_root,
             ),
             docs_build_dir=get_build_support_docs_build_dir(
-                project_root=docker_project_root
+                project_root=self.docker_project_root,
             ),
         )

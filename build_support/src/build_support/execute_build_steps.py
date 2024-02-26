@@ -14,34 +14,46 @@ from build_support.ci_cd_tasks.env_setup_tasks import (
     BuildPulumiEnvironment,
     Clean,
 )
-from build_support.ci_cd_tasks.lint_tasks import Autoflake, Lint
+from build_support.ci_cd_tasks.lint_tasks import (
+    ApplyRuffFixUnsafe,
+    Lint,
+    RuffFixSafe,
+)
 from build_support.ci_cd_tasks.push_tasks import PushAll, PushPypi
-from build_support.ci_cd_tasks.test_tasks import (
-    TestAll,
-    TestBuildSupport,
-    TestPypi,
-    TestPythonStyle,
+from build_support.ci_cd_tasks.validation_tasks import (
+    ValidateAll,
+    ValidateBuildSupport,
+    ValidatePypi,
+    ValidatePythonStyle,
 )
 from build_support.dag_engine import TaskNode, concatenate_args, run_process, run_tasks
 from build_support.new_project_setup.setup_new_project import MakeProjectFromTemplate
 
-CLI_ARG_TO_TASK: dict[str, TaskNode] = {
-    "make_new_project": MakeProjectFromTemplate(),
-    "clean": Clean(),
-    "build_dev": BuildDevEnvironment(),
-    "build_prod": BuildProdEnvironment(),
-    "build_pulumi": BuildPulumiEnvironment(),
-    "test_style": TestPythonStyle(),
-    "test_build_support": TestBuildSupport(),
-    "test_pypi": TestPypi(),
-    "test": TestAll(),
-    "lint": Lint(),
-    "autoflake": Autoflake(),
-    "build_pypi": BuildPypi(),
-    "build_docs": BuildDocs(),
-    "build": BuildAll(),
-    "push_pypi": PushPypi(),
-    "push": PushAll(),
+#######################################################################################
+# Test tasks use the word "Validate" instead of "Test" in their name to prevent
+# pytest from getting confused and producing lots of warnings.  However, for the sake
+# of standardization and usability we will use "test" instead of "validate" for the
+# exposed CLI options and Makefile commands.
+#######################################################################################
+
+CLI_ARG_TO_TASK: dict[str, type[TaskNode]] = {
+    "make_new_project": MakeProjectFromTemplate,
+    "clean": Clean,
+    "build_dev": BuildDevEnvironment,
+    "build_prod": BuildProdEnvironment,
+    "build_pulumi": BuildPulumiEnvironment,
+    "test_style": ValidatePythonStyle,
+    "test_build_support": ValidateBuildSupport,
+    "test_pypi": ValidatePypi,
+    "test": ValidateAll,
+    "lint": Lint,
+    "ruff_fix_safe": RuffFixSafe,
+    "apply_unsafe_ruff_fixes": ApplyRuffFixUnsafe,
+    "build_pypi": BuildPypi,
+    "build_docs": BuildDocs,
+    "build": BuildAll,
+    "push_pypi": PushPypi,
+    "push": PushAll,
 }
 
 
@@ -67,7 +79,7 @@ def fix_permissions(local_user_uid: int, local_user_gid: int) -> None:
                     for path in Path(__file__).parent.parent.parent.parent.glob("*")
                     if path.name != ".git"
                 ],
-            ]
+            ],
         ),
         silent=True,
     )
@@ -135,17 +147,21 @@ def run_main(args: Namespace) -> None:
     """
     non_docker_project_root = args.non_docker_project_root
     docker_project_root = args.docker_project_root
-    tasks = [CLI_ARG_TO_TASK[arg] for arg in args.build_tasks]
-    try:
-        run_tasks(
-            tasks=tasks,
+    local_user_uid = args.user_id
+    local_user_gid = args.group_id
+    requested_tasks = [
+        CLI_ARG_TO_TASK[arg](
             non_docker_project_root=non_docker_project_root,
             docker_project_root=docker_project_root,
-            local_user_uid=args.user_id,
-            local_user_gid=args.group_id,
+            local_user_uid=local_user_uid,
+            local_user_gid=local_user_gid,
         )
+        for arg in args.build_tasks
+    ]
+    try:
+        run_tasks(tasks=requested_tasks)
     except Exception as e:
-        print(e)
+        print(e)  # noqa: T201
     finally:
         fix_permissions(local_user_uid=args.user_id, local_user_gid=args.group_id)
 

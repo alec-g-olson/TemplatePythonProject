@@ -8,37 +8,41 @@ from template_python_project.calculators.data_models import (
 
 calculate_results_test_cases = [
     (
-        CalculatorInput(typeOfCalc=CalculationType.ADD, value1=2, value2=1),
+        CalculatorInput(type_of_calc=CalculationType.ADD, value1=2, value2=1),
         CalculatorOutput(result=3),
     ),
     (
-        CalculatorInput(typeOfCalc=CalculationType.SUBTRACT, value1=1, value2=2),
+        CalculatorInput(type_of_calc=CalculationType.SUBTRACT, value1=1, value2=2),
         CalculatorOutput(result=-1),
     ),
     (
-        CalculatorInput(typeOfCalc=CalculationType.MULTIPLY, value1=3, value2=3),
+        CalculatorInput(type_of_calc=CalculationType.MULTIPLY, value1=3, value2=3),
         CalculatorOutput(result=9),
     ),
     (
-        CalculatorInput(typeOfCalc=CalculationType.DIVIDE, value1=5, value2=2),
+        CalculatorInput(type_of_calc=CalculationType.DIVIDE, value1=5, value2=2),
         CalculatorOutput(result=2.5),
     ),
 ]
 
 
-@pytest.mark.parametrize("input_values, result", calculate_results_test_cases)
-def test_calculate_result(input_values, result):
-    assert calculate_result(input_values) == result
+@pytest.mark.parametrize(("input_values", "result"), calculate_results_test_cases)
+def test_calculate_result(
+    input_values: CalculatorInput, result: CalculatorOutput
+) -> None:
+    assert calculate_result(args=input_values) == result
 
 
-def test_calculate_result_all_types_covered():
+def test_calculate_result_all_types_covered() -> None:
     assert len(
-        {input_value[0].typeOfCalc for input_value in calculate_results_test_cases}
+        {input_value[0].type_of_calc for input_value in calculate_results_test_cases}
     ) == len(CalculationType)
 
 
-def test_divide_by_zero():
+def test_divide_by_zero() -> None:
     with pytest.raises(ZeroDivisionError):
         calculate_result(
-            CalculatorInput(typeOfCalc=CalculationType.DIVIDE, value1=199, value2=0)
+            args=CalculatorInput(
+                type_of_calc=CalculationType.DIVIDE, value1=199, value2=0
+            )
         )

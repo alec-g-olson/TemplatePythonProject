@@ -7,16 +7,128 @@ exclude_lines = [
   "pragma: no cover"
 ]
 
-[tool.isort]
-profile = "black"
-line_length = 88
+[tool.ruff]
+line-length = 88
+indent-width = 4
+target-version = "py312"
 
-[tool.black]
-line_length = 88
+[tool.ruff.lint]
+select = [
+  "A",
+  "B",
+  "C4",
+  "D",
+  "E",
+  "F",
+  "G",
+  "I",
+  "N",
+  "Q",
+  "T10",
+  "T20",
+  "AIR",
+  "ANN",
+  "ARG",
+  "ASYNC",
+  "COM",
+  "DJ",
+  "DTZ",
+  "EM",
+  "ERA",
+  # "EXE",
+  # "FBT",
+  # "FIX",
+  "FLY",
+  "ICN",
+  "INP",
+  "INT",
+  "ISC",
+  "LOG",
+  "NPY",
+  "PD",
+  "PERF",
+  "PIE",
+  "PGH",
+  "PL",
+  "PT",
+  "PTH",
+  "PYI",
+  "RET",
+  "RSE",
+  "RUF",
+  "SIM",
+  "SLF",
+  "SLOT",
+  "TCH",
+  "TD",
+  "TID",
+  "TRIO",
+  "TRY",
+]
+pydocstyle.convention = "google"
+ignore = [
+  "E11",
+  "E2",
+  "E3",
+  "ANN10",
+  "COM812",
+  "ISC001",
+  "PLC0415",
+  "PLC1",
+  "PLC2",
+  "PLE0643",
+  "PLE0704",
+  "PLE1132",
+  "PLR0202",
+  "PLR0203",
+  "PLR0904",
+  "PLR0914",
+  "PLR0916",
+  "PLR0917",
+  "PLR1702",
+  "PLR1704",
+  "PLR1733",
+  "PLR1736",
+  "PLR2044",
+  "PLR6201",
+  "PLR6301",
+  "PLW0108",
+  "PLW0245",
+  "PLW0604",
+  "PLW1501",
+  "PLW1514",
+  "PLW1641",
+  "PLW2101",
+  "PLW3201",
+  "RUF021",
+  "RUF022",
+  "RUF023",
+  "RUF024",
+  "RUF025",
+  "RUF026",
+  "RUF027",
+]
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
+
+[tool.ruff.lint.per-file-ignores]
+"documentation_enforcement/sphinx_conf/conf.py" = ["INP001"]
+
+[tool.mypy]
+enable_error_code = ["ignore-without-code"]
+
 
 [tool.poetry]
 name = "template_python_project"
-version = "0.2.20"
+version = "0.2.21"
 license = "unlicense"
 packages = [{include = "template_python_project", from="pypi_package/src"}]
 description = "A project that can be used as a template to provide some CI/CD out of the box."
@@ -25,7 +137,7 @@ readme = "README.md"
 repository = "https://github.com/alec-g-olson/TemplatePythonProject"
 
 [tool.poetry.dependencies]
-python = "3.12.1"  # If changed here change base image in Dockerfile
+python = "3.12.2"  # If changed here change base image in Dockerfile
 Pydantic = "^2.5"
 
 [tool.poetry.group.build]
@@ -42,11 +154,7 @@ tomlkit = "^0.12"
 optional = true
 
 [tool.poetry.group.dev.dependencies]
-autoflake = "^2.2"
-bandit = {extras = ["baseline", "toml"], version = "^1.7.7"}
-black = "^23.12"
-isort = "^5.13"
-flake8 = "^7.0"
+bandit = {extras = ["baseline", "toml"], version = "^1.7"}
 mypy = "^1.8"
 pydocstyle = "^6.3"
 pytest = "^7.4"
@@ -55,6 +163,7 @@ pytest-html = "^4.1"
 pytest-xdist = "^3.5"
 responses = "^0.24"
 requests = "^2.31"
+ruff = "^0.2.2"
 sphinx = "^7.2"
 sphinx-rtd-theme = "^2.0.0"
 types-requests = "^2.31"

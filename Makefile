@@ -65,9 +65,17 @@ build_pypi: setup_build_envs
 test: setup_build_envs
 	$(EXECUTE_BUILD_STEPS_COMMAND) test
 
-.PHONY: autoflake
-autoflake: setup_build_envs
-	$(EXECUTE_BUILD_STEPS_COMMAND) autoflake
+.PHONY: apply_unsafe_ruff_fixes
+apply_unsafe_ruff_fixes: setup_build_envs
+	$(EXECUTE_BUILD_STEPS_COMMAND) apply_unsafe_ruff_fixes
+
+.PHONY: list_unsafe_ruff_fixes
+list_unsafe_ruff_fixes: setup_build_envs
+	$(EXECUTE_BUILD_STEPS_COMMAND) list_unsafe_ruff_fixes
+
+.PHONY: ruff_fix_safe
+ruff_fix_safe: setup_build_envs
+	$(EXECUTE_BUILD_STEPS_COMMAND) ruff_fix_safe
 
 .PHONY: lint
 lint: setup_build_envs

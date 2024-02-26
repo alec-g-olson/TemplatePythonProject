@@ -3,6 +3,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from _pytest.fixtures import SubRequest
+
 from build_support.ci_cd_tasks.build_tasks import BuildAll, BuildDocs, BuildPypi
 from build_support.ci_cd_tasks.env_setup_tasks import (
     BuildDevEnvironment,
@@ -10,13 +12,17 @@ from build_support.ci_cd_tasks.env_setup_tasks import (
     BuildPulumiEnvironment,
     Clean,
 )
-from build_support.ci_cd_tasks.lint_tasks import Autoflake, Lint
+from build_support.ci_cd_tasks.lint_tasks import (
+    ApplyRuffFixUnsafe,
+    Lint,
+    RuffFixSafe,
+)
 from build_support.ci_cd_tasks.push_tasks import PushAll, PushPypi
-from build_support.ci_cd_tasks.test_tasks import (
-    TestAll,
-    TestBuildSupport,
-    TestPypi,
-    TestPythonStyle,
+from build_support.ci_cd_tasks.validation_tasks import (
+    ValidateAll,
+    ValidateBuildSupport,
+    ValidatePypi,
+    ValidatePythonStyle,
 )
 from build_support.dag_engine import concatenate_args
 from build_support.execute_build_steps import (
@@ -28,28 +34,29 @@ from build_support.execute_build_steps import (
 from build_support.new_project_setup.setup_new_project import MakeProjectFromTemplate
 
 
-def test_constants_not_changed_by_accident():
-    assert CLI_ARG_TO_TASK == {
-        "make_new_project": MakeProjectFromTemplate(),
-        "clean": Clean(),
-        "build_dev": BuildDevEnvironment(),
-        "build_prod": BuildProdEnvironment(),
-        "build_pulumi": BuildPulumiEnvironment(),
-        "test_style": TestPythonStyle(),
-        "test_build_support": TestBuildSupport(),
-        "test_pypi": TestPypi(),
-        "test": TestAll(),
-        "lint": Lint(),
-        "autoflake": Autoflake(),
-        "build_pypi": BuildPypi(),
-        "build_docs": BuildDocs(),
-        "build": BuildAll(),
-        "push_pypi": PushPypi(),
-        "push": PushAll(),
+def test_constants_not_changed_by_accident() -> None:
+    assert CLI_ARG_TO_TASK.copy() == {
+        "make_new_project": MakeProjectFromTemplate,
+        "clean": Clean,
+        "build_dev": BuildDevEnvironment,
+        "build_prod": BuildProdEnvironment,
+        "build_pulumi": BuildPulumiEnvironment,
+        "test_style": ValidatePythonStyle,
+        "test_build_support": ValidateBuildSupport,
+        "test_pypi": ValidatePypi,
+        "test": ValidateAll,
+        "lint": Lint,
+        "ruff_fix_safe": RuffFixSafe,
+        "apply_unsafe_ruff_fixes": ApplyRuffFixUnsafe,
+        "build_pypi": BuildPypi,
+        "build_docs": BuildDocs,
+        "build": BuildAll,
+        "push_pypi": PushPypi,
+        "push": PushAll,
     }
 
 
-def test_fix_permissions(real_project_root_dir: Path):
+def test_fix_permissions(real_project_root_dir: Path) -> None:
     with patch("build_support.execute_build_steps.run_process") as run_process_mock:
         local_user = "1337:42"
         fix_permissions_args = concatenate_args(
@@ -62,28 +69,28 @@ def test_fix_permissions(real_project_root_dir: Path):
                     for path in real_project_root_dir.glob("*")
                     if path.name != ".git"
                 ],
-            ]
+            ],
         )
         fix_permissions(local_user_uid=1337, local_user_gid=42)
         run_process_mock.assert_called_once_with(args=fix_permissions_args, silent=True)
 
 
 @pytest.fixture(params=[Path("/usr/dev"), Path("/user/dev")])
-def docker_project_root_arg(request) -> Path:
+def docker_project_root_arg(request: SubRequest) -> Path:
     return request.param
 
 
 @pytest.fixture(params=[Path("/path/to/project"), Path("/some/other/path")])
-def non_docker_project_root_arg(request) -> Path:
+def non_docker_project_root_arg(request: SubRequest) -> Path:
     return request.param
 
 
 @pytest.fixture(params=CLI_ARG_TO_TASK.keys())
-def build_task(request) -> str:
+def build_task(request: SubRequest) -> str:
     return request.param
 
 
-@pytest.fixture
+@pytest.fixture()
 def args_to_test_single_task(
     docker_project_root_arg: Path,
     non_docker_project_root_arg: Path,
@@ -107,7 +114,7 @@ def args_to_test_single_task(
     ]
 
 
-@pytest.fixture
+@pytest.fixture()
 def expected_namespace_single_task(
     docker_project_root_arg: Path,
     non_docker_project_root_arg: Path,
@@ -125,12 +132,13 @@ def expected_namespace_single_task(
 
 
 def test_parse_args_single_task(
-    args_to_test_single_task, expected_namespace_single_task
-):
+    args_to_test_single_task: list[str],
+    expected_namespace_single_task: Namespace,
+) -> None:
     assert parse_args(args=args_to_test_single_task) == expected_namespace_single_task
 
 
-@pytest.fixture
+@pytest.fixture()
 def args_to_test_all_tasks(
     docker_project_root_arg: Path,
     non_docker_project_root_arg: Path,
@@ -152,7 +160,7 @@ def args_to_test_all_tasks(
     ] + list(CLI_ARG_TO_TASK.keys())
 
 
-@pytest.fixture
+@pytest.fixture()
 def expected_namespace_all_tasks(
     docker_project_root_arg: Path,
     non_docker_project_root_arg: Path,
@@ -168,11 +176,13 @@ def expected_namespace_all_tasks(
     )
 
 
-def test_parse_args_all_task(args_to_test_all_tasks, expected_namespace_all_tasks):
+def test_parse_args_all_task(
+    args_to_test_all_tasks: list[str], expected_namespace_all_tasks: Namespace
+) -> None:
     assert parse_args(args=args_to_test_all_tasks) == expected_namespace_all_tasks
 
 
-def test_parse_args_no_task():
+def test_parse_args_no_task() -> None:
     with pytest.raises(SystemExit):
         parse_args(
             args=[
@@ -184,11 +194,11 @@ def test_parse_args_no_task():
                 "20",
                 "--group-id",
                 "101",
-            ]
+            ],
         )
 
 
-def test_parse_args_bad_task():
+def test_parse_args_bad_task() -> None:
     with pytest.raises(SystemExit):
         parse_args(
             args=[
@@ -201,11 +211,11 @@ def test_parse_args_bad_task():
                 "--group-id",
                 "101",
                 "INVALID_TASK_NAME",
-            ]
+            ],
         )
 
 
-def test_parse_args_no_group_id():
+def test_parse_args_no_group_id() -> None:
     with pytest.raises(SystemExit):
         parse_args(
             args=[
@@ -216,11 +226,11 @@ def test_parse_args_no_group_id():
                 "--user-id",
                 "20",
                 "clean",
-            ]
+            ],
         )
 
 
-def test_parse_args_no_user_id():
+def test_parse_args_no_user_id() -> None:
     with pytest.raises(SystemExit):
         parse_args(
             args=[
@@ -231,11 +241,11 @@ def test_parse_args_no_user_id():
                 "--group-id",
                 "101",
                 "clean",
-            ]
+            ],
         )
 
 
-def test_parse_args_no_docker_project_root():
+def test_parse_args_no_docker_project_root() -> None:
     with pytest.raises(SystemExit):
         parse_args(
             args=[
@@ -246,11 +256,11 @@ def test_parse_args_no_docker_project_root():
                 "--group-id",
                 "101",
                 "clean",
-            ]
+            ],
         )
 
 
-def test_parse_args_no_non_docker_project_root():
+def test_parse_args_no_non_docker_project_root() -> None:
     with pytest.raises(SystemExit):
         parse_args(
             args=[
@@ -261,7 +271,7 @@ def test_parse_args_no_non_docker_project_root():
                 "--group-id",
                 "101",
                 "clean",
-            ]
+            ],
         )
 
 
@@ -270,7 +280,7 @@ def test_run_main_success(
     docker_project_root: Path,
     local_uid: int,
     local_gid: int,
-):
+) -> None:
     args = Namespace(
         non_docker_project_root=mock_project_root,
         docker_project_root=docker_project_root,
@@ -279,18 +289,22 @@ def test_run_main_success(
         build_tasks=["clean"],
     )
     with patch("build_support.execute_build_steps.run_tasks") as mock_run_tasks, patch(
-        "build_support.execute_build_steps.fix_permissions"
+        "build_support.execute_build_steps.fix_permissions",
     ) as mock_fix_permissions:
         run_main(args)
         mock_run_tasks.assert_called_once_with(
-            tasks=[Clean()],
-            non_docker_project_root=mock_project_root,
-            docker_project_root=docker_project_root,
-            local_user_uid=local_uid,
-            local_user_gid=local_gid,
+            tasks=[
+                Clean(
+                    non_docker_project_root=mock_project_root,
+                    docker_project_root=docker_project_root,
+                    local_user_uid=local_uid,
+                    local_user_gid=local_gid,
+                )
+            ],
         )
         mock_fix_permissions.assert_called_once_with(
-            local_user_uid=local_uid, local_user_gid=local_gid
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
         )
 
 
@@ -299,7 +313,7 @@ def test_run_main_exception(
     docker_project_root: Path,
     local_uid: int,
     local_gid: int,
-):
+) -> None:
     all_task_list = list(CLI_ARG_TO_TASK.keys())
     args = Namespace(
         non_docker_project_root=mock_project_root,
@@ -309,21 +323,25 @@ def test_run_main_exception(
         build_tasks=all_task_list,
     )
     with patch("build_support.execute_build_steps.run_tasks") as mock_run_tasks, patch(
-        "builtins.print"
+        "builtins.print",
     ) as mock_print, patch(
-        "build_support.execute_build_steps.fix_permissions"
+        "build_support.execute_build_steps.fix_permissions",
     ) as mock_fix_permissions:
         error_to_raise = RuntimeError("error_message")
         mock_run_tasks.side_effect = error_to_raise
         run_main(args)
-        mock_run_tasks.assert_called_once_with(
-            tasks=[CLI_ARG_TO_TASK[arg] for arg in all_task_list],
-            non_docker_project_root=mock_project_root,
-            docker_project_root=docker_project_root,
-            local_user_uid=local_uid,
-            local_user_gid=local_gid,
-        )
+        requested_tasks = [
+            CLI_ARG_TO_TASK[task_name](
+                non_docker_project_root=mock_project_root,
+                docker_project_root=docker_project_root,
+                local_user_uid=local_uid,
+                local_user_gid=local_gid,
+            )
+            for task_name in all_task_list
+        ]
+        mock_run_tasks.assert_called_once_with(tasks=requested_tasks)
         mock_print.assert_called_once_with(error_to_raise)
         mock_fix_permissions.assert_called_once_with(
-            local_user_uid=local_uid, local_user_gid=local_gid
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
         )

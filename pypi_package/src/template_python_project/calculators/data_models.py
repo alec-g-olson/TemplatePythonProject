@@ -25,7 +25,7 @@ class CalculationType(Enum):
 class CalculatorInput(BaseModel):
     """Object containing the information required to do a calculation."""
 
-    typeOfCalc: CalculationType
+    type_of_calc: CalculationType
     value1: float
     value2: float
 

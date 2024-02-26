@@ -18,7 +18,9 @@ from build_support.dag_engine import concatenate_args
 
 
 def get_test_report_name(
-    project_root: Path, test_context: SubprojectContext, report_extension: str
+    project_root: Path,
+    test_context: SubprojectContext,
+    report_extension: str,
 ) -> str:
     """Enforces a consistent python report naming convention.
 
@@ -38,7 +40,7 @@ def get_test_report_name(
             get_project_version(project_root=project_root),
             test_context.value,
             report_extension,
-        ]
+        ],
     )
 
 
@@ -72,12 +74,13 @@ def get_bandit_report_path(project_root: Path, test_context: SubprojectContext) 
         Path: Path to the bandit report for the requested subproject context.
     """
     return get_build_reports_dir(project_root=project_root).joinpath(
-        get_bandit_report_name(project_root=project_root, test_context=test_context)
+        get_bandit_report_name(project_root=project_root, test_context=test_context),
     )
 
 
 def get_pytest_html_report_name(
-    project_root: Path, test_context: SubprojectContext
+    project_root: Path,
+    test_context: SubprojectContext,
 ) -> str:
     """Get the name of the pytest html report for the requested context.
 
@@ -97,7 +100,8 @@ def get_pytest_html_report_name(
 
 
 def get_pytest_html_report_path(
-    project_root: Path, test_context: SubprojectContext
+    project_root: Path,
+    test_context: SubprojectContext,
 ) -> Path:
     """Get the path of the pytest html report for the requested context.
 
@@ -111,13 +115,15 @@ def get_pytest_html_report_path(
     """
     return get_build_reports_dir(project_root=project_root).joinpath(
         get_pytest_html_report_name(
-            project_root=project_root, test_context=test_context
-        )
+            project_root=project_root,
+            test_context=test_context,
+        ),
     )
 
 
 def get_pytest_xml_report_name(
-    project_root: Path, test_context: SubprojectContext
+    project_root: Path,
+    test_context: SubprojectContext,
 ) -> str:
     """Get the name of the pytest xml report for the requested context.
 
@@ -137,7 +143,8 @@ def get_pytest_xml_report_name(
 
 
 def get_pytest_xml_report_path(
-    project_root: Path, test_context: SubprojectContext
+    project_root: Path,
+    test_context: SubprojectContext,
 ) -> Path:
     """Get the path of the pytest xml report for the requested context.
 
@@ -150,12 +157,16 @@ def get_pytest_xml_report_path(
         Path: Path to the pytest xml report for the requested subproject context.
     """
     return get_build_reports_dir(project_root=project_root).joinpath(
-        get_pytest_xml_report_name(project_root=project_root, test_context=test_context)
+        get_pytest_xml_report_name(
+            project_root=project_root,
+            test_context=test_context,
+        ),
     )
 
 
 def get_pytest_xml_coverage_report_name(
-    project_root: Path, test_context: SubprojectContext
+    project_root: Path,
+    test_context: SubprojectContext,
 ) -> str:
     """Get the name of the pytest xml coverage report for the requested context.
 
@@ -175,7 +186,8 @@ def get_pytest_xml_coverage_report_name(
 
 
 def get_pytest_xml_coverage_report_path(
-    project_root: Path, test_context: SubprojectContext
+    project_root: Path,
+    test_context: SubprojectContext,
 ) -> Path:
     """Get the path of the pytest xml coverage report for the requested context.
 
@@ -185,17 +197,20 @@ def get_pytest_xml_coverage_report_path(
             getting a report name for.
 
     Returns:
-        Path: Path to the pytest xml coverage report for the requested subproject context.
+        Path: Path to the pytest xml coverage report for the requested subproject
+            context.
     """
     return get_build_reports_dir(project_root=project_root).joinpath(
         get_pytest_xml_coverage_report_name(
-            project_root=project_root, test_context=test_context
-        )
+            project_root=project_root,
+            test_context=test_context,
+        ),
     )
 
 
 def get_pytest_html_coverage_report_name(
-    project_root: Path, test_context: SubprojectContext
+    project_root: Path,
+    test_context: SubprojectContext,
 ) -> str:
     """Get the name of the pytest html coverage report for the requested context.
 
@@ -215,7 +230,8 @@ def get_pytest_html_coverage_report_name(
 
 
 def get_pytest_html_coverage_report_path(
-    project_root: Path, test_context: SubprojectContext
+    project_root: Path,
+    test_context: SubprojectContext,
 ) -> Path:
     """Get the path of the pytest html coverage report for the requested context.
 
@@ -225,17 +241,19 @@ def get_pytest_html_coverage_report_path(
             getting a report name for.
 
     Returns:
-        Path: Path to the pytest html coverage report for the requested subproject context.
+        Path: Path to the pytest html coverage report for the requested subproject
+            context.
     """
     return get_build_reports_dir(project_root=project_root).joinpath(
         get_pytest_html_coverage_report_name(
-            project_root=project_root, test_context=test_context
-        )
+            project_root=project_root,
+            test_context=test_context,
+        ),
     )
 
 
 def get_coverage_root(project_root: Path, test_context: SubprojectContext) -> Path:
-    """Gets the directory that will have coverage calculated based on the subproject context.
+    """Gets the directory that will have coverage calculated based on the subproject.
 
     Args:
         project_root (Path): Path to this project's root.
@@ -243,7 +261,8 @@ def get_coverage_root(project_root: Path, test_context: SubprojectContext) -> Pa
             getting a report name for.
 
     Returns:
-        Path: Path to directory that will have coverage calculated for the subproject context.
+        Path: Path to directory that will have coverage calculated for the subproject
+            context.
     """
     match test_context:
         case SubprojectContext.BUILD_SUPPORT:
@@ -257,13 +276,13 @@ def get_coverage_root(project_root: Path, test_context: SubprojectContext) -> Pa
         case SubprojectContext.ALL:
             return project_root
         case _:  # pragma: no cover - can't hit if all enums are implemented
-            raise ValueError(
-                f"{repr(test_context)} is not a valid enum of PyTestContext."
-            )
+            msg = f"{test_context!r} is not a valid enum of PyTestContext."
+            raise ValueError(msg)
 
 
 def get_pytest_report_args(
-    project_root: Path, test_context: SubprojectContext
+    project_root: Path,
+    test_context: SubprojectContext,
 ) -> list[str]:
     """Get the args used by pytest.
 
@@ -277,19 +296,24 @@ def get_pytest_report_args(
             context.
     """
     coverage_xml = get_pytest_xml_coverage_report_path(
-        project_root=project_root, test_context=test_context
+        project_root=project_root,
+        test_context=test_context,
     )
     coverage_html = get_pytest_html_coverage_report_path(
-        project_root=project_root, test_context=test_context
+        project_root=project_root,
+        test_context=test_context,
     )
     test_xml = get_pytest_xml_report_path(
-        project_root=project_root, test_context=test_context
+        project_root=project_root,
+        test_context=test_context,
     )
     test_html = get_pytest_html_report_path(
-        project_root=project_root, test_context=test_context
+        project_root=project_root,
+        test_context=test_context,
     )
     coverage_root_dir = get_coverage_root(
-        project_root=project_root, test_context=test_context
+        project_root=project_root,
+        test_context=test_context,
     )
     return concatenate_args(
         args=[
@@ -303,5 +327,5 @@ def get_pytest_report_args(
             f"--junitxml={test_xml}",
             f"--html={test_html}",
             "--self-contained-html",
-        ]
+        ],
     )

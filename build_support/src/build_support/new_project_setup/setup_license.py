@@ -8,7 +8,7 @@ Attributes:
 """
 
 from copy import copy
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from build_support.new_project_setup.license_templates import get_template_for_license
@@ -30,20 +30,24 @@ def get_new_license_content(template_key: str, organization: Organization) -> st
         str: The contents of a new license using the values from the organization.
     """
     working_license_content = copy(get_template_for_license(template_key=template_key))
-    current_year = str(datetime.now().year)
+    current_year = str(datetime.now(tz=timezone.utc).astimezone().year)
     for year_field in YEAR_TEMPLATE_FIELDS:
         working_license_content = working_license_content.replace(
-            year_field, current_year
+            year_field,
+            current_year,
         )
     for copyright_owner_field in COPYRIGHT_OWNER_TEMPLATE_FIELDS:
         working_license_content = working_license_content.replace(
-            copyright_owner_field, organization.formatted_name_and_email()
+            copyright_owner_field,
+            organization.formatted_name_and_email(),
         )
     return working_license_content
 
 
 def write_new_license_from_template(
-    license_file_path: Path, template_key: str, organization: Organization
+    license_file_path: Path,
+    template_key: str,
+    organization: Organization,
 ) -> None:
     """Creates a new license file based on the template_key and organization.
 
@@ -57,6 +61,7 @@ def write_new_license_from_template(
         None
     """
     license_content = get_new_license_content(
-        template_key=template_key, organization=organization
+        template_key=template_key,
+        organization=organization,
     )
     license_file_path.write_text(license_content)

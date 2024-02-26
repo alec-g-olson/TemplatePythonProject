@@ -14,8 +14,10 @@ from build_support.new_project_setup.setup_new_project import MakeProjectFromTem
 
 
 def _check_pyproject_toml(
-    pyproject_toml_path: Path, settings: ProjectSettings, version_reset: bool
-):
+    pyproject_toml_path: Path,
+    settings: ProjectSettings,
+    version_reset: bool,
+) -> None:
     pyproject_toml_data = tomllib.loads(pyproject_toml_path.read_text())
     assert pyproject_toml_data["tool"]["poetry"]["name"] == settings.name
     assert (
@@ -23,7 +25,7 @@ def _check_pyproject_toml(
     ) == version_reset
     assert pyproject_toml_data["tool"]["poetry"]["license"] == settings.license
     assert pyproject_toml_data["tool"]["poetry"]["authors"] == [
-        settings.organization.formatted_name_and_email()
+        settings.organization.formatted_name_and_email(),
     ]
     assert len(pyproject_toml_data["tool"]["poetry"]["packages"]) == 1
     assert (
@@ -31,42 +33,47 @@ def _check_pyproject_toml(
     )
 
 
-def _check_license_file(license_path: Path, settings: ProjectSettings):
+def _check_license_file(license_path: Path, settings: ProjectSettings) -> None:
     expected_license_content = get_new_license_content(
-        template_key=settings.license, organization=settings.organization
+        template_key=settings.license,
+        organization=settings.organization,
     )
     observed_license_content = license_path.read_text()
     assert observed_license_content == expected_license_content
 
 
-def _check_folder_names(project_folder: Path, settings: ProjectSettings):
+def _check_folder_names(project_folder: Path, settings: ProjectSettings) -> None:
     assert (
         get_pypi_src_dir(project_root=project_folder).joinpath(settings.name).exists()
     )
 
 
 def _ensure_project_folder_matches_settings(
-    project_folder: Path, settings: ProjectSettings, version_reset: bool
-):
+    project_folder: Path,
+    settings: ProjectSettings,
+    version_reset: bool,
+) -> None:
     _check_pyproject_toml(
         pyproject_toml_path=project_folder.joinpath("pyproject.toml"),
         settings=settings,
         version_reset=version_reset,
     )
     _check_license_file(
-        license_path=project_folder.joinpath("LICENSE"), settings=settings
+        license_path=project_folder.joinpath("LICENSE"),
+        settings=settings,
     )
     _check_folder_names(project_folder=project_folder, settings=settings)
 
 
-def test_make_new_project(tmp_path: Path, real_project_root_dir):
+def test_make_new_project(tmp_path: Path, real_project_root_dir: Path) -> None:
     tmp_project_path = tmp_path.joinpath("template_python_project")
     shutil.copytree(real_project_root_dir, tmp_project_path)
     project_settings_path = tmp_project_path.joinpath(
-        "build_support", "new_project_settings.yaml"
+        "build_support",
+        "new_project_settings.yaml",
     )
     original_project_settings = ProjectSettings.from_yaml(
-        project_settings_path.read_text()
+        project_settings_path.read_text(),
     )
     _ensure_project_folder_matches_settings(
         project_folder=tmp_project_path,
@@ -82,13 +89,13 @@ def test_make_new_project(tmp_path: Path, real_project_root_dir):
         ),
     )
     project_settings_path.write_text(modified_project_settings.to_yaml())
-    make_project_task = MakeProjectFromTemplate()
-    make_project_task.run(
+    make_project_task = MakeProjectFromTemplate(
         non_docker_project_root=tmp_project_path,
         docker_project_root=tmp_project_path,
         local_user_uid=1337,
         local_user_gid=42,
     )
+    make_project_task.run()
     _ensure_project_folder_matches_settings(
         project_folder=tmp_project_path,
         settings=modified_project_settings,
@@ -103,13 +110,13 @@ def test_make_new_project(tmp_path: Path, real_project_root_dir):
         ),
     )
     project_settings_path.write_text(modified_project_settings.to_yaml())
-    make_project_task = MakeProjectFromTemplate()
-    make_project_task.run(
+    make_project_task = MakeProjectFromTemplate(
         non_docker_project_root=tmp_project_path,
         docker_project_root=tmp_project_path,
         local_user_uid=1337,
         local_user_gid=42,
     )
+    make_project_task.run()
     _ensure_project_folder_matches_settings(
         project_folder=tmp_project_path,
         settings=modified_project_settings,
@@ -117,5 +124,18 @@ def test_make_new_project(tmp_path: Path, real_project_root_dir):
     )
 
 
-def test_setup_new_project_requires():
-    assert MakeProjectFromTemplate().required_tasks() == [Clean()]
+def test_setup_new_project_requires(tmp_path: Path) -> None:
+    tmp_project_path = tmp_path.joinpath("template_python_project")
+    assert MakeProjectFromTemplate(
+        non_docker_project_root=tmp_project_path,
+        docker_project_root=tmp_project_path,
+        local_user_uid=1337,
+        local_user_gid=42,
+    ).required_tasks() == [
+        Clean(
+            non_docker_project_root=tmp_project_path,
+            docker_project_root=tmp_project_path,
+            local_user_uid=1337,
+            local_user_gid=42,
+        )
+    ]

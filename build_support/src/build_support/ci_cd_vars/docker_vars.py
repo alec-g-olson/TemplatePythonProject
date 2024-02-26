@@ -39,7 +39,8 @@ def get_docker_image_name(project_root: Path, target_image: DockerTarget) -> str
 
 
 def get_python_path_for_target_image(
-    docker_project_root: Path, target_image: DockerTarget
+    docker_project_root: Path,
+    target_image: DockerTarget,
 ) -> str:
     """Gets the python path to use with this project.
 
@@ -55,7 +56,7 @@ def get_python_path_for_target_image(
     match target_image:
         case DockerTarget.BUILD:
             python_folders: Path | list[str] = get_build_support_src_dir(
-                project_root=docker_project_root
+                project_root=docker_project_root,
             )
         case DockerTarget.DEV:
             python_folders = get_all_python_folders(project_root=docker_project_root)
@@ -64,7 +65,8 @@ def get_python_path_for_target_image(
         case DockerTarget.PULUMI:
             python_folders = get_pulumi_dir(project_root=docker_project_root)
         case _:  # pragma: no cover - can't hit if all enums are implemented
-            raise ValueError(f"{repr(target_image)} is not a valid enum of DockerType.")
+            msg = f"{target_image!r} is not a valid enum of DockerType."
+            raise ValueError(msg)
     return ":".join(concatenate_args(args=[python_folders]))
 
 
@@ -78,11 +80,12 @@ def get_python_path_env(docker_project_root: Path, target_image: DockerTarget) -
             are requesting the python path for.
 
     Returns:
-        str: The PYTHONPATH for the specified docker image in the form on an ENV variable
-            that can be used on the command line.
+        str: The PYTHONPATH for the specified docker image in the form on an ENV
+            variable that can be used on the command line.
     """
     return "PYTHONPATH=" + get_python_path_for_target_image(
-        docker_project_root=docker_project_root, target_image=target_image
+        docker_project_root=docker_project_root,
+        target_image=target_image,
     )
 
 
@@ -100,20 +103,23 @@ def get_mypy_path_env(docker_project_root: Path, target_image: DockerTarget) -> 
             that can be used on the command line.
     """
     return "MYPYPATH=" + get_python_path_for_target_image(
-        docker_project_root=docker_project_root, target_image=target_image
+        docker_project_root=docker_project_root,
+        target_image=target_image,
     )
 
 
 def get_base_docker_command_for_image(
-    non_docker_project_root: Path, docker_project_root: Path, target_image: DockerTarget
+    non_docker_project_root: Path,
+    docker_project_root: Path,
+    target_image: DockerTarget,
 ) -> list[str]:
-    """Builds a list of arguments for when we want to run commands in a docker container.
+    """Builds a list of arguments for running commands in a docker container.
 
     Note:
-        This list does not contain the name of the container.  This is done so that if we
-        want to add additional docker command arguments for specific commands we can call
-        this function in conjunction with `get_docker_image_name` to build a command for
-        the special circumstances we need.
+        This list does not contain the name of the container.  This is done so that if
+        we want to add additional docker command arguments for specific commands we can
+        call this function in conjunction with `get_docker_image_name` to build a
+        command for the special circumstances we need.
 
         If we don't need to use special additional arguments use the
         `get_docker_command_for_image` function instead.
@@ -139,7 +145,8 @@ def get_base_docker_command_for_image(
             f"--workdir={docker_project_root.absolute()}",
             "-e",
             get_python_path_env(
-                docker_project_root=docker_project_root, target_image=target_image
+                docker_project_root=docker_project_root,
+                target_image=target_image,
             ),
             "-v",
             "/var/run/docker.sock:/var/run/docker.sock",
@@ -149,17 +156,19 @@ def get_base_docker_command_for_image(
                     args=[
                         non_docker_project_root.absolute(),
                         docker_project_root.absolute(),
-                    ]
-                )
+                    ],
+                ),
             ),
-        ]
+        ],
     )
 
 
 def get_docker_command_for_image(
-    non_docker_project_root: Path, docker_project_root: Path, target_image: DockerTarget
+    non_docker_project_root: Path,
+    docker_project_root: Path,
+    target_image: DockerTarget,
 ) -> list[str]:
-    """Builds a list of arguments for when we want to run commands in a docker container.
+    """Builds a list of arguments for running commands in a docker container.
 
     Args:
         non_docker_project_root (Path): Path to this project's root on the local
@@ -182,14 +191,17 @@ def get_docker_command_for_image(
                 target_image=target_image,
             ),
             get_docker_image_name(
-                project_root=docker_project_root, target_image=target_image
+                project_root=docker_project_root,
+                target_image=target_image,
             ),
-        ]
+        ],
     )
 
 
 def get_interactive_docker_command_for_image(
-    non_docker_project_root: Path, docker_project_root: Path, target_image: DockerTarget
+    non_docker_project_root: Path,
+    docker_project_root: Path,
+    target_image: DockerTarget,
 ) -> list[str]:
     """Arguments to start an interactive docker shell in the specified image.
 
@@ -215,9 +227,10 @@ def get_interactive_docker_command_for_image(
             ),
             "-it",
             get_docker_image_name(
-                project_root=docker_project_root, target_image=target_image
+                project_root=docker_project_root,
+                target_image=target_image,
             ),
-        ]
+        ],
     )
 
 
@@ -259,5 +272,5 @@ def get_docker_build_command(
             "-t",
             get_docker_image_name(project_root=project_root, target_image=target_image),
             project_root.absolute(),
-        ]
+        ],
     )

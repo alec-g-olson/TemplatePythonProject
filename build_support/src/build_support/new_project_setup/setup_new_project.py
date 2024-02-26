@@ -4,8 +4,6 @@ This module exists to have a single task and code location where all
 the logic for making a new project is executed from.
 """
 
-from pathlib import Path
-
 from build_support.ci_cd_tasks.env_setup_tasks import Clean
 from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_license_file,
@@ -32,47 +30,38 @@ class MakeProjectFromTemplate(TaskNode):
         Returns:
             list[TaskNode]: A list of tasks required to build a new project. [Clean]
         """
-        return [Clean()]
+        return [
+            Clean(
+                non_docker_project_root=self.non_docker_project_root,
+                docker_project_root=self.non_docker_project_root,
+                local_user_uid=self.local_user_uid,
+                local_user_gid=self.local_user_gid,
+            ),
+        ]
 
-    def run(
-        self,
-        non_docker_project_root: Path,
-        docker_project_root: Path,
-        local_user_uid: int,
-        local_user_gid: int,
-    ) -> None:
+    def run(self) -> None:
         """Modifies the appropriate files to start a new project.
-
-        Args:
-            non_docker_project_root (Path): Path to this project's root on the local
-                machine.
-            docker_project_root (Path): Path to this project's root when running
-                in docker containers.
-            local_user_uid (int): The local user's users id, used when tasks need to be
-                run by the local user.
-            local_user_gid (int): The local user's group id, used when tasks need to be
-                run by the local user.
 
         Returns:
             None
         """
-        original_project_name = get_project_name(project_root=docker_project_root)
+        original_project_name = get_project_name(project_root=self.docker_project_root)
         new_project_settings = ProjectSettings.from_yaml(
             yaml_str=get_new_project_settings(
-                project_root=docker_project_root
-            ).read_text()
+                project_root=self.docker_project_root,
+            ).read_text(),
         )
         update_pyproject_toml(
-            project_root=docker_project_root,
+            project_root=self.docker_project_root,
             new_project_settings=new_project_settings,
         )
         write_new_license_from_template(
-            license_file_path=get_license_file(project_root=docker_project_root),
+            license_file_path=get_license_file(project_root=self.docker_project_root),
             template_key=new_project_settings.license,
             organization=new_project_settings.organization,
         )
         update_folders_in_project(
-            project_root=docker_project_root,
+            project_root=self.docker_project_root,
             original_project_name=original_project_name,
             new_project_settings=new_project_settings,
         )

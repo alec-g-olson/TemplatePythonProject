@@ -3,18 +3,49 @@
 import itertools
 import sys
 from abc import ABC, abstractmethod
-from functools import cache
-from os import environ, setgid, setuid
+from os import environ
 from pathlib import Path
 from pwd import getpwuid
 
 # The purpose of this module is to make subprocess calls
 from subprocess import PIPE, Popen  # nosec: B404
-from typing import Any, Callable
+from typing import IO, Any
 
 
 class TaskNode(ABC):
     """An abstract representation of a task that can be run in a DAG."""
+
+    non_docker_project_root: Path
+    docker_project_root: Path
+    local_user_uid: int
+    local_user_gid: int
+
+    def __init__(
+        self,
+        non_docker_project_root: Path,
+        docker_project_root: Path,
+        local_user_uid: int,
+        local_user_gid: int,
+    ) -> None:
+        """Init method for TaskNode.
+
+        Args:
+            non_docker_project_root (Path): Path to this project's root on the local
+                machine.
+            docker_project_root (Path): Path to this project's root when running
+                in docker containers.
+            local_user_uid (int): The local user's users id, used when tasks need to be
+                run by the local user.
+            local_user_gid (int): The local user's group id, used when tasks need to be
+                run by the local user.
+
+        Returns:
+            None
+        """
+        self.non_docker_project_root = non_docker_project_root
+        self.docker_project_root = docker_project_root
+        self.local_user_uid = local_user_uid
+        self.local_user_gid = local_user_gid
 
     def task_label(self) -> str:
         """A unique label for each task, used when building the DAG.
@@ -33,7 +64,14 @@ class TaskNode(ABC):
         Returns:
             bool: True if equal, otherwise false.
         """
-        return isinstance(other, TaskNode) and self.task_label() == other.task_label()
+        return (
+            isinstance(other, TaskNode)
+            and self.task_label() == other.task_label()
+            and self.non_docker_project_root == other.non_docker_project_root
+            and self.docker_project_root == other.docker_project_root
+            and self.local_user_uid == other.local_user_uid
+            and self.local_user_gid == other.local_user_gid
+        )
 
     def __hash__(self) -> int:
         """Calculates a hash value for use in dictionaries.
@@ -53,24 +91,8 @@ class TaskNode(ABC):
         """
 
     @abstractmethod
-    def run(
-        self,
-        non_docker_project_root: Path,
-        docker_project_root: Path,
-        local_user_uid: int,
-        local_user_gid: int,
-    ) -> None:
+    def run(self) -> None:
         """Will contain the logic of each task.
-
-        Args:
-            non_docker_project_root (Path): Path to this project's root on the local
-                machine.
-            docker_project_root (Path): Path to this project's root when running
-                in docker containers.
-            local_user_uid (int): The local user's users id, used when tasks need to be
-                run by the local user.
-            local_user_gid (int): The local user's group id, used when tasks need to be
-                run by the local user.
 
         Returns:
             None
@@ -115,42 +137,23 @@ def get_task_execution_order(requested_tasks: list[TaskNode]) -> list[TaskNode]:
     return execution_order
 
 
-def run_tasks(
-    tasks: list[TaskNode],
-    non_docker_project_root: Path,
-    docker_project_root: Path,
-    local_user_uid: int,
-    local_user_gid: int,
-) -> None:
+def run_tasks(tasks: list[TaskNode]) -> None:
     """Builds the DAG required for a task and runs the DAG.
 
     Args:
         tasks (list[TaskNode]): Tasks that will be executed, along with prerequisite
             tasks.
-        docker_project_root (Path): Path to this project's root when running
-            in docker containers.
-        non_docker_project_root (Path): Path to this project's root on the local
-            machine.
-        local_user_uid (int): The local user's users id, used when tasks need to be
-            run by the local user.
-        local_user_gid (int): The local user's group id, used when tasks need to be
-            run by the local user.
 
     Returns:
         None
     """
     task_execution_order = get_task_execution_order(requested_tasks=tasks)
-    print("Will execute the following tasks:", flush=True)
+    print("Will execute the following tasks:", flush=True)  # noqa: T201
     for task in task_execution_order:
-        print(f"  - {task.task_label()}", flush=True)
+        print(f"  - {task.task_label()}", flush=True)  # noqa: T201
     for task in task_execution_order:
-        print(f"Starting: {task.task_label()}", flush=True)
-        task.run(
-            non_docker_project_root=non_docker_project_root,
-            docker_project_root=docker_project_root,
-            local_user_uid=local_user_uid,
-            local_user_gid=local_user_gid,
-        )
+        print(f"Starting: {task.task_label()}", flush=True)  # noqa: T201
+        task.run()
 
 
 def get_str_args(args: list[Any]) -> list[str]:
@@ -169,7 +172,7 @@ def concatenate_args(args: list[Any | list[Any]]) -> list[str]:
     """Flattens elements and lists of elements into a single list.
 
     Example:
-        >>> concatenate_args([1, 2.5, "str", [2,3], [42, "1337"]])
+        >>> concatenate_args([1, 2.5, "str", [2, 3], [42, "1337"]])
         ["1", "2.5", "str", "2", "3", "42", "1337"]
 
     Args:
@@ -202,75 +205,81 @@ def resolve_process_results(
         None
     """
     if output and not silent:
-        print(output.decode("utf-8"), flush=True, end="")
+        print(output.decode("utf-8"), flush=True, end="")  # noqa: T201
     if error:
-        print(error.decode("utf-8"), flush=True, end="", file=sys.stderr)
+        print(error.decode("utf-8"), flush=True, end="", file=sys.stderr)  # noqa: T201
     if return_code != 0:
         if silent:
-            print(
+            print(  # noqa: T201
                 f"{command_as_str}\nFailed with code: {return_code}",
                 flush=True,
                 file=sys.stderr,
             )
-        exit(return_code)
+        sys.exit(return_code)
 
 
-@cache
-def demote_process_to_user(user_uid: int, user_gid: int) -> Callable[[], None]:
-    """Creates a function that changes the user.
+def build_popen_maybe_local_user(
+    args: list[str],
+    stdin: IO | int | None = None,
+    user_uid: int = 0,
+    user_gid: int = 0,
+) -> Popen:
+    """Creates a Popes instance based on the arguments.
 
     Args:
-        user_uid (int): The user's OS user ID.
-        user_gid (int): The user's OS group ID.
+        args (list[str]): The args to pass to the new process.
+        stdin (IO | int | None): The stdin to use with the new process.
+        user_uid (int | None): The user's OS user ID.
+        user_gid (int | None): The user's OS group ID.
 
     Returns:
-        Callable[[], None]: A function that changes the user to the user specified
-            by the provided user ID and group ID.
+        Popen: A Popen instance with parameters set by the inputs to this function.
     """
+    env = None
+    if user_uid or user_gid:
+        env = environ.copy()
+        env["HOME"] = f"/home/{getpwuid(user_uid)[0]}/"
 
-    def demote_to_specific_user():
-        setgid(user_gid)
-        setuid(user_uid)
-        environ["HOME"] = f"/home/{getpwuid(user_uid)[0]}/"
-
-    return demote_to_specific_user
+    # As this is currently setup, commands are never injected by external users
+    return Popen(  # nosec: B603
+        args=args,
+        stdin=stdin,
+        stdout=PIPE,
+        stderr=PIPE,
+        user=user_uid if user_uid else None,
+        group=user_gid if user_gid else None,
+        env=env,
+    )
 
 
 def run_process(
-    args: list[Any], local_user_uid: int = 0, local_user_gid: int = 0, silent=False
+    args: list[Any],
+    user_uid: int = 0,
+    user_gid: int = 0,
+    silent: bool = False,
 ) -> bytes:
     """Runs a process.
 
     Args:
         args (list[Any]): A list of arguments that could be run on the command line.
-        local_user_uid (int): The local user's user ID, used to run the process as
+        user_uid (int): The local user's user ID, used to run the process as
             the local user. Defaults to 0, runs as root.
-        local_user_gid (int): The local user's group ID, used to run the process as
+        user_gid (int): The local user's group ID, used to run the process as
             the local user. Defaults to 0, runs as root.
         silent (bool): Should the process be run silently.  Defaults to False.
 
     Returns:
         bytes: The stdout from the subprocess that was run.
     """
-    args = get_str_args(args=args)
-    command_as_str = " ".join(args)
+    str_args = get_str_args(args=args)
+    command_as_str = " ".join(str_args)
     if not silent:
-        print(command_as_str, flush=True)
-    run_as_user_func = None
-    if local_user_uid or local_user_gid:
-        run_as_user_func = demote_process_to_user(
-            user_uid=local_user_uid, user_gid=local_user_gid
-        )
-    # As this is currently setup, commands are never injected by external users
-    p = Popen(
-        args,
-        stdin=PIPE,
-        stdout=PIPE,
-        stderr=PIPE,
-        bufsize=-1,
-        shell=False,
-        preexec_fn=run_as_user_func,
-    )  # nosec: B603
+        print(command_as_str, flush=True)  # noqa: T201
+    p = build_popen_maybe_local_user(
+        args=str_args,
+        user_uid=user_uid,
+        user_gid=user_gid,
+    )
     output, error = p.communicate()
     return_code = p.returncode
     resolve_process_results(
@@ -285,17 +294,17 @@ def run_process(
 
 def get_output_of_process(
     args: list[Any],
-    local_user_uid: int = 0,
-    local_user_gid: int = 0,
-    silent=False,
+    user_uid: int = 0,
+    user_gid: int = 0,
+    silent: bool = False,
 ) -> str:
     """Runs a process and gets the output.
 
     Args:
         args (list[Any]): A list of arguments that could be run on the command line.
-        local_user_uid (int): The local user's user ID, used to run the process as
+        user_uid (int): The local user's user ID, used to run the process as
             the local user. Defaults to 0, runs as root.
-        local_user_gid (int): The local user's group ID, used to run the process as
+        user_gid (int): The local user's group ID, used to run the process as
             the local user. Defaults to 0, runs as root.
         silent (bool): Should the process be run silently.  Defaults to False.
 
@@ -304,8 +313,8 @@ def get_output_of_process(
     """
     output = run_process(
         args=args,
-        local_user_uid=local_user_uid,
-        local_user_gid=local_user_gid,
+        user_uid=user_uid,
+        user_gid=user_gid,
         silent=silent,
     )
     return output.decode("utf-8").strip()
@@ -313,18 +322,18 @@ def get_output_of_process(
 
 def run_piped_processes(
     processes: list[list[Any]],
-    local_user_uid: int = 0,
-    local_user_gid: int = 0,
-    silent=False,
+    user_uid: int = 0,
+    user_gid: int = 0,
+    silent: bool = False,
 ) -> None:
     """Runs piped processes as they would be on the command line.
 
     Args:
         processes (list[list[Any]]): The list of process arguments that will be run
             sequentially.
-        local_user_uid (int): The local user's user ID, used to run the process as
+        user_uid (int): The local user's user ID, used to run the process as
             the local user. Defaults to 0, runs as root.
-        local_user_gid (int): The local user's group ID, used to run the process as
+        user_gid (int): The local user's group ID, used to run the process as
             the local user. Defaults to 0, runs as root.
         silent (bool): Should the process be run silently.  Defaults to False.
 
@@ -335,26 +344,20 @@ def run_piped_processes(
     process_strs = [" ".join(args) for args in args_list]
     command_as_str = " | ".join(process_strs)
     if not silent:
-        print(command_as_str, flush=True)
-    run_as_user_func = None
-    if local_user_uid or local_user_gid:
-        run_as_user_func = demote_process_to_user(
-            user_uid=local_user_uid, user_gid=local_user_gid
-        )
-    # As this is currently setup, commands are never injected by external users
-    p1 = Popen(
-        args=args_list[0], stdout=PIPE, shell=False, preexec_fn=run_as_user_func
-    )  # nosec: B603
+        print(command_as_str, flush=True)  # noqa: T201
+    p1 = build_popen_maybe_local_user(
+        args=args_list[0],
+        user_uid=user_uid,
+        user_gid=user_gid,
+    )
     popen_processes = [p1]
     for args in args_list[1:]:
         last_process = popen_processes[-1]
-        # As this is currently setup, commands are never injected by external users
-        next_process = Popen(  # nosec: B603
+        next_process = build_popen_maybe_local_user(
             args=args,
             stdin=last_process.stdout,
-            stdout=PIPE,
-            shell=False,
-            preexec_fn=run_as_user_func,
+            user_uid=user_uid,
+            user_gid=user_gid,
         )
         popen_processes.append(next_process)
     output, error = popen_processes[-1].communicate()
