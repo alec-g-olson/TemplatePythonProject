@@ -2,6 +2,8 @@ from copy import copy
 
 import pytest
 import yaml
+from pydantic import ValidationError
+
 from build_support.new_project_setup.new_project_data_models import ProjectSettings
 
 project_settings_data_dict = {
@@ -11,48 +13,48 @@ project_settings_data_dict = {
 }
 
 
-@pytest.fixture
+@pytest.fixture()
 def project_yaml_str() -> str:
     return yaml.dump(project_settings_data_dict)
 
 
-def test_load(project_yaml_str: str):
+def test_load(project_yaml_str: str) -> None:
     project_setting = ProjectSettings.from_yaml(yaml_str=project_yaml_str)
     assert project_setting == ProjectSettings.model_validate(project_settings_data_dict)
 
 
-def test_load_bad_name():
+def test_load_bad_name() -> None:
     bad_dict = copy(project_settings_data_dict)
-    bad_dict["name"] = 4
+    bad_dict["name"] = 4  # type: ignore[assignment]
     project_yaml_str = yaml.dump(bad_dict)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValidationError):
         ProjectSettings.from_yaml(yaml_str=project_yaml_str)
 
 
-def test_load_bad_license():
+def test_load_bad_license() -> None:
     bad_dict = copy(project_settings_data_dict)
-    bad_dict["license"] = 4
+    bad_dict["license"] = 4  # type: ignore[assignment]
     project_yaml_str = yaml.dump(bad_dict)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValidationError):
         ProjectSettings.from_yaml(yaml_str=project_yaml_str)
 
 
-def test_load_invalid_license():
+def test_load_invalid_license() -> None:
     bad_dict = copy(project_settings_data_dict)
     bad_dict["license"] = "INVALID_LICENSE"
     project_yaml_str = yaml.dump(bad_dict)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValidationError):
         ProjectSettings.from_yaml(yaml_str=project_yaml_str)
 
 
-def test_load_bad_organization():
+def test_load_bad_organization() -> None:
     bad_dict = copy(project_settings_data_dict)
-    bad_dict["organization"] = 4
+    bad_dict["organization"] = 4  # type: ignore[assignment]
     project_yaml_str = yaml.dump(bad_dict)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValidationError):
         ProjectSettings.from_yaml(yaml_str=project_yaml_str)
 
 
-def test_dump(project_yaml_str: str):
+def test_dump(project_yaml_str: str) -> None:
     project_setting = ProjectSettings.model_validate(project_settings_data_dict)
     assert project_setting.to_yaml() == project_yaml_str

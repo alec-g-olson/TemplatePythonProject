@@ -1,6 +1,8 @@
 from pathlib import Path
 from unittest.mock import call, patch
 
+import pytest
+
 from build_support.ci_cd_tasks.build_tasks import (
     BuildAll,
     BuildDocs,
@@ -8,7 +10,7 @@ from build_support.ci_cd_tasks.build_tasks import (
     build_docs_for_subproject,
 )
 from build_support.ci_cd_tasks.env_setup_tasks import BuildProdEnvironment
-from build_support.ci_cd_tasks.test_tasks import TestPypi, TestPythonStyle
+from build_support.ci_cd_tasks.validation_tasks import ValidatePypi, ValidatePythonStyle
 from build_support.ci_cd_vars.docker_vars import (
     DockerTarget,
     get_docker_command_for_image,
@@ -36,7 +38,7 @@ def test_build_all_requires(
     docker_project_root: Path,
     local_uid: int,
     local_gid: int,
-):
+) -> None:
     assert BuildAll(
         non_docker_project_root=mock_project_root,
         docker_project_root=docker_project_root,
@@ -63,7 +65,7 @@ def test_run_build_all(
     docker_project_root: Path,
     local_uid: int,
     local_gid: int,
-):
+) -> None:
     with patch("build_support.ci_cd_tasks.build_tasks.run_process") as run_process_mock:
         BuildAll(
             non_docker_project_root=mock_project_root,
@@ -79,20 +81,20 @@ def test_build_pypi_requires(
     docker_project_root: Path,
     local_uid: int,
     local_gid: int,
-):
+) -> None:
     assert BuildPypi(
         non_docker_project_root=mock_project_root,
         docker_project_root=docker_project_root,
         local_user_uid=local_uid,
         local_user_gid=local_gid,
     ).required_tasks() == [
-        TestPypi(
+        ValidatePypi(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
             local_user_uid=local_uid,
             local_user_gid=local_gid,
         ),
-        TestPythonStyle(
+        ValidatePythonStyle(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
             local_user_uid=local_uid,
@@ -107,13 +109,13 @@ def test_build_pypi_requires(
     ]
 
 
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
 def test_run_build_pypi(
     mock_project_root: Path,
-    mock_docker_pyproject_toml_file: Path,
     docker_project_root: Path,
     local_uid: int,
     local_gid: int,
-):
+) -> None:
     with patch("build_support.ci_cd_tasks.build_tasks.run_process") as run_process_mock:
         clean_dist_args = concatenate_args(
             args=[
@@ -156,23 +158,20 @@ def test_run_build_pypi(
             local_user_uid=local_uid,
             local_user_gid=local_gid,
         ).run()
-        assert run_process_mock.call_count == 3
-        run_process_mock.assert_has_calls(
-            calls=[
-                call(args=clean_dist_args),
-                call(args=poetry_build_args),
-                call(args=mv_dist_to_final_location_args),
-            ],
-        )
+        expected_run_process_calls = [
+            call(args=clean_dist_args),
+            call(args=poetry_build_args),
+            call(args=mv_dist_to_final_location_args),
+        ]
+        assert run_process_mock.call_count == len(expected_run_process_calls)
+        run_process_mock.assert_has_calls(calls=expected_run_process_calls)
 
 
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
 def test_build_docs_for_subproject(
     mock_project_root: Path,
-    mock_docker_pyproject_toml_file: Path,
     docker_project_root: Path,
-    local_uid: int,
-    local_gid: int,
-):
+) -> None:
     subproject_dir = mock_project_root.joinpath("subprocess_dir")
     subproject_src_dir = subproject_dir.joinpath("src")
     subproject_docs_dir = subproject_dir.joinpath("docs")
@@ -221,13 +220,12 @@ def test_build_docs_for_subproject(
             docs_src_dir=subproject_docs_src_dir,
             docs_build_dir=subproject_docs_build_dir,
         )
-        assert run_process_mock.call_count == 2
-        run_process_mock.assert_has_calls(
-            calls=[
-                call(args=sphinx_api_doc_args),
-                call(args=sphinx_build_args),
-            ],
-        )
+        expected_run_process_calls = [
+            call(args=sphinx_api_doc_args),
+            call(args=sphinx_build_args),
+        ]
+        assert run_process_mock.call_count == len(expected_run_process_calls)
+        run_process_mock.assert_has_calls(calls=expected_run_process_calls)
 
 
 def test_build_docs_requires(
@@ -235,14 +233,14 @@ def test_build_docs_requires(
     docker_project_root: Path,
     local_uid: int,
     local_gid: int,
-):
+) -> None:
     assert BuildDocs(
         non_docker_project_root=mock_project_root,
         docker_project_root=docker_project_root,
         local_user_uid=local_uid,
         local_user_gid=local_gid,
     ).required_tasks() == [
-        TestPythonStyle(
+        ValidatePythonStyle(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
             local_user_uid=local_uid,
@@ -251,13 +249,13 @@ def test_build_docs_requires(
     ]
 
 
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
 def test_run_build_docs(
     mock_project_root: Path,
-    mock_docker_pyproject_toml_file: Path,
     docker_project_root: Path,
     local_uid: int,
     local_gid: int,
-):
+) -> None:
     with patch("build_support.ci_cd_tasks.build_tasks.run_process") as run_process_mock:
         pypi_sphinx_api_doc_args = concatenate_args(
             [
@@ -335,12 +333,11 @@ def test_run_build_docs(
             local_user_uid=local_uid,
             local_user_gid=local_gid,
         ).run()
-        assert run_process_mock.call_count == 4
-        run_process_mock.assert_has_calls(
-            calls=[
-                call(args=pypi_sphinx_api_doc_args),
-                call(args=pypi_sphinx_build_args),
-                call(args=build_support_sphinx_api_doc_args),
-                call(args=build_support_sphinx_build_args),
-            ],
-        )
+        expected_run_process_calls = [
+            call(args=pypi_sphinx_api_doc_args),
+            call(args=pypi_sphinx_build_args),
+            call(args=build_support_sphinx_api_doc_args),
+            call(args=build_support_sphinx_build_args),
+        ]
+        assert run_process_mock.call_count == len(expected_run_process_calls)
+        run_process_mock.assert_has_calls(calls=expected_run_process_calls)

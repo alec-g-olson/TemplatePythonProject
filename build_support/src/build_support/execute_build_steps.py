@@ -14,16 +14,27 @@ from build_support.ci_cd_tasks.env_setup_tasks import (
     BuildPulumiEnvironment,
     Clean,
 )
-from build_support.ci_cd_tasks.lint_tasks import Autoflake, Lint
+from build_support.ci_cd_tasks.lint_tasks import (
+    ApplyRuffFixUnsafe,
+    Lint,
+    RuffFixSafe,
+)
 from build_support.ci_cd_tasks.push_tasks import PushAll, PushPypi
-from build_support.ci_cd_tasks.test_tasks import (
-    TestAll,
-    TestBuildSupport,
-    TestPypi,
-    TestPythonStyle,
+from build_support.ci_cd_tasks.validation_tasks import (
+    ValidateAll,
+    ValidateBuildSupport,
+    ValidatePypi,
+    ValidatePythonStyle,
 )
 from build_support.dag_engine import TaskNode, concatenate_args, run_process, run_tasks
 from build_support.new_project_setup.setup_new_project import MakeProjectFromTemplate
+
+#######################################################################################
+# Test tasks use the word "Validate" instead of "Test" in their name to prevent
+# pytest from getting confused and producing lots of warnings.  However, for the sake
+# of standardization and usability we will use "test" instead of "validate" for the
+# exposed CLI options and Makefile commands.
+#######################################################################################
 
 CLI_ARG_TO_TASK: dict[str, type[TaskNode]] = {
     "make_new_project": MakeProjectFromTemplate,
@@ -31,12 +42,13 @@ CLI_ARG_TO_TASK: dict[str, type[TaskNode]] = {
     "build_dev": BuildDevEnvironment,
     "build_prod": BuildProdEnvironment,
     "build_pulumi": BuildPulumiEnvironment,
-    "test_style": TestPythonStyle,
-    "test_build_support": TestBuildSupport,
-    "test_pypi": TestPypi,
-    "test": TestAll,
+    "test_style": ValidatePythonStyle,
+    "test_build_support": ValidateBuildSupport,
+    "test_pypi": ValidatePypi,
+    "test": ValidateAll,
     "lint": Lint,
-    "autoflake": Autoflake,
+    "ruff_fix_safe": RuffFixSafe,
+    "apply_unsafe_ruff_fixes": ApplyRuffFixUnsafe,
     "build_pypi": BuildPypi,
     "build_docs": BuildDocs,
     "build": BuildAll,

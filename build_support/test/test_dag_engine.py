@@ -4,6 +4,8 @@ from subprocess import PIPE
 from unittest.mock import MagicMock, call, patch
 
 import pytest
+from _pytest.fixtures import SubRequest
+
 from build_support.ci_cd_tasks.env_setup_tasks import Clean
 from build_support.dag_engine import (
     TaskNode,
@@ -26,7 +28,7 @@ def build_mock_task(task_name: str, required_mock_tasks: list[TaskNode]) -> Task
     return mock_task
 
 
-@pytest.fixture
+@pytest.fixture()
 def all_tasks() -> set[TaskNode]:
     task1 = build_mock_task(task_name="TASK_1", required_mock_tasks=[])
     task2 = build_mock_task(task_name="TASK_2", required_mock_tasks=[])
@@ -40,8 +42,8 @@ def all_tasks() -> set[TaskNode]:
     return {task1, task2, task3, task4, task5, task6, task7, task8, task9}
 
 
-@pytest.fixture
-def all_task_lookup(all_tasks) -> dict[str, TaskNode]:
+@pytest.fixture()
+def all_task_lookup(all_tasks: set[TaskNode]) -> dict[str, TaskNode]:
     return {task.task_label(): task for task in all_tasks}
 
 
@@ -97,24 +99,28 @@ tasks_names_to_execution_order_names = [
 
 
 @pytest.fixture(params=tasks_names_to_execution_order_names)
-def run_info(request) -> list[list[str]]:
+def run_info(request: SubRequest) -> list[list[str]]:
     return request.param
 
 
-@pytest.fixture
-def tasks_requested(run_info, all_task_lookup) -> list[TaskNode]:
+@pytest.fixture()
+def tasks_requested(
+    run_info: list[list[str]], all_task_lookup: dict[str, TaskNode]
+) -> list[TaskNode]:
     return [all_task_lookup[task_name] for task_name in run_info[0]]
 
 
-@pytest.fixture
-def task_execution_order(run_info, all_task_lookup) -> list[TaskNode]:
+@pytest.fixture()
+def task_execution_order(
+    run_info: list[list[str]], all_task_lookup: dict[str, TaskNode]
+) -> list[TaskNode]:
     return [all_task_lookup[task_name] for task_name in run_info[1]]
 
 
-def test_task_hash():
+def test_task_hash() -> None:
     task = Clean(
-        non_docker_project_root=Path(""),
-        docker_project_root=Path(""),
+        non_docker_project_root=Path(),
+        docker_project_root=Path(),
         local_user_uid=0,
         local_user_gid=0,
     )
@@ -124,7 +130,7 @@ def test_task_hash():
 def test_add_task_and_all_required_tasks_to_dict(
     tasks_requested: list[TaskNode],
     task_execution_order: list[TaskNode],
-):
+) -> None:
     observed_results = get_task_execution_order(requested_tasks=tasks_requested)
     assert observed_results == task_execution_order
 
@@ -133,11 +139,7 @@ def test_run_tasks(
     tasks_requested: list[TaskNode],
     task_execution_order: list[TaskNode],
     all_tasks: set[TaskNode],
-    mock_project_root: Path,
-    docker_project_root: Path,
-    local_uid: int,
-    local_gid: int,
-):
+) -> None:
     run_tasks(tasks=tasks_requested)
     for mock_task in all_tasks:
         # need this line to make MyPy play nice with MagicMock
@@ -147,10 +149,10 @@ def test_run_tasks(
             else:
                 assert mock_task.run.call_count == 0
         else:  # pragma: no cover - not hit if test passes
-            assert False
+            pytest.fail("Something when wrong in test setup.")
 
 
-def test_get_str_args():
+def test_get_str_args() -> None:
     assert get_str_args(args=[9, 3.5, Path("/usr/dev"), "A string!!!"]) == [
         "9",
         "3.5",
@@ -159,7 +161,7 @@ def test_get_str_args():
     ]
 
 
-def test_concatenate_args():
+def test_concatenate_args() -> None:
     assert concatenate_args(args=["a", Path("/usr/dev"), 9, [], [9, 3.5]]) == [
         "a",
         "/usr/dev",
@@ -169,7 +171,7 @@ def test_concatenate_args():
     ]
 
 
-def test_resolve_process_results_normal_process():
+def test_resolve_process_results_normal_process() -> None:
     with patch("builtins.print") as mock_print:
         resolve_process_results(
             command_as_str="run a process",
@@ -181,7 +183,7 @@ def test_resolve_process_results_normal_process():
         mock_print.assert_called_once_with("output", flush=True, end="")
 
 
-def test_resolve_process_results_normal_process_exit_1():
+def test_resolve_process_results_normal_process_exit_1() -> None:
     with patch("builtins.print") as mock_print, patch(
         "build_support.dag_engine.sys.exit"
     ) as mock_exit:
@@ -196,7 +198,7 @@ def test_resolve_process_results_normal_process_exit_1():
         mock_exit.assert_called_once_with(1)
 
 
-def test_resolve_process_results_normal_process_has_error_text():
+def test_resolve_process_results_normal_process_has_error_text() -> None:
     with patch("builtins.print") as mock_print:
         resolve_process_results(
             command_as_str="run a process",
@@ -205,16 +207,15 @@ def test_resolve_process_results_normal_process_has_error_text():
             return_code=0,
             silent=False,
         )
-        assert mock_print.call_count == 2
-        mock_print.assert_has_calls(
-            calls=[
-                call("output", flush=True, end=""),
-                call("error", flush=True, end="", file=sys.stderr),
-            ],
-        )
+        expected_print_calls = [
+            call("output", flush=True, end=""),
+            call("error", flush=True, end="", file=sys.stderr),
+        ]
+        assert mock_print.call_count == len(expected_print_calls)
+        mock_print.assert_has_calls(calls=expected_print_calls)
 
 
-def test_resolve_process_results_normal_process_has_error_text_exit_1():
+def test_resolve_process_results_normal_process_has_error_text_exit_1() -> None:
     with patch("builtins.print") as mock_print, patch(
         "build_support.dag_engine.sys.exit"
     ) as mock_exit:
@@ -225,17 +226,16 @@ def test_resolve_process_results_normal_process_has_error_text_exit_1():
             return_code=1,
             silent=False,
         )
-        assert mock_print.call_count == 2
-        mock_print.assert_has_calls(
-            calls=[
-                call("output", flush=True, end=""),
-                call("error", flush=True, end="", file=sys.stderr),
-            ],
-        )
+        expected_print_calls = [
+            call("output", flush=True, end=""),
+            call("error", flush=True, end="", file=sys.stderr),
+        ]
+        assert mock_print.call_count == len(expected_print_calls)
+        mock_print.assert_has_calls(calls=expected_print_calls)
         mock_exit.assert_called_once_with(1)
 
 
-def test_resolve_process_results_normal_process_silent():
+def test_resolve_process_results_normal_process_silent() -> None:
     with patch("builtins.print") as mock_print:
         resolve_process_results(
             command_as_str="run a process",
@@ -248,7 +248,7 @@ def test_resolve_process_results_normal_process_silent():
         mock_print.assert_called_once_with("error", flush=True, end="", file=sys.stderr)
 
 
-def test_resolve_process_results_normal_process_silent_exit_1():
+def test_resolve_process_results_normal_process_silent_exit_1() -> None:
     with patch("builtins.print") as mock_print, patch(
         "build_support.dag_engine.sys.exit"
     ) as mock_exit:
@@ -259,17 +259,16 @@ def test_resolve_process_results_normal_process_silent_exit_1():
             return_code=1,
             silent=True,
         )
-        assert mock_print.call_count == 2
-        mock_print.assert_has_calls(
-            calls=[
-                call("error", flush=True, end="", file=sys.stderr),
-                call("run a process\nFailed with code: 1", flush=True, file=sys.stderr),
-            ],
-        )
+        expected_print_calls = [
+            call("error", flush=True, end="", file=sys.stderr),
+            call("run a process\nFailed with code: 1", flush=True, file=sys.stderr),
+        ]
+        assert mock_print.call_count == len(expected_print_calls)
+        mock_print.assert_has_calls(calls=expected_print_calls)
         mock_exit.assert_called_once_with(1)
 
 
-def test_run_process():
+def test_run_process() -> None:
     with patch("build_support.dag_engine.Popen") as mock_popen, patch(
         "build_support.dag_engine.resolve_process_results",
     ) as mock_resolve_process_results:
@@ -297,7 +296,7 @@ def test_run_process():
         )
 
 
-def test_run_process_silent():
+def test_run_process_silent() -> None:
     with patch("build_support.dag_engine.Popen") as mock_popen, patch(
         "build_support.dag_engine.resolve_process_results",
     ) as mock_resolve_process_results:
@@ -328,7 +327,7 @@ def test_run_process_silent():
         )
 
 
-def test_run_process_as_user():
+def test_run_process_as_user() -> None:
     with patch("build_support.dag_engine.Popen") as mock_popen, patch(
         "build_support.dag_engine.resolve_process_results",
     ) as mock_resolve_process_results, patch(
@@ -373,7 +372,7 @@ def test_run_process_as_user():
         )
 
 
-def test_run_process_silent_as_user():
+def test_run_process_silent_as_user() -> None:
     with patch("build_support.dag_engine.Popen") as mock_popen, patch(
         "build_support.dag_engine.resolve_process_results",
     ) as mock_resolve_process_results, patch(
@@ -419,7 +418,7 @@ def test_run_process_silent_as_user():
         )
 
 
-def test_get_output_of_process():
+def test_get_output_of_process() -> None:
     with patch("build_support.dag_engine.run_process") as mock_run_process:
         mock_run_process.return_value = b"output"
         assert (
@@ -428,7 +427,7 @@ def test_get_output_of_process():
         )
 
 
-def test_run_piped_processes():
+def test_run_piped_processes() -> None:
     with patch("build_support.dag_engine.Popen") as mock_popen, patch(
         "builtins.print",
     ) as mock_print, patch(
@@ -443,29 +442,28 @@ def test_run_piped_processes():
             processes=[["command", 0, 1.5, Path("/usr/dev")], ["second_command", 1337]],
         )
         command_as_str = "command 0 1.5 /usr/dev | second_command 1337"
-        assert mock_popen.call_count == 2
-        mock_popen.assert_has_calls(
-            calls=[
-                call(
-                    args=["command", "0", "1.5", "/usr/dev"],
-                    stdin=None,
-                    stdout=PIPE,
-                    stderr=PIPE,
-                    user=None,
-                    group=None,
-                    env=None,
-                ),
-                call(
-                    args=["second_command", "1337"],
-                    stdin=process_mock.stdout,
-                    stdout=PIPE,
-                    stderr=PIPE,
-                    user=None,
-                    group=None,
-                    env=None,
-                ),
-            ],
-        )
+        expected_popen_calls = [
+            call(
+                args=["command", "0", "1.5", "/usr/dev"],
+                stdin=None,
+                stdout=PIPE,
+                stderr=PIPE,
+                user=None,
+                group=None,
+                env=None,
+            ),
+            call(
+                args=["second_command", "1337"],
+                stdin=process_mock.stdout,
+                stdout=PIPE,
+                stderr=PIPE,
+                user=None,
+                group=None,
+                env=None,
+            ),
+        ]
+        assert mock_popen.call_count == len(expected_popen_calls)
+        mock_popen.assert_has_calls(calls=expected_popen_calls)
         mock_resolve_process_results.assert_called_once_with(
             command_as_str=command_as_str,
             output=b"output",
@@ -476,7 +474,7 @@ def test_run_piped_processes():
         mock_print.assert_called_once_with(command_as_str, flush=True)
 
 
-def test_run_piped_processes_silent():
+def test_run_piped_processes_silent() -> None:
     with patch("build_support.dag_engine.Popen") as mock_popen, patch(
         "builtins.print",
     ) as mock_print, patch(
@@ -492,29 +490,28 @@ def test_run_piped_processes_silent():
             silent=True,
         )
         command_as_str = "command 0 1.5 /usr/dev | second_command 1337"
-        assert mock_popen.call_count == 2
-        mock_popen.assert_has_calls(
-            calls=[
-                call(
-                    args=["command", "0", "1.5", "/usr/dev"],
-                    stdin=None,
-                    stdout=PIPE,
-                    stderr=PIPE,
-                    user=None,
-                    group=None,
-                    env=None,
-                ),
-                call(
-                    args=["second_command", "1337"],
-                    stdin=process_mock.stdout,
-                    stdout=PIPE,
-                    stderr=PIPE,
-                    user=None,
-                    group=None,
-                    env=None,
-                ),
-            ],
-        )
+        expected_popen_calls = [
+            call(
+                args=["command", "0", "1.5", "/usr/dev"],
+                stdin=None,
+                stdout=PIPE,
+                stderr=PIPE,
+                user=None,
+                group=None,
+                env=None,
+            ),
+            call(
+                args=["second_command", "1337"],
+                stdin=process_mock.stdout,
+                stdout=PIPE,
+                stderr=PIPE,
+                user=None,
+                group=None,
+                env=None,
+            ),
+        ]
+        assert mock_popen.call_count == len(expected_popen_calls)
+        mock_popen.assert_has_calls(calls=expected_popen_calls)
         mock_resolve_process_results.assert_called_once_with(
             command_as_str=command_as_str,
             output=b"output",
@@ -525,7 +522,7 @@ def test_run_piped_processes_silent():
         mock_print.assert_not_called()
 
 
-def test_run_piped_processes_as_user():
+def test_run_piped_processes_as_user() -> None:
     with patch("build_support.dag_engine.Popen") as mock_popen, patch(
         "builtins.print",
     ) as mock_print, patch(
@@ -552,29 +549,28 @@ def test_run_piped_processes_as_user():
         )
         assert len(mock_environ) == 1
         command_as_str = "command 0 1.5 /usr/dev | second_command 1337"
-        assert mock_popen.call_count == 2
-        mock_popen.assert_has_calls(
-            calls=[
-                call(
-                    args=["command", "0", "1.5", "/usr/dev"],
-                    stdin=None,
-                    stdout=PIPE,
-                    stderr=PIPE,
-                    user=1337,
-                    group=42,
-                    env=expected_new_env,
-                ),
-                call(
-                    args=["second_command", "1337"],
-                    stdin=process_mock.stdout,
-                    stdout=PIPE,
-                    stderr=PIPE,
-                    user=1337,
-                    group=42,
-                    env=expected_new_env,
-                ),
-            ],
-        )
+        expected_popen_calls = [
+            call(
+                args=["command", "0", "1.5", "/usr/dev"],
+                stdin=None,
+                stdout=PIPE,
+                stderr=PIPE,
+                user=1337,
+                group=42,
+                env=expected_new_env,
+            ),
+            call(
+                args=["second_command", "1337"],
+                stdin=process_mock.stdout,
+                stdout=PIPE,
+                stderr=PIPE,
+                user=1337,
+                group=42,
+                env=expected_new_env,
+            ),
+        ]
+        assert mock_popen.call_count == len(expected_popen_calls)
+        mock_popen.assert_has_calls(calls=expected_popen_calls)
         mock_resolve_process_results.assert_called_once_with(
             command_as_str=command_as_str,
             output=b"output",
@@ -585,7 +581,7 @@ def test_run_piped_processes_as_user():
         mock_print.assert_called_once_with(command_as_str, flush=True)
 
 
-def test_run_piped_processes_silent_as_user():
+def test_run_piped_processes_silent_as_user() -> None:
     with patch("build_support.dag_engine.Popen") as mock_popen, patch(
         "builtins.print",
     ) as mock_print, patch(
@@ -613,29 +609,28 @@ def test_run_piped_processes_silent_as_user():
         )
         assert len(mock_environ) == 1
         command_as_str = "command 0 1.5 /usr/dev | second_command 1337"
-        assert mock_popen.call_count == 2
-        mock_popen.assert_has_calls(
-            calls=[
-                call(
-                    args=["command", "0", "1.5", "/usr/dev"],
-                    stdin=None,
-                    stdout=PIPE,
-                    stderr=PIPE,
-                    user=1337,
-                    group=42,
-                    env=expected_new_env,
-                ),
-                call(
-                    args=["second_command", "1337"],
-                    stdin=process_mock.stdout,
-                    stdout=PIPE,
-                    stderr=PIPE,
-                    user=1337,
-                    group=42,
-                    env=expected_new_env,
-                ),
-            ],
-        )
+        expected_popen_calls = [
+            call(
+                args=["command", "0", "1.5", "/usr/dev"],
+                stdin=None,
+                stdout=PIPE,
+                stderr=PIPE,
+                user=1337,
+                group=42,
+                env=expected_new_env,
+            ),
+            call(
+                args=["second_command", "1337"],
+                stdin=process_mock.stdout,
+                stdout=PIPE,
+                stderr=PIPE,
+                user=1337,
+                group=42,
+                env=expected_new_env,
+            ),
+        ]
+        assert mock_popen.call_count == len(expected_popen_calls)
+        mock_popen.assert_has_calls(calls=expected_popen_calls)
         mock_resolve_process_results.assert_called_once_with(
             command_as_str=command_as_str,
             output=b"output",
@@ -646,7 +641,7 @@ def test_run_piped_processes_silent_as_user():
         mock_print.assert_not_called()
 
 
-def test_run_piped_processes_one_process():
+def test_run_piped_processes_one_process() -> None:
     with patch("build_support.dag_engine.Popen") as mock_popen, patch(
         "builtins.print",
     ) as mock_print, patch(
@@ -678,7 +673,7 @@ def test_run_piped_processes_one_process():
         mock_print.assert_called_once_with(command_as_str, flush=True)
 
 
-def test_run_piped_processes_one_process_silent():
+def test_run_piped_processes_one_process_silent() -> None:
     with patch("build_support.dag_engine.Popen") as mock_popen, patch(
         "builtins.print",
     ) as mock_print, patch(

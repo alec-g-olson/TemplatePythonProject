@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+
 from build_support.ci_cd_tasks.env_setup_tasks import GitInfo
 from build_support.ci_cd_vars.file_and_dir_path_vars import get_git_info_yaml
 
@@ -20,6 +21,6 @@ def real_git_info(real_project_root_dir: Path) -> GitInfo:
 
 
 @pytest.fixture(scope="session")
-def is_on_main(real_git_info: GitInfo):
+def is_on_main(real_git_info: GitInfo) -> bool:
     """Determine if the main branch is currently checked out."""
     return real_git_info.branch == "main"

@@ -1,4 +1,5 @@
 import re
+from http import HTTPStatus
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -20,8 +21,8 @@ HYPERLINK_PATTERN = r"\[({0})]\(\s*({1})\s*\)".format(
 )
 
 
-@pytest.fixture
-def check_weblinks(is_on_main):
+@pytest.fixture()
+def check_weblinks(is_on_main: bool) -> bool:
     return not is_on_main
 
 
@@ -31,11 +32,7 @@ def _build_header_regex(header_level: int, header_title: str) -> str:
 
 def _build_header_regexes(header_level_dict: Dict[str, int]) -> List[str]:
     return [
-        regex_str
-        for regex_str in [
-            _build_header_regex(level, title)
-            for title, level in header_level_dict.items()
-        ]
+        _build_header_regex(level, title) for title, level in header_level_dict.items()
     ]
 
 
@@ -81,16 +78,20 @@ def _get_headers_missing_details(
     current_header = None
     if readme_path.exists():
         for line in readme_path.open():
-            line = line.rstrip()
-            if line.startswith("#"):
+            striped_line = line.rstrip()
+            if striped_line.startswith("#"):
                 current_header = None
             for regex_str in header_regexes:
                 if not headers_with_details_found[regex_str] and re.match(
-                    regex_str, line
+                    regex_str, striped_line
                 ):
                     current_header = regex_str
                     break
-            if line and current_header and not re.match(current_header, line):
+            if (
+                striped_line
+                and current_header
+                and not re.match(current_header, striped_line)
+            ):
                 headers_with_details_found[current_header] = True
 
     return [
@@ -137,13 +138,11 @@ def _is_broken_hyperlink(
         if (
             check_weblinks
         ):  # pragma: no cover - might not hit if check_weblinks is false
-            return requests.get(hyperlink[1]).status_code != 200
-        else:
-            return False  # pragma: no cover - might not hit if check_weblinks is true
-    elif hyperlink[1].startswith("#"):
-        return not hyperlink[1] in all_headers
-    else:
-        return not current_dir.joinpath(hyperlink[1]).exists()
+            return requests.get(hyperlink[1]).status_code != HTTPStatus.OK
+        return False  # pragma: no cover - might not hit if check_weblinks is true
+    if hyperlink[1].startswith("#"):
+        return hyperlink[1] not in all_headers
+    return not current_dir.joinpath(hyperlink[1]).exists()
 
 
 def _get_all_bad_hyperlinks(
@@ -152,12 +151,8 @@ def _get_all_bad_hyperlinks(
     BadHyperlinkInfo
 ]:  # pragma: no cover - has branches not reached if all tests pass
     bad_hyperlinks = []
-    line_number = 1
     if readme_path.exists():
-        all_headers = []
-        for line in readme_path.open():
-            if line.startswith("#"):
-                all_headers.append(line)
+        all_headers = [line for line in readme_path.open() if line.startswith("#")]
         possible_header_links = []
         for header in all_headers:
             start_of_header = 0
@@ -169,24 +164,23 @@ def _get_all_bad_hyperlinks(
             strip_header = "#" + header[start_of_header:-1]
             strip_header = strip_header.replace(" ", "-").lower()
             possible_header_links.append(strip_header)
-        print(possible_header_links)
-        for line in readme_path.open():
-            hyperlinks = re.findall(HYPERLINK_PATTERN, line)
-            for hyperlink in hyperlinks:
-                if _is_broken_hyperlink(
-                    current_dir=readme_path.parent,
-                    hyperlink=hyperlink,
-                    check_weblinks=check_weblinks,
-                    all_headers=possible_header_links,
-                ):
-                    bad_hyperlinks.append(
-                        BadHyperlinkInfo(
-                            readme_path=readme_path.relative_to(PROJECT_ROOT_DIR),
-                            line_number=line_number,
-                            hyperlink=str(hyperlink),
-                        )
-                    )
-            line_number += 1
+        bad_hyperlinks = [
+            bad_hyperlinks.append(
+                BadHyperlinkInfo(
+                    readme_path=readme_path.relative_to(PROJECT_ROOT_DIR),
+                    line_number=line_number,
+                    hyperlink=str(hyperlink),
+                )
+            )
+            for line_number, line in enumerate(readme_path.open(), 1)
+            for hyperlink in re.findall(HYPERLINK_PATTERN, line)
+            if _is_broken_hyperlink(
+                current_dir=readme_path.parent,
+                hyperlink=hyperlink,
+                check_weblinks=check_weblinks,
+                all_headers=possible_header_links,
+            )
+        ]
     return bad_hyperlinks
 
 
@@ -235,7 +229,7 @@ TOP_LEVEL_README_HEADER_REGEXES = _build_header_regexes(
 )
 
 
-def test_top_level_readme_has_required_headers():
+def test_top_level_readme_has_required_headers() -> None:
     missing_headers = _get_missing_headers(
         header_regexes=TOP_LEVEL_README_HEADER_REGEXES,
         readme_path=TOP_LEVEL_README_PATH,
@@ -243,7 +237,7 @@ def test_top_level_readme_has_required_headers():
     assert missing_headers == []
 
 
-def test_top_level_header_have_details():
+def test_top_level_header_have_details() -> None:
     headers_missing_details = _get_headers_missing_details(
         header_regexes=TOP_LEVEL_README_HEADER_REGEXES,
         readme_path=TOP_LEVEL_README_PATH,
@@ -251,7 +245,7 @@ def test_top_level_header_have_details():
     assert headers_missing_details == []
 
 
-def test_top_level_readme_has_no_extra_headers():
+def test_top_level_readme_has_no_extra_headers() -> None:
     extra_headers = _get_extra_headers(
         header_regexes=TOP_LEVEL_README_HEADER_REGEXES,
         readme_path=TOP_LEVEL_README_PATH,
@@ -259,7 +253,7 @@ def test_top_level_readme_has_no_extra_headers():
     assert extra_headers == []
 
 
-def test_top_level_readme_hyperlinks_are_valid(check_weblinks):
+def test_top_level_readme_hyperlinks_are_valid(check_weblinks: bool) -> None:
     assert (
         _get_all_bad_hyperlinks(
             readme_path=TOP_LEVEL_README_PATH, check_weblinks=check_weblinks

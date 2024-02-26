@@ -107,11 +107,12 @@ def get_template_for_license(template_key: str) -> str:
     """
     template_key_lower = template_key.lower()
     if not is_valid_license_template(template_key=template_key):
-        raise ValueError(
+        msg = (
             '"template_key" must be one of:\n  '
             + "  \n".join(sorted(get_licenses_with_templates()))
-            + f"found {template_key_lower} instead.",
+            + f"found {template_key_lower} instead."
         )
+        raise ValueError(msg)
     if template_key_lower == ALL_RIGHTS_RESERVED_KEY:
         return ALL_RIGHTS_RESERVED_TEMPLATE
     license_template_file = REAL_LICENSE_TEMPLATE_DIR.joinpath(template_key_lower)

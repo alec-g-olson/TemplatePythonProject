@@ -3,6 +3,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from _pytest.fixtures import SubRequest
+
 from build_support.ci_cd_vars.docker_vars import (
     DockerTarget,
     get_interactive_docker_command_for_image,
@@ -10,7 +12,7 @@ from build_support.ci_cd_vars.docker_vars import (
 from build_support.report_build_var import AllowedCliArgs, parse_args, run_main
 
 
-def test_allowed_cli_ars_not_changed_by_accident():
+def test_allowed_cli_ars_not_changed_by_accident() -> None:
     assert {arg: arg.value for arg in AllowedCliArgs} == {
         AllowedCliArgs.DEV_DOCKER_INTERACTIVE: "interactive-dev-docker-command",
         AllowedCliArgs.PROD_DOCKER_INTERACTIVE: "interactive-prod-docker-command",
@@ -19,21 +21,21 @@ def test_allowed_cli_ars_not_changed_by_accident():
 
 
 @pytest.fixture(params=[Path("/usr/dev"), Path("/user/dev")])
-def docker_project_root_arg(request) -> Path:
+def docker_project_root_arg(request: SubRequest) -> Path:
     return request.param
 
 
 @pytest.fixture(params=[Path("/path/to/project"), Path("/some/other/path")])
-def non_docker_project_root_arg(request) -> Path:
+def non_docker_project_root_arg(request: SubRequest) -> Path:
     return request.param
 
 
 @pytest.fixture(params=[arg.value for arg in AllowedCliArgs])
-def build_variable_to_report(request) -> str:
+def build_variable_to_report(request: SubRequest) -> str:
     return request.param
 
 
-@pytest.fixture
+@pytest.fixture()
 def args_to_test_single_var(
     docker_project_root_arg: Path,
     non_docker_project_root_arg: Path,
@@ -52,7 +54,7 @@ def args_to_test_single_var(
     ]
 
 
-@pytest.fixture
+@pytest.fixture()
 def expected_namespace_single_var(
     docker_project_root_arg: Path,
     non_docker_project_root_arg: Path,
@@ -65,11 +67,13 @@ def expected_namespace_single_var(
     )
 
 
-def test_parse_args_single_var(args_to_test_single_var, expected_namespace_single_var):
+def test_parse_args_single_var(
+    args_to_test_single_var: list[str], expected_namespace_single_var: Namespace
+) -> None:
     assert parse_args(args=args_to_test_single_var) == expected_namespace_single_var
 
 
-def test_parse_args_no_task():
+def test_parse_args_no_task() -> None:
     with pytest.raises(SystemExit):
         parse_args(
             args=[
@@ -81,7 +85,7 @@ def test_parse_args_no_task():
         )
 
 
-def test_parse_args_bad_var():
+def test_parse_args_bad_var() -> None:
     with pytest.raises(SystemExit):
         parse_args(
             args=[
@@ -95,7 +99,7 @@ def test_parse_args_bad_var():
         )
 
 
-def test_parse_args_no_docker_project_root():
+def test_parse_args_no_docker_project_root() -> None:
     with pytest.raises(SystemExit):
         parse_args(
             args=[
@@ -107,7 +111,7 @@ def test_parse_args_no_docker_project_root():
         )
 
 
-def test_parse_args_no_non_docker_project_root():
+def test_parse_args_no_non_docker_project_root() -> None:
     with pytest.raises(SystemExit):
         parse_args(
             args=[
@@ -119,11 +123,11 @@ def test_parse_args_no_non_docker_project_root():
         )
 
 
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
 def test_run_main_for_each_var_in_enum(
     mock_project_root: Path,
-    mock_docker_pyproject_toml_file: Path,
     docker_project_root: Path,
-):
+) -> None:
     for var_to_report in AllowedCliArgs:
         args = Namespace(
             non_docker_project_root=mock_project_root,
@@ -133,11 +137,11 @@ def test_run_main_for_each_var_in_enum(
         run_main(args)
 
 
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
 def test_run_main_for_get_interactive_dev(
     mock_project_root: Path,
-    mock_docker_pyproject_toml_file: Path,
     docker_project_root: Path,
-):
+) -> None:
     args = Namespace(
         non_docker_project_root=mock_project_root,
         docker_project_root=docker_project_root,
@@ -156,11 +160,11 @@ def test_run_main_for_get_interactive_dev(
         )
 
 
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
 def test_run_main_for_get_interactive_prod(
     mock_project_root: Path,
-    mock_docker_pyproject_toml_file: Path,
     docker_project_root: Path,
-):
+) -> None:
     args = Namespace(
         non_docker_project_root=mock_project_root,
         docker_project_root=docker_project_root,
@@ -179,11 +183,11 @@ def test_run_main_for_get_interactive_prod(
         )
 
 
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
 def test_run_main_for_get_interactive_pulumi(
     mock_project_root: Path,
-    mock_docker_pyproject_toml_file: Path,
     docker_project_root: Path,
-):
+) -> None:
     args = Namespace(
         non_docker_project_root=mock_project_root,
         docker_project_root=docker_project_root,

@@ -2,12 +2,11 @@
 
 
 from build_support.ci_cd_tasks.build_tasks import BuildPypi
-from build_support.ci_cd_tasks.test_tasks import TestAll
+from build_support.ci_cd_tasks.validation_tasks import ValidateAll
 from build_support.ci_cd_vars.git_status_vars import (
-    MAIN_BRANCH_NAME,
+    commit_changes_if_diff,
     current_branch_is_main,
     get_current_branch,
-    get_git_diff,
 )
 from build_support.ci_cd_vars.project_setting_vars import (
     get_project_version,
@@ -60,7 +59,7 @@ class PushTags(TaskNode):
             list[TaskNode]: A list of tasks required to push version tags.
         """
         return [
-            TestAll(
+            ValidateAll(
                 non_docker_project_root=self.non_docker_project_root,
                 docker_project_root=self.docker_project_root,
                 local_user_uid=self.local_user_uid,
@@ -90,48 +89,13 @@ class PushTags(TaskNode):
         currently_on_main = current_branch_is_main(current_branch=current_branch)
         is_dev_version = is_dev_project_version(project_version=current_version)
         if currently_on_main ^ is_dev_version:
-            local_user = f"{self.local_user_uid}:{self.local_user_gid}"
-            run_process(
-                args=concatenate_args(
-                    args=[
-                        "chown",
-                        "-R",
-                        local_user,
-                        "/root/.gitconfig",
-                    ],
+            commit_changes_if_diff(
+                commit_message_no_quotes=(
+                    f"Committing staged changes for {current_version}"
                 ),
-                silent=True,
+                local_user_uid=self.local_user_uid,
+                local_user_gid=self.local_user_gid,
             )
-            current_diff = get_git_diff()
-            if current_diff:
-                if currently_on_main:
-                    msg = (
-                        "Attempting to push tags with unstaged changes to "
-                        f"{MAIN_BRANCH_NAME}."
-                    )
-                    raise RuntimeError(msg)
-                run_process(
-                    args=concatenate_args(args=["git", "add", "-u"]),
-                    user_uid=self.local_user_uid,
-                    user_gid=self.local_user_gid,
-                )
-                run_process(
-                    args=concatenate_args(
-                        args=[
-                            "git",
-                            "commit",
-                            "-m",
-                            f"'Committing staged changes for {current_version}'",
-                        ],
-                    ),
-                    user_uid=self.local_user_uid,
-                    user_gid=self.local_user_gid,
-                )
-                run_process(
-                    args=concatenate_args(args=["git", "push"]),
-                    user_uid=self.local_user_uid,
-                    user_gid=self.local_user_gid,
-                )
             run_process(
                 args=concatenate_args(args=["git", "tag", current_version]),
                 user_uid=self.local_user_uid,

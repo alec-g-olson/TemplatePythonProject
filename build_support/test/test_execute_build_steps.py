@@ -3,6 +3,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from _pytest.fixtures import SubRequest
+
 from build_support.ci_cd_tasks.build_tasks import BuildAll, BuildDocs, BuildPypi
 from build_support.ci_cd_tasks.env_setup_tasks import (
     BuildDevEnvironment,
@@ -10,13 +12,17 @@ from build_support.ci_cd_tasks.env_setup_tasks import (
     BuildPulumiEnvironment,
     Clean,
 )
-from build_support.ci_cd_tasks.lint_tasks import Autoflake, Lint
+from build_support.ci_cd_tasks.lint_tasks import (
+    ApplyRuffFixUnsafe,
+    Lint,
+    RuffFixSafe,
+)
 from build_support.ci_cd_tasks.push_tasks import PushAll, PushPypi
-from build_support.ci_cd_tasks.test_tasks import (
-    TestAll,
-    TestBuildSupport,
-    TestPypi,
-    TestPythonStyle,
+from build_support.ci_cd_tasks.validation_tasks import (
+    ValidateAll,
+    ValidateBuildSupport,
+    ValidatePypi,
+    ValidatePythonStyle,
 )
 from build_support.dag_engine import concatenate_args
 from build_support.execute_build_steps import (
@@ -28,19 +34,20 @@ from build_support.execute_build_steps import (
 from build_support.new_project_setup.setup_new_project import MakeProjectFromTemplate
 
 
-def test_constants_not_changed_by_accident():
-    assert CLI_ARG_TO_TASK == {
+def test_constants_not_changed_by_accident() -> None:
+    assert CLI_ARG_TO_TASK.copy() == {
         "make_new_project": MakeProjectFromTemplate,
         "clean": Clean,
         "build_dev": BuildDevEnvironment,
         "build_prod": BuildProdEnvironment,
         "build_pulumi": BuildPulumiEnvironment,
-        "test_style": TestPythonStyle,
-        "test_build_support": TestBuildSupport,
-        "test_pypi": TestPypi,
-        "test": TestAll,
+        "test_style": ValidatePythonStyle,
+        "test_build_support": ValidateBuildSupport,
+        "test_pypi": ValidatePypi,
+        "test": ValidateAll,
         "lint": Lint,
-        "autoflake": Autoflake,
+        "ruff_fix_safe": RuffFixSafe,
+        "apply_unsafe_ruff_fixes": ApplyRuffFixUnsafe,
         "build_pypi": BuildPypi,
         "build_docs": BuildDocs,
         "build": BuildAll,
@@ -49,7 +56,7 @@ def test_constants_not_changed_by_accident():
     }
 
 
-def test_fix_permissions(real_project_root_dir: Path):
+def test_fix_permissions(real_project_root_dir: Path) -> None:
     with patch("build_support.execute_build_steps.run_process") as run_process_mock:
         local_user = "1337:42"
         fix_permissions_args = concatenate_args(
@@ -69,21 +76,21 @@ def test_fix_permissions(real_project_root_dir: Path):
 
 
 @pytest.fixture(params=[Path("/usr/dev"), Path("/user/dev")])
-def docker_project_root_arg(request) -> Path:
+def docker_project_root_arg(request: SubRequest) -> Path:
     return request.param
 
 
 @pytest.fixture(params=[Path("/path/to/project"), Path("/some/other/path")])
-def non_docker_project_root_arg(request) -> Path:
+def non_docker_project_root_arg(request: SubRequest) -> Path:
     return request.param
 
 
 @pytest.fixture(params=CLI_ARG_TO_TASK.keys())
-def build_task(request) -> str:
+def build_task(request: SubRequest) -> str:
     return request.param
 
 
-@pytest.fixture
+@pytest.fixture()
 def args_to_test_single_task(
     docker_project_root_arg: Path,
     non_docker_project_root_arg: Path,
@@ -107,7 +114,7 @@ def args_to_test_single_task(
     ]
 
 
-@pytest.fixture
+@pytest.fixture()
 def expected_namespace_single_task(
     docker_project_root_arg: Path,
     non_docker_project_root_arg: Path,
@@ -125,13 +132,13 @@ def expected_namespace_single_task(
 
 
 def test_parse_args_single_task(
-    args_to_test_single_task,
-    expected_namespace_single_task,
-):
+    args_to_test_single_task: list[str],
+    expected_namespace_single_task: Namespace,
+) -> None:
     assert parse_args(args=args_to_test_single_task) == expected_namespace_single_task
 
 
-@pytest.fixture
+@pytest.fixture()
 def args_to_test_all_tasks(
     docker_project_root_arg: Path,
     non_docker_project_root_arg: Path,
@@ -153,7 +160,7 @@ def args_to_test_all_tasks(
     ] + list(CLI_ARG_TO_TASK.keys())
 
 
-@pytest.fixture
+@pytest.fixture()
 def expected_namespace_all_tasks(
     docker_project_root_arg: Path,
     non_docker_project_root_arg: Path,
@@ -169,11 +176,13 @@ def expected_namespace_all_tasks(
     )
 
 
-def test_parse_args_all_task(args_to_test_all_tasks, expected_namespace_all_tasks):
+def test_parse_args_all_task(
+    args_to_test_all_tasks: list[str], expected_namespace_all_tasks: Namespace
+) -> None:
     assert parse_args(args=args_to_test_all_tasks) == expected_namespace_all_tasks
 
 
-def test_parse_args_no_task():
+def test_parse_args_no_task() -> None:
     with pytest.raises(SystemExit):
         parse_args(
             args=[
@@ -189,7 +198,7 @@ def test_parse_args_no_task():
         )
 
 
-def test_parse_args_bad_task():
+def test_parse_args_bad_task() -> None:
     with pytest.raises(SystemExit):
         parse_args(
             args=[
@@ -206,7 +215,7 @@ def test_parse_args_bad_task():
         )
 
 
-def test_parse_args_no_group_id():
+def test_parse_args_no_group_id() -> None:
     with pytest.raises(SystemExit):
         parse_args(
             args=[
@@ -221,7 +230,7 @@ def test_parse_args_no_group_id():
         )
 
 
-def test_parse_args_no_user_id():
+def test_parse_args_no_user_id() -> None:
     with pytest.raises(SystemExit):
         parse_args(
             args=[
@@ -236,7 +245,7 @@ def test_parse_args_no_user_id():
         )
 
 
-def test_parse_args_no_docker_project_root():
+def test_parse_args_no_docker_project_root() -> None:
     with pytest.raises(SystemExit):
         parse_args(
             args=[
@@ -251,7 +260,7 @@ def test_parse_args_no_docker_project_root():
         )
 
 
-def test_parse_args_no_non_docker_project_root():
+def test_parse_args_no_non_docker_project_root() -> None:
     with pytest.raises(SystemExit):
         parse_args(
             args=[
@@ -271,7 +280,7 @@ def test_run_main_success(
     docker_project_root: Path,
     local_uid: int,
     local_gid: int,
-):
+) -> None:
     args = Namespace(
         non_docker_project_root=mock_project_root,
         docker_project_root=docker_project_root,
@@ -304,7 +313,7 @@ def test_run_main_exception(
     docker_project_root: Path,
     local_uid: int,
     local_gid: int,
-):
+) -> None:
     all_task_list = list(CLI_ARG_TO_TASK.keys())
     args = Namespace(
         non_docker_project_root=mock_project_root,

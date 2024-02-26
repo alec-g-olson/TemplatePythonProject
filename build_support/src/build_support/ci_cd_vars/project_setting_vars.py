@@ -48,7 +48,7 @@ def get_project_version(project_root: Path) -> str:
     if not ALLOWED_VERSION_REGEX.match(version_str):
         msg = (
             "Project version in pyproject.toml must match the regex "
-            f"'{ALLOWED_VERSION_REGEX.pattern}', found '{version_str}'.",
+            f"'{ALLOWED_VERSION_REGEX.pattern}', found '{version_str}'."
         )
         raise ValueError(msg)
     return "v" + version_str
@@ -111,6 +111,6 @@ def get_pulumi_version(project_root: Path) -> str:
             return package["version"]
     msg = (
         "poetry.lock does not have a pulumi package installed, "
-        "or is no longer a toml format.",
+        "or is no longer a toml format."
     )
     raise ValueError(msg)

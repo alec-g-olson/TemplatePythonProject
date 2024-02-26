@@ -116,6 +116,15 @@ class Clean(TaskNode):
         run_process(
             args=["rm", "-rf", get_build_dir(project_root=self.docker_project_root)],
         )
+        run_process(
+            args=["rm", "-rf", self.docker_project_root.joinpath(".mypy_cache")],
+        )
+        run_process(
+            args=["rm", "-rf", self.docker_project_root.joinpath(".pytest_cache")],
+        )
+        run_process(
+            args=["rm", "-rf", self.docker_project_root.joinpath(".ruff_cache")],
+        )
         for docs_build_dir in [
             get_build_support_docs_build_dir(project_root=self.docker_project_root),
             get_pypi_docs_build_dir(project_root=self.docker_project_root),

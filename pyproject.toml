@@ -7,13 +7,6 @@ exclude_lines = [
   "pragma: no cover"
 ]
 
-[tool.isort]
-profile = "black"
-line_length = 88
-
-[tool.black]
-line_length = 88
-
 [tool.ruff]
 line-length = 88
 indent-width = 4
@@ -78,6 +71,8 @@ ignore = [
   "E2",
   "E3",
   "ANN10",
+  "COM812",
+  "ISC001",
   "PLC0415",
   "PLC1",
   "PLC2",
@@ -124,6 +119,9 @@ line-ending = "auto"
 docstring-code-format = true
 docstring-code-line-length = "dynamic"
 
+[tool.ruff.lint.per-file-ignores]
+"documentation_enforcement/sphinx_conf/conf.py" = ["INP001"]
+
 [tool.mypy]
 enable_error_code = ["ignore-without-code"]
 
@@ -156,11 +154,7 @@ tomlkit = "^0.12"
 optional = true
 
 [tool.poetry.group.dev.dependencies]
-autoflake = "^2.2"
-bandit = {extras = ["baseline", "toml"], version = "^1.7.7"}
-black = "^23.12"
-isort = "^5.13"
-flake8 = "^7.0"
+bandit = {extras = ["baseline", "toml"], version = "^1.7"}
 mypy = "^1.8"
 pydocstyle = "^6.3"
 pytest = "^7.4"

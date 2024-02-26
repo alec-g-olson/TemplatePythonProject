@@ -1,6 +1,8 @@
 from pathlib import Path
 
 import pytest
+from _pytest.fixtures import SubRequest
+
 from build_support.ci_cd_vars.file_and_dir_path_vars import (
     SubprojectContext,
     get_build_reports_dir,
@@ -30,21 +32,21 @@ from build_support.ci_cd_vars.python_vars import (
 )
 from build_support.dag_engine import concatenate_args
 
-pytest_contexts = [target for target in SubprojectContext]
+pytest_contexts = list(SubprojectContext)
 
 
 @pytest.fixture(params=pytest_contexts)
-def pytest_context(request) -> SubprojectContext:
+def pytest_context(request: SubRequest) -> SubprojectContext:
     return request.param
 
 
+@pytest.mark.usefixtures("mock_local_pyproject_toml_file")
 @pytest.mark.parametrize("report_extension", ["some_extension.ext", "nice_text.txt"])
 def test_get_pytest_report_name(
     mock_project_root: Path,
-    mock_local_pyproject_toml_file,
     pytest_context: SubprojectContext,
     report_extension: str,
-):
+) -> None:
     assert get_test_report_name(
         project_root=mock_project_root,
         test_context=pytest_context,
@@ -59,11 +61,11 @@ def test_get_pytest_report_name(
     )
 
 
+@pytest.mark.usefixtures("mock_local_pyproject_toml_file")
 def test_get_bandit_report_name(
     mock_project_root: Path,
-    mock_local_pyproject_toml_file,
     pytest_context: SubprojectContext,
-):
+) -> None:
     assert get_bandit_report_name(
         project_root=mock_project_root,
         test_context=pytest_context,
@@ -74,11 +76,11 @@ def test_get_bandit_report_name(
     )
 
 
+@pytest.mark.usefixtures("mock_local_pyproject_toml_file")
 def test_get_bandit_report_path(
     mock_project_root: Path,
-    mock_local_pyproject_toml_file,
     pytest_context: SubprojectContext,
-):
+) -> None:
     assert get_bandit_report_path(
         project_root=mock_project_root,
         test_context=pytest_context,
@@ -90,11 +92,11 @@ def test_get_bandit_report_path(
     )
 
 
+@pytest.mark.usefixtures("mock_local_pyproject_toml_file")
 def test_get_pytest_html_report_name(
     mock_project_root: Path,
-    mock_local_pyproject_toml_file,
     pytest_context: SubprojectContext,
-):
+) -> None:
     assert get_pytest_html_report_name(
         project_root=mock_project_root,
         test_context=pytest_context,
@@ -105,11 +107,11 @@ def test_get_pytest_html_report_name(
     )
 
 
+@pytest.mark.usefixtures("mock_local_pyproject_toml_file")
 def test_get_pytest_html_report_path(
     mock_project_root: Path,
-    mock_local_pyproject_toml_file,
     pytest_context: SubprojectContext,
-):
+) -> None:
     assert get_pytest_html_report_path(
         project_root=mock_project_root,
         test_context=pytest_context,
@@ -121,11 +123,11 @@ def test_get_pytest_html_report_path(
     )
 
 
+@pytest.mark.usefixtures("mock_local_pyproject_toml_file")
 def test_get_pytest_xml_report_name(
     mock_project_root: Path,
-    mock_local_pyproject_toml_file,
     pytest_context: SubprojectContext,
-):
+) -> None:
     assert get_pytest_xml_report_name(
         project_root=mock_project_root,
         test_context=pytest_context,
@@ -136,11 +138,11 @@ def test_get_pytest_xml_report_name(
     )
 
 
+@pytest.mark.usefixtures("mock_local_pyproject_toml_file")
 def test_get_pytest_xml_report_path(
     mock_project_root: Path,
-    mock_local_pyproject_toml_file,
     pytest_context: SubprojectContext,
-):
+) -> None:
     assert get_pytest_xml_report_path(
         project_root=mock_project_root,
         test_context=pytest_context,
@@ -152,11 +154,11 @@ def test_get_pytest_xml_report_path(
     )
 
 
+@pytest.mark.usefixtures("mock_local_pyproject_toml_file")
 def test_get_pytest_xml_coverage_report_name(
     mock_project_root: Path,
-    mock_local_pyproject_toml_file,
     pytest_context: SubprojectContext,
-):
+) -> None:
     assert get_pytest_xml_coverage_report_name(
         project_root=mock_project_root,
         test_context=pytest_context,
@@ -167,11 +169,11 @@ def test_get_pytest_xml_coverage_report_name(
     )
 
 
+@pytest.mark.usefixtures("mock_local_pyproject_toml_file")
 def test_get_pytest_xml_coverage_report_path(
     mock_project_root: Path,
-    mock_local_pyproject_toml_file,
     pytest_context: SubprojectContext,
-):
+) -> None:
     assert get_pytest_xml_coverage_report_path(
         project_root=mock_project_root,
         test_context=pytest_context,
@@ -183,11 +185,11 @@ def test_get_pytest_xml_coverage_report_path(
     )
 
 
+@pytest.mark.usefixtures("mock_local_pyproject_toml_file")
 def test_get_pytest_html_coverage_report_name(
     mock_project_root: Path,
-    mock_local_pyproject_toml_file,
     pytest_context: SubprojectContext,
-):
+) -> None:
     assert get_pytest_html_coverage_report_name(
         project_root=mock_project_root,
         test_context=pytest_context,
@@ -198,11 +200,11 @@ def test_get_pytest_html_coverage_report_name(
     )
 
 
+@pytest.mark.usefixtures("mock_local_pyproject_toml_file")
 def test_get_pytest_html_coverage_report_path(
     mock_project_root: Path,
-    mock_local_pyproject_toml_file,
     pytest_context: SubprojectContext,
-):
+) -> None:
     assert get_pytest_html_coverage_report_path(
         project_root=mock_project_root,
         test_context=pytest_context,
@@ -214,11 +216,11 @@ def test_get_pytest_html_coverage_report_path(
     )
 
 
+@pytest.mark.usefixtures("mock_local_pyproject_toml_file")
 def test_get_coverage_root(
     mock_project_root: Path,
-    mock_local_pyproject_toml_file,
     pytest_context: SubprojectContext,
-):
+) -> None:
     observed_coverage_root_dir = get_coverage_root(
         project_root=mock_project_root,
         test_context=pytest_context,
@@ -243,11 +245,11 @@ def test_get_coverage_root(
         assert observed_coverage_root_dir == mock_project_root
 
 
+@pytest.mark.usefixtures("mock_local_pyproject_toml_file")
 def test_get_pytest_report_args(
     mock_project_root: Path,
-    mock_local_pyproject_toml_file,
     pytest_context: SubprojectContext,
-):
+) -> None:
     coverage_xml = get_pytest_xml_coverage_report_path(
         project_root=mock_project_root,
         test_context=pytest_context,

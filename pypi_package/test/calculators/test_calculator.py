@@ -26,19 +26,23 @@ calculate_results_test_cases = [
 ]
 
 
-@pytest.mark.parametrize("input_values, result", calculate_results_test_cases)
-def test_calculate_result(input_values, result):
-    assert calculate_result(input_values) == result
+@pytest.mark.parametrize(("input_values", "result"), calculate_results_test_cases)
+def test_calculate_result(
+    input_values: CalculatorInput, result: CalculatorOutput
+) -> None:
+    assert calculate_result(args=input_values) == result
 
 
-def test_calculate_result_all_types_covered():
+def test_calculate_result_all_types_covered() -> None:
     assert len(
         {input_value[0].type_of_calc for input_value in calculate_results_test_cases}
     ) == len(CalculationType)
 
 
-def test_divide_by_zero():
+def test_divide_by_zero() -> None:
     with pytest.raises(ZeroDivisionError):
         calculate_result(
-            CalculatorInput(type_of_calc=CalculationType.DIVIDE, value1=199, value2=0)
+            args=CalculatorInput(
+                type_of_calc=CalculationType.DIVIDE, value1=199, value2=0
+            )
         )

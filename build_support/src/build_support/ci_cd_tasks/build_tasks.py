@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from build_support.ci_cd_tasks.env_setup_tasks import BuildProdEnvironment
-from build_support.ci_cd_tasks.test_tasks import TestPypi, TestPythonStyle
+from build_support.ci_cd_tasks.validation_tasks import ValidatePypi, ValidatePythonStyle
 from build_support.ci_cd_vars.docker_vars import (
     DockerTarget,
     get_docker_command_for_image,
@@ -70,13 +70,13 @@ class BuildPypi(TaskNode):
             list[TaskNode]: A list of tasks required to build Pypi package.
         """
         return [
-            TestPypi(
+            ValidatePypi(
                 non_docker_project_root=self.non_docker_project_root,
                 docker_project_root=self.docker_project_root,
                 local_user_uid=self.local_user_uid,
                 local_user_gid=self.local_user_gid,
             ),
-            TestPythonStyle(
+            ValidatePythonStyle(
                 non_docker_project_root=self.non_docker_project_root,
                 docker_project_root=self.docker_project_root,
                 local_user_uid=self.local_user_uid,
@@ -217,7 +217,7 @@ class BuildDocs(TaskNode):
             list[TaskNode]: A list of tasks required to build documentation.
         """
         return [
-            TestPythonStyle(
+            ValidatePythonStyle(
                 non_docker_project_root=self.non_docker_project_root,
                 docker_project_root=self.docker_project_root,
                 local_user_uid=self.local_user_uid,

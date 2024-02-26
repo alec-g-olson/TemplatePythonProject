@@ -4,7 +4,6 @@
 from build_support.ci_cd_tasks.env_setup_tasks import BuildDevEnvironment, GetGitInfo
 from build_support.ci_cd_vars.docker_vars import (
     DockerTarget,
-    get_all_python_folders,
     get_base_docker_command_for_image,
     get_build_support_src_dir,
     get_docker_command_for_image,
@@ -15,7 +14,7 @@ from build_support.ci_cd_vars.docker_vars import (
 )
 from build_support.ci_cd_vars.file_and_dir_path_vars import (
     SubprojectContext,
-    get_all_src_folders,
+    get_all_non_test_folders,
     get_all_test_folders,
     get_build_support_src_and_test,
     get_build_support_test_dir,
@@ -30,7 +29,7 @@ from build_support.ci_cd_vars.python_vars import (
 from build_support.dag_engine import TaskNode, concatenate_args, run_process
 
 
-class TestAll(TaskNode):
+class ValidateAll(TaskNode):
     """A collective test task used to test all elements of the project."""
 
     def required_tasks(self) -> list[TaskNode]:
@@ -40,19 +39,19 @@ class TestAll(TaskNode):
             list[TaskNode]: A list of all build tasks.
         """
         return [
-            TestPypi(
+            ValidatePypi(
                 non_docker_project_root=self.non_docker_project_root,
                 docker_project_root=self.docker_project_root,
                 local_user_uid=self.local_user_uid,
                 local_user_gid=self.local_user_gid,
             ),
-            TestBuildSupport(
+            ValidateBuildSupport(
                 non_docker_project_root=self.non_docker_project_root,
                 docker_project_root=self.docker_project_root,
                 local_user_uid=self.local_user_uid,
                 local_user_gid=self.local_user_gid,
             ),
-            TestPythonStyle(
+            ValidatePythonStyle(
                 non_docker_project_root=self.non_docker_project_root,
                 docker_project_root=self.docker_project_root,
                 local_user_uid=self.local_user_uid,
@@ -70,7 +69,7 @@ class TestAll(TaskNode):
         """
 
 
-class TestBuildSupport(TaskNode):
+class ValidateBuildSupport(TaskNode):
     """Runs tests to ensure all elements of the build pipeline are passing tests."""
 
     def required_tasks(self) -> list[TaskNode]:
@@ -124,7 +123,7 @@ class TestBuildSupport(TaskNode):
         )
 
 
-class TestPythonStyle(TaskNode):
+class ValidatePythonStyle(TaskNode):
     """Task enforcing stylistic checks of python code and project version."""
 
     def required_tasks(self) -> list[TaskNode]:
@@ -162,9 +161,9 @@ class TestPythonStyle(TaskNode):
                         docker_project_root=self.docker_project_root,
                         target_image=DockerTarget.DEV,
                     ),
-                    "isort",
-                    "--check-only",
-                    get_all_python_folders(project_root=self.docker_project_root),
+                    "ruff",
+                    "check",
+                    get_all_non_test_folders(project_root=self.docker_project_root),
                 ],
             ),
         )
@@ -176,35 +175,10 @@ class TestPythonStyle(TaskNode):
                         docker_project_root=self.docker_project_root,
                         target_image=DockerTarget.DEV,
                     ),
-                    "black",
-                    "--check",
-                    get_all_python_folders(project_root=self.docker_project_root),
-                ],
-            ),
-        )
-        run_process(
-            args=concatenate_args(
-                args=[
-                    get_docker_command_for_image(
-                        non_docker_project_root=self.non_docker_project_root,
-                        docker_project_root=self.docker_project_root,
-                        target_image=DockerTarget.DEV,
-                    ),
-                    "pydocstyle",
-                    get_all_src_folders(project_root=self.docker_project_root),
-                ],
-            ),
-        )
-        run_process(
-            args=concatenate_args(
-                args=[
-                    get_docker_command_for_image(
-                        non_docker_project_root=self.non_docker_project_root,
-                        docker_project_root=self.docker_project_root,
-                        target_image=DockerTarget.DEV,
-                    ),
-                    "pydocstyle",
-                    "--add-ignore=D100,D104",
+                    "ruff",
+                    "check",
+                    "--ignore",
+                    "D",
                     get_all_test_folders(project_root=self.docker_project_root),
                 ],
             ),
@@ -225,19 +199,6 @@ class TestPythonStyle(TaskNode):
                         test_context=SubprojectContext.DOCUMENTATION_ENFORCEMENT,
                     ),
                     get_documentation_tests_dir(project_root=self.docker_project_root),
-                ],
-            ),
-        )
-        run_process(
-            args=concatenate_args(
-                args=[
-                    get_docker_command_for_image(
-                        non_docker_project_root=self.non_docker_project_root,
-                        docker_project_root=self.docker_project_root,
-                        target_image=DockerTarget.DEV,
-                    ),
-                    "flake8",
-                    get_all_python_folders(project_root=self.docker_project_root),
                 ],
             ),
         )
@@ -352,7 +313,7 @@ class TestPythonStyle(TaskNode):
         )
 
 
-class TestPypi(TaskNode):
+class ValidatePypi(TaskNode):
     """Task for testing PyPi package."""
 
     def required_tasks(self) -> list[TaskNode]:

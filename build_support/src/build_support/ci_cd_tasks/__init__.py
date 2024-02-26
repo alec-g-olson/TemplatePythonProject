@@ -13,8 +13,10 @@ these tasks by domain specific functions, but this lead to circular dependencies
 Modules:
     | env_setup_tasks.py: Tasks that setup environments for CI/CD should go here.
         e.g. Building dev docker containers, cleaning, getting git status, etc...
-    | test_tasks.py: Testing tasks, these should only depend on env setup tasks.
-        Testing should not be dependent on linting.
+    | validation_tasks.py: Testing tasks, these should only depend on env setup tasks.
+        Testing should not be dependent on linting.  We call the file "validation"
+        and name the tasks with the pattern "ValidateXxxx" to avoid pytest error
+        messages.
     | lint_tasks.py: Linting tasks.  It's okay for some of these to depend on some
         tests, because no tests should depend on linting.
     | build_tasks.py: Tasks that build artifacts that will be pushed.  If a docker

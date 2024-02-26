@@ -558,6 +558,22 @@ def get_all_test_folders(project_root: Path) -> list[str]:
     )
 
 
+def get_all_non_test_folders(project_root: Path) -> list[str]:
+    """Gets all the non-test python folders in the project.
+
+    Args:
+        project_root (Path): Path to this project's root.
+
+    Returns:
+        list[str]: Path to all the non-test pytho folders in the project.
+    """
+    return [
+        path
+        for path in get_all_python_folders(project_root=project_root)
+        if path not in get_all_test_folders(project_root=project_root)
+    ]
+
+
 ########################################
 # Enum for specifying a sub-project
 ########################################

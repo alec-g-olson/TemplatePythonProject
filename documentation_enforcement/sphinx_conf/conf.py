@@ -1,3 +1,5 @@
+"""A configuration file for sphinx doc generation."""
+
 html_theme = "sphinx_rtd_theme"
 
 extensions = [
