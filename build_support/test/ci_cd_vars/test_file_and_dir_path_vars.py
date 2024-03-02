@@ -26,7 +26,6 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_pypi_test_dir,
     get_pyproject_toml,
     get_sphinx_conf_dir,
-    get_temp_dist_dir,
     maybe_build_dir,
 )
 from build_support.dag_engine import concatenate_args
@@ -166,17 +165,6 @@ def test_get_git_info_yaml(mock_project_root: Path) -> None:
     assert get_git_info_yaml(project_root=mock_project_root) == get_build_dir(
         project_root=mock_project_root,
     ).joinpath("git_info.yaml")
-
-
-def test_get_temp_dist_dir(mock_project_root: Path) -> None:
-    expected_temp_dist_dir = mock_project_root.joinpath("dist")
-    assert not expected_temp_dist_dir.exists()
-    assert get_temp_dist_dir(project_root=mock_project_root) == expected_temp_dist_dir
-    assert expected_temp_dist_dir.exists()
-
-    assert get_temp_dist_dir(
-        project_root=mock_project_root,
-    ) == mock_project_root.joinpath("dist")
 
 
 def test_get_all_non_pulumi_python_folders(mock_project_root: Path) -> None:
