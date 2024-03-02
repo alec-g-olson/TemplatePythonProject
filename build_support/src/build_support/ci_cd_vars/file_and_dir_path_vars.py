@@ -469,18 +469,6 @@ def get_git_info_yaml(project_root: Path) -> Path:
     return get_build_dir(project_root=project_root).joinpath("git_info.yaml")
 
 
-def get_temp_dist_dir(project_root: Path) -> Path:
-    """Gets the temporary dist dir for the project.
-
-    Args:
-        project_root (Path): Path to this project's root.
-
-    Returns:
-        Path: Path to temporary dist dir for the project.
-    """
-    return maybe_build_dir(dir_to_build=project_root.joinpath("dist"))
-
-
 ########################################
 # Files and folder collections that span domains
 ########################################

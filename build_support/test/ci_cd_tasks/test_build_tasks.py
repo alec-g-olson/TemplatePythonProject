@@ -24,7 +24,6 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_pypi_docs_src_dir,
     get_pypi_src_dir,
     get_sphinx_conf_dir,
-    get_temp_dist_dir,
 )
 from build_support.ci_cd_vars.project_setting_vars import (
     get_project_name,
@@ -138,17 +137,7 @@ def test_run_build_pypi(
                 ),
                 "poetry",
                 "build",
-            ],
-        )
-        mv_dist_to_final_location_args = concatenate_args(
-            args=[
-                get_docker_command_for_image(
-                    non_docker_project_root=mock_project_root,
-                    docker_project_root=docker_project_root,
-                    target_image=DockerTarget.PROD,
-                ),
-                "mv",
-                get_temp_dist_dir(project_root=docker_project_root),
+                "--output",
                 get_dist_dir(project_root=docker_project_root),
             ],
         )
@@ -161,7 +150,6 @@ def test_run_build_pypi(
         expected_run_process_calls = [
             call(args=clean_dist_args),
             call(args=poetry_build_args),
-            call(args=mv_dist_to_final_location_args),
         ]
         assert run_process_mock.call_count == len(expected_run_process_calls)
         run_process_mock.assert_has_calls(calls=expected_run_process_calls)

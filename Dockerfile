@@ -3,12 +3,12 @@ FROM python:3.12.2 AS base
 # [tool.poetry.dependencies]
 
 # make sure to update build.system.requries poetry version in pyproject.toml
-ENV POETRY_VERSION="1.7.1"
+ENV POETRY_VERSION="1.8.1"
 ENV POETRY_HOME="/opt/poetry"
 
 ENV PATH="$POETRY_HOME/bin:$PATH"
 
-RUN pip install --upgrade pip==23.3.2
+RUN pip install --upgrade pip==24.0
 RUN pip install poetry==$POETRY_VERSION
 
 COPY poetry.lock poetry.lock

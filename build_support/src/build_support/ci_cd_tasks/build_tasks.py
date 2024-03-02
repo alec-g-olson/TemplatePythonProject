@@ -17,7 +17,6 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_pypi_docs_src_dir,
     get_pypi_src_dir,
     get_sphinx_conf_dir,
-    get_temp_dist_dir,
 )
 from build_support.ci_cd_vars.project_setting_vars import (
     get_project_name,
@@ -120,22 +119,7 @@ class BuildPypi(TaskNode):
                     ),
                     "poetry",
                     "build",
-                ],
-            ),
-        )
-        # TODO @Alec: clean this up once a new version of poetry supporting "-o" is
-        #  released
-        # https://github.com/alec-g-olson/TemplatePythonProject/issues/64
-        run_process(
-            args=concatenate_args(
-                args=[
-                    get_docker_command_for_image(
-                        non_docker_project_root=self.non_docker_project_root,
-                        docker_project_root=self.docker_project_root,
-                        target_image=DockerTarget.PROD,
-                    ),
-                    "mv",
-                    get_temp_dist_dir(project_root=self.docker_project_root),
+                    "--output",
                     get_dist_dir(project_root=self.docker_project_root),
                 ],
             ),
