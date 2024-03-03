@@ -1,7 +1,7 @@
 """Should hold all tasks that run tests, both on artifacts and style tests."""
 
 
-from build_support.ci_cd_tasks.env_setup_tasks import BuildDevEnvironment, GetGitInfo
+from build_support.ci_cd_tasks.env_setup_tasks import GetGitInfo, SetupDevEnvironment
 from build_support.ci_cd_vars.docker_vars import (
     DockerTarget,
     get_base_docker_command_for_image,
@@ -86,7 +86,7 @@ class ValidateBuildSupport(TaskNode):
                 local_user_uid=self.local_user_uid,
                 local_user_gid=self.local_user_gid,
             ),
-            BuildDevEnvironment(
+            SetupDevEnvironment(
                 non_docker_project_root=self.non_docker_project_root,
                 docker_project_root=self.docker_project_root,
                 local_user_uid=self.local_user_uid,
@@ -139,7 +139,7 @@ class ValidatePythonStyle(TaskNode):
                 local_user_uid=self.local_user_uid,
                 local_user_gid=self.local_user_gid,
             ),
-            BuildDevEnvironment(
+            SetupDevEnvironment(
                 non_docker_project_root=self.non_docker_project_root,
                 docker_project_root=self.docker_project_root,
                 local_user_uid=self.local_user_uid,
@@ -323,7 +323,7 @@ class ValidatePypi(TaskNode):
             list[TaskNode]: A list of tasks required to test the pypi package.
         """
         return [
-            BuildDevEnvironment(
+            SetupDevEnvironment(
                 non_docker_project_root=self.non_docker_project_root,
                 docker_project_root=self.docker_project_root,
                 local_user_uid=self.local_user_uid,

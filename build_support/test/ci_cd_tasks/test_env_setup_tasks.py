@@ -9,12 +9,12 @@ from conftest import mock_project_versions
 from pydantic import ValidationError
 
 from build_support.ci_cd_tasks.env_setup_tasks import (
-    BuildDevEnvironment,
-    BuildProdEnvironment,
-    BuildPulumiEnvironment,
     Clean,
     GetGitInfo,
     GitInfo,
+    SetupDevEnvironment,
+    SetupProdEnvironment,
+    SetupPulumiEnvironment,
 )
 from build_support.ci_cd_vars.docker_vars import DockerTarget, get_docker_build_command
 from build_support.ci_cd_vars.file_and_dir_path_vars import (
@@ -35,7 +35,7 @@ def test_build_dev_env_requires(
     local_gid: int,
 ) -> None:
     assert (
-        BuildDevEnvironment(
+        SetupDevEnvironment(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
             local_user_uid=local_uid,
@@ -59,7 +59,7 @@ def test_run_build_dev_env(
             project_root=docker_project_root,
             target_image=DockerTarget.DEV,
         )
-        BuildDevEnvironment(
+        SetupDevEnvironment(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
             local_user_uid=local_uid,
@@ -76,7 +76,7 @@ def test_build_prod_env_requires(
     local_gid: int,
 ) -> None:
     assert (
-        BuildProdEnvironment(
+        SetupProdEnvironment(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
             local_user_uid=local_uid,
@@ -100,7 +100,7 @@ def test_run_build_prod_env(
             project_root=docker_project_root,
             target_image=DockerTarget.PROD,
         )
-        BuildProdEnvironment(
+        SetupProdEnvironment(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
             local_user_uid=local_uid,
@@ -117,7 +117,7 @@ def test_build_pulumi_env_requires(
     local_gid: int,
 ) -> None:
     assert (
-        BuildPulumiEnvironment(
+        SetupPulumiEnvironment(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
             local_user_uid=local_uid,
@@ -147,7 +147,7 @@ def test_run_build_pulumi_env(
                 + get_pulumi_version(project_root=docker_project_root),
             },
         )
-        BuildPulumiEnvironment(
+        SetupPulumiEnvironment(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
             local_user_uid=local_uid,

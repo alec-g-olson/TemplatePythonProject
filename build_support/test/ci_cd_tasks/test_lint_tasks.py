@@ -3,7 +3,7 @@ from unittest.mock import call, patch
 
 import pytest
 
-from build_support.ci_cd_tasks.env_setup_tasks import BuildDevEnvironment
+from build_support.ci_cd_tasks.env_setup_tasks import SetupDevEnvironment
 from build_support.ci_cd_tasks.lint_tasks import (
     ApplyRuffFixUnsafe,
     Lint,
@@ -42,7 +42,7 @@ def lint_task(
 
 def test_lint_requires(lint_task: Lint) -> None:
     assert lint_task.required_tasks() == [
-        BuildDevEnvironment(
+        SetupDevEnvironment(
             non_docker_project_root=lint_task.non_docker_project_root,
             docker_project_root=lint_task.docker_project_root,
             local_user_uid=lint_task.local_user_uid,

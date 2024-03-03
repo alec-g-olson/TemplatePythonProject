@@ -3,7 +3,7 @@ from unittest.mock import call, patch
 
 import pytest
 
-from build_support.ci_cd_tasks.env_setup_tasks import BuildDevEnvironment, GetGitInfo
+from build_support.ci_cd_tasks.env_setup_tasks import GetGitInfo, SetupDevEnvironment
 from build_support.ci_cd_tasks.validation_tasks import (
     ValidateAll,
     ValidateBuildSupport,
@@ -108,7 +108,7 @@ def test_validate_build_support_requires(
             local_user_uid=validate_build_support_task.local_user_uid,
             local_user_gid=validate_build_support_task.local_user_gid,
         ),
-        BuildDevEnvironment(
+        SetupDevEnvironment(
             non_docker_project_root=validate_build_support_task.non_docker_project_root,
             docker_project_root=validate_build_support_task.docker_project_root,
             local_user_uid=validate_build_support_task.local_user_uid,
@@ -173,7 +173,7 @@ def test_validate_python_style_requires(
             local_user_uid=validate_python_style_task.local_user_uid,
             local_user_gid=validate_python_style_task.local_user_gid,
         ),
-        BuildDevEnvironment(
+        SetupDevEnvironment(
             non_docker_project_root=validate_python_style_task.non_docker_project_root,
             docker_project_root=validate_python_style_task.docker_project_root,
             local_user_uid=validate_python_style_task.local_user_uid,
@@ -365,7 +365,7 @@ def validate_pypi_task(
 def test_validate_pypi_requires(validate_pypi_task: ValidatePypi) -> None:
     task = validate_pypi_task
     assert task.required_tasks() == [
-        BuildDevEnvironment(
+        SetupDevEnvironment(
             non_docker_project_root=task.non_docker_project_root,
             docker_project_root=task.docker_project_root,
             local_user_uid=task.local_user_uid,

@@ -5,52 +5,139 @@
 This project exists to give me and anyone else who would like to use it a template to
 work off of that has a decent testing pipeline that is platform independent.
 
-The basic philosophy of this repo is that every part of the CI/CD pipeline should be 
-controlled in the [Makefile](Makefile), with all relevant steps running in Docker with 
-well versioned requirements. This means that anyone on any system should be able to run 
-`make test`, or `make push` and have the same environment and execution steps locally or
-on whatever CI/CD service you are working with.
+This is project licensed with The Unlicense, which puts this project into the public
+domain.  Anyone can take this code and do anything they want for profit or personal use
+with no need for attribution or requirement to keep your projects open source.  Unless
+you choose to use The Unlicense for your new project, only the code that came from this
+template will be part of the public domain.
 
-This is licensed with the MIT No Attribution License, which allows anyone to take the 
-code and do whatever they want with no need for attribution or requirement to keep your 
-projects open source.
+### Goals of Template Project
+
+The platonic ideal of a well controlled project is that you should be able to run a 
+1-line command to either build your entire system from scratch or upgrade to a new 
+version.  The developers of this template project also believe that unless development
+practices are enforced by code they are not enforced.  This template project strives to
+provide a well organized set of practically applicable patterns for scalable project
+development in a completely controlled environment.
+
+Running tests and deployments should be as simple as `make test` or `make push`
+regardless of whether you are using a personal machine or a service account running in
+a cloud VM.
+
+#### Enforcement of Development Practices
+
+The enforcement of development practices is done in the CI/CD pipeline and controlled in
+the [build_support](build_support/src/build_support) package.  Any practices the
+development team wants to enforce should be added into the tasks implemented here, or
+in another location that is called and run by a task in the CI/CD pipeline.  For example
+the ValidatePythonStyle Task in the 
+[validation_tasks.py](build_support/src/build_support/ci_cd_tasks/validation_tasks.py)
+module makes a call that runs the tests in the 
+[process_and_style_enforcement](process_and_style_enforcement) directory.
+
+#### Enforcement of Development and Production Environments
+
+This project goes to great lengths to ensure that all commands are run in controlled
+environments.  This is done by running as many commands as possible in docker 
+containers.  The build container is used to run the build pipeline, and makes many
+calls that execute commands in the dev, pulumi, or prod containers.  When making these
+calls this project uses a Docker outside of Docker (DooD) strategy.
+
+This project has a [Makefile](Makefile) that exists to make executing
+CI/CD tasks and getting local variables (such as the local filepath to the project) 
+easy.  There are some tasks that have to be executed on the local system, such as
+building the build container, and in these situations these tasks should be added as
+commands within the makefile.
+
+### Organization of Template Project
+
+For the sake of centralized enforcement this template project is structured as a 
+monorepo.  Once you have created your own project from this template you can break it up
+as you see fit.  There are 4 top-level folders that are worth discussing:
+
+- [build_support](build_support)
+  - Contains all the tasks that can be run as part of CI/CD or development
+  - [execute_build_steps.py](build_support/src/build_support/execute_build_steps.py)
+  Contains the "main" that should be called within the build container to run tasks.
+  - [report_build_var.py](build_support/src/build_support/report_build_var.py)
+  Contains the "main" that should be called within the build container to report 
+  variables.
+- [process_and_style_enforcement](process_and_style_enforcement)
+  - The tests that are run as part of the ValidatePythonStyle task.
+- [pulumi](pulumi)
+  - The pulumi code that sets up and manages cloud resources and deployments.
+- [pypi_package](pypi_package)
+  - The pypi package that will contain our business logic and be deployed to production
+  environments. 
 
 ### Scope of Template Project
 
-The platonic ideal of a project with well functioning CI/CD is that if your entire 
-environment is completely destroyed you should be able to run a 1 line command and have 
-everything rebuilt as it was.  This template project strives to give as much of that 
-functionality out of the box as possible.
+This project wants to provide a template project that is useful for start-ups or other
+small organizations, so they can start from a well managed and controlled codebase.
+Hopefully this will prevent the painful process of growing to the point that controls
+are needed and then having to enforce controls and practices onto an unwieldy codebase.
 
-#### Services to Control With CI/CD
- - API (Not implemented)
- - Compute engine (Not implemented)
+In order to achieve this, this template project must provide practically useful software
+patterns that can be easily extended to meet business needs.
+
+#### Architecture Layers
+
+The all implementations will be dictated by the general design philosophy we take.  We
+have tried to balance general applicability with useful snippets of example code.  The
+following 3-layer architecture will be managed as best we can in 
+[pypi_package](pypi_package) and implemented across all production environments.
+
+ - API Layer (Not implemented)
+ - Engine Layer (Not implemented)
    - Fast tasks - Less than 10ms in API layer
    - Medium tasks - Less than 2 minutes but more than 10ms (Not implemented)
    - Long tasks - More than 2 minutes (Not implemented)
- - Database storage (Not implemented)
-   - Structured - e.g. mySQL (Not implemented)
-   - Semi-structured - e.g. PostgreSQL (Not implemented)
-   - Unstructured - e.g. MongoDB (Not implemented)
+ - Persistence Layer (Not implemented)
+   - Files - e.g. (GCS, S3, etc...)
+   - Databases
+     - Structured - e.g. mySQL
+     - Semi-structured - e.g. PostgreSQL
+     - Unstructured - e.g. MongoDB
  
 #### Environments this Template Strives to Support
+
+Below is a list of environments that we hope to support:
+
  - Local Deployment to Docker Compose (Not implemented)
  - AWS (Not implemented)
  - GCP (Not implemented)
  - Azure (Not implemented)
 
 #### Additional Control this Template Tries to Provide
+
+We want to make it so that this project can manage the CI/CD rules on whatever platform
+the team is developing on.  So we strive to make it so that when a new project is set up
+the source code management is also set up and controlled.
+
  - GitHub setup (Not implemented)
+ - Azure DevOps setup (Not implemented)
+ - Atlassian setup (Not implemented - no Pulumi support)
  - User account management including permissions (Not implemented)
 
 ### Creating a New Project From This Template
 
 In order to create a new project from this template first modify the fields in the 
 [project_settings.yaml](build_support/new_project_settings.yaml) to what ever values you
-need and then run `make make_new_project`.  This will do the following:
- - PyPi:
-   - Rename the [pyproject.toml](pyproject.toml) project name.
+need and then run `make make_new_project`.  This will change the following files and 
+folders in the ways listed below:
+
+ - LICENSE
+   - Use the specified license template to make a new license
+   - Use the provided organization name and email (if applicable)
+   - Use the current year for copyright (if applicable)
+ - pypi_package:
+   - Change the name of the package in the src folder.
+ - [pyproject.toml](pyproject.toml):
+   - Change the project name.
    - Reset the version number of this project to `0.0.0`.
+   - Change the license to the specified license.
+   - Update the project Authors.
+   - Update the name of the folder to include when building a pypi package.
 
 ## Primary Services
 
@@ -73,10 +160,9 @@ To get started with this repository the developer must install the following:
   
   - [Docker](https://docs.docker.com/)
   - [Make](https://www.gnu.org/software/make/)
-  - [Python 3.12](https://www.python.org/)
 
-To ensure that you have installed all components correctly run `make lint test` from the
-projects root directory.
+To ensure that you have installed all components correctly run `make lint` from the
+project's root directory.
 
 ## Development Environment Setup
 
@@ -90,7 +176,7 @@ If you prefer to use the PyCharm IDE use the following instructions to get setup
 
 #### PyCharm: Setting the Python Interpreter
 
-In the root directory for this project run `make build_dev_environment` to build the 
+In the root directory for this project run `make setup_dev_env` to build the 
 docker image with the correct interpreter.  Once you have done this go to PyCharm's 
 Interpreter Settings and navigate to "Add Interpreter > On Docker". Select "Pull or use 
 existing" and fill the "image tag" field with `template_python_project:dev`.  Click
@@ -98,22 +184,22 @@ existing" and fill the "image tag" field with `template_python_project:dev`.  Cl
 selected on the left with `/usr/local/bin/python3`, and finally click "Create".  Then 
 hit "Apply" on PyCharm's Interpreter Settings page and enjoy!
 
-Note: The image name is pulled from [pyproject.toml](pyproject.toml).  If you change 
-`template_python_project` to something else you must build a new image and reset the 
-interpreter.  You'll also need to update this README.
-
 #### PyCharm: Setting Src and Test Folders
 
-There are two source folders in this project, [pypi_package/src](pypi_package/src) and 
-[build_support/src](build_support/src).  For each of them you need to right-click on the
+For each of the following source folders you need to right-click on the
 folder in the project view. There will be a `Mark Directory as` option.  Hover over that
 and then select `Sources Root`.
 
-There are three test folders in this project, [pypi_package/test](pypi_package/test), 
-[documentation_enforcement/test](documentation_enforcement/test), and 
-[build_support/test](build_support/test).  For each of them you will repeat the process 
-described for the source folders, but instead of selecting `Sources Root`, you
-will mark these as `Test Sources Root`.
+- [build_support/src](build_support/src)
+- [pulumi/src](pulumi/src)
+- [pypi_package/src](pypi_package/src)
+
+For each of the following test folders you will repeat the process described for the 
+source folders, but instead of selecting `Sources Root`, you will mark these as `Test Sources Root`.
+
+- [build_support/test](build_support/test)
+- [process_and_style_enforcement/test](process_and_style_enforcement/test)
+- [pypi_package/test](pypi_package/test)
 
 #### PyCharm: Configuring PyCharm to Use Pytest
 
@@ -148,103 +234,101 @@ correctly picking up its interpreter, and that PyCharm is using pytest.
 
 If you prefer to use the VS Code IDE use the following instructions to get setup.
 
-#### VS Code: Setting the Python Interpreter
+[Ticket for Adding VS Code Setup Instructions](https://github.com/alec-g-olson/TemplatePythonProject/issues/68)
 
-Someone else can add instructions here.
+# Working in this Repository
 
-#### VS Code: Setting Src and Test Folders
+When working in this repository make sure that as many instructions as possible are
+recorded in [build_support](build_support) tasks, and if that isn't possible we must
+record them in a make command.  Because there is a great deal of convince in using make
+commands instead of requiring local environment values (such as path to the project), 
+it is useful for all instructions to run through make commands. 
 
-Someone else can add instructions here.
+The following commands are a subset of the commands available that are particularly
+useful to new developers working in this repo.
 
-#### VS Code: Configuring VS Code to Use Pytest
-
-Someone else can add instructions here.
-
-#### VS Code: Checking Your Work by Running the Tests
-
-Someone else can add instructions here.
-
-## Working in this Repository
-
-When working in this repository make sure that everything you do is ultimately recorded
-in a make command.  Our goal is to have the test pipelines be a light script wrapping 
-`make test` for whatever CI/CD environment we run in, and our deployment pipelines to be
-wrapping `make push`.  These commands should run in the same environments locally, 
-during test and deployment, and in the cloud.  Put another way, if a new dev clones this
-repo, installs the technologies listed in the "Getting Started", and runs `make test` it
-should work.  And the only thing that should fail if they run `make push` is our check 
-that the version they have has already been pushed.
-
-### Selected Build Commands
+## Selected Build Commands
 | Command                      | Description                                                     |
 |------------------------------|-----------------------------------------------------------------|
 | `make clean`                 | Clears the build folder, removing all intermediate build files. |
-| `make build_dev_environment` | Builds the docker with the dev environment.                     |
+| `make open_dev_docker_shell` | Opens a shell within a dev docker container.                    |
+| `make setup_dev_env`         | Builds the docker with the dev environment.                     |
 | `make lint`                  | Runs the lint commands on this repo.                            |
 | `make test`                  | Runs                                                            |
-| `make build_artifact`        | Builds the artifact produced by this repo.                      |
-| `make push`  TBD             | Pushes the artifact produced by this repo to prod.              |
+| `make build`                 | Builds the artifacts produced by this repo.                     |
+| `make push`  TBD             | Pushes the artifacts produced by this repo to prod.             |
 
-### Tools Enforcing Dev Standards
+## Tools Enforcing Dev Standards
+ - [Poetry](#poetry)
  - [PyTest and PyTest-Cov](#pytest-and-pytest-cov)
- - [iSort](#isort)
- - [Black](#black)
- - [PyDocStyle](#pydocstyle)
- - [Flake8](#flake8)
+ - [Ruff](#ruff)
+ - [Process and Style Enforcement](#process-and-style-enforcement)
  - [MyPy](#mypy)
+ - [Bandit](#bandit)
 
-#### PyTest and PyTest-Cov
+### Poetry
+
+[Poetry](https://python-poetry.org) is a tool used for managing dependencies and
+building/publishing packages.
+
+The dependencies are listed in [pyproject.toml](pyproject.toml), and should not be
+edited unless you are in a shell that was opened with `make open_dev_docker_shell`.
+Once a shell has been opened you can edit the requirements.  Once you are done editing
+you need to run `poetry lock --no-update` in order for the lockfile to be synced with
+the new requirements.  Once this command executes without error, exits from the shell.
+
+Anytime you run a poetry process outside the CI/CD pipeline (`update`, `add`, etc..)
+you should follow a similar pattern of first opening a dev shell and then closing the
+shell when you are done.
+
+### PyTest and PyTest-Cov
 We enforce 100% coverage of files in the src and test folders in this repo.  If there is
 a line, branch, or function that is going to be too difficult to test you can add a 
 `#pragma: no cover` comment on that line, and it will be ignored.
 
-#### iSort
+### Ruff
 
-[iSort](https://pycqa.github.io/isort/) is used to enforce consistent import statement 
-order.  This cedes all authority on the "correct" way to order import statements to 
-iSort so that there are not arguments between devs.
+[Ruff](https://docs.astral.sh/ruff/) is used by this project as both a formatter and a
+linter.
 
-We enforce import sorting on all src, test, and build_support python files.
+When linting we run all stabilized rules that are compatible with the Ruff Formatter.
+Because of this we want to pin the Ruff version more specifically than we pin most
+packages we manage in poetry.
 
-#### Black
+Ruff is a drop in replacement for:
+- isort
+- black
+- pydocstyle
+- pyupgrade
+- flake8
+- autoflake
 
-Similar to how we have given authority over import order to iSort, we have given 
-authority over code formatting to [Black](https://black.readthedocs.io/).
+### Process and Style Enforcement
 
-We enforce import sorting on all src, test, and build_support python files.
+[process_and_style_enforcement/test](process_and_style_enforcement/test) contains a number of
+tests that we have implemented to enforce standards for which no off the shelf tools
+exist.  Additional style enforcement without off the shelf tooling should go here.
 
-#### PyDocStyle
-
-[PyDocStyle](https://www.pydocstyle.org/) enforces documentation.  Requires devs to 
-write a docstring for every function, class, module, etc... and enforces some style 
-guides on those docstrings.
-
-If we can find a way to enforce documenting the inputs and return values of functions
-I'd love to add it.
-
-We only enforce docstrings on python files in the src folder.
-
-#### Flake8
-
-[flake8](https://flake8.pycqa.org/) enforces some basic code patterns and style.
-
-We enforce flake8 requirements on all src, test, and build_support python files.
-
-#### MyPy
+### MyPy
 
 [MyPy](https://mypy.readthedocs.io/) enforces typing.
 
 We enforce typing on all src, test, and build_support python files.
 
-## Technologies and Frameworks
+### Bandit
+
+[Bandit](https://bandit.readthedocs.io/en/latest/) is a static analysis tool that
+identifies possible security threats.
+
+# Technologies and Frameworks
 
 Summarize at a high level the technologies and frameworks used.
 
-### Major Technologies
+## Major Technologies
 
 Explain the major technologies is more detail.  Add headers as needed.
 
-### Other tools
+## Other tools
 
 Are there other tools that augment the major technologies?
 

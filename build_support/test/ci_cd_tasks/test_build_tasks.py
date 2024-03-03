@@ -9,7 +9,7 @@ from build_support.ci_cd_tasks.build_tasks import (
     BuildPypi,
     build_docs_for_subproject,
 )
-from build_support.ci_cd_tasks.env_setup_tasks import BuildProdEnvironment
+from build_support.ci_cd_tasks.env_setup_tasks import SetupProdEnvironment
 from build_support.ci_cd_tasks.validation_tasks import ValidatePypi, ValidatePythonStyle
 from build_support.ci_cd_vars.docker_vars import (
     DockerTarget,
@@ -99,7 +99,7 @@ def test_build_pypi_requires(
             local_user_uid=local_uid,
             local_user_gid=local_gid,
         ),
-        BuildProdEnvironment(
+        SetupProdEnvironment(
             non_docker_project_root=mock_project_root,
             docker_project_root=docker_project_root,
             local_user_uid=local_uid,

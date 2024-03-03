@@ -17,7 +17,7 @@ from build_support.ci_cd_vars.project_setting_vars import get_pulumi_version
 from build_support.dag_engine import TaskNode, concatenate_args, run_process
 
 
-class BuildDevEnvironment(TaskNode):
+class SetupDevEnvironment(TaskNode):
     """Builds a docker image with a stable environment for running dev commands."""
 
     def required_tasks(self) -> list[TaskNode]:
@@ -42,7 +42,7 @@ class BuildDevEnvironment(TaskNode):
         )
 
 
-class BuildProdEnvironment(TaskNode):
+class SetupProdEnvironment(TaskNode):
     """Builds a docker image with a stable environment for running prod commands."""
 
     def required_tasks(self) -> list[TaskNode]:
@@ -67,7 +67,7 @@ class BuildProdEnvironment(TaskNode):
         )
 
 
-class BuildPulumiEnvironment(TaskNode):
+class SetupPulumiEnvironment(TaskNode):
     """Builds a docker image with a stable environment for running pulumi commands."""
 
     def required_tasks(self) -> list[TaskNode]:

@@ -1,7 +1,7 @@
 """Should hold all tasks that perform automated formatting of code."""
 
 
-from build_support.ci_cd_tasks.env_setup_tasks import BuildDevEnvironment
+from build_support.ci_cd_tasks.env_setup_tasks import SetupDevEnvironment
 from build_support.ci_cd_tasks.validation_tasks import (
     ValidateBuildSupport,
     ValidatePypi,
@@ -29,7 +29,7 @@ class Lint(TaskNode):
             list[TaskNode]: A list of tasks required to lint project.
         """
         return [
-            BuildDevEnvironment(
+            SetupDevEnvironment(
                 non_docker_project_root=self.non_docker_project_root,
                 docker_project_root=self.docker_project_root,
                 local_user_uid=self.local_user_uid,
