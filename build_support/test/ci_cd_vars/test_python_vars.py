@@ -7,7 +7,7 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     SubprojectContext,
     get_build_reports_dir,
     get_build_support_dir,
-    get_documentation_enforcement_dir,
+    get_process_and_style_enforcement_dir,
     get_pulumi_dir,
     get_pypi_dir,
 )
@@ -234,7 +234,7 @@ def test_get_coverage_root(
             project_root=mock_project_root,
         )
     elif pytest_context == SubprojectContext.DOCUMENTATION_ENFORCEMENT:
-        assert observed_coverage_root_dir == get_documentation_enforcement_dir(
+        assert observed_coverage_root_dir == get_process_and_style_enforcement_dir(
             project_root=mock_project_root,
         )
     elif pytest_context == SubprojectContext.PULUMI:

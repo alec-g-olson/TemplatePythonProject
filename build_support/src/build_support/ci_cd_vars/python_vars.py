@@ -6,7 +6,7 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     SubprojectContext,
     get_build_reports_dir,
     get_build_support_dir,
-    get_documentation_enforcement_dir,
+    get_process_and_style_enforcement_dir,
     get_pulumi_dir,
     get_pypi_dir,
 )
@@ -272,7 +272,7 @@ def get_coverage_root(project_root: Path, test_context: SubprojectContext) -> Pa
         case SubprojectContext.PULUMI:
             return get_pulumi_dir(project_root=project_root)
         case SubprojectContext.DOCUMENTATION_ENFORCEMENT:
-            return get_documentation_enforcement_dir(project_root=project_root)
+            return get_process_and_style_enforcement_dir(project_root=project_root)
         case SubprojectContext.ALL:
             return project_root
         case _:  # pragma: no cover - can't hit if all enums are implemented

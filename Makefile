@@ -124,15 +124,15 @@ make_new_project: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) make_new_project
 
 .PHONY: setup_dev_env
-setup_dev_env:
+setup_dev_env: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) setup_dev_env
 
 .PHONY: setup_prod_env
-setup_prod_env:
+setup_prod_env: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) setup_prod_env
 
 .PHONY: setup_pulumi_env
-setup_pulumi_env:
+setup_pulumi_env: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) setup_pulumi_env
 
 .PHONY: setup_build_env

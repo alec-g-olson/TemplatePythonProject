@@ -5,20 +5,22 @@
 This project exists to give me and anyone else who would like to use it a template to
 work off of that has a decent testing pipeline that is platform independent.
 
-This is project licensed with The Unlicense, which puts this project into the public
+This project is licensed with The Unlicense, which puts this project into the public
 domain.  Anyone can take this code and do anything they want for profit or personal use
-with no need for attribution or requirement to keep your projects open source.  Unless
-you choose to use The Unlicense for your new project, only the code that came from this
-template will be part of the public domain.
+with no need for attribution or requirement to keep your projects open source.  When you
+make a new project based on this template, only the code that came from this template 
+will be part of the public domain, unless you choose to use a license that puts the rest
+of your new project into the public domain.
 
 ### Goals of Template Project
 
 The platonic ideal of a well controlled project is that you should be able to run a 
-1-line command to either build your entire system from scratch or upgrade to a new 
-version.  The developers of this template project also believe that unless development
-practices are enforced by code they are not enforced.  This template project strives to
-provide a well organized set of practically applicable patterns for scalable project
-development in a completely controlled environment.
+1-line command to build your entire system from scratch, upgrade to a new 
+version, or roll-back to a previous version.  The developers of this template project 
+also believe that unless development practices are enforced by code they are not 
+enforced.  This template project strives to provide a well organized set of practically
+applicable patterns for scalable project development in a completely controlled 
+environment.
 
 Running tests and deployments should be as simple as `make test` or `make push`
 regardless of whether you are using a personal machine or a service account running in
@@ -63,11 +65,13 @@ as you see fit.  There are 4 top-level folders that are worth discussing:
   Contains the "main" that should be called within the build container to report 
   variables.
 - [process_and_style_enforcement](process_and_style_enforcement)
-  - The tests that are run as part of the ValidatePythonStyle task.
+  - The tests that are run as part of the ValidatePythonStyle task.  Tests should be 
+  added here when there isn't an off the shelf tool for enforcing style or process that 
+  the devs want to enforce.
 - [pulumi](pulumi)
   - The pulumi code that sets up and manages cloud resources and deployments.
 - [pypi_package](pypi_package)
-  - The pypi package that will contain our business logic and be deployed to production
+  - The pypi package that will contain our business logic and will be deployed to production
   environments. 
 
 ### Scope of Template Project
@@ -131,7 +135,7 @@ folders in the ways listed below:
    - Use the provided organization name and email (if applicable)
    - Use the current year for copyright (if applicable)
  - pypi_package:
-   - Change the name of the package in the src folder.
+   - Change the name of the package in the src folder to the new project name.
  - [pyproject.toml](pyproject.toml):
    - Change the project name.
    - Reset the version number of this project to `0.0.0`.
@@ -225,10 +229,11 @@ of 120.  Change this value to 88 and click "Apply" and then "OK".
 
 #### PyCharm: Checking Your Work by Running the Tests
 
-Right click "test" in the project structure window.  Then click "Run 'pytest in test'". 
-All tests should run and pass. If there are any issues it is an indication that setup 
-was not followed correctly.  Ensure that the docker image was built correctly, PyCharm
-correctly picking up its interpreter, and that PyCharm is using pytest.
+Right click `bulid_support/test` in the project structure window.  Then click 
+"Run 'pytest in test'". All tests should run and pass. If there are any issues it is an 
+indication that setup was not followed correctly.  Ensure that the docker image was 
+built correctly, PyCharm correctly picking up its interpreter, and that PyCharm is 
+using pytest.
 
 ### VS Code
 
@@ -248,15 +253,16 @@ The following commands are a subset of the commands available that are particula
 useful to new developers working in this repo.
 
 ## Selected Build Commands
-| Command                      | Description                                                     |
-|------------------------------|-----------------------------------------------------------------|
-| `make clean`                 | Clears the build folder, removing all intermediate build files. |
-| `make open_dev_docker_shell` | Opens a shell within a dev docker container.                    |
-| `make setup_dev_env`         | Builds the docker with the dev environment.                     |
-| `make lint`                  | Runs the lint commands on this repo.                            |
-| `make test`                  | Runs                                                            |
-| `make build`                 | Builds the artifacts produced by this repo.                     |
-| `make push`  TBD             | Pushes the artifacts produced by this repo to prod.             |
+| Command                      | Description                                                      |
+|------------------------------|------------------------------------------------------------------|
+| `make clean`                 | Clears the build folder, removing all intermediate build files.  |
+| `make docker_prune_all`      | Deletes all docker containers, images, and caches on machine.    |
+| `make open_dev_docker_shell` | Opens a shell within a dev docker container.                     |
+| `make setup_dev_env`         | Builds the docker with the dev environment.                      |
+| `make lint`                  | Runs the lint commands on this repo.                             |
+| `make test`                  | Runs all build, process, and style tests for this repo.          |
+| `make build`                 | Builds the artifacts produced by this repo.                      |
+| `make push`  TBD             | Pushes the artifacts produced by this repo to prod.              |
 
 ## Tools Enforcing Dev Standards
  - [Poetry](#poetry)
@@ -291,9 +297,10 @@ a line, branch, or function that is going to be too difficult to test you can ad
 [Ruff](https://docs.astral.sh/ruff/) is used by this project as both a formatter and a
 linter.
 
-When linting we run all stabilized rules that are compatible with the Ruff Formatter.
-Because of this we want to pin the Ruff version more specifically than we pin most
-packages we manage in poetry.
+When linting we run all stabilize rules that are compatible with the Ruff Formatter.
+Because Ruff is under active development and the list of new tests and stable tests
+is changing with some frequency we want to pin the Ruff version more specifically than
+we pin most packages we manage in poetry.
 
 Ruff is a drop in replacement for:
 - isort
@@ -305,15 +312,16 @@ Ruff is a drop in replacement for:
 
 ### Process and Style Enforcement
 
-[process_and_style_enforcement/test](process_and_style_enforcement/test) contains a number of
-tests that we have implemented to enforce standards for which no off the shelf tools
-exist.  Additional style enforcement without off the shelf tooling should go here.
+[process_and_style_enforcement/test](process_and_style_enforcement/test) contains a 
+number of tests that we have implemented to enforce standards for which no off the shelf
+tools exist.  Additional style or process enforcement without off the shelf tooling 
+should go here.
 
 ### MyPy
 
 [MyPy](https://mypy.readthedocs.io/) enforces typing.
 
-We enforce typing on all src, test, and build_support python files.
+We enforce typing on all `src` and `test` python files.
 
 ### Bandit
 
