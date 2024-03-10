@@ -1,4 +1,5 @@
 """Module for changing file and folder names when setting up a new project."""
+
 from pathlib import Path
 
 from build_support.ci_cd_vars.file_and_dir_path_vars import get_pypi_src_dir

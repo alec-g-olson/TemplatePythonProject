@@ -205,11 +205,12 @@ def test_apply_run_ruff_fix_unsafe(
     apply_ruff_fix_unsafe_task: ApplyRuffFixUnsafe,
 ) -> None:
     task = apply_ruff_fix_unsafe_task
-    with patch(
-        "build_support.ci_cd_tasks.lint_tasks.run_process"
-    ) as run_process_mock, patch(
-        "build_support.ci_cd_tasks.lint_tasks.commit_changes_if_diff"
-    ) as commit_changes_mock:
+    with (
+        patch("build_support.ci_cd_tasks.lint_tasks.run_process") as run_process_mock,
+        patch(
+            "build_support.ci_cd_tasks.lint_tasks.commit_changes_if_diff"
+        ) as commit_changes_mock,
+    ):
         fix_src_args = concatenate_args(
             args=[
                 get_docker_command_for_image(

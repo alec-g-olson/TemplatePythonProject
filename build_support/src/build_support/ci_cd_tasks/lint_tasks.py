@@ -1,6 +1,5 @@
 """Should hold all tasks that perform automated formatting of code."""
 
-
 from build_support.ci_cd_tasks.env_setup_tasks import SetupDevEnvironment
 from build_support.ci_cd_tasks.validation_tasks import (
     ValidateBuildSupport,

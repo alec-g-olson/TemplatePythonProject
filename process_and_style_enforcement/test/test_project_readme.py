@@ -165,12 +165,10 @@ def _get_all_bad_hyperlinks(
             strip_header = strip_header.replace(" ", "-").lower()
             possible_header_links.append(strip_header)
         bad_hyperlinks = [
-            bad_hyperlinks.append(
-                BadHyperlinkInfo(
-                    readme_path=readme_path.relative_to(PROJECT_ROOT_DIR),
-                    line_number=line_number,
-                    hyperlink=str(hyperlink),
-                )
+            BadHyperlinkInfo(
+                readme_path=readme_path.relative_to(PROJECT_ROOT_DIR),
+                line_number=line_number,
+                hyperlink=str(hyperlink),
             )
             for line_number, line in enumerate(readme_path.open(), 1)
             for hyperlink in re.findall(HYPERLINK_PATTERN, line)

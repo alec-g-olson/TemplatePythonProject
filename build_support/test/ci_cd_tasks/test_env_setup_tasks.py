@@ -1,7 +1,7 @@
 from copy import copy
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 import pytest
 import yaml
@@ -183,52 +183,52 @@ def test_run_clean(
     index_rst_name = "index.rst"
 
     def _add_some_folders_and_files_to_folder(
-        folder: Path,
+        current_folder: Path,
         required_file_names: list[str] | None = None,
     ) -> None:
-        folder.mkdir(parents=True, exist_ok=True)
+        current_folder.mkdir(parents=True, exist_ok=True)
         file_names_to_add = ["some.txt", "file.txt", "names.txt", "to.txt", "add.txt"]
         folder_names_to_add = ["some", "folder", "names", "to", "add"]
         if required_file_names:
             file_names_to_add += required_file_names
         for file_name in file_names_to_add:
-            folder.joinpath(file_name).touch()
+            current_folder.joinpath(file_name).touch()
         for folder_name in folder_names_to_add:
-            new_folder = folder.joinpath(folder_name)
+            new_folder = current_folder.joinpath(folder_name)
             new_folder.mkdir()
             new_folder.joinpath("some_folder_contents.txt").touch()
 
     mypy_cache = docker_project_root.joinpath(".mypy_cache")
-    _add_some_folders_and_files_to_folder(folder=mypy_cache)
+    _add_some_folders_and_files_to_folder(current_folder=mypy_cache)
 
     pytest_cache = docker_project_root.joinpath(".pytest_cache")
-    _add_some_folders_and_files_to_folder(folder=pytest_cache)
+    _add_some_folders_and_files_to_folder(current_folder=pytest_cache)
 
     ruff_cache = docker_project_root.joinpath(".ruff_cache")
-    _add_some_folders_and_files_to_folder(folder=ruff_cache)
+    _add_some_folders_and_files_to_folder(current_folder=ruff_cache)
 
     build_dir = get_build_dir(project_root=docker_project_root)
-    _add_some_folders_and_files_to_folder(folder=build_dir)
+    _add_some_folders_and_files_to_folder(current_folder=build_dir)
 
     build_support_docs_build_dir = get_build_support_docs_build_dir(
         project_root=docker_project_root,
     )
-    _add_some_folders_and_files_to_folder(folder=build_support_docs_build_dir)
+    _add_some_folders_and_files_to_folder(current_folder=build_support_docs_build_dir)
 
     pypi_docs_build_dir = get_pypi_docs_build_dir(project_root=docker_project_root)
-    _add_some_folders_and_files_to_folder(folder=pypi_docs_build_dir)
+    _add_some_folders_and_files_to_folder(current_folder=pypi_docs_build_dir)
 
     build_support_docs_src_dir = get_build_support_docs_src_dir(
         project_root=docker_project_root,
     )
     _add_some_folders_and_files_to_folder(
-        folder=build_support_docs_src_dir,
+        current_folder=build_support_docs_src_dir,
         required_file_names=[index_rst_name],
     )
 
     pypi_docs_src_dir = get_pypi_docs_src_dir(project_root=docker_project_root)
     _add_some_folders_and_files_to_folder(
-        folder=pypi_docs_src_dir,
+        current_folder=pypi_docs_src_dir,
         required_file_names=[index_rst_name],
     )
 
@@ -348,14 +348,17 @@ def test_run_get_git_info(
     local_uid: int,
     local_gid: int,
 ) -> None:
-    with patch(
-        "build_support.ci_cd_tasks.env_setup_tasks.run_process",
-    ) as run_process_mock, patch(
-        "build_support.ci_cd_tasks.env_setup_tasks.get_current_branch",
-    ) as get_branch_mock, patch(
-        "build_support.ci_cd_tasks.env_setup_tasks.get_local_tags",
-    ) as get_tags_mock:
-        get_fetch_args = ["git", "fetch"]
+    with (
+        patch(
+            "build_support.ci_cd_tasks.env_setup_tasks.run_process",
+        ) as run_process_mock,
+        patch(
+            "build_support.ci_cd_tasks.env_setup_tasks.get_current_branch",
+        ) as get_branch_mock,
+        patch(
+            "build_support.ci_cd_tasks.env_setup_tasks.get_local_tags",
+        ) as get_tags_mock,
+    ):
         branch_name = "some_branch"
         tags = ["some_non_version_tag", "0.0.0", "0.1.0"]
         get_branch_mock.return_value = branch_name
@@ -368,11 +371,21 @@ def test_run_get_git_info(
             local_user_uid=local_uid,
             local_user_gid=local_gid,
         ).run()
-        run_process_mock.assert_called_once_with(
-            args=get_fetch_args,
+        expected_fix_permissions_call = call(
+            args=[
+                "chown",
+                f"{local_uid}:{local_gid}",
+                str(docker_project_root),
+            ]
+        )
+        expected_git_fetch_call = call(
+            args=["git", "fetch"],
             user_uid=local_uid,
             user_gid=local_gid,
         )
+        all_expected_calls = [expected_fix_permissions_call, expected_git_fetch_call]
+        assert run_process_mock.call_count == len(all_expected_calls)
+        run_process_mock.assert_has_calls(calls=all_expected_calls, any_order=True)
         observed_git_info = GitInfo.from_yaml(git_info_yaml_dest.read_text())
         expected_git_info = GitInfo(branch=branch_name, tags=tags)
         assert observed_git_info == expected_git_info

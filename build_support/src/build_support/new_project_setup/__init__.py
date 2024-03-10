@@ -6,16 +6,16 @@ available in the new_project_settings.yaml, and the work should all be managed b
 MakeProjectFromTemplate task in the setup_new_project module.
 
 Modules:
-    | new_project_data_models.py: Contains the data models that can parse
+    | new_project_data_models: Contains the data models that can parse
         new_project_settings.yaml. Once parsed it is available in code.
-    | license_templates.py: Contains the basic license template information.  Split
+    | license_templates: Contains the basic license template information.  Split
         out from setup_license so that setup_new_project didn't create a circular
         dependency.
-    | setup_license.py: Contains the logic for setting up a new license based on the
+    | setup_license: Contains the logic for setting up a new license based on the
         values in new_project_settings.yaml.
-    | update_pyproject_toml.py: Contains the logic for updating pyproject.toml based on
+    | update_pyproject_toml: Contains the logic for updating pyproject.toml based on
         the new_project_settings.yaml.
-    | update_folder_names.py: Contains the logic for updating file and folder names
+    | update_folder_names: Contains the logic for updating file and folder names
         based on the new_project_settings.yaml.
-    | setup_new_project.py: Contains the MakeProjectFromTemplate Task.
+    | setup_new_project: Contains the MakeProjectFromTemplate Task.
 """

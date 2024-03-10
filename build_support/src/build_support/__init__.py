@@ -9,8 +9,8 @@ SubPackages:
         project that is not part of the standard pipeline.
 
 Modules:
-    | dag_engine.py: Contains the logic for resolving task dependencies and running
+    | dag_engine: Contains the logic for resolving task dependencies and running
         tasks in a coherent order.
-    | execute_build_steps.py: A "main" that runs tasks.
-    | report_build_var.py: A "main" that reports variables.
+    | execute_build_steps: A "main" that runs tasks.
+    | report_build_var: A "main" that reports variables.
 """

@@ -25,6 +25,7 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_build_support_src_dir,
     get_build_support_test_dir,
     get_documentation_tests_dir,
+    get_process_and_style_enforcement_dir,
     get_pulumi_dir,
     get_pypi_src_and_test,
     get_pypi_src_dir,
@@ -272,6 +273,14 @@ def test_run_validate_python_style(
                 get_build_support_test_dir(project_root=task.docker_project_root),
             ],
         )
+        mypy_process_and_style_enforcement_args = concatenate_args(
+            args=[
+                mypy_command,
+                get_process_and_style_enforcement_dir(
+                    project_root=task.docker_project_root
+                ),
+            ]
+        )
         mypy_pulumi_args = concatenate_args(
             args=[
                 mypy_command,
@@ -336,6 +345,7 @@ def test_run_validate_python_style(
             mypy_pypi_args,
             mypy_build_support_src_args,
             mypy_build_support_test_args,
+            mypy_process_and_style_enforcement_args,
             mypy_pulumi_args,
             bandit_pypi_args,
             bandit_pulumi_args,

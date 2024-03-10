@@ -156,14 +156,13 @@ optional = true
 [tool.poetry.group.dev.dependencies]
 bandit = {extras = ["baseline", "toml"], version = "^1.7"}
 mypy = "^1.8"
-pydocstyle = "^6.3"
 pytest = "^7.4"
 pytest-cov = "^4.1"
 pytest-html = "^4.1"
 pytest-xdist = "^3.5"
 responses = "^0.24"
 requests = "^2.31"
-ruff = "0.2.2"  # When upgrading ensure we run all stable rules and exclude previews
+ruff = "0.3.2"  # When upgrading ensure we run all stable rules and exclude previews
 sphinx = "^7.2"
 sphinx-rtd-theme = "^2.0.0"
 types-requests = "^2.31"

@@ -1,159 +1,384 @@
 import ast
-import inspect
+import re
 from dataclasses import dataclass
+from inspect import getmembers, isclass, isfunction, ismodule, signature
 from pathlib import Path
 from re import compile
 from textwrap import dedent
-from typing import NamedTuple, Pattern, TypeAlias
+from types import FunctionType, ModuleType
+from typing import Any, Iterable, Pattern, Type, TypeAlias
 
 import pytest
 from _pytest.fixtures import SubRequest
-from pydocstyle import ConventionChecker
-from pydocstyle.parser import Class, Function, Method, Module, Package, Parser
 
-DocumentationElement: TypeAlias = Class | Function | Method | Module | Package
-
-sub_projects_to_enforce_docstrings = ["pypi_package", "build_support"]
+ImportedElement: TypeAlias = (
+    ModuleType | FunctionType | classmethod | staticmethod | Type
+)
 
 
-@pytest.fixture(params=sub_projects_to_enforce_docstrings)
-def package_to_test(real_project_root_dir: Path, request: SubRequest) -> Path:
-    return real_project_root_dir.joinpath(request.param, "src")
+@dataclass(frozen=True)
+class PackageInfo:
+    module_path: str
+    docstring: str
+    sub_packages: list[str]
+    modules: dict[str, ModuleType]
 
 
-def get_all_module_paths_in(top_package: Path, all_modules: list[Path]) -> None:
-    sub_folders = []
-    python_modules = []
-    for path in top_package.glob("*"):
-        if path.is_dir():
-            sub_folders.append(path)
-        elif path.name.endswith(".py"):
-            python_modules.append(path)
-    all_modules += sorted(python_modules)
-    for sub_folder in sorted(sub_folders):
-        get_all_module_paths_in(top_package=sub_folder, all_modules=all_modules)
+@dataclass(frozen=True)
+class ModuleInfo:
+    module_path: str
+    docstring: str
+    attributes: dict[str, Any]
+    classes: dict[str, Type]
+    functions: dict[str, FunctionType]
 
 
-def get_all_module_paths(top_package: Path) -> list[Path]:
-    all_modules_to_test = []
-    get_all_module_paths_in(top_package=top_package, all_modules=all_modules_to_test)
-    return all_modules_to_test
+@dataclass(frozen=True)
+class ClassInfo:
+    module_path: str
+    docstring: str
+    element_path: str
+    methods: dict[str, FunctionType | classmethod | staticmethod]
 
 
-def get_flattened_public_children(
-    element_to_flatten: DocumentationElement,
-) -> list[DocumentationElement]:
-    flattened_list = [element_to_flatten]
-    for child in element_to_flatten.children:
-        if child.is_public:  # pragma: no cover - branching, all could be public
-            flattened_list += get_flattened_public_children(element_to_flatten=child)
-    return flattened_list
+@dataclass(frozen=True)
+class FunctionInfo:
+    module_path: str
+    docstring: str
+    element_path: str
+    args: list[str]
 
 
-def parse_all_objects(package_to_test: Path) -> list[DocumentationElement]:
-    all_modules_to_test = get_all_module_paths(top_package=package_to_test)
-    pydocstyle_parser = Parser()
-    all_objects = []
-    for module_path in all_modules_to_test:
-        parsed_module = pydocstyle_parser.parse(
-            filelike=module_path.open(),
-            filename=str(module_path.relative_to(package_to_test)),
-        )
-        all_objects += get_flattened_public_children(element_to_flatten=parsed_module)
-    return all_objects
+DocumentationElement: TypeAlias = PackageInfo | ModuleInfo | ClassInfo | FunctionInfo
 
 
-def get_all_packages_in(package_to_test: Path) -> list[Package]:
-    return [
-        obj
-        for obj in parse_all_objects(package_to_test=package_to_test)
-        if isinstance(obj, Package)
-    ]
+sub_projects_to_enforce_docstrings = ["template_python_project", "build_support"]
 
 
-def get_all_modules_in(package_to_test: Path) -> list[Module]:
-    return [
-        obj
-        for obj in parse_all_objects(package_to_test=package_to_test)
-        if isinstance(obj, Module) and not isinstance(obj, Package)
-    ]
+@pytest.fixture(params=sub_projects_to_enforce_docstrings, scope="module")
+def package_to_test(request: SubRequest) -> str:
+    return request.param
 
 
-def get_all_classes_in(package_to_test: Path) -> list[Class]:
-    return [
-        obj
-        for obj in parse_all_objects(package_to_test=package_to_test)
-        if isinstance(obj, Class)
-    ]
+def import_element(
+    full_module_path: str, full_element_path: str | None = None
+) -> ImportedElement:
+    imported_element = __import__(full_module_path)
+    for path_element in full_module_path.split(".")[1:]:
+        imported_element = getattr(imported_element, path_element)
+    if full_element_path is not None:  # pragma: no cover - might not have element path
+        for path_element in full_element_path.split("."):
+            imported_element = getattr(imported_element, path_element)
+    return imported_element
 
 
-def get_all_functions_in(package_to_test: Path) -> list[Function]:
-    return [
-        obj
-        for obj in parse_all_objects(package_to_test=package_to_test)
-        if isinstance(obj, Function) and not isinstance(obj, Method)
-    ]
+def get_list_of_imported_names(module_source_text: str) -> set[str]:
+    names_imported = set()
+    parsed_module = ast.parse(module_source_text)
+    for node in ast.iter_child_nodes(parsed_module):
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            for name in node.names:
+                names_imported.add(name.asname if name.asname else name.name)
+    return names_imported
 
 
-def get_all_methods_in(package_to_test: Path) -> list[Method]:
-    return [
-        obj
-        for obj in parse_all_objects(package_to_test=package_to_test)
-        if isinstance(obj, Method)
-    ]
-
-
-def get_source_file_name(
-    parsed_element: Package | Module | Class | Function | Method,
-) -> str:  # pragma: no cover if all pass
-    if isinstance(parsed_element, (Package, Module)):
-        return parsed_element.name
-    return get_source_file_name(parsed_element=parsed_element.parent)
-
-
-def get_element_name(
-    parsed_element: Package | Module | Class | Function | Method,
-    suffix_to_add: str | None = None,
-) -> str:  # pragma: no cover if all pass
-    if not suffix_to_add:
-        suffix_to_add = ""
-    if isinstance(parsed_element, (Package, Module)):
-        return suffix_to_add
-    if suffix_to_add:
-        suffix_to_add = parsed_element.name + "." + suffix_to_add
-    else:
-        suffix_to_add = parsed_element.name
-    return get_element_name(
-        parsed_element=parsed_element.parent, suffix_to_add=suffix_to_add
+def parse_package_info(imported_package: ModuleType) -> PackageInfo:
+    sub_packages = []
+    modules = {}
+    if imported_package.__file__ is None:  # pragma: no cover not hit if pass
+        msg = f"{imported_package.__name__} is does not have a file path."
+        raise ValueError(msg)
+    package_path = Path(imported_package.__file__)
+    for package_file_or_folder in package_path.parent.glob("*"):
+        file_or_folder_name = package_file_or_folder.name
+        if file_or_folder_name.startswith("_"):
+            continue
+        if package_file_or_folder.is_file() and file_or_folder_name[-3:] == ".py":
+            module_name = file_or_folder_name[:-3]
+            module_path = f"{imported_package.__package__}.{module_name}"
+            imported_module = import_element(full_module_path=module_path)
+            if not isinstance(imported_module, ModuleType):  # pragma: no cover
+                msg = f"{imported_module.__name__} is not a module."
+                raise ValueError(msg)
+            modules[module_name] = imported_module
+        if package_file_or_folder.is_dir():
+            sub_packages.append(file_or_folder_name)
+    if imported_package.__doc__ is None:  # pragma: no cover
+        imported_package.__doc__ = ""
+    return PackageInfo(
+        module_path=imported_package.__name__,
+        docstring=imported_package.__doc__,
+        sub_packages=sub_packages,
+        modules=modules,
     )
 
 
-convention_checker = ConventionChecker()
+def parse_module_info(imported_module: ModuleType) -> ModuleInfo:
+    if imported_module.__file__ is None:  # pragma: no cover not hit if pass
+        msg = f"{imported_module.__name__} is does not have a file path."
+        raise ValueError(msg)
+    module_path = Path(imported_module.__file__)
+    module_text = module_path.read_text()
+    names_imported_by_module = get_list_of_imported_names(
+        module_source_text=module_text
+    )
+    attributes = {}
+    classes = {}
+    functions = {}
+    for name, member in getmembers(imported_module):
+        if not (name.startswith(("_", "@")) or name in names_imported_by_module):
+            if isfunction(member):
+                functions[name] = member
+            elif isclass(member):
+                classes[name] = member
+            else:
+                attributes[name] = member
+    if imported_module.__doc__ is None:  # pragma: no cover
+        imported_module.__doc__ = ""
+    return ModuleInfo(
+        module_path=imported_module.__name__,
+        docstring=imported_module.__doc__,
+        attributes=attributes,
+        classes=classes,
+        functions=functions,
+    )
 
 
-class SectionContext(NamedTuple):
+def parse_class_info(imported_class: Type) -> ClassInfo:
+    methods = {}
+    for name, member in vars(imported_class).items():
+        if (
+            (isfunction(member) or isinstance(member, (staticmethod, classmethod)))
+            and (
+                not name.startswith("_")
+                or (name.startswith("__") and name.endswith("__"))
+            )
+            and name != "__new__"
+        ):
+            methods[name] = member
+    if imported_class.__doc__ is None:  # pragma: no cover
+        imported_class.__doc__ = ""
+    return ClassInfo(
+        module_path=imported_class.__module__,
+        element_path=imported_class.__name__,
+        docstring=imported_class.__doc__,
+        methods=methods,
+    )
+
+
+def parse_function_info(
+    imported_function: FunctionType | classmethod | staticmethod,
+) -> FunctionInfo:
+    if isinstance(imported_function, (classmethod, staticmethod)):
+        params = signature(imported_function.__func__).parameters
+    else:
+        params = signature(imported_function).parameters
+    args = [param for param in params if param not in {"self", "cls"}]
+    if imported_function.__doc__ is None:  # pragma: no cover
+        imported_function.__doc__ = ""
+    return FunctionInfo(
+        module_path=imported_function.__module__,
+        element_path=imported_function.__name__,
+        docstring=imported_function.__doc__,
+        args=args,
+    )
+
+
+def parse_sub_elements(
+    imported_element: ImportedElement, all_element_info: list[DocumentationElement]
+) -> None:
+    if ismodule(imported_element):
+        if imported_element.__file__ is None:  # pragma: no cover not hit if pass
+            msg = f"{imported_element.__name__} is does not have a file path."
+            raise ValueError(msg)
+        if imported_element.__file__.endswith("__init__.py"):
+            parsed_package = parse_package_info(imported_package=imported_element)
+            all_element_info.append(parsed_package)
+            for sub_package in parsed_package.sub_packages:
+                sub_package_path = f"{imported_element.__package__}.{sub_package}"
+                parse_sub_elements(
+                    imported_element=import_element(full_module_path=sub_package_path),
+                    all_element_info=all_element_info,
+                )
+            for imported_module in parsed_package.modules.values():
+                parse_sub_elements(
+                    imported_element=imported_module,
+                    all_element_info=all_element_info,
+                )
+        else:
+            parsed_module = parse_module_info(imported_module=imported_element)
+            all_element_info.append(parsed_module)
+            for imported_class in parsed_module.classes.values():
+                parse_sub_elements(
+                    imported_element=imported_class,
+                    all_element_info=all_element_info,
+                )
+            for imported_function in parsed_module.functions.values():
+                parse_sub_elements(
+                    imported_element=imported_function,
+                    all_element_info=all_element_info,
+                )
+    elif isfunction(imported_element) or isinstance(
+        imported_element, (staticmethod, classmethod)
+    ):
+        parsed_function = parse_function_info(imported_function=imported_element)
+        all_element_info.append(parsed_function)
+    elif isinstance(imported_element, type):
+        parsed_class = parse_class_info(imported_class=imported_element)
+        all_element_info.append(parsed_class)
+        for imported_method in parsed_class.methods.values():
+            parse_sub_elements(
+                imported_element=imported_method,
+                all_element_info=all_element_info,
+            )
+    else:  # pragma: no cover not hit if everything is working
+        msg = f"{imported_element.__name__} is not a supported type."
+        raise ValueError(msg)
+
+
+@pytest.fixture(scope="module")
+def parse_all_elements(package_to_test: str) -> list[DocumentationElement]:
+    top_level_package = import_element(full_module_path=package_to_test)
+    all_elements: list[DocumentationElement] = []
+    parse_sub_elements(
+        imported_element=top_level_package, all_element_info=all_elements
+    )
+    return all_elements
+
+
+@pytest.fixture(scope="module")
+def all_packages_info(
+    parse_all_elements: list[DocumentationElement],
+) -> list[PackageInfo]:
+    return [obj for obj in parse_all_elements if isinstance(obj, PackageInfo)]
+
+
+@pytest.fixture(scope="module")
+def all_modules_info(
+    parse_all_elements: list[DocumentationElement],
+) -> list[ModuleInfo]:
+    return [obj for obj in parse_all_elements if isinstance(obj, ModuleInfo)]
+
+
+@pytest.fixture(scope="module")
+def all_class_info(parse_all_elements: list[DocumentationElement]) -> list[ClassInfo]:
+    return [obj for obj in parse_all_elements if isinstance(obj, ClassInfo)]
+
+
+@pytest.fixture(scope="module")
+def all_function_info(
+    parse_all_elements: list[DocumentationElement],
+) -> list[FunctionInfo]:
+    return [obj for obj in parse_all_elements if isinstance(obj, FunctionInfo)]
+
+
+@dataclass(frozen=True)
+class SectionContext:
     section_name: str
     previous_line: str
-    line: int
+    line: str
     following_lines: list[str]
     original_index: int
     is_last_section: bool
 
 
+def get_leading_words(line: str) -> str:
+    """Return any leading set of words from `line`.
+
+    For example, if `line` is "  Hello world!!!", returns "Hello world".
+    """
+    result = re.compile(r"[\w ]+").match(line.strip())
+    if result is not None:
+        return result.group()
+    return ""
+
+
+def is_docstring_section(context: SectionContext) -> bool:
+    section_name_suffix = (
+        context.line.strip().lstrip(context.section_name.strip()).strip()
+    )
+
+    section_suffix_is_only_colon = section_name_suffix == ":"
+
+    punctuation = [",", ";", ".", "-", "\\", "/", "]", "}", ")"]
+    prev_line_ends_with_punctuation = any(
+        context.previous_line.strip().endswith(x) for x in punctuation
+    )
+
+    this_line_looks_like_a_section_name = (
+        len(section_name_suffix.strip()) == 0 or section_suffix_is_only_colon
+    )
+
+    prev_line_looks_like_end_of_paragraph = (
+        prev_line_ends_with_punctuation or len(context.previous_line.strip()) == 0
+    )
+
+    return this_line_looks_like_a_section_name and prev_line_looks_like_end_of_paragraph
+
+
+def get_section_context(
+    lines: list[str], valid_section_names: Iterable[str]
+) -> Iterable[SectionContext]:
+    lower_section_names = [s.lower() for s in valid_section_names]
+
+    def _suspected_as_section(_line: str) -> bool:
+        result = get_leading_words(_line.lower())
+        return result in lower_section_names
+
+    # Finding our suspects.
+    suspected_section_indices = [
+        i for i, line in enumerate(lines) if _suspected_as_section(line)
+    ]
+
+    # First - create a list of possible contexts. Note that the
+    # `following_lines` member is until the end of the docstring.
+    contexts = []
+    for i in suspected_section_indices:
+        last_index = i-1
+        next_index = i+1
+        contexts.append(
+            SectionContext(
+                get_leading_words(lines[i].strip()),
+                lines[last_index],
+                lines[i],
+                lines[next_index:],
+                i,
+                False,
+            )
+        )
+
+    # Now that we have manageable objects - rule out false positives.
+    contexts = [c for c in contexts if is_docstring_section(c)]
+
+    # Now we shall trim the `following lines` field to only reach the
+    # next section name.
+    for i in range(len(contexts)):
+        current_context = contexts[i]
+        next_context = None if i == len(contexts) - 1 else contexts[i + 1]
+        end = -1 if next_context is None else next_context.original_index
+        next_index = current_context.original_index + 1
+        yield SectionContext(
+            current_context.section_name,
+            current_context.previous_line,
+            current_context.line,
+            lines[next_index: end],
+            current_context.original_index,
+            next_context is None,
+        )
+
+
 def normalize_context(context: SectionContext) -> SectionContext:
+    lines = context.following_lines
     if context.following_lines:  # pragma: no cover - all context might have lines
         first_line = context.following_lines[0]
         leading_whitespaces = first_line[: -len(first_line.lstrip())]
+        lines = [
+            line
+            for line in context.following_lines
+            if line.startswith(leading_whitespaces) or line == ""
+        ]
 
-    args_content = dedent(
-        "\n".join(
-            [
-                line
-                for line in context.following_lines
-                if line.startswith(leading_whitespaces) or line == ""
-            ]
-        )
-    ).strip()
+    args_content = dedent("\n".join(lines)).strip()
     return SectionContext(
         section_name=context.section_name,
         previous_line=context.previous_line,
@@ -165,19 +390,46 @@ def normalize_context(context: SectionContext) -> SectionContext:
 
 
 def get_docstring_contexts(docstring: str) -> dict[str, SectionContext]:
-    lines = docstring.split("\n")
+    lines = docstring.split("\n") if docstring else []
     return {
         context.section_name: normalize_context(context=context)
-        for context in convention_checker._get_section_contexts(  # noqa: SLF001
+        for context in get_section_context(
             lines,
-            sorted(
-                set(
-                    list(convention_checker.GOOGLE_SECTION_NAMES)
-                    + PROJECT_SPECIFIC_SECTIONS
-                )
-            ),
+            sorted(set(GOOGLE_SECTION_NAMES + PROJECT_SPECIFIC_SECTIONS)),
         )
     }
+
+
+GOOGLE_SECTION_NAMES = [
+    "Args",
+    "Arguments",
+    "Attention",
+    "Attributes",
+    "Caution",
+    "Danger",
+    "Error",
+    "Example",
+    "Examples",
+    "Hint",
+    "Important",
+    "Keyword Args",
+    "Keyword Arguments",
+    "Methods",
+    "Note",
+    "Notes",
+    "Return",
+    "Returns",
+    "Raises",
+    "References",
+    "See Also",
+    "Tip",
+    "Todo",
+    "Warning",
+    "Warnings",
+    "Warns",
+    "Yield",
+    "Yields",
+]
 
 
 POSSIBLE_ATTRIBUTES_SECTIONS = ["Attributes"]
@@ -213,7 +465,7 @@ GOOGLE_RESULT_REGEX = compile(r"^\s*(([\w\[\],\s]+)\s*:\s*(.+)|None)")
 class SectionElementData:
     possible_section_names: list[str]
     required_context_elements: list[str]
-    enforced_element_regex: Pattern[str] | None
+    enforced_element_regex: Pattern[str]
 
     extra_elements: list[str]
     missing_elements: list[str]
@@ -229,7 +481,7 @@ class SectionElementData:
 
 @dataclass
 class GenericDocstringData:
-    module_name: str
+    module: str
     missing_sections: list[str]
     clashing_sections: list[str]
     sections: dict[str, SectionElementData]
@@ -281,23 +533,23 @@ def check_for_section_with_elements_in_contexts(
     docstring_data: GenericDocstringData,
     section_name: str,
 ) -> None:
-    section_element_data = docstring_data.sections[section_name]
-    if section_element_data.required_context_elements:
+    section_element = docstring_data.sections[section_name]
+    if section_element.required_context_elements:
         sections_founds = [
             section
-            for section in section_element_data.possible_section_names
+            for section in section_element.possible_section_names
             if section in contexts
         ]
         if len(sections_founds) == 0:  # pragma: no cover if all pass
             docstring_data.missing_sections.append(
-                "|".join(section_element_data.possible_section_names)
+                "|".join(section_element.possible_section_names)
             )
         elif len(sections_founds) == 1:
             check_all_elements_in_section_context(
                 context=contexts[sections_founds[0]],
-                required_context_elements=section_element_data.required_context_elements,
-                enforced_element_regex=section_element_data.enforced_element_regex,
-                section_element_data=section_element_data,
+                required_context_elements=section_element.required_context_elements,
+                enforced_element_regex=section_element.enforced_element_regex,
+                section_element_data=section_element,
             )
         else:  # pragma: no cover if all pass
             docstring_data.clashing_sections.append("|".join(sections_founds))
@@ -341,19 +593,13 @@ def check_for_section_with_single_element_in_contexts(
 
 
 def get_package_sub_package_section_info(
-    root_of_package_to_test: Path,
-    parsed_object: Package,
+    parsed_package: PackageInfo,
     contexts: dict[str, SectionContext],
     docstring_data: GenericDocstringData,
     section_name: str,
 ) -> None:
     section_element_data = docstring_data.sections[section_name]
-    current_package_path = root_of_package_to_test.joinpath(parsed_object.name).parent
-    section_element_data.required_context_elements = [
-        x.name
-        for x in current_package_path.glob("*")
-        if x.is_dir() and x.name != "__pycache__"
-    ]
+    section_element_data.required_context_elements = parsed_package.sub_packages
     check_for_section_with_elements_in_contexts(
         contexts=contexts,
         docstring_data=docstring_data,
@@ -362,19 +608,13 @@ def get_package_sub_package_section_info(
 
 
 def get_package_module_section_info(
-    root_of_package_to_test: Path,
-    parsed_object: Package,
+    parsed_package: PackageInfo,
     contexts: dict[str, SectionContext],
     docstring_data: GenericDocstringData,
     section_name: str,
 ) -> None:
     section_element_data = docstring_data.sections[section_name]
-    current_package_path = root_of_package_to_test.joinpath(parsed_object.name).parent
-    section_element_data.required_context_elements = [
-        x.name
-        for x in current_package_path.glob("*")
-        if x.is_file() and x.name != "__init__.py" and x.name.endswith(".py")
-    ]
+    section_element_data.required_context_elements = list(parsed_package.modules.keys())
     check_for_section_with_elements_in_contexts(
         contexts=contexts,
         docstring_data=docstring_data,
@@ -387,12 +627,13 @@ class PackageDocstringData(GenericDocstringData):
     pass
 
 
-def test_all_package_docstrings(package_to_test: Path) -> None:
+def test_all_package_docstrings(all_packages_info: list[PackageInfo]) -> None:
+    assert len(all_packages_info) != 0
     packages_with_issues_in_docstrings = []
-    for parsed_package in get_all_packages_in(package_to_test=package_to_test):
-        contexts = get_docstring_contexts(docstring=parsed_package.docstring)
+    for package_info in all_packages_info:
+        contexts = get_docstring_contexts(docstring=package_info.docstring)
         package_docstring_data = PackageDocstringData(
-            module_name=get_source_file_name(parsed_element=parsed_package),
+            module=package_info.module_path,
             missing_sections=[],
             clashing_sections=[],
             sections={
@@ -415,15 +656,13 @@ def test_all_package_docstrings(package_to_test: Path) -> None:
             },
         )
         get_package_sub_package_section_info(
-            root_of_package_to_test=package_to_test,
-            parsed_object=parsed_package,
+            parsed_package=package_info,
             contexts=contexts,
             docstring_data=package_docstring_data,
             section_name="sub_packages",
         )
         get_package_module_section_info(
-            root_of_package_to_test=package_to_test,
-            parsed_object=parsed_package,
+            parsed_package=package_info,
             contexts=contexts,
             docstring_data=package_docstring_data,
             section_name="modules",
@@ -433,53 +672,16 @@ def test_all_package_docstrings(package_to_test: Path) -> None:
     assert packages_with_issues_in_docstrings == []
 
 
-def import_element(
-    full_module_path: str, full_element_path: str | None = None
-) -> DocumentationElement:
-    imported_element = __import__(full_module_path)
-    for path_element in full_module_path.split(".")[1:]:
-        imported_element = getattr(imported_element, path_element)
-    if full_element_path is not None:  # pragma: no cover - might not have element path
-        for path_element in full_element_path.split("."):
-            imported_element = getattr(imported_element, path_element)
-    return imported_element
-
-
-def get_list_of_imported_names(module_source_text: str) -> set[str]:
-    names_imported = set()
-    parsed_module = ast.parse(module_source_text)
-    for node in ast.iter_child_nodes(parsed_module):
-        if isinstance(node, (ast.Import, ast.ImportFrom)):
-            for name in node.names:
-                names_imported.add(name.asname if name.asname else name.name)
-    return names_imported
-
-
 def get_module_attributes_section_info(
-    parsed_object: Module,
+    parsed_module: ModuleInfo,
     contexts: dict[str, SectionContext],
     docstring_data: GenericDocstringData,
     section_name: str,
 ) -> None:
-    # remove ".py"
-    module_path = get_source_file_name(parsed_element=parsed_object)[:-3].replace(
-        "/", "."
-    )
-    imported_module = import_element(full_module_path=module_path)
-    names_imported_by_module = get_list_of_imported_names(
-        module_source_text=parsed_object.source
-    )
-    module_child_names = {child.name for child in parsed_object.children}
     section_element_data = docstring_data.sections[section_name]
-    section_element_data.required_context_elements = [
-        name
-        for name in dir(imported_module)
-        if not (
-            name.startswith(("_", "@"))
-            or name in names_imported_by_module
-            or name in module_child_names
-        )
-    ]
+    section_element_data.required_context_elements = list(
+        parsed_module.attributes.keys()
+    )
     check_for_section_with_elements_in_contexts(
         contexts=contexts,
         docstring_data=docstring_data,
@@ -492,12 +694,13 @@ class ModuleDocstringData(GenericDocstringData):
     pass
 
 
-def test_all_module_docstrings(package_to_test: Path) -> None:
+def test_all_module_docstrings(all_modules_info: list[ModuleInfo]) -> None:
+    assert len(all_modules_info) != 0
     modules_with_issues_in_docstrings = []
-    for parsed_module in get_all_modules_in(package_to_test=package_to_test):
-        contexts = get_docstring_contexts(docstring=parsed_module.docstring)
+    for module_info in all_modules_info:
+        contexts = get_docstring_contexts(docstring=module_info.docstring)
         module_docstring_data = ModuleDocstringData(
-            module_name=get_source_file_name(parsed_element=parsed_module),
+            module=module_info.module_path,
             missing_sections=[],
             clashing_sections=[],
             sections={
@@ -512,7 +715,7 @@ def test_all_module_docstrings(package_to_test: Path) -> None:
             },
         )
         get_module_attributes_section_info(
-            parsed_object=parsed_module,
+            parsed_module=module_info,
             contexts=contexts,
             docstring_data=module_docstring_data,
             section_name="attributes",
@@ -522,34 +725,20 @@ def test_all_module_docstrings(package_to_test: Path) -> None:
     assert modules_with_issues_in_docstrings == []
 
 
-def test_all_class_docstrings(package_to_test: Path) -> None:
-    for parsed_class in get_all_classes_in(package_to_test=package_to_test):
-        assert parsed_class is not None
+def test_all_class_docstrings(all_class_info: list[ClassInfo]) -> None:
+    assert len(all_class_info) != 0
+    for class_info in all_class_info:
+        assert class_info is not None
 
 
 def get_function_args_section_info(
-    parsed_object: Method | Function,
+    parsed_function: FunctionInfo,
     contexts: dict[str, SectionContext],
     docstring_data: GenericDocstringData,
     section_name: str,
 ) -> None:
-    # remove ".py"
-    module_path = get_source_file_name(parsed_element=parsed_object)[:-3].replace(
-        "/", "."
-    )
-    imported_function = import_element(
-        full_module_path=module_path,
-        full_element_path=get_element_name(parsed_element=parsed_object),
-    )
-    parameters = list(inspect.signature(imported_function).parameters)
     section_element_data = docstring_data.sections[section_name]
-    section_element_data.required_context_elements = [
-        x
-        for x in parsed_object.callable_args
-        # We have to check against real parameters because sometimes
-        # the parsed object lists complex type hints as callable args
-        if x not in ["self", "cls"] and x in parameters
-    ]
+    section_element_data.required_context_elements = parsed_function.args
     check_for_section_with_elements_in_contexts(
         contexts=contexts,
         docstring_data=docstring_data,
@@ -581,65 +770,14 @@ class FunctionDocstringData(ElementDocstringData):
         return False
 
 
-@dataclass
-class MethodDocstringData(FunctionDocstringData):
-    """Different name for convenience."""
-
-
-def test_all_method_docstrings(package_to_test: Path) -> None:
-    method_with_issues_in_docstrings = []
-    for parsed_method in get_all_methods_in(package_to_test=package_to_test):
-        contexts = get_docstring_contexts(docstring=parsed_method.docstring)
-        method_docstring_data = MethodDocstringData(
-            module_name=get_source_file_name(parsed_element=parsed_method),
-            name=get_element_name(parsed_element=parsed_method),
-            missing_sections=[],
-            clashing_sections=[],
-            sections={
-                "args": SectionElementData(
-                    possible_section_names=POSSIBLE_ARGUMENTS_SECTIONS,
-                    required_context_elements=[],
-                    enforced_element_regex=ENFORCED_GOOGLE_ARGS_REGEX,
-                    extra_elements=[],
-                    missing_elements=[],
-                    malformed_element_docs=[],
-                ),
-                "results": SectionElementData(
-                    possible_section_names=POSSIBLE_RESULTS_SECTIONS,
-                    required_context_elements=[],
-                    enforced_element_regex=GOOGLE_RESULT_REGEX,
-                    extra_elements=[],
-                    missing_elements=[],
-                    malformed_element_docs=[],
-                ),
-            },
-            result_missing_type_or_description=None,
-        )
-        get_function_args_section_info(
-            parsed_object=parsed_method,
-            contexts=contexts,
-            docstring_data=method_docstring_data,
-            section_name="args",
-        )
-        method_docstring_data.result_missing_type_or_description = (
-            get_error_in_function_results_section_info(
-                contexts=contexts,
-                docstring_data=method_docstring_data,
-                section_name="results",
-            )
-        )
-        if method_docstring_data.has_issues():  # pragma: no cover if all pass
-            method_with_issues_in_docstrings.append(method_docstring_data)
-    assert method_with_issues_in_docstrings == []
-
-
-def test_all_function_docstrings(package_to_test: Path) -> None:
+def test_all_function_docstrings(all_function_info: list[FunctionInfo]) -> None:
+    assert len(all_function_info) != 0
     functions_with_issues_in_docstrings = []
-    for parsed_function in get_all_functions_in(package_to_test=package_to_test):
-        contexts = get_docstring_contexts(docstring=parsed_function.docstring)
+    for function_info in all_function_info:
+        contexts = get_docstring_contexts(docstring=function_info.docstring)
         function_docstring_data = FunctionDocstringData(
-            module_name=get_source_file_name(parsed_element=parsed_function),
-            name=get_element_name(parsed_element=parsed_function),
+            module=function_info.module_path,
+            name=function_info.element_path,
             missing_sections=[],
             clashing_sections=[],
             sections={
@@ -663,7 +801,7 @@ def test_all_function_docstrings(package_to_test: Path) -> None:
             result_missing_type_or_description=None,
         )
         get_function_args_section_info(
-            parsed_object=parsed_function,
+            parsed_function=function_info,
             contexts=contexts,
             docstring_data=function_docstring_data,
             section_name="args",

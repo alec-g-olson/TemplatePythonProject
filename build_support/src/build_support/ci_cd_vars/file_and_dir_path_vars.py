@@ -1,4 +1,5 @@
 """Collection of all file and folder path functions and variables."""
+
 from enum import Enum
 from pathlib import Path
 
@@ -229,7 +230,9 @@ def get_documentation_tests_dir(project_root: Path) -> Path:
     Returns:
         Path: Path to the documentation tests directory for this project.
     """
-    return get_process_and_style_enforcement_dir(project_root=project_root).joinpath("test")
+    return get_process_and_style_enforcement_dir(project_root=project_root).joinpath(
+        "test"
+    )
 
 
 ########################################
