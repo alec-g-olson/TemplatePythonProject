@@ -8,9 +8,9 @@ work off of that has a decent testing pipeline that is platform independent.
 This project is licensed with The Unlicense, which puts this project into the public
 domain.  Anyone can take this code and do anything they want for profit or personal use
 with no need for attribution or requirement to keep your projects open source.  When you
-make a new project based on this template, only the code that came from this template 
-will be part of the public domain, unless you choose to use a license that puts the rest
-of your new project into the public domain.
+make a new project based on this template you can use any license you want, and only the
+code that came from this template will be part of the public domain, unless you choose 
+to use a license that puts the rest of your new project into the public domain.
 
 ### Goals of Template Project
 
@@ -71,8 +71,8 @@ as you see fit.  There are 4 top-level folders that are worth discussing:
 - [pulumi](pulumi)
   - The pulumi code that sets up and manages cloud resources and deployments.
 - [pypi_package](pypi_package)
-  - The pypi package that will contain our business logic and will be deployed to production
-  environments. 
+  - The pypi package that will contain our business logic and will be deployed to
+  production environments. 
 
 ### Scope of Template Project
 
@@ -199,7 +199,8 @@ and then select `Sources Root`.
 - [pypi_package/src](pypi_package/src)
 
 For each of the following test folders you will repeat the process described for the 
-source folders, but instead of selecting `Sources Root`, you will mark these as `Test Sources Root`.
+source folders, but instead of selecting `Sources Root`, you will mark these as 
+`Test Sources Root`.
 
 - [build_support/test](build_support/test)
 - [process_and_style_enforcement/test](process_and_style_enforcement/test)
