@@ -184,9 +184,10 @@ def test_resolve_process_results_normal_process() -> None:
 
 
 def test_resolve_process_results_normal_process_exit_1() -> None:
-    with patch("builtins.print") as mock_print, patch(
-        "build_support.dag_engine.sys.exit"
-    ) as mock_exit:
+    with (
+        patch("builtins.print") as mock_print,
+        patch("build_support.dag_engine.sys.exit") as mock_exit,
+    ):
         resolve_process_results(
             command_as_str="run a process",
             output=b"output",
@@ -216,9 +217,10 @@ def test_resolve_process_results_normal_process_has_error_text() -> None:
 
 
 def test_resolve_process_results_normal_process_has_error_text_exit_1() -> None:
-    with patch("builtins.print") as mock_print, patch(
-        "build_support.dag_engine.sys.exit"
-    ) as mock_exit:
+    with (
+        patch("builtins.print") as mock_print,
+        patch("build_support.dag_engine.sys.exit") as mock_exit,
+    ):
         resolve_process_results(
             command_as_str="run a process",
             output=b"output",
@@ -249,9 +251,10 @@ def test_resolve_process_results_normal_process_silent() -> None:
 
 
 def test_resolve_process_results_normal_process_silent_exit_1() -> None:
-    with patch("builtins.print") as mock_print, patch(
-        "build_support.dag_engine.sys.exit"
-    ) as mock_exit:
+    with (
+        patch("builtins.print") as mock_print,
+        patch("build_support.dag_engine.sys.exit") as mock_exit,
+    ):
         resolve_process_results(
             command_as_str="run a process",
             output=b"output",
@@ -269,9 +272,12 @@ def test_resolve_process_results_normal_process_silent_exit_1() -> None:
 
 
 def test_run_process() -> None:
-    with patch("build_support.dag_engine.Popen") as mock_popen, patch(
-        "build_support.dag_engine.resolve_process_results",
-    ) as mock_resolve_process_results:
+    with (
+        patch("build_support.dag_engine.Popen") as mock_popen,
+        patch(
+            "build_support.dag_engine.resolve_process_results",
+        ) as mock_resolve_process_results,
+    ):
         process_mock = MagicMock()
         process_mock.communicate = MagicMock()
         process_mock.communicate.return_value = b"output", b"error"
@@ -297,9 +303,12 @@ def test_run_process() -> None:
 
 
 def test_run_process_silent() -> None:
-    with patch("build_support.dag_engine.Popen") as mock_popen, patch(
-        "build_support.dag_engine.resolve_process_results",
-    ) as mock_resolve_process_results:
+    with (
+        patch("build_support.dag_engine.Popen") as mock_popen,
+        patch(
+            "build_support.dag_engine.resolve_process_results",
+        ) as mock_resolve_process_results,
+    ):
         process_mock = MagicMock()
         process_mock.communicate = MagicMock()
         process_mock.communicate.return_value = b"output", b"error"
@@ -328,13 +337,16 @@ def test_run_process_silent() -> None:
 
 
 def test_run_process_as_user() -> None:
-    with patch("build_support.dag_engine.Popen") as mock_popen, patch(
-        "build_support.dag_engine.resolve_process_results",
-    ) as mock_resolve_process_results, patch(
-        "build_support.dag_engine.getpwuid"
-    ) as mock_getpwuid, patch(
-        "build_support.dag_engine.environ", {"initial_key": "initial_val"}
-    ) as mock_environ:
+    with (
+        patch("build_support.dag_engine.Popen") as mock_popen,
+        patch(
+            "build_support.dag_engine.resolve_process_results",
+        ) as mock_resolve_process_results,
+        patch("build_support.dag_engine.getpwuid") as mock_getpwuid,
+        patch(
+            "build_support.dag_engine.environ", {"initial_key": "initial_val"}
+        ) as mock_environ,
+    ):
         user_name = "user_name"
         mock_getpwuid.return_value = [user_name]
         home_path = f"/home/{user_name}/"
@@ -373,13 +385,16 @@ def test_run_process_as_user() -> None:
 
 
 def test_run_process_silent_as_user() -> None:
-    with patch("build_support.dag_engine.Popen") as mock_popen, patch(
-        "build_support.dag_engine.resolve_process_results",
-    ) as mock_resolve_process_results, patch(
-        "build_support.dag_engine.getpwuid"
-    ) as mock_getpwuid, patch(
-        "build_support.dag_engine.environ", {"initial_key": "initial_val"}
-    ) as mock_environ:
+    with (
+        patch("build_support.dag_engine.Popen") as mock_popen,
+        patch(
+            "build_support.dag_engine.resolve_process_results",
+        ) as mock_resolve_process_results,
+        patch("build_support.dag_engine.getpwuid") as mock_getpwuid,
+        patch(
+            "build_support.dag_engine.environ", {"initial_key": "initial_val"}
+        ) as mock_environ,
+    ):
         user_name = "user_name"
         mock_getpwuid.return_value = [user_name]
         home_path = f"/home/{user_name}/"
@@ -428,11 +443,15 @@ def test_get_output_of_process() -> None:
 
 
 def test_run_piped_processes() -> None:
-    with patch("build_support.dag_engine.Popen") as mock_popen, patch(
-        "builtins.print",
-    ) as mock_print, patch(
-        "build_support.dag_engine.resolve_process_results",
-    ) as mock_resolve_process_results:
+    with (
+        patch("build_support.dag_engine.Popen") as mock_popen,
+        patch(
+            "builtins.print",
+        ) as mock_print,
+        patch(
+            "build_support.dag_engine.resolve_process_results",
+        ) as mock_resolve_process_results,
+    ):
         process_mock = MagicMock()
         process_mock.communicate = MagicMock()
         process_mock.communicate.return_value = b"output", b"error"
@@ -475,11 +494,15 @@ def test_run_piped_processes() -> None:
 
 
 def test_run_piped_processes_silent() -> None:
-    with patch("build_support.dag_engine.Popen") as mock_popen, patch(
-        "builtins.print",
-    ) as mock_print, patch(
-        "build_support.dag_engine.resolve_process_results",
-    ) as mock_resolve_process_results:
+    with (
+        patch("build_support.dag_engine.Popen") as mock_popen,
+        patch(
+            "builtins.print",
+        ) as mock_print,
+        patch(
+            "build_support.dag_engine.resolve_process_results",
+        ) as mock_resolve_process_results,
+    ):
         process_mock = MagicMock()
         process_mock.communicate = MagicMock()
         process_mock.communicate.return_value = b"output", b"error"
@@ -523,15 +546,19 @@ def test_run_piped_processes_silent() -> None:
 
 
 def test_run_piped_processes_as_user() -> None:
-    with patch("build_support.dag_engine.Popen") as mock_popen, patch(
-        "builtins.print",
-    ) as mock_print, patch(
-        "build_support.dag_engine.resolve_process_results",
-    ) as mock_resolve_process_results, patch(
-        "build_support.dag_engine.getpwuid"
-    ) as mock_getpwuid, patch(
-        "build_support.dag_engine.environ", {"initial_key": "initial_val"}
-    ) as mock_environ:
+    with (
+        patch("build_support.dag_engine.Popen") as mock_popen,
+        patch(
+            "builtins.print",
+        ) as mock_print,
+        patch(
+            "build_support.dag_engine.resolve_process_results",
+        ) as mock_resolve_process_results,
+        patch("build_support.dag_engine.getpwuid") as mock_getpwuid,
+        patch(
+            "build_support.dag_engine.environ", {"initial_key": "initial_val"}
+        ) as mock_environ,
+    ):
         user_name = "user_name"
         mock_getpwuid.return_value = [user_name]
         home_path = f"/home/{user_name}/"
@@ -582,15 +609,19 @@ def test_run_piped_processes_as_user() -> None:
 
 
 def test_run_piped_processes_silent_as_user() -> None:
-    with patch("build_support.dag_engine.Popen") as mock_popen, patch(
-        "builtins.print",
-    ) as mock_print, patch(
-        "build_support.dag_engine.resolve_process_results",
-    ) as mock_resolve_process_results, patch(
-        "build_support.dag_engine.getpwuid"
-    ) as mock_getpwuid, patch(
-        "build_support.dag_engine.environ", {"initial_key": "initial_val"}
-    ) as mock_environ:
+    with (
+        patch("build_support.dag_engine.Popen") as mock_popen,
+        patch(
+            "builtins.print",
+        ) as mock_print,
+        patch(
+            "build_support.dag_engine.resolve_process_results",
+        ) as mock_resolve_process_results,
+        patch("build_support.dag_engine.getpwuid") as mock_getpwuid,
+        patch(
+            "build_support.dag_engine.environ", {"initial_key": "initial_val"}
+        ) as mock_environ,
+    ):
         user_name = "user_name"
         mock_getpwuid.return_value = [user_name]
         home_path = f"/home/{user_name}/"
@@ -642,11 +673,15 @@ def test_run_piped_processes_silent_as_user() -> None:
 
 
 def test_run_piped_processes_one_process() -> None:
-    with patch("build_support.dag_engine.Popen") as mock_popen, patch(
-        "builtins.print",
-    ) as mock_print, patch(
-        "build_support.dag_engine.resolve_process_results",
-    ) as mock_resolve_process_results:
+    with (
+        patch("build_support.dag_engine.Popen") as mock_popen,
+        patch(
+            "builtins.print",
+        ) as mock_print,
+        patch(
+            "build_support.dag_engine.resolve_process_results",
+        ) as mock_resolve_process_results,
+    ):
         process_mock = MagicMock()
         process_mock.communicate = MagicMock()
         process_mock.communicate.return_value = b"output", b"error"
@@ -674,11 +709,15 @@ def test_run_piped_processes_one_process() -> None:
 
 
 def test_run_piped_processes_one_process_silent() -> None:
-    with patch("build_support.dag_engine.Popen") as mock_popen, patch(
-        "builtins.print",
-    ) as mock_print, patch(
-        "build_support.dag_engine.resolve_process_results",
-    ) as mock_resolve_process_results:
+    with (
+        patch("build_support.dag_engine.Popen") as mock_popen,
+        patch(
+            "builtins.print",
+        ) as mock_print,
+        patch(
+            "build_support.dag_engine.resolve_process_results",
+        ) as mock_resolve_process_results,
+    ):
         process_mock = MagicMock()
         process_mock.communicate = MagicMock()
         process_mock.communicate.return_value = b"output", b"error"

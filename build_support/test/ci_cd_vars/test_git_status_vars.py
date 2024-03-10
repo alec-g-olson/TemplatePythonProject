@@ -109,11 +109,14 @@ def test_commit_changes_no_diff(
     local_uid: int,
     local_gid: int,
 ) -> None:
-    with patch(
-        "build_support.ci_cd_vars.git_status_vars.run_process",
-    ) as run_process_mock, patch(
-        "build_support.ci_cd_vars.git_status_vars.get_git_diff",
-    ) as get_git_diff_mock:
+    with (
+        patch(
+            "build_support.ci_cd_vars.git_status_vars.run_process",
+        ) as run_process_mock,
+        patch(
+            "build_support.ci_cd_vars.git_status_vars.get_git_diff",
+        ) as get_git_diff_mock,
+    ):
         get_git_diff_mock.return_value = ""
         commit_changes_if_diff(
             commit_message_no_quotes=valid_commit_message,
@@ -150,13 +153,17 @@ def test_commit_changes_with_diff_on_main(
     local_gid: int,
 ) -> None:
     branch_name = MAIN_BRANCH_NAME
-    with patch(
-        "build_support.ci_cd_vars.git_status_vars.run_process",
-    ) as run_process_mock, patch(
-        "build_support.ci_cd_vars.git_status_vars.get_git_diff",
-    ) as get_git_diff_mock, patch(
-        "build_support.ci_cd_vars.git_status_vars.get_current_branch",
-    ) as get_branch_mock:
+    with (
+        patch(
+            "build_support.ci_cd_vars.git_status_vars.run_process",
+        ) as run_process_mock,
+        patch(
+            "build_support.ci_cd_vars.git_status_vars.get_git_diff",
+        ) as get_git_diff_mock,
+        patch(
+            "build_support.ci_cd_vars.git_status_vars.get_current_branch",
+        ) as get_branch_mock,
+    ):
         get_git_diff_mock.return_value = "some_diff"
         get_branch_mock.return_value = branch_name
         expected_message = (
@@ -177,13 +184,17 @@ def test_run_push_tags_allowed_with_diff_not_main(
     local_gid: int,
 ) -> None:
     branch_name = "not_" + MAIN_BRANCH_NAME
-    with patch(
-        "build_support.ci_cd_vars.git_status_vars.run_process",
-    ) as run_process_mock, patch(
-        "build_support.ci_cd_vars.git_status_vars.get_git_diff",
-    ) as get_git_diff_mock, patch(
-        "build_support.ci_cd_vars.git_status_vars.get_current_branch",
-    ) as get_branch_mock:
+    with (
+        patch(
+            "build_support.ci_cd_vars.git_status_vars.run_process",
+        ) as run_process_mock,
+        patch(
+            "build_support.ci_cd_vars.git_status_vars.get_git_diff",
+        ) as get_git_diff_mock,
+        patch(
+            "build_support.ci_cd_vars.git_status_vars.get_current_branch",
+        ) as get_branch_mock,
+    ):
         get_git_diff_mock.return_value = "some_diff"
         get_branch_mock.return_value = branch_name
         commit_changes_if_diff(

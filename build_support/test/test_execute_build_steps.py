@@ -7,10 +7,10 @@ from _pytest.fixtures import SubRequest
 
 from build_support.ci_cd_tasks.build_tasks import BuildAll, BuildDocs, BuildPypi
 from build_support.ci_cd_tasks.env_setup_tasks import (
-    BuildDevEnvironment,
-    BuildProdEnvironment,
-    BuildPulumiEnvironment,
     Clean,
+    SetupDevEnvironment,
+    SetupProdEnvironment,
+    SetupPulumiEnvironment,
 )
 from build_support.ci_cd_tasks.lint_tasks import (
     ApplyRuffFixUnsafe,
@@ -38,9 +38,9 @@ def test_constants_not_changed_by_accident() -> None:
     assert CLI_ARG_TO_TASK.copy() == {
         "make_new_project": MakeProjectFromTemplate,
         "clean": Clean,
-        "build_dev": BuildDevEnvironment,
-        "build_prod": BuildProdEnvironment,
-        "build_pulumi": BuildPulumiEnvironment,
+        "setup_dev_env": SetupDevEnvironment,
+        "setup_prod_env": SetupProdEnvironment,
+        "setup_pulumi_env": SetupPulumiEnvironment,
         "test_style": ValidatePythonStyle,
         "test_build_support": ValidateBuildSupport,
         "test_pypi": ValidatePypi,
@@ -288,9 +288,12 @@ def test_run_main_success(
         group_id=local_gid,
         build_tasks=["clean"],
     )
-    with patch("build_support.execute_build_steps.run_tasks") as mock_run_tasks, patch(
-        "build_support.execute_build_steps.fix_permissions",
-    ) as mock_fix_permissions:
+    with (
+        patch("build_support.execute_build_steps.run_tasks") as mock_run_tasks,
+        patch(
+            "build_support.execute_build_steps.fix_permissions",
+        ) as mock_fix_permissions,
+    ):
         run_main(args)
         mock_run_tasks.assert_called_once_with(
             tasks=[
@@ -322,11 +325,15 @@ def test_run_main_exception(
         group_id=local_gid,
         build_tasks=all_task_list,
     )
-    with patch("build_support.execute_build_steps.run_tasks") as mock_run_tasks, patch(
-        "builtins.print",
-    ) as mock_print, patch(
-        "build_support.execute_build_steps.fix_permissions",
-    ) as mock_fix_permissions:
+    with (
+        patch("build_support.execute_build_steps.run_tasks") as mock_run_tasks,
+        patch(
+            "builtins.print",
+        ) as mock_print,
+        patch(
+            "build_support.execute_build_steps.fix_permissions",
+        ) as mock_fix_permissions,
+    ):
         error_to_raise = RuntimeError("error_message")
         mock_run_tasks.side_effect = error_to_raise
         run_main(args)

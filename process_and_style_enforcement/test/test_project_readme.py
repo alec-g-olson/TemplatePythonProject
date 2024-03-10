@@ -165,12 +165,10 @@ def _get_all_bad_hyperlinks(
             strip_header = strip_header.replace(" ", "-").lower()
             possible_header_links.append(strip_header)
         bad_hyperlinks = [
-            bad_hyperlinks.append(
-                BadHyperlinkInfo(
-                    readme_path=readme_path.relative_to(PROJECT_ROOT_DIR),
-                    line_number=line_number,
-                    hyperlink=str(hyperlink),
-                )
+            BadHyperlinkInfo(
+                readme_path=readme_path.relative_to(PROJECT_ROOT_DIR),
+                line_number=line_number,
+                hyperlink=str(hyperlink),
             )
             for line_number, line in enumerate(readme_path.open(), 1)
             for hyperlink in re.findall(HYPERLINK_PATTERN, line)
@@ -186,8 +184,12 @@ def _get_all_bad_hyperlinks(
 
 TOP_LEVEL_README_HEADER_LEVEL_DICT = {
     "Template Project": 1,
+    "Goals of Template Project": 3,
+    "Enforcement of Development Practices": 4,
+    "Enforcement of Development and Production Environments": 4,
+    "Organization of Template Project": 3,
     "Scope of Template Project": 3,
-    "Services to Control With CI/CD": 4,
+    "Architecture Layers": 4,
     "Environments this Template Strives to Support": 4,
     "Additional Control this Template Tries to Provide": 4,
     "Creating a New Project From This Template": 3,
@@ -204,22 +206,18 @@ TOP_LEVEL_README_HEADER_LEVEL_DICT = {
     "PyCharm: Setting Vertical Ruler to 88": 4,
     "PyCharm: Checking Your Work by Running the Tests": 4,
     "VS Code": 3,
-    "VS Code: Setting the Python Interpreter": 4,
-    "VS Code: Setting Src and Test Folders": 4,
-    "VS Code: Configuring VS Code to Use Pytest": 4,
-    "VS Code: Checking Your Work by Running the Tests": 4,
-    "Working in this Repository": 2,
-    "Selected Build Commands": 3,
-    "Tools Enforcing Dev Standards": 3,
-    "PyTest and PyTest-Cov": 4,
-    "iSort": 4,
-    "Black": 4,
-    "PyDocStyle": 4,
-    "Flake8": 4,
-    "MyPy": 4,
-    "Technologies and Frameworks": 2,
-    "Major Technologies": 3,
-    "Other tools": 3,
+    "Working in this Repository": 1,
+    "Selected Build Commands": 2,
+    "Tools Enforcing Dev Standards": 2,
+    "Poetry": 3,
+    "PyTest and PyTest-Cov": 3,
+    "Ruff": 3,
+    "Process and Style Enforcement": 3,
+    "MyPy": 3,
+    "Bandit": 3,
+    "Technologies and Frameworks": 1,
+    "Major Technologies": 2,
+    "Other tools": 2,
     "Versioning": 1,
     "Creating a Release": 1,
 }

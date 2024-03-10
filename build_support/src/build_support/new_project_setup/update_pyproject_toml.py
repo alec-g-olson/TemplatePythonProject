@@ -32,7 +32,7 @@ def update_pyproject_toml(
     pyproject_data["tool"]["poetry"]["authors"] = [
         new_project_settings.organization.formatted_name_and_email(),
     ]
-    pyproject_data["tool"]["poetry"]["packages"][0][
-        "include"
-    ] = new_project_settings.name
+    pyproject_data["tool"]["poetry"]["packages"][0]["include"] = (
+        new_project_settings.name
+    )
     path_to_pyproject_toml.write_text(dumps(pyproject_data))

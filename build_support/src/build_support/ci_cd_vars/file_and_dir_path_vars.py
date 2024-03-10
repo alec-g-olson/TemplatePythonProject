@@ -1,4 +1,5 @@
 """Collection of all file and folder path functions and variables."""
+
 from enum import Enum
 from pathlib import Path
 
@@ -120,7 +121,7 @@ def get_pulumi_dir(project_root: Path) -> Path:
     return project_root.joinpath("pulumi")
 
 
-def get_documentation_enforcement_dir(project_root: Path) -> Path:
+def get_process_and_style_enforcement_dir(project_root: Path) -> Path:
     """Gets the documentation enforcement directory for this project.
 
     Args:
@@ -129,7 +130,7 @@ def get_documentation_enforcement_dir(project_root: Path) -> Path:
     Returns:
         Path: Path to the documentation enforcement directory for this project.
     """
-    return project_root.joinpath("documentation_enforcement")
+    return project_root.joinpath("process_and_style_enforcement")
 
 
 ########################################
@@ -202,7 +203,7 @@ def get_subproject_docs_build_dir(subproject_root: Path) -> Path:
 
 
 ########################################
-# Files and folders contained in documentation_enforcement
+# Files and folders contained in process_and_style_enforcement
 ########################################
 
 
@@ -215,7 +216,7 @@ def get_sphinx_conf_dir(project_root: Path) -> Path:
     Returns:
         Path: Path to the sphinx config directory in this project.
     """
-    return get_documentation_enforcement_dir(project_root=project_root).joinpath(
+    return get_process_and_style_enforcement_dir(project_root=project_root).joinpath(
         "sphinx_conf",
     )
 
@@ -229,7 +230,9 @@ def get_documentation_tests_dir(project_root: Path) -> Path:
     Returns:
         Path: Path to the documentation tests directory for this project.
     """
-    return get_documentation_enforcement_dir(project_root=project_root).joinpath("test")
+    return get_process_and_style_enforcement_dir(project_root=project_root).joinpath(
+        "test"
+    )
 
 
 ########################################
@@ -573,5 +576,5 @@ class SubprojectContext(Enum):
     PYPI = "pypi_package"
     BUILD_SUPPORT = "build_support"
     PULUMI = "pulumi"
-    DOCUMENTATION_ENFORCEMENT = "documentation_enforcement"
+    DOCUMENTATION_ENFORCEMENT = "process_and_style_enforcement"
     ALL = "all"

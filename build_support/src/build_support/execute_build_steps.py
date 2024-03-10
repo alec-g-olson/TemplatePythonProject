@@ -9,10 +9,10 @@ from pathlib import Path
 
 from build_support.ci_cd_tasks.build_tasks import BuildAll, BuildDocs, BuildPypi
 from build_support.ci_cd_tasks.env_setup_tasks import (
-    BuildDevEnvironment,
-    BuildProdEnvironment,
-    BuildPulumiEnvironment,
     Clean,
+    SetupDevEnvironment,
+    SetupProdEnvironment,
+    SetupPulumiEnvironment,
 )
 from build_support.ci_cd_tasks.lint_tasks import (
     ApplyRuffFixUnsafe,
@@ -39,9 +39,9 @@ from build_support.new_project_setup.setup_new_project import MakeProjectFromTem
 CLI_ARG_TO_TASK: dict[str, type[TaskNode]] = {
     "make_new_project": MakeProjectFromTemplate,
     "clean": Clean,
-    "build_dev": BuildDevEnvironment,
-    "build_prod": BuildProdEnvironment,
-    "build_pulumi": BuildPulumiEnvironment,
+    "setup_dev_env": SetupDevEnvironment,
+    "setup_prod_env": SetupProdEnvironment,
+    "setup_pulumi_env": SetupPulumiEnvironment,
     "test_style": ValidatePythonStyle,
     "test_build_support": ValidateBuildSupport,
     "test_pypi": ValidatePypi,

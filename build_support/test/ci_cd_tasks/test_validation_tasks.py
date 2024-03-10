@@ -3,7 +3,7 @@ from unittest.mock import call, patch
 
 import pytest
 
-from build_support.ci_cd_tasks.env_setup_tasks import BuildDevEnvironment, GetGitInfo
+from build_support.ci_cd_tasks.env_setup_tasks import GetGitInfo, SetupDevEnvironment
 from build_support.ci_cd_tasks.validation_tasks import (
     ValidateAll,
     ValidateBuildSupport,
@@ -25,6 +25,7 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_build_support_src_dir,
     get_build_support_test_dir,
     get_documentation_tests_dir,
+    get_process_and_style_enforcement_dir,
     get_pulumi_dir,
     get_pypi_src_and_test,
     get_pypi_src_dir,
@@ -108,7 +109,7 @@ def test_validate_build_support_requires(
             local_user_uid=validate_build_support_task.local_user_uid,
             local_user_gid=validate_build_support_task.local_user_gid,
         ),
-        BuildDevEnvironment(
+        SetupDevEnvironment(
             non_docker_project_root=validate_build_support_task.non_docker_project_root,
             docker_project_root=validate_build_support_task.docker_project_root,
             local_user_uid=validate_build_support_task.local_user_uid,
@@ -173,7 +174,7 @@ def test_validate_python_style_requires(
             local_user_uid=validate_python_style_task.local_user_uid,
             local_user_gid=validate_python_style_task.local_user_gid,
         ),
-        BuildDevEnvironment(
+        SetupDevEnvironment(
             non_docker_project_root=validate_python_style_task.non_docker_project_root,
             docker_project_root=validate_python_style_task.docker_project_root,
             local_user_uid=validate_python_style_task.local_user_uid,
@@ -272,6 +273,14 @@ def test_run_validate_python_style(
                 get_build_support_test_dir(project_root=task.docker_project_root),
             ],
         )
+        mypy_process_and_style_enforcement_args = concatenate_args(
+            args=[
+                mypy_command,
+                get_process_and_style_enforcement_dir(
+                    project_root=task.docker_project_root
+                ),
+            ]
+        )
         mypy_pulumi_args = concatenate_args(
             args=[
                 mypy_command,
@@ -336,6 +345,7 @@ def test_run_validate_python_style(
             mypy_pypi_args,
             mypy_build_support_src_args,
             mypy_build_support_test_args,
+            mypy_process_and_style_enforcement_args,
             mypy_pulumi_args,
             bandit_pypi_args,
             bandit_pulumi_args,
@@ -365,7 +375,7 @@ def validate_pypi_task(
 def test_validate_pypi_requires(validate_pypi_task: ValidatePypi) -> None:
     task = validate_pypi_task
     assert task.required_tasks() == [
-        BuildDevEnvironment(
+        SetupDevEnvironment(
             non_docker_project_root=task.non_docker_project_root,
             docker_project_root=task.docker_project_root,
             local_user_uid=task.local_user_uid,

@@ -3,6 +3,7 @@
 Attributes:
     | ALLOWED_VERSION_REGEX: A regex for allowed version numbers for this project.
 """
+
 import re
 import tomllib
 from pathlib import Path

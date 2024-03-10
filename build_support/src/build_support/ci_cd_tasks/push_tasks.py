@@ -1,6 +1,5 @@
 """Should hold all tasks that push artifacts after testing."""
 
-
 from build_support.ci_cd_tasks.build_tasks import BuildPypi
 from build_support.ci_cd_tasks.validation_tasks import ValidateAll
 from build_support.ci_cd_vars.git_status_vars import (

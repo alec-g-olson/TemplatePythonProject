@@ -3,6 +3,7 @@
 Attributes:
     | MAIN_BRANCH_NAME: The name of the main branch for this repo.
 """
+
 from build_support.dag_engine import (
     concatenate_args,
     get_output_of_process,

@@ -10,6 +10,7 @@ Attributes:
     | REAL_PROJECT_ROOT: A path to the root of this project.
     | REAL_LICENSE_TEMPLATE_DIR: A path to a folder that will cache license templates.
 """
+
 import json
 from pathlib import Path
 from time import sleep

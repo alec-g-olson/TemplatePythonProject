@@ -120,7 +120,7 @@ docstring-code-format = true
 docstring-code-line-length = "dynamic"
 
 [tool.ruff.lint.per-file-ignores]
-"documentation_enforcement/sphinx_conf/conf.py" = ["INP001"]
+"process_and_style_enforcement/sphinx_conf/conf.py" = ["INP001"]
 
 [tool.mypy]
 enable_error_code = ["ignore-without-code"]
@@ -128,7 +128,7 @@ enable_error_code = ["ignore-without-code"]
 
 [tool.poetry]
 name = "template_python_project"
-version = "0.2.22"
+version = "0.2.23"
 license = "unlicense"
 packages = [{include = "template_python_project", from="pypi_package/src"}]
 description = "A project that can be used as a template to provide some CI/CD out of the box."
@@ -156,14 +156,13 @@ optional = true
 [tool.poetry.group.dev.dependencies]
 bandit = {extras = ["baseline", "toml"], version = "^1.7"}
 mypy = "^1.8"
-pydocstyle = "^6.3"
 pytest = "^7.4"
 pytest-cov = "^4.1"
 pytest-html = "^4.1"
 pytest-xdist = "^3.5"
 responses = "^0.24"
 requests = "^2.31"
-ruff = "^0.2.2"
+ruff = "0.3.2"  # When upgrading ensure we run all stable rules and exclude previews
 sphinx = "^7.2"
 sphinx-rtd-theme = "^2.0.0"
 types-requests = "^2.31"
@@ -176,5 +175,5 @@ pulumi = "^3.0"
 pulumi-aws = "^6.0"
 
 [build-system]
-requires = ["poetry-core==1.7.1"]  # make sure to update in Dockerfile
+requires = ["poetry-core==1.8.1"]  # If changed here change POETRY_VERSION in Dockerfile
 build-backend = "poetry.core.masonry.api"

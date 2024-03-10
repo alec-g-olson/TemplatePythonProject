@@ -86,15 +86,20 @@ def test_run_push_tags_not_allowed(
     branch_name: str,
     current_version: str,
 ) -> None:
-    with patch(
-        "build_support.ci_cd_tasks.push_tasks.get_current_branch",
-    ) as get_branch_mock, patch(
-        "build_support.ci_cd_tasks.push_tasks.get_project_version",
-    ) as get_version_mock, patch(
-        "build_support.ci_cd_tasks.push_tasks.run_process",
-    ) as run_process_mock, patch(
-        "build_support.ci_cd_tasks.push_tasks.commit_changes_if_diff",
-    ) as commit_changes_mock:
+    with (
+        patch(
+            "build_support.ci_cd_tasks.push_tasks.get_current_branch",
+        ) as get_branch_mock,
+        patch(
+            "build_support.ci_cd_tasks.push_tasks.get_project_version",
+        ) as get_version_mock,
+        patch(
+            "build_support.ci_cd_tasks.push_tasks.run_process",
+        ) as run_process_mock,
+        patch(
+            "build_support.ci_cd_tasks.push_tasks.commit_changes_if_diff",
+        ) as commit_changes_mock,
+    ):
         get_branch_mock.return_value = branch_name
         get_version_mock.return_value = current_version
         expected_message = (
@@ -118,15 +123,20 @@ def test_run_push_tags_allowed(
     branch_name: str,
     current_version: str,
 ) -> None:
-    with patch(
-        "build_support.ci_cd_tasks.push_tasks.run_process",
-    ) as run_process_mock, patch(
-        "build_support.ci_cd_tasks.push_tasks.commit_changes_if_diff",
-    ) as commit_changes_mock, patch(
-        "build_support.ci_cd_tasks.push_tasks.get_current_branch",
-    ) as get_branch_mock, patch(
-        "build_support.ci_cd_tasks.push_tasks.get_project_version",
-    ) as get_version_mock:
+    with (
+        patch(
+            "build_support.ci_cd_tasks.push_tasks.run_process",
+        ) as run_process_mock,
+        patch(
+            "build_support.ci_cd_tasks.push_tasks.commit_changes_if_diff",
+        ) as commit_changes_mock,
+        patch(
+            "build_support.ci_cd_tasks.push_tasks.get_current_branch",
+        ) as get_branch_mock,
+        patch(
+            "build_support.ci_cd_tasks.push_tasks.get_project_version",
+        ) as get_version_mock,
+    ):
         get_branch_mock.return_value = branch_name
         get_version_mock.return_value = current_version
         push_tags_task.run()

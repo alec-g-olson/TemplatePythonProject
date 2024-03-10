@@ -17,7 +17,7 @@ from build_support.ci_cd_vars.project_setting_vars import get_pulumi_version
 from build_support.dag_engine import TaskNode, concatenate_args, run_process
 
 
-class BuildDevEnvironment(TaskNode):
+class SetupDevEnvironment(TaskNode):
     """Builds a docker image with a stable environment for running dev commands."""
 
     def required_tasks(self) -> list[TaskNode]:
@@ -42,7 +42,7 @@ class BuildDevEnvironment(TaskNode):
         )
 
 
-class BuildProdEnvironment(TaskNode):
+class SetupProdEnvironment(TaskNode):
     """Builds a docker image with a stable environment for running prod commands."""
 
     def required_tasks(self) -> list[TaskNode]:
@@ -67,7 +67,7 @@ class BuildProdEnvironment(TaskNode):
         )
 
 
-class BuildPulumiEnvironment(TaskNode):
+class SetupPulumiEnvironment(TaskNode):
     """Builds a docker image with a stable environment for running pulumi commands."""
 
     def required_tasks(self) -> list[TaskNode]:
@@ -150,8 +150,8 @@ class GitInfo(BaseModel):
     branch: str
     tags: list[str]
 
-    @classmethod
-    def from_yaml(cls, yaml_str: str) -> "GitInfo":
+    @staticmethod
+    def from_yaml(yaml_str: str) -> "GitInfo":
         """Builds an object from a json str.
 
         Args:
@@ -188,6 +188,15 @@ class GetGitInfo(TaskNode):
         Returns:
             None
         """
+        run_process(
+            args=concatenate_args(
+                args=[
+                    "chown",
+                    f"{self.local_user_uid}:{self.local_user_gid}",
+                    self.docker_project_root,
+                ]
+            )
+        )
         run_process(
             args=concatenate_args(args=["git", "fetch"]),
             user_uid=self.local_user_uid,

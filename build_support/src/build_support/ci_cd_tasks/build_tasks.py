@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from build_support.ci_cd_tasks.env_setup_tasks import BuildProdEnvironment
+from build_support.ci_cd_tasks.env_setup_tasks import SetupProdEnvironment
 from build_support.ci_cd_tasks.validation_tasks import ValidatePypi, ValidatePythonStyle
 from build_support.ci_cd_vars.docker_vars import (
     DockerTarget,
@@ -81,7 +81,7 @@ class BuildPypi(TaskNode):
                 local_user_uid=self.local_user_uid,
                 local_user_gid=self.local_user_gid,
             ),
-            BuildProdEnvironment(
+            SetupProdEnvironment(
                 non_docker_project_root=self.non_docker_project_root,
                 docker_project_root=self.docker_project_root,
                 local_user_uid=self.local_user_uid,
