@@ -1,15 +1,27 @@
 """Defines the structure of a python subproject."""
+
 from dataclasses import dataclass
+from enum import Enum
 from functools import cache
 from pathlib import Path
 
 from build_support.ci_cd_vars.project_structure import get_build_dir, maybe_build_dir
-from build_support.ci_cd_vars.subproject_enum import SubprojectContext
+
+
+class SubprojectContext(Enum):
+    """An Enum to track the possible docker targets and images."""
+
+    PYPI = "pypi_package"
+    BUILD_SUPPORT = "build_support"
+    PULUMI = "pulumi"
+    DOCUMENTATION_ENFORCEMENT = "process_and_style_enforcement"
+    ALL = "all"
 
 
 @dataclass(frozen=True)
 class PythonSubProject:
     """Class that describes a python subproject."""
+
     project_root: Path
     subproject_name: str
 

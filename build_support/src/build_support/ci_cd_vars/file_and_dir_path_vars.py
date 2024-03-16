@@ -3,8 +3,8 @@
 from pathlib import Path
 
 from build_support.ci_cd_vars.project_structure import get_build_dir, maybe_build_dir
-from build_support.ci_cd_vars.subproject_enum import SubprojectContext
 from build_support.ci_cd_vars.subproject_structure import (
+    SubprojectContext,
     get_all_python_subprojects_dict,
     get_python_subproject,
 )

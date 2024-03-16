@@ -9,8 +9,10 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
 )
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
 from build_support.ci_cd_vars.project_structure import get_dockerfile
-from build_support.ci_cd_vars.subproject_enum import SubprojectContext
-from build_support.ci_cd_vars.subproject_structure import get_python_subproject
+from build_support.ci_cd_vars.subproject_structure import (
+    SubprojectContext,
+    get_python_subproject,
+)
 from build_support.process_runner import concatenate_args
 
 

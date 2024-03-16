@@ -1,4 +1,5 @@
 """Defines the top level project structure."""
+
 from pathlib import Path
 
 

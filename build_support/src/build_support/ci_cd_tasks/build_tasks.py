@@ -17,7 +17,7 @@ from build_support.ci_cd_vars.project_setting_vars import (
     get_project_name,
     get_project_version,
 )
-from build_support.ci_cd_vars.subproject_enum import SubprojectContext
+from build_support.ci_cd_vars.subproject_structure import SubprojectContext
 from build_support.process_runner import concatenate_args, run_process
 
 

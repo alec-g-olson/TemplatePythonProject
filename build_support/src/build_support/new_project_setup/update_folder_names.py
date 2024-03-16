@@ -2,8 +2,10 @@
 
 from pathlib import Path
 
-from build_support.ci_cd_vars.subproject_enum import SubprojectContext
-from build_support.ci_cd_vars.subproject_structure import get_python_subproject
+from build_support.ci_cd_vars.subproject_structure import (
+    SubprojectContext,
+    get_python_subproject,
+)
 from build_support.new_project_setup.new_project_data_models import ProjectSettings
 
 

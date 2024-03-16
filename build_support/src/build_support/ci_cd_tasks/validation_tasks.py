@@ -18,8 +18,8 @@ from build_support.ci_cd_vars.python_vars import (
     get_bandit_report_path,
     get_pytest_report_args,
 )
-from build_support.ci_cd_vars.subproject_enum import SubprojectContext
 from build_support.ci_cd_vars.subproject_structure import (
+    SubprojectContext,
     get_all_python_subprojects_dict,
     get_python_subproject,
 )
