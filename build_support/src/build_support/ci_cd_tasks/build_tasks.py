@@ -1,6 +1,6 @@
 """ci_cd_tasks should house all tasks that build artifacts that will be pushed."""
 
-import shutil
+from shutil import copytree
 
 from build_support.ci_cd_tasks.env_setup_tasks import SetupProdEnvironment
 from build_support.ci_cd_tasks.task_node import PerSubprojectTask, TaskNode
@@ -17,7 +17,9 @@ from build_support.ci_cd_vars.project_setting_vars import (
     get_project_name,
     get_project_version,
 )
-from build_support.ci_cd_vars.subproject_structure import SubprojectContext
+from build_support.ci_cd_vars.subproject_structure import (
+    get_all_python_subprojects_dict,
+)
 from build_support.process_runner import concatenate_args, run_process
 
 
@@ -32,14 +34,7 @@ class BuildAll(TaskNode):
         """
         return [
             BuildPypi(basic_task_info=self.get_basic_task_info()),
-            BuildDocs(
-                basic_task_info=self.get_basic_task_info(),
-                subproject_context=SubprojectContext.BUILD_SUPPORT,
-            ),
-            BuildDocs(
-                basic_task_info=self.get_basic_task_info(),
-                subproject_context=SubprojectContext.PYPI,
-            ),
+            BuildAllDocs(basic_task_info=self.get_basic_task_info()),
         ]
 
     def run(self) -> None:
@@ -104,6 +99,37 @@ class BuildPypi(TaskNode):
         )
 
 
+class BuildAllDocs(TaskNode):
+    """Task for building documentation for all subprojects."""
+
+    def required_tasks(self) -> list[TaskNode]:
+        """Lists all subprojects with documentation to add to the DAG.
+
+        Returns:
+            list[TaskNode]: A list of all documentation build tasks.
+        """
+        subprojects = get_all_python_subprojects_dict(
+            project_root=self.docker_project_root
+        )
+        return [
+            BuildDocs(
+                basic_task_info=self.get_basic_task_info(),
+                subproject_context=subproject_context,
+            )
+            for subproject_context, subproject in subprojects.items()
+            if subproject.get_docs_dir().exists()
+        ]
+
+    def run(self) -> None:
+        """Does nothing.
+
+        Arguments are inherited from subclass.
+
+        Returns:
+            None
+        """
+
+
 class BuildDocs(PerSubprojectTask):
     """Task for building the sphinx docs for this project."""
 
@@ -123,9 +149,9 @@ class BuildDocs(PerSubprojectTask):
         Returns:
             None
         """
-        shutil.copytree(
-            self.subproject.get_subproject_docs_dir(),
-            self.subproject.get_subproject_docs_source_dir(),
+        copytree(
+            src=self.subproject.get_docs_dir(),
+            dst=self.subproject.get_build_docs_source_dir(),
         )
         run_process(
             args=concatenate_args(
@@ -145,8 +171,8 @@ class BuildDocs(PerSubprojectTask):
                     "-V",
                     get_project_version(project_root=self.docker_project_root),
                     "-o",
-                    self.subproject.get_subproject_docs_source_dir(),
-                    self.subproject.get_subproject_src_dir(),
+                    self.subproject.get_build_docs_source_dir(),
+                    self.subproject.get_src_dir(),
                 ],
             ),
         )
@@ -159,8 +185,8 @@ class BuildDocs(PerSubprojectTask):
                         target_image=DockerTarget.DEV,
                     ),
                     "sphinx-build",
-                    self.subproject.get_subproject_docs_source_dir(),
-                    self.subproject.get_subproject_docs_build_dir(),
+                    self.subproject.get_build_docs_source_dir(),
+                    self.subproject.get_build_docs_build_dir(),
                     "-c",
                     get_sphinx_conf_dir(project_root=self.docker_project_root),
                 ],

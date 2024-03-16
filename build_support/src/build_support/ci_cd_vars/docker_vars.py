@@ -60,7 +60,7 @@ def get_python_path_for_target_image(
                 get_python_subproject(
                     subproject_context=SubprojectContext.BUILD_SUPPORT,
                     project_root=docker_project_root,
-                ).get_subproject_src_dir()
+                ).get_src_dir()
             ]
         case DockerTarget.DEV:
             python_folders = get_all_python_folders(project_root=docker_project_root)
@@ -69,14 +69,14 @@ def get_python_path_for_target_image(
                 get_python_subproject(
                     subproject_context=SubprojectContext.PYPI,
                     project_root=docker_project_root,
-                ).get_subproject_src_dir()
+                ).get_src_dir()
             ]
         case DockerTarget.PULUMI:
             python_folders = [
                 get_python_subproject(
                     subproject_context=SubprojectContext.PULUMI,
                     project_root=docker_project_root,
-                ).get_subproject_src_dir()
+                ).get_src_dir()
             ]
         case _:  # pragma: no cover - can't hit if all enums are implemented
             msg = f"{target_image!r} is not a valid enum of DockerType."

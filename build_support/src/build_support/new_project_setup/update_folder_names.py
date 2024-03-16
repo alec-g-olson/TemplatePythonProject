@@ -28,7 +28,7 @@ def update_folders_in_project(
     """
     pypi_src_dir = get_python_subproject(
         subproject_context=SubprojectContext.PYPI, project_root=project_root
-    ).get_subproject_src_dir()
+    ).get_src_dir()
     original_package_dir = pypi_src_dir.joinpath(original_project_name)
     new_package_dir = pypi_src_dir.joinpath(new_project_settings.name)
     original_package_dir.rename(new_package_dir)

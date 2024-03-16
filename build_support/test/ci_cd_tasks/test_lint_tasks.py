@@ -1,4 +1,3 @@
-from pathlib import Path
 from unittest.mock import call, patch
 
 import pytest
@@ -9,6 +8,7 @@ from build_support.ci_cd_tasks.lint_tasks import (
     Lint,
     RuffFixSafe,
 )
+from build_support.ci_cd_tasks.task_node import BasicTaskInfo
 from build_support.ci_cd_tasks.validation_tasks import (
     ValidateBuildSupport,
     ValidatePypi,
@@ -25,40 +25,20 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
 from build_support.process_runner import concatenate_args
 
 
-@pytest.fixture()
-def lint_task(
-    mock_project_root: Path,
-    docker_project_root: Path,
-    local_uid: int,
-    local_gid: int,
-) -> Lint:
-    return Lint(
-        non_docker_project_root=mock_project_root,
-        docker_project_root=docker_project_root,
-        local_user_uid=local_uid,
-        local_user_gid=local_gid,
-    )
-
-
-def test_lint_requires(lint_task: Lint) -> None:
-    assert lint_task.required_tasks() == [
-        SetupDevEnvironment(
-            non_docker_project_root=lint_task.non_docker_project_root,
-            docker_project_root=lint_task.docker_project_root,
-            local_user_uid=lint_task.local_user_uid,
-            local_user_gid=lint_task.local_user_gid,
-        )
+def test_lint_requires(basic_task_info: BasicTaskInfo) -> None:
+    assert Lint(basic_task_info=basic_task_info).required_tasks() == [
+        SetupDevEnvironment(basic_task_info=basic_task_info)
     ]
 
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
-def test_run_lint(lint_task: Lint) -> None:
+def test_run_lint(basic_task_info: BasicTaskInfo) -> None:
     with patch("build_support.ci_cd_tasks.lint_tasks.run_process") as run_process_mock:
         sort_imports_args = concatenate_args(
             args=[
                 get_docker_command_for_image(
-                    non_docker_project_root=lint_task.non_docker_project_root,
-                    docker_project_root=lint_task.docker_project_root,
+                    non_docker_project_root=basic_task_info.non_docker_project_root,
+                    docker_project_root=basic_task_info.docker_project_root,
                     target_image=DockerTarget.DEV,
                 ),
                 "ruff",
@@ -66,22 +46,26 @@ def test_run_lint(lint_task: Lint) -> None:
                 "--select",
                 "I",
                 "--fix",
-                get_all_python_folders(project_root=lint_task.docker_project_root),
+                get_all_python_folders(
+                    project_root=basic_task_info.docker_project_root
+                ),
             ],
         )
         format_args = concatenate_args(
             args=[
                 get_docker_command_for_image(
-                    non_docker_project_root=lint_task.non_docker_project_root,
-                    docker_project_root=lint_task.docker_project_root,
+                    non_docker_project_root=basic_task_info.non_docker_project_root,
+                    docker_project_root=basic_task_info.docker_project_root,
                     target_image=DockerTarget.DEV,
                 ),
                 "ruff",
                 "format",
-                get_all_python_folders(project_root=lint_task.docker_project_root),
+                get_all_python_folders(
+                    project_root=basic_task_info.docker_project_root
+                ),
             ],
         )
-        lint_task.run()
+        Lint(basic_task_info=basic_task_info).run()
         expected_run_process_calls = [
             call(args=sort_imports_args),
             call(args=format_args),
@@ -90,67 +74,37 @@ def test_run_lint(lint_task: Lint) -> None:
         run_process_mock.assert_has_calls(calls=expected_run_process_calls)
 
 
-@pytest.fixture()
-def ruff_fix_safe_task(
-    mock_project_root: Path,
-    docker_project_root: Path,
-    local_uid: int,
-    local_gid: int,
-) -> RuffFixSafe:
-    return RuffFixSafe(
-        non_docker_project_root=mock_project_root,
-        docker_project_root=docker_project_root,
-        local_user_uid=local_uid,
-        local_user_gid=local_gid,
-    )
-
-
-def test_ruff_fix_safe_requires(ruff_fix_safe_task: RuffFixSafe) -> None:
-    assert ruff_fix_safe_task.required_tasks() == [
-        Lint(
-            non_docker_project_root=ruff_fix_safe_task.non_docker_project_root,
-            docker_project_root=ruff_fix_safe_task.docker_project_root,
-            local_user_uid=ruff_fix_safe_task.local_user_uid,
-            local_user_gid=ruff_fix_safe_task.local_user_gid,
-        ),
-        ValidatePypi(
-            non_docker_project_root=ruff_fix_safe_task.non_docker_project_root,
-            docker_project_root=ruff_fix_safe_task.docker_project_root,
-            local_user_uid=ruff_fix_safe_task.local_user_uid,
-            local_user_gid=ruff_fix_safe_task.local_user_gid,
-        ),
-        ValidateBuildSupport(
-            non_docker_project_root=ruff_fix_safe_task.non_docker_project_root,
-            docker_project_root=ruff_fix_safe_task.docker_project_root,
-            local_user_uid=ruff_fix_safe_task.local_user_uid,
-            local_user_gid=ruff_fix_safe_task.local_user_gid,
-        ),
+def test_ruff_fix_safe_requires(basic_task_info: BasicTaskInfo) -> None:
+    assert RuffFixSafe(basic_task_info=basic_task_info).required_tasks() == [
+        Lint(basic_task_info=basic_task_info),
+        ValidatePypi(basic_task_info=basic_task_info),
+        ValidateBuildSupport(basic_task_info=basic_task_info),
     ]
 
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
-def test_run_ruff_fix_safe(ruff_fix_safe_task: RuffFixSafe) -> None:
+def test_run_ruff_fix_safe(basic_task_info: BasicTaskInfo) -> None:
     with patch("build_support.ci_cd_tasks.lint_tasks.run_process") as run_process_mock:
         fix_src_args = concatenate_args(
             args=[
                 get_docker_command_for_image(
-                    non_docker_project_root=ruff_fix_safe_task.non_docker_project_root,
-                    docker_project_root=ruff_fix_safe_task.docker_project_root,
+                    non_docker_project_root=basic_task_info.non_docker_project_root,
+                    docker_project_root=basic_task_info.docker_project_root,
                     target_image=DockerTarget.DEV,
                 ),
                 "ruff",
                 "check",
                 "--fix",
                 get_all_non_test_folders(
-                    project_root=ruff_fix_safe_task.docker_project_root
+                    project_root=basic_task_info.docker_project_root
                 ),
             ],
         )
         fix_test_args = concatenate_args(
             args=[
                 get_docker_command_for_image(
-                    non_docker_project_root=ruff_fix_safe_task.non_docker_project_root,
-                    docker_project_root=ruff_fix_safe_task.docker_project_root,
+                    non_docker_project_root=basic_task_info.non_docker_project_root,
+                    docker_project_root=basic_task_info.docker_project_root,
                     target_image=DockerTarget.DEV,
                 ),
                 "ruff",
@@ -158,12 +112,10 @@ def test_run_ruff_fix_safe(ruff_fix_safe_task: RuffFixSafe) -> None:
                 "--ignore",
                 "D",
                 "--fix",
-                get_all_test_folders(
-                    project_root=ruff_fix_safe_task.docker_project_root
-                ),
+                get_all_test_folders(project_root=basic_task_info.docker_project_root),
             ],
         )
-        ruff_fix_safe_task.run()
+        RuffFixSafe(basic_task_info=basic_task_info).run()
         expected_run_process_calls = [
             call(args=fix_src_args),
             call(args=fix_test_args),
@@ -172,39 +124,14 @@ def test_run_ruff_fix_safe(ruff_fix_safe_task: RuffFixSafe) -> None:
         run_process_mock.assert_has_calls(calls=expected_run_process_calls)
 
 
-@pytest.fixture()
-def apply_ruff_fix_unsafe_task(
-    mock_project_root: Path,
-    docker_project_root: Path,
-    local_uid: int,
-    local_gid: int,
-) -> ApplyRuffFixUnsafe:
-    return ApplyRuffFixUnsafe(
-        non_docker_project_root=mock_project_root,
-        docker_project_root=docker_project_root,
-        local_user_uid=local_uid,
-        local_user_gid=local_gid,
-    )
-
-
-def test_apply_ruff_fix_unsafe_requires(
-    apply_ruff_fix_unsafe_task: ApplyRuffFixUnsafe,
-) -> None:
-    assert apply_ruff_fix_unsafe_task.required_tasks() == [
-        RuffFixSafe(
-            non_docker_project_root=apply_ruff_fix_unsafe_task.non_docker_project_root,
-            docker_project_root=apply_ruff_fix_unsafe_task.docker_project_root,
-            local_user_uid=apply_ruff_fix_unsafe_task.local_user_uid,
-            local_user_gid=apply_ruff_fix_unsafe_task.local_user_gid,
-        ),
+def test_apply_ruff_fix_unsafe_requires(basic_task_info: BasicTaskInfo) -> None:
+    assert ApplyRuffFixUnsafe(basic_task_info=basic_task_info).required_tasks() == [
+        RuffFixSafe(basic_task_info=basic_task_info),
     ]
 
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
-def test_apply_run_ruff_fix_unsafe(
-    apply_ruff_fix_unsafe_task: ApplyRuffFixUnsafe,
-) -> None:
-    task = apply_ruff_fix_unsafe_task
+def test_apply_run_ruff_fix_unsafe(basic_task_info: BasicTaskInfo) -> None:
     with (
         patch("build_support.ci_cd_tasks.lint_tasks.run_process") as run_process_mock,
         patch(
@@ -214,22 +141,24 @@ def test_apply_run_ruff_fix_unsafe(
         fix_src_args = concatenate_args(
             args=[
                 get_docker_command_for_image(
-                    non_docker_project_root=task.non_docker_project_root,
-                    docker_project_root=task.docker_project_root,
+                    non_docker_project_root=basic_task_info.non_docker_project_root,
+                    docker_project_root=basic_task_info.docker_project_root,
                     target_image=DockerTarget.DEV,
                 ),
                 "ruff",
                 "check",
                 "--fix",
                 "--unsafe-fixes",
-                get_all_non_test_folders(project_root=task.docker_project_root),
+                get_all_non_test_folders(
+                    project_root=basic_task_info.docker_project_root
+                ),
             ],
         )
         fix_test_args = concatenate_args(
             args=[
                 get_docker_command_for_image(
-                    non_docker_project_root=task.non_docker_project_root,
-                    docker_project_root=task.docker_project_root,
+                    non_docker_project_root=basic_task_info.non_docker_project_root,
+                    docker_project_root=basic_task_info.docker_project_root,
                     target_image=DockerTarget.DEV,
                 ),
                 "ruff",
@@ -238,10 +167,10 @@ def test_apply_run_ruff_fix_unsafe(
                 "D",
                 "--fix",
                 "--unsafe-fixes",
-                get_all_test_folders(project_root=task.docker_project_root),
+                get_all_test_folders(project_root=basic_task_info.docker_project_root),
             ],
         )
-        task.run()
+        ApplyRuffFixUnsafe(basic_task_info=basic_task_info).run()
         expected_run_process_calls = [
             call(args=fix_src_args),
             call(args=fix_test_args),
@@ -252,6 +181,6 @@ def test_apply_run_ruff_fix_unsafe(
             commit_message_no_quotes=(
                 "Committing staged changes for before applying unsafe ruff fixes."
             ),
-            local_user_uid=task.local_user_uid,
-            local_user_gid=task.local_user_gid,
+            local_user_uid=basic_task_info.local_user_uid,
+            local_user_gid=basic_task_info.local_user_gid,
         )

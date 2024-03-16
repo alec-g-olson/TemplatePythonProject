@@ -12,8 +12,6 @@ Modules:
     | project_setting_vars: Reports project setting information.  Usually by parsing
         config files.
     | docker_vars: Variables and functions that relate to making docker calls.
-    | python_vars: Variables that are only useful in the context of python
-        building and testing.
     | project_structure: Variables and functions that relate to the top level structure
         of this project.
     | subproject_structure: Variables and functions that relate to the structure of

@@ -1,7 +1,7 @@
 import ast
 import re
 from dataclasses import dataclass
-from inspect import getmembers, isclass, isfunction, ismodule, signature
+from inspect import getmembers, isclass, isfunction, ismodule, signature, unwrap
 from pathlib import Path
 from re import compile
 from textwrap import dedent
@@ -126,13 +126,14 @@ def parse_module_info(imported_module: ModuleType) -> ModuleInfo:
     classes = {}
     functions = {}
     for name, member in getmembers(imported_module):
+        unwrapped_member = unwrap(member)
         if not (name.startswith(("_", "@")) or name in names_imported_by_module):
-            if isfunction(member):
-                functions[name] = member
-            elif isclass(member):
-                classes[name] = member
+            if isfunction(unwrapped_member):
+                functions[name] = unwrapped_member
+            elif isclass(unwrapped_member):
+                classes[name] = unwrapped_member
             else:
-                attributes[name] = member
+                attributes[name] = unwrapped_member
     if imported_module.__doc__ is None:  # pragma: no cover
         imported_module.__doc__ = ""
     return ModuleInfo(
@@ -144,8 +145,20 @@ def parse_module_info(imported_module: ModuleType) -> ModuleInfo:
     )
 
 
-def parse_class_info(imported_class: Type) -> ClassInfo:
+def parse_class_info(imported_class: Type, element_prefix: str) -> ClassInfo:
     methods = {}
+    class_elements = dict(vars(imported_class))
+    dataclass_params = class_elements.get("__dataclass_params__")
+    methods_to_ignore = ["__new__"]
+    if dataclass_params:  # pragma: no cover - might not have dataclasses in src
+        if dataclass_params.eq:
+            methods_to_ignore.extend(["__eq__", "__hash__"])
+        if dataclass_params.init:
+            methods_to_ignore.append("__init__")
+        if dataclass_params.repr:
+            methods_to_ignore.append("__repr__")
+        if dataclass_params.frozen:
+            methods_to_ignore.extend(["__setattr__", "__delattr__"])
     for name, member in vars(imported_class).items():
         if (
             (isfunction(member) or isinstance(member, (staticmethod, classmethod)))
@@ -153,21 +166,23 @@ def parse_class_info(imported_class: Type) -> ClassInfo:
                 not name.startswith("_")
                 or (name.startswith("__") and name.endswith("__"))
             )
-            and name != "__new__"
+            and name not in methods_to_ignore
         ):
             methods[name] = member
     if imported_class.__doc__ is None:  # pragma: no cover
         imported_class.__doc__ = ""
     return ClassInfo(
         module_path=imported_class.__module__,
-        element_path=imported_class.__name__,
+        element_path=f"{element_prefix}.{imported_class.__name__}"
+        if element_prefix
+        else imported_class.__name__,
         docstring=imported_class.__doc__,
         methods=methods,
     )
 
 
 def parse_function_info(
-    imported_function: FunctionType | classmethod | staticmethod,
+    imported_function: FunctionType | classmethod | staticmethod, element_prefix: str
 ) -> FunctionInfo:
     if isinstance(imported_function, (classmethod, staticmethod)):
         params = signature(imported_function.__func__).parameters
@@ -178,14 +193,18 @@ def parse_function_info(
         imported_function.__doc__ = ""
     return FunctionInfo(
         module_path=imported_function.__module__,
-        element_path=imported_function.__name__,
+        element_path=f"{element_prefix}.{imported_function.__name__}"
+        if element_prefix
+        else imported_function.__name__,
         docstring=imported_function.__doc__,
         args=args,
     )
 
 
 def parse_sub_elements(
-    imported_element: ImportedElement, all_element_info: list[DocumentationElement]
+    imported_element: ImportedElement,
+    all_element_info: list[DocumentationElement],
+    element_prefix: str = "",
 ) -> None:
     if ismodule(imported_element):
         if imported_element.__file__ is None:  # pragma: no cover not hit if pass
@@ -221,15 +240,20 @@ def parse_sub_elements(
     elif isfunction(imported_element) or isinstance(
         imported_element, (staticmethod, classmethod)
     ):
-        parsed_function = parse_function_info(imported_function=imported_element)
+        parsed_function = parse_function_info(
+            imported_function=imported_element, element_prefix=element_prefix
+        )
         all_element_info.append(parsed_function)
     elif isinstance(imported_element, type):
-        parsed_class = parse_class_info(imported_class=imported_element)
+        parsed_class = parse_class_info(
+            imported_class=imported_element, element_prefix=element_prefix
+        )
         all_element_info.append(parsed_class)
         for imported_method in parsed_class.methods.values():
             parse_sub_elements(
                 imported_element=imported_method,
                 all_element_info=all_element_info,
+                element_prefix=element_prefix + imported_method.__name__,
             )
     else:  # pragma: no cover not hit if everything is working
         msg = f"{imported_element.__name__} is not a supported type."
@@ -622,17 +646,12 @@ def get_package_module_section_info(
     )
 
 
-@dataclass
-class PackageDocstringData(GenericDocstringData):
-    pass
-
-
 def test_all_package_docstrings(all_packages_info: list[PackageInfo]) -> None:
     assert len(all_packages_info) != 0
     packages_with_issues_in_docstrings = []
     for package_info in all_packages_info:
         contexts = get_docstring_contexts(docstring=package_info.docstring)
-        package_docstring_data = PackageDocstringData(
+        package_docstring_data = GenericDocstringData(
             module=package_info.module_path,
             missing_sections=[],
             clashing_sections=[],
@@ -689,17 +708,12 @@ def get_module_attributes_section_info(
     )
 
 
-@dataclass
-class ModuleDocstringData(GenericDocstringData):
-    pass
-
-
 def test_all_module_docstrings(all_modules_info: list[ModuleInfo]) -> None:
     assert len(all_modules_info) != 0
     modules_with_issues_in_docstrings = []
     for module_info in all_modules_info:
         contexts = get_docstring_contexts(docstring=module_info.docstring)
-        module_docstring_data = ModuleDocstringData(
+        module_docstring_data = GenericDocstringData(
             module=module_info.module_path,
             missing_sections=[],
             clashing_sections=[],

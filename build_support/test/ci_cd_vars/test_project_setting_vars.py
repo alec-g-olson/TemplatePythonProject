@@ -5,10 +5,6 @@ from typing import Any
 import pytest
 from conftest import other_package_info
 
-from build_support.ci_cd_vars.file_and_dir_path_vars import (
-    get_poetry_lock_file,
-    get_pyproject_toml,
-)
 from build_support.ci_cd_vars.project_setting_vars import (
     ALLOWED_VERSION_REGEX,
     get_project_name,
@@ -17,6 +13,10 @@ from build_support.ci_cd_vars.project_setting_vars import (
     get_pyproject_toml_data,
     is_dev_project_version,
     is_prod_project_version,
+)
+from build_support.ci_cd_vars.project_structure import (
+    get_poetry_lock_file,
+    get_pyproject_toml,
 )
 
 

@@ -60,8 +60,8 @@ class PushTags(TaskNode):
         built from.  If tags are pushed after some artifacts are built it would
         be possible for a build error to cause the tag to not be pushed. If that
         happened then the version check we do during testing would be invalid
-        because there could previously pushed artifacts for a version that passes
-        that test.
+        because there could have previously been artifacts pushed for a version that
+        passes that test.
 
         Returns:
             None

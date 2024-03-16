@@ -14,10 +14,6 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_all_test_folders,
 )
 from build_support.ci_cd_vars.machine_introspection_vars import THREADS_AVAILABLE
-from build_support.ci_cd_vars.python_vars import (
-    get_bandit_report_path,
-    get_pytest_report_args,
-)
 from build_support.ci_cd_vars.subproject_structure import (
     SubprojectContext,
     get_all_python_subprojects_dict,
@@ -72,6 +68,10 @@ class ValidateBuildSupport(TaskNode):
         Returns:
             None
         """
+        build_support_subproject = get_python_subproject(
+            subproject_context=SubprojectContext.BUILD_SUPPORT,
+            project_root=self.docker_project_root,
+        )
         run_process(
             args=concatenate_args(
                 args=[
@@ -83,17 +83,8 @@ class ValidateBuildSupport(TaskNode):
                     "pytest",
                     "-n",
                     THREADS_AVAILABLE,
-                    get_pytest_report_args(
-                        project_root=self.docker_project_root,
-                        subproject=get_python_subproject(
-                            subproject_context=SubprojectContext.BUILD_SUPPORT,
-                            project_root=self.docker_project_root,
-                        ),
-                    ),
-                    get_python_subproject(
-                        subproject_context=SubprojectContext.BUILD_SUPPORT,
-                        project_root=self.docker_project_root,
-                    ).get_subproject_src_and_test_dir(),
+                    build_support_subproject.get_pytest_report_args(),
+                    build_support_subproject.get_src_and_test_dir(),
                 ],
             ),
         )
@@ -163,16 +154,12 @@ class ValidatePythonStyle(TaskNode):
                     "pytest",
                     "-n",
                     THREADS_AVAILABLE,
-                    get_pytest_report_args(
-                        project_root=self.docker_project_root,
-                        subproject=get_python_subproject(
-                            subproject_context=SubprojectContext.DOCUMENTATION_ENFORCEMENT,
-                            project_root=self.docker_project_root,
-                        ),
-                    ),
                     subproject[
                         SubprojectContext.DOCUMENTATION_ENFORCEMENT
-                    ].get_subproject_test_dir(),
+                    ].get_pytest_report_args(),
+                    subproject[
+                        SubprojectContext.DOCUMENTATION_ENFORCEMENT
+                    ].get_test_dir(),
                 ],
             ),
         )
@@ -200,7 +187,7 @@ class ValidatePythonStyle(TaskNode):
             args=concatenate_args(
                 args=[
                     mypy_command,
-                    subproject[SubprojectContext.PYPI].get_subproject_root(),
+                    subproject[SubprojectContext.PYPI].get_root_dir(),
                 ],
             ),
         )
@@ -208,9 +195,7 @@ class ValidatePythonStyle(TaskNode):
             args=concatenate_args(
                 args=[
                     mypy_command,
-                    subproject[
-                        SubprojectContext.BUILD_SUPPORT
-                    ].get_subproject_src_dir(),
+                    subproject[SubprojectContext.BUILD_SUPPORT].get_src_dir(),
                 ],
             ),
         )
@@ -218,9 +203,7 @@ class ValidatePythonStyle(TaskNode):
             args=concatenate_args(
                 args=[
                     mypy_command,
-                    subproject[
-                        SubprojectContext.BUILD_SUPPORT
-                    ].get_subproject_test_dir(),
+                    subproject[SubprojectContext.BUILD_SUPPORT].get_test_dir(),
                 ],
             ),
         )
@@ -230,7 +213,7 @@ class ValidatePythonStyle(TaskNode):
                     mypy_command,
                     subproject[
                         SubprojectContext.DOCUMENTATION_ENFORCEMENT
-                    ].get_subproject_root(),
+                    ].get_root_dir(),
                 ],
             ),
         )
@@ -238,7 +221,7 @@ class ValidatePythonStyle(TaskNode):
             args=concatenate_args(
                 args=[
                     mypy_command,
-                    subproject[SubprojectContext.PULUMI].get_subproject_root(),
+                    subproject[SubprojectContext.PULUMI].get_root_dir(),
                 ],
             ),
         )
@@ -252,15 +235,9 @@ class ValidatePythonStyle(TaskNode):
                     ),
                     "bandit",
                     "-o",
-                    get_bandit_report_path(
-                        project_root=self.docker_project_root,
-                        subproject=get_python_subproject(
-                            subproject_context=SubprojectContext.PYPI,
-                            project_root=self.docker_project_root,
-                        ),
-                    ),
+                    subproject[SubprojectContext.PYPI].get_bandit_report_path(),
                     "-r",
-                    subproject[SubprojectContext.PYPI].get_subproject_src_dir(),
+                    subproject[SubprojectContext.PYPI].get_src_dir(),
                 ],
             ),
         )
@@ -274,15 +251,9 @@ class ValidatePythonStyle(TaskNode):
                     ),
                     "bandit",
                     "-o",
-                    get_bandit_report_path(
-                        project_root=self.docker_project_root,
-                        subproject=get_python_subproject(
-                            subproject_context=SubprojectContext.PULUMI,
-                            project_root=self.docker_project_root,
-                        ),
-                    ),
+                    subproject[SubprojectContext.PULUMI].get_bandit_report_path(),
                     "-r",
-                    subproject[SubprojectContext.PULUMI].get_subproject_root(),
+                    subproject[SubprojectContext.PULUMI].get_src_dir(),
                 ],
             ),
         )
@@ -296,17 +267,11 @@ class ValidatePythonStyle(TaskNode):
                     ),
                     "bandit",
                     "-o",
-                    get_bandit_report_path(
-                        project_root=self.docker_project_root,
-                        subproject=get_python_subproject(
-                            subproject_context=SubprojectContext.BUILD_SUPPORT,
-                            project_root=self.docker_project_root,
-                        ),
-                    ),
-                    "-r",
                     subproject[
                         SubprojectContext.BUILD_SUPPORT
-                    ].get_subproject_src_dir(),
+                    ].get_bandit_report_path(),
+                    "-r",
+                    subproject[SubprojectContext.BUILD_SUPPORT].get_src_dir(),
                 ],
             ),
         )
@@ -331,6 +296,10 @@ class ValidatePypi(TaskNode):
         Returns:
             None
         """
+        pypi_subproject = get_python_subproject(
+            subproject_context=SubprojectContext.PYPI,
+            project_root=self.docker_project_root,
+        )
         run_process(
             args=concatenate_args(
                 args=[
@@ -342,17 +311,8 @@ class ValidatePypi(TaskNode):
                     "pytest",
                     "-n",
                     THREADS_AVAILABLE,
-                    get_pytest_report_args(
-                        project_root=self.docker_project_root,
-                        subproject=get_python_subproject(
-                            subproject_context=SubprojectContext.PYPI,
-                            project_root=self.docker_project_root,
-                        ),
-                    ),
-                    get_python_subproject(
-                        subproject_context=SubprojectContext.PYPI,
-                        project_root=self.docker_project_root,
-                    ).get_subproject_src_and_test_dir(),
+                    pypi_subproject.get_pytest_report_args(),
+                    pypi_subproject.get_src_and_test_dir(),
                 ],
             ),
         )

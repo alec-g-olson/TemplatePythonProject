@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from build_support.ci_cd_vars.subproject_structure import (
-    PythonSubProject,
+    PythonSubproject,
     SubprojectContext,
     get_python_subproject,
 )
@@ -105,7 +105,7 @@ class PerSubprojectTask(TaskNode, ABC):
     """This abstract class is intended for tasks are repeated across subprojects."""
 
     subproject_context: SubprojectContext
-    subproject: PythonSubProject
+    subproject: PythonSubproject
 
     def __init__(
         self,

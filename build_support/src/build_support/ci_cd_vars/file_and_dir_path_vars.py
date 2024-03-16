@@ -27,7 +27,7 @@ def get_sphinx_conf_dir(project_root: Path) -> Path:
         subproject_context=SubprojectContext.DOCUMENTATION_ENFORCEMENT,
         project_root=project_root,
     )
-    return process_and_style_subproject.get_subproject_root().joinpath(
+    return process_and_style_subproject.get_root_dir().joinpath(
         "sphinx_conf",
     )
 
@@ -49,7 +49,7 @@ def get_new_project_settings(project_root: Path) -> Path:
     build_support_subproject = get_python_subproject(
         subproject_context=SubprojectContext.BUILD_SUPPORT, project_root=project_root
     )
-    return build_support_subproject.get_subproject_root().joinpath(
+    return build_support_subproject.get_root_dir().joinpath(
         "new_project_settings.yaml",
     )
 
@@ -127,12 +127,13 @@ def get_all_python_folders(project_root: Path) -> list[Path]:
         list[Path]: Path to all the python folders in the project.
     """
     subprojects = get_all_python_subprojects_dict(project_root=project_root)
-    return [
+    python_folders = [
         python_folder
         for subproject in subprojects.values()
-        for python_folder in subproject.get_subproject_src_and_test_dir()
+        for python_folder in subproject.get_src_and_test_dir()
         if python_folder.exists()
     ] + [get_sphinx_conf_dir(project_root=project_root)]
+    return sorted(python_folders)
 
 
 def get_all_non_pulumi_python_folders(project_root: Path) -> list[Path]:
@@ -145,14 +146,15 @@ def get_all_non_pulumi_python_folders(project_root: Path) -> list[Path]:
         list[Path]: Path to all the non-pulumi python folders in the project.
     """
     pulumi_subproject = get_python_subproject(
-        subproject=SubprojectContext.PULUMI, project_root=project_root
+        subproject_context=SubprojectContext.PULUMI, project_root=project_root
     )
-    pulumi_folders = pulumi_subproject.get_subproject_src_and_test_dir()
-    return [
+    pulumi_folders = pulumi_subproject.get_src_and_test_dir()
+    non_pulumi_python_folders = [
         folder
         for folder in get_all_python_folders(project_root=project_root)
         if folder not in pulumi_folders
     ]
+    return sorted(non_pulumi_python_folders)
 
 
 def get_all_src_folders(project_root: Path) -> list[Path]:
@@ -165,9 +167,7 @@ def get_all_src_folders(project_root: Path) -> list[Path]:
         list[Path]: Path to all the python src folders in the project.
     """
     subprojects = get_all_python_subprojects_dict(project_root=project_root)
-    src_dirs = [
-        subproject.get_subproject_src_dir() for subproject in subprojects.values()
-    ]
+    src_dirs = sorted(subproject.get_src_dir() for subproject in subprojects.values())
     return [src_dir for src_dir in src_dirs if src_dir.exists()]
 
 
@@ -181,9 +181,7 @@ def get_all_test_folders(project_root: Path) -> list[Path]:
         list[Path]: Path to all the python test folders in the project.
     """
     subprojects = get_all_python_subprojects_dict(project_root=project_root)
-    test_dirs = [
-        subproject.get_subproject_test_dir() for subproject in subprojects.values()
-    ]
+    test_dirs = sorted(subproject.get_test_dir() for subproject in subprojects.values())
     return [test_dir for test_dir in test_dirs if test_dir.exists()]
 
 

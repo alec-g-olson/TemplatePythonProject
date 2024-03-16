@@ -47,13 +47,13 @@ def get_license_file(project_root: Path) -> Path:
 
 
 def get_poetry_lock_file(project_root: Path) -> Path:
-    """Get a path to the poetry.lock file in a project.
+    """Get a path to the poetry lock file in a project.
 
     Args:
         project_root (Path): Path to this project's root.
 
     Returns:
-        Path: Path to the poetry.lock file in this project.
+        Path: Path to the poetry lock file in this project.
     """
     return project_root.joinpath("poetry.lock")
 
