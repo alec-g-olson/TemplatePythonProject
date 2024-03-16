@@ -334,8 +334,8 @@ def get_section_context(
     # `following_lines` member is until the end of the docstring.
     contexts = []
     for i in suspected_section_indices:
-        last_index = i-1
-        next_index = i+1
+        last_index = i - 1
+        next_index = i + 1
         contexts.append(
             SectionContext(
                 get_leading_words(lines[i].strip()),
@@ -361,7 +361,7 @@ def get_section_context(
             current_context.section_name,
             current_context.previous_line,
             current_context.line,
-            lines[next_index: end],
+            lines[next_index:end],
             current_context.original_index,
             next_context is None,
         )

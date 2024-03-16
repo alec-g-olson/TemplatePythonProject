@@ -1,28 +1,24 @@
 """ci_cd_tasks should house all tasks that build artifacts that will be pushed."""
 
-from pathlib import Path
+import shutil
 
 from build_support.ci_cd_tasks.env_setup_tasks import SetupProdEnvironment
+from build_support.ci_cd_tasks.task_node import PerSubprojectTask, TaskNode
 from build_support.ci_cd_tasks.validation_tasks import ValidatePypi, ValidatePythonStyle
 from build_support.ci_cd_vars.docker_vars import (
     DockerTarget,
     get_docker_command_for_image,
 )
 from build_support.ci_cd_vars.file_and_dir_path_vars import (
-    get_build_support_docs_build_dir,
-    get_build_support_docs_src_dir,
-    get_build_support_src_dir,
     get_dist_dir,
-    get_pypi_docs_build_dir,
-    get_pypi_docs_src_dir,
-    get_pypi_src_dir,
     get_sphinx_conf_dir,
 )
 from build_support.ci_cd_vars.project_setting_vars import (
     get_project_name,
     get_project_version,
 )
-from build_support.dag_engine import TaskNode, concatenate_args, run_process
+from build_support.ci_cd_vars.subproject_enum import SubprojectContext
+from build_support.process_runner import concatenate_args, run_process
 
 
 class BuildAll(TaskNode):
@@ -35,17 +31,14 @@ class BuildAll(TaskNode):
             list[TaskNode]: A list of all build tasks.
         """
         return [
-            BuildPypi(
-                non_docker_project_root=self.non_docker_project_root,
-                docker_project_root=self.docker_project_root,
-                local_user_uid=self.local_user_uid,
-                local_user_gid=self.local_user_gid,
+            BuildPypi(basic_task_info=self.get_basic_task_info()),
+            BuildDocs(
+                basic_task_info=self.get_basic_task_info(),
+                subproject_context=SubprojectContext.BUILD_SUPPORT,
             ),
             BuildDocs(
-                non_docker_project_root=self.non_docker_project_root,
-                docker_project_root=self.docker_project_root,
-                local_user_uid=self.local_user_uid,
-                local_user_gid=self.local_user_gid,
+                basic_task_info=self.get_basic_task_info(),
+                subproject_context=SubprojectContext.PYPI,
             ),
         ]
 
@@ -69,24 +62,9 @@ class BuildPypi(TaskNode):
             list[TaskNode]: A list of tasks required to build Pypi package.
         """
         return [
-            ValidatePypi(
-                non_docker_project_root=self.non_docker_project_root,
-                docker_project_root=self.docker_project_root,
-                local_user_uid=self.local_user_uid,
-                local_user_gid=self.local_user_gid,
-            ),
-            ValidatePythonStyle(
-                non_docker_project_root=self.non_docker_project_root,
-                docker_project_root=self.docker_project_root,
-                local_user_uid=self.local_user_uid,
-                local_user_gid=self.local_user_gid,
-            ),
-            SetupProdEnvironment(
-                non_docker_project_root=self.non_docker_project_root,
-                docker_project_root=self.docker_project_root,
-                local_user_uid=self.local_user_uid,
-                local_user_gid=self.local_user_gid,
-            ),
+            ValidatePypi(basic_task_info=self.get_basic_task_info()),
+            ValidatePythonStyle(basic_task_info=self.get_basic_task_info()),
+            SetupProdEnvironment(basic_task_info=self.get_basic_task_info()),
         ]
 
     def run(self) -> None:
@@ -126,72 +104,7 @@ class BuildPypi(TaskNode):
         )
 
 
-def build_docs_for_subproject(
-    non_docker_project_root: Path,
-    docker_project_root: Path,
-    subproject_src_dir: Path,
-    docs_src_dir: Path,
-    docs_build_dir: Path,
-) -> None:
-    """Builds the docs for a subproject.
-
-    Args:
-        non_docker_project_root (Path): Path to this project's root on the local
-                machine.
-        docker_project_root (Path): Path to this project's root when running in docker
-            containers.
-        subproject_src_dir (Path): Path to the subproject's src dir on the dev docker
-            container.
-        docs_src_dir (Path): Path to the subproject's documentation source directory
-            on the dev docker container.
-        docs_build_dir (Path): Path to the subproject's documentation build directory
-            on the dev docker container.
-
-    Returns:
-        None
-    """
-    run_process(
-        args=concatenate_args(
-            [
-                get_docker_command_for_image(
-                    non_docker_project_root=non_docker_project_root,
-                    docker_project_root=docker_project_root,
-                    target_image=DockerTarget.DEV,
-                ),
-                "sphinx-apidoc",
-                "-f",
-                "--separate",
-                "--module-first",
-                "--no-toc",
-                "-H",
-                get_project_name(project_root=docker_project_root),
-                "-V",
-                get_project_version(project_root=docker_project_root),
-                "-o",
-                docs_src_dir,
-                subproject_src_dir,
-            ],
-        ),
-    )
-    run_process(
-        args=concatenate_args(
-            [
-                get_docker_command_for_image(
-                    non_docker_project_root=non_docker_project_root,
-                    docker_project_root=docker_project_root,
-                    target_image=DockerTarget.DEV,
-                ),
-                "sphinx-build",
-                docs_src_dir,
-                docs_build_dir,
-                "-c",
-                get_sphinx_conf_dir(project_root=docker_project_root),
-            ],
-        ),
-    )
-
-
-class BuildDocs(TaskNode):
+class BuildDocs(PerSubprojectTask):
     """Task for building the sphinx docs for this project."""
 
     def required_tasks(self) -> list[TaskNode]:
@@ -201,12 +114,7 @@ class BuildDocs(TaskNode):
             list[TaskNode]: A list of tasks required to build documentation.
         """
         return [
-            ValidatePythonStyle(
-                non_docker_project_root=self.non_docker_project_root,
-                docker_project_root=self.docker_project_root,
-                local_user_uid=self.local_user_uid,
-                local_user_gid=self.local_user_gid,
-            ),
+            ValidatePythonStyle(basic_task_info=self.get_basic_task_info()),
         ]
 
     def run(self) -> None:
@@ -215,25 +123,46 @@ class BuildDocs(TaskNode):
         Returns:
             None
         """
-        build_docs_for_subproject(
-            non_docker_project_root=self.non_docker_project_root,
-            docker_project_root=self.docker_project_root,
-            subproject_src_dir=get_pypi_src_dir(project_root=self.docker_project_root),
-            docs_src_dir=get_pypi_docs_src_dir(project_root=self.docker_project_root),
-            docs_build_dir=get_pypi_docs_build_dir(
-                project_root=self.docker_project_root,
+        shutil.copytree(
+            self.subproject.get_subproject_docs_dir(),
+            self.subproject.get_subproject_docs_source_dir(),
+        )
+        run_process(
+            args=concatenate_args(
+                [
+                    get_docker_command_for_image(
+                        non_docker_project_root=self.non_docker_project_root,
+                        docker_project_root=self.docker_project_root,
+                        target_image=DockerTarget.DEV,
+                    ),
+                    "sphinx-apidoc",
+                    "-f",
+                    "--separate",
+                    "--module-first",
+                    "--no-toc",
+                    "-H",
+                    get_project_name(project_root=self.docker_project_root),
+                    "-V",
+                    get_project_version(project_root=self.docker_project_root),
+                    "-o",
+                    self.subproject.get_subproject_docs_source_dir(),
+                    self.subproject.get_subproject_src_dir(),
+                ],
             ),
         )
-        build_docs_for_subproject(
-            non_docker_project_root=self.non_docker_project_root,
-            docker_project_root=self.docker_project_root,
-            subproject_src_dir=get_build_support_src_dir(
-                project_root=self.docker_project_root,
-            ),
-            docs_src_dir=get_build_support_docs_src_dir(
-                project_root=self.docker_project_root,
-            ),
-            docs_build_dir=get_build_support_docs_build_dir(
-                project_root=self.docker_project_root,
+        run_process(
+            args=concatenate_args(
+                [
+                    get_docker_command_for_image(
+                        non_docker_project_root=self.non_docker_project_root,
+                        docker_project_root=self.docker_project_root,
+                        target_image=DockerTarget.DEV,
+                    ),
+                    "sphinx-build",
+                    self.subproject.get_subproject_docs_source_dir(),
+                    self.subproject.get_subproject_docs_build_dir(),
+                    "-c",
+                    get_sphinx_conf_dir(project_root=self.docker_project_root),
+                ],
             ),
         )

@@ -12,7 +12,7 @@ from build_support.ci_cd_vars.git_status_vars import (
     get_git_diff,
     get_local_tags,
 )
-from build_support.dag_engine import concatenate_args
+from build_support.process_runner import concatenate_args
 
 
 def test_get_current_branch() -> None:

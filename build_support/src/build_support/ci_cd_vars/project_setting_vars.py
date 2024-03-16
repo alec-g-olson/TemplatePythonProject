@@ -9,7 +9,7 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
-from build_support.ci_cd_vars.file_and_dir_path_vars import (
+from build_support.ci_cd_vars.project_structure import (
     get_poetry_lock_file,
     get_pyproject_toml,
 )

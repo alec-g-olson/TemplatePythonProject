@@ -35,7 +35,7 @@ from build_support.ci_cd_vars.python_vars import (
     get_bandit_report_path,
     get_pytest_report_args,
 )
-from build_support.dag_engine import concatenate_args
+from build_support.process_runner import concatenate_args
 
 
 @pytest.fixture()

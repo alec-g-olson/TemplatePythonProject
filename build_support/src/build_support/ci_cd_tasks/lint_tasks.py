@@ -1,6 +1,7 @@
 """Should hold all tasks that perform automated formatting of code."""
 
 from build_support.ci_cd_tasks.env_setup_tasks import SetupDevEnvironment
+from build_support.ci_cd_tasks.task_node import TaskNode
 from build_support.ci_cd_tasks.validation_tasks import (
     ValidateBuildSupport,
     ValidatePypi,
@@ -15,7 +16,7 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_all_test_folders,
 )
 from build_support.ci_cd_vars.git_status_vars import commit_changes_if_diff
-from build_support.dag_engine import TaskNode, concatenate_args, run_process
+from build_support.process_runner import concatenate_args, run_process
 
 
 class Lint(TaskNode):
@@ -28,12 +29,7 @@ class Lint(TaskNode):
             list[TaskNode]: A list of tasks required to lint project.
         """
         return [
-            SetupDevEnvironment(
-                non_docker_project_root=self.non_docker_project_root,
-                docker_project_root=self.docker_project_root,
-                local_user_uid=self.local_user_uid,
-                local_user_gid=self.local_user_gid,
-            ),
+            SetupDevEnvironment(basic_task_info=self.get_basic_task_info()),
         ]
 
     def run(self) -> None:
@@ -88,24 +84,9 @@ class RuffFixSafe(TaskNode):
             list[TaskNode]: A list of tasks required to safely fix code issues.
         """
         return [
-            Lint(
-                non_docker_project_root=self.non_docker_project_root,
-                docker_project_root=self.docker_project_root,
-                local_user_uid=self.local_user_uid,
-                local_user_gid=self.local_user_gid,
-            ),
-            ValidatePypi(
-                non_docker_project_root=self.non_docker_project_root,
-                docker_project_root=self.docker_project_root,
-                local_user_uid=self.local_user_uid,
-                local_user_gid=self.local_user_gid,
-            ),
-            ValidateBuildSupport(
-                non_docker_project_root=self.non_docker_project_root,
-                docker_project_root=self.docker_project_root,
-                local_user_uid=self.local_user_uid,
-                local_user_gid=self.local_user_gid,
-            ),
+            Lint(basic_task_info=self.get_basic_task_info()),
+            ValidatePypi(basic_task_info=self.get_basic_task_info()),
+            ValidateBuildSupport(basic_task_info=self.get_basic_task_info()),
         ]
 
     def run(self) -> None:
@@ -163,12 +144,7 @@ class ApplyRuffFixUnsafe(TaskNode):
             list[TaskNode]: A list of tasks required to lint project.
         """
         return [
-            RuffFixSafe(
-                non_docker_project_root=self.non_docker_project_root,
-                docker_project_root=self.docker_project_root,
-                local_user_uid=self.local_user_uid,
-                local_user_gid=self.local_user_gid,
-            )
+            RuffFixSafe(basic_task_info=self.get_basic_task_info()),
         ]
 
     def run(self) -> None:

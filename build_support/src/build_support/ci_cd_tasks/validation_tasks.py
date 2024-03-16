@@ -1,32 +1,29 @@
 """Should hold all tasks that run tests, both on artifacts and style tests."""
 
 from build_support.ci_cd_tasks.env_setup_tasks import GetGitInfo, SetupDevEnvironment
+from build_support.ci_cd_tasks.task_node import TaskNode
 from build_support.ci_cd_vars.docker_vars import (
     DockerTarget,
     get_base_docker_command_for_image,
-    get_build_support_src_dir,
     get_docker_command_for_image,
     get_docker_image_name,
     get_mypy_path_env,
-    get_pulumi_dir,
-    get_pypi_src_dir,
 )
 from build_support.ci_cd_vars.file_and_dir_path_vars import (
-    SubprojectContext,
     get_all_non_test_folders,
     get_all_test_folders,
-    get_build_support_src_and_test,
-    get_build_support_test_dir,
-    get_documentation_tests_dir,
-    get_process_and_style_enforcement_dir,
-    get_pypi_src_and_test,
 )
 from build_support.ci_cd_vars.machine_introspection_vars import THREADS_AVAILABLE
 from build_support.ci_cd_vars.python_vars import (
     get_bandit_report_path,
     get_pytest_report_args,
 )
-from build_support.dag_engine import TaskNode, concatenate_args, run_process
+from build_support.ci_cd_vars.subproject_enum import SubprojectContext
+from build_support.ci_cd_vars.subproject_structure import (
+    get_all_python_subprojects_dict,
+    get_python_subproject,
+)
+from build_support.process_runner import concatenate_args, run_process
 
 
 class ValidateAll(TaskNode):
@@ -39,24 +36,9 @@ class ValidateAll(TaskNode):
             list[TaskNode]: A list of all build tasks.
         """
         return [
-            ValidatePypi(
-                non_docker_project_root=self.non_docker_project_root,
-                docker_project_root=self.docker_project_root,
-                local_user_uid=self.local_user_uid,
-                local_user_gid=self.local_user_gid,
-            ),
-            ValidateBuildSupport(
-                non_docker_project_root=self.non_docker_project_root,
-                docker_project_root=self.docker_project_root,
-                local_user_uid=self.local_user_uid,
-                local_user_gid=self.local_user_gid,
-            ),
-            ValidatePythonStyle(
-                non_docker_project_root=self.non_docker_project_root,
-                docker_project_root=self.docker_project_root,
-                local_user_uid=self.local_user_uid,
-                local_user_gid=self.local_user_gid,
-            ),
+            ValidatePypi(basic_task_info=self.get_basic_task_info()),
+            ValidateBuildSupport(basic_task_info=self.get_basic_task_info()),
+            ValidatePythonStyle(basic_task_info=self.get_basic_task_info()),
         ]
 
     def run(self) -> None:
@@ -80,18 +62,8 @@ class ValidateBuildSupport(TaskNode):
         """
         # Needs git info to tell if we are on main for some tests that could go stale
         return [
-            GetGitInfo(
-                non_docker_project_root=self.non_docker_project_root,
-                docker_project_root=self.docker_project_root,
-                local_user_uid=self.local_user_uid,
-                local_user_gid=self.local_user_gid,
-            ),
-            SetupDevEnvironment(
-                non_docker_project_root=self.non_docker_project_root,
-                docker_project_root=self.docker_project_root,
-                local_user_uid=self.local_user_uid,
-                local_user_gid=self.local_user_gid,
-            ),
+            GetGitInfo(basic_task_info=self.get_basic_task_info()),
+            SetupDevEnvironment(basic_task_info=self.get_basic_task_info()),
         ]
 
     def run(self) -> None:
@@ -113,11 +85,15 @@ class ValidateBuildSupport(TaskNode):
                     THREADS_AVAILABLE,
                     get_pytest_report_args(
                         project_root=self.docker_project_root,
-                        test_context=SubprojectContext.BUILD_SUPPORT,
+                        subproject=get_python_subproject(
+                            subproject_context=SubprojectContext.BUILD_SUPPORT,
+                            project_root=self.docker_project_root,
+                        ),
                     ),
-                    get_build_support_src_and_test(
+                    get_python_subproject(
+                        subproject_context=SubprojectContext.BUILD_SUPPORT,
                         project_root=self.docker_project_root,
-                    ),
+                    ).get_subproject_src_and_test_dir(),
                 ],
             ),
         )
@@ -133,18 +109,8 @@ class ValidatePythonStyle(TaskNode):
             list[TaskNode]: A list of tasks required to test python style.
         """
         return [
-            GetGitInfo(
-                non_docker_project_root=self.non_docker_project_root,
-                docker_project_root=self.docker_project_root,
-                local_user_uid=self.local_user_uid,
-                local_user_gid=self.local_user_gid,
-            ),
-            SetupDevEnvironment(
-                non_docker_project_root=self.non_docker_project_root,
-                docker_project_root=self.docker_project_root,
-                local_user_uid=self.local_user_uid,
-                local_user_gid=self.local_user_gid,
-            ),
+            GetGitInfo(basic_task_info=self.get_basic_task_info()),
+            SetupDevEnvironment(basic_task_info=self.get_basic_task_info()),
         ]
 
     def run(self) -> None:
@@ -153,6 +119,9 @@ class ValidatePythonStyle(TaskNode):
         Returns:
             None
         """
+        subproject = get_all_python_subprojects_dict(
+            project_root=self.docker_project_root
+        )
         run_process(
             args=concatenate_args(
                 args=[
@@ -196,9 +165,14 @@ class ValidatePythonStyle(TaskNode):
                     THREADS_AVAILABLE,
                     get_pytest_report_args(
                         project_root=self.docker_project_root,
-                        test_context=SubprojectContext.DOCUMENTATION_ENFORCEMENT,
+                        subproject=get_python_subproject(
+                            subproject_context=SubprojectContext.DOCUMENTATION_ENFORCEMENT,
+                            project_root=self.docker_project_root,
+                        ),
                     ),
-                    get_documentation_tests_dir(project_root=self.docker_project_root),
+                    subproject[
+                        SubprojectContext.DOCUMENTATION_ENFORCEMENT
+                    ].get_subproject_test_dir(),
                 ],
             ),
         )
@@ -226,7 +200,7 @@ class ValidatePythonStyle(TaskNode):
             args=concatenate_args(
                 args=[
                     mypy_command,
-                    get_pypi_src_and_test(project_root=self.docker_project_root),
+                    subproject[SubprojectContext.PYPI].get_subproject_root(),
                 ],
             ),
         )
@@ -234,7 +208,9 @@ class ValidatePythonStyle(TaskNode):
             args=concatenate_args(
                 args=[
                     mypy_command,
-                    get_build_support_src_dir(project_root=self.docker_project_root),
+                    subproject[
+                        SubprojectContext.BUILD_SUPPORT
+                    ].get_subproject_src_dir(),
                 ],
             ),
         )
@@ -242,7 +218,9 @@ class ValidatePythonStyle(TaskNode):
             args=concatenate_args(
                 args=[
                     mypy_command,
-                    get_build_support_test_dir(project_root=self.docker_project_root),
+                    subproject[
+                        SubprojectContext.BUILD_SUPPORT
+                    ].get_subproject_test_dir(),
                 ],
             ),
         )
@@ -250,9 +228,9 @@ class ValidatePythonStyle(TaskNode):
             args=concatenate_args(
                 args=[
                     mypy_command,
-                    get_process_and_style_enforcement_dir(
-                        project_root=self.docker_project_root
-                    ),
+                    subproject[
+                        SubprojectContext.DOCUMENTATION_ENFORCEMENT
+                    ].get_subproject_root(),
                 ],
             ),
         )
@@ -260,7 +238,7 @@ class ValidatePythonStyle(TaskNode):
             args=concatenate_args(
                 args=[
                     mypy_command,
-                    get_pulumi_dir(project_root=self.docker_project_root),
+                    subproject[SubprojectContext.PULUMI].get_subproject_root(),
                 ],
             ),
         )
@@ -276,10 +254,13 @@ class ValidatePythonStyle(TaskNode):
                     "-o",
                     get_bandit_report_path(
                         project_root=self.docker_project_root,
-                        test_context=SubprojectContext.PYPI,
+                        subproject=get_python_subproject(
+                            subproject_context=SubprojectContext.PYPI,
+                            project_root=self.docker_project_root,
+                        ),
                     ),
                     "-r",
-                    get_pypi_src_dir(project_root=self.docker_project_root),
+                    subproject[SubprojectContext.PYPI].get_subproject_src_dir(),
                 ],
             ),
         )
@@ -295,10 +276,13 @@ class ValidatePythonStyle(TaskNode):
                     "-o",
                     get_bandit_report_path(
                         project_root=self.docker_project_root,
-                        test_context=SubprojectContext.PULUMI,
+                        subproject=get_python_subproject(
+                            subproject_context=SubprojectContext.PULUMI,
+                            project_root=self.docker_project_root,
+                        ),
                     ),
                     "-r",
-                    get_pulumi_dir(project_root=self.docker_project_root),
+                    subproject[SubprojectContext.PULUMI].get_subproject_root(),
                 ],
             ),
         )
@@ -314,10 +298,15 @@ class ValidatePythonStyle(TaskNode):
                     "-o",
                     get_bandit_report_path(
                         project_root=self.docker_project_root,
-                        test_context=SubprojectContext.BUILD_SUPPORT,
+                        subproject=get_python_subproject(
+                            subproject_context=SubprojectContext.BUILD_SUPPORT,
+                            project_root=self.docker_project_root,
+                        ),
                     ),
                     "-r",
-                    get_build_support_src_dir(project_root=self.docker_project_root),
+                    subproject[
+                        SubprojectContext.BUILD_SUPPORT
+                    ].get_subproject_src_dir(),
                 ],
             ),
         )
@@ -333,12 +322,7 @@ class ValidatePypi(TaskNode):
             list[TaskNode]: A list of tasks required to test the pypi package.
         """
         return [
-            SetupDevEnvironment(
-                non_docker_project_root=self.non_docker_project_root,
-                docker_project_root=self.docker_project_root,
-                local_user_uid=self.local_user_uid,
-                local_user_gid=self.local_user_gid,
-            ),
+            SetupDevEnvironment(basic_task_info=self.get_basic_task_info()),
         ]
 
     def run(self) -> None:
@@ -360,9 +344,15 @@ class ValidatePypi(TaskNode):
                     THREADS_AVAILABLE,
                     get_pytest_report_args(
                         project_root=self.docker_project_root,
-                        test_context=SubprojectContext.PYPI,
+                        subproject=get_python_subproject(
+                            subproject_context=SubprojectContext.PYPI,
+                            project_root=self.docker_project_root,
+                        ),
                     ),
-                    get_pypi_src_and_test(project_root=self.docker_project_root),
+                    get_python_subproject(
+                        subproject_context=SubprojectContext.PYPI,
+                        project_root=self.docker_project_root,
+                    ).get_subproject_src_and_test_dir(),
                 ],
             ),
         )

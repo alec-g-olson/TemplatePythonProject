@@ -12,5 +12,6 @@ Modules:
     | dag_engine: Contains the logic for resolving task dependencies and running
         tasks in a coherent order.
     | execute_build_steps: A "main" that runs tasks.
+    | process_runner: Contains the logic for executing subprocesses.
     | report_build_var: A "main" that reports variables.
 """

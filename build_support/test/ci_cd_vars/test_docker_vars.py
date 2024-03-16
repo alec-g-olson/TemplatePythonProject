@@ -21,7 +21,7 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_pulumi_dir,
     get_pypi_src_dir,
 )
-from build_support.dag_engine import concatenate_args
+from build_support.process_runner import concatenate_args
 
 docker_targets = list(DockerTarget)
 test_project_names = ["test_project_one", "some_other_project"]

@@ -22,7 +22,7 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_all_python_folders,
     get_all_test_folders,
 )
-from build_support.dag_engine import concatenate_args
+from build_support.process_runner import concatenate_args
 
 
 @pytest.fixture()

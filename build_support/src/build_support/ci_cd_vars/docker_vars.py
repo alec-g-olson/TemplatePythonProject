@@ -6,13 +6,12 @@ from typing import Any
 
 from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_all_python_folders,
-    get_build_support_src_dir,
-    get_dockerfile,
-    get_pulumi_dir,
-    get_pypi_src_dir,
 )
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
-from build_support.dag_engine import concatenate_args
+from build_support.ci_cd_vars.project_structure import get_dockerfile
+from build_support.ci_cd_vars.subproject_enum import SubprojectContext
+from build_support.ci_cd_vars.subproject_structure import get_python_subproject
+from build_support.process_runner import concatenate_args
 
 
 class DockerTarget(Enum):
@@ -55,15 +54,28 @@ def get_python_path_for_target_image(
     """
     match target_image:
         case DockerTarget.BUILD:
-            python_folders: Path | list[str] = get_build_support_src_dir(
-                project_root=docker_project_root,
-            )
+            python_folders = [
+                get_python_subproject(
+                    subproject_context=SubprojectContext.BUILD_SUPPORT,
+                    project_root=docker_project_root,
+                ).get_subproject_src_dir()
+            ]
         case DockerTarget.DEV:
             python_folders = get_all_python_folders(project_root=docker_project_root)
         case DockerTarget.PROD:
-            python_folders = get_pypi_src_dir(project_root=docker_project_root)
+            python_folders = [
+                get_python_subproject(
+                    subproject_context=SubprojectContext.PYPI,
+                    project_root=docker_project_root,
+                ).get_subproject_src_dir()
+            ]
         case DockerTarget.PULUMI:
-            python_folders = get_pulumi_dir(project_root=docker_project_root)
+            python_folders = [
+                get_python_subproject(
+                    subproject_context=SubprojectContext.PULUMI,
+                    project_root=docker_project_root,
+                ).get_subproject_src_dir()
+            ]
         case _:  # pragma: no cover - can't hit if all enums are implemented
             msg = f"{target_image!r} is not a valid enum of DockerType."
             raise ValueError(msg)

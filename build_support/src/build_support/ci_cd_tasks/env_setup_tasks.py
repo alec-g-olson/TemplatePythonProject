@@ -3,18 +3,15 @@
 from pydantic import BaseModel
 from yaml import safe_dump, safe_load
 
+from build_support.ci_cd_tasks.task_node import TaskNode
 from build_support.ci_cd_vars.docker_vars import DockerTarget, get_docker_build_command
 from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_build_dir,
-    get_build_support_docs_build_dir,
-    get_build_support_docs_src_dir,
     get_git_info_yaml,
-    get_pypi_docs_build_dir,
-    get_pypi_docs_src_dir,
 )
 from build_support.ci_cd_vars.git_status_vars import get_current_branch, get_local_tags
 from build_support.ci_cd_vars.project_setting_vars import get_pulumi_version
-from build_support.dag_engine import TaskNode, concatenate_args, run_process
+from build_support.process_runner import concatenate_args, run_process
 
 
 class SetupDevEnvironment(TaskNode):
@@ -125,23 +122,6 @@ class Clean(TaskNode):
         run_process(
             args=["rm", "-rf", self.docker_project_root.joinpath(".ruff_cache")],
         )
-        for docs_build_dir in [
-            get_build_support_docs_build_dir(project_root=self.docker_project_root),
-            get_pypi_docs_build_dir(project_root=self.docker_project_root),
-        ]:
-            run_process(args=["rm", "-rf", docs_build_dir])
-        for docs_source_dir in [
-            get_build_support_docs_src_dir(project_root=self.docker_project_root),
-            get_pypi_docs_src_dir(project_root=self.docker_project_root),
-        ]:
-            files_and_folders_to_remove = [
-                file_or_folder_path
-                for file_or_folder_path in docs_source_dir.glob("*")
-                if file_or_folder_path.name != "index.rst"
-            ]
-            run_process(
-                args=concatenate_args(args=["rm", "-rf", files_and_folders_to_remove]),
-            )
 
 
 class GitInfo(BaseModel):

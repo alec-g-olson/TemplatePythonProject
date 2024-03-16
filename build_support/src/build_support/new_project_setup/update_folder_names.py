@@ -2,7 +2,8 @@
 
 from pathlib import Path
 
-from build_support.ci_cd_vars.file_and_dir_path_vars import get_pypi_src_dir
+from build_support.ci_cd_vars.subproject_enum import SubprojectContext
+from build_support.ci_cd_vars.subproject_structure import get_python_subproject
 from build_support.new_project_setup.new_project_data_models import ProjectSettings
 
 
@@ -23,7 +24,9 @@ def update_folders_in_project(
     Returns:
         None
     """
-    pypi_src_dir = get_pypi_src_dir(project_root=project_root)
+    pypi_src_dir = get_python_subproject(
+        subproject_context=SubprojectContext.PYPI, project_root=project_root
+    ).get_subproject_src_dir()
     original_package_dir = pypi_src_dir.joinpath(original_project_name)
     new_package_dir = pypi_src_dir.joinpath(new_project_settings.name)
     original_package_dir.rename(new_package_dir)

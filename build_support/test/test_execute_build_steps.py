@@ -24,7 +24,6 @@ from build_support.ci_cd_tasks.validation_tasks import (
     ValidatePypi,
     ValidatePythonStyle,
 )
-from build_support.dag_engine import concatenate_args
 from build_support.execute_build_steps import (
     CLI_ARG_TO_TASK,
     fix_permissions,
@@ -32,6 +31,7 @@ from build_support.execute_build_steps import (
     run_main,
 )
 from build_support.new_project_setup.setup_new_project import MakeProjectFromTemplate
+from build_support.process_runner import concatenate_args
 
 
 def test_constants_not_changed_by_accident() -> None:

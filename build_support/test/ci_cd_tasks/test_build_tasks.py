@@ -29,7 +29,7 @@ from build_support.ci_cd_vars.project_setting_vars import (
     get_project_name,
     get_project_version,
 )
-from build_support.dag_engine import concatenate_args
+from build_support.process_runner import concatenate_args
 
 
 def test_build_all_requires(

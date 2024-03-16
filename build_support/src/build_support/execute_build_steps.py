@@ -20,14 +20,16 @@ from build_support.ci_cd_tasks.lint_tasks import (
     RuffFixSafe,
 )
 from build_support.ci_cd_tasks.push_tasks import PushAll, PushPypi
+from build_support.ci_cd_tasks.task_node import BasicTaskInfo, TaskNode
 from build_support.ci_cd_tasks.validation_tasks import (
     ValidateAll,
     ValidateBuildSupport,
     ValidatePypi,
     ValidatePythonStyle,
 )
-from build_support.dag_engine import TaskNode, concatenate_args, run_process, run_tasks
+from build_support.dag_engine import run_tasks
 from build_support.new_project_setup.setup_new_project import MakeProjectFromTemplate
+from build_support.process_runner import concatenate_args, run_process
 
 #######################################################################################
 # Test tasks use the word "Validate" instead of "Test" in their name to prevent
@@ -151,10 +153,12 @@ def run_main(args: Namespace) -> None:
     local_user_gid = args.group_id
     requested_tasks = [
         CLI_ARG_TO_TASK[arg](
-            non_docker_project_root=non_docker_project_root,
-            docker_project_root=docker_project_root,
-            local_user_uid=local_user_uid,
-            local_user_gid=local_user_gid,
+            basic_task_info=BasicTaskInfo(
+                non_docker_project_root=non_docker_project_root,
+                docker_project_root=docker_project_root,
+                local_user_uid=local_user_uid,
+                local_user_gid=local_user_gid,
+            )
         )
         for arg in args.build_tasks
     ]

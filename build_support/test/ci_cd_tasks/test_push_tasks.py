@@ -7,7 +7,7 @@ from build_support.ci_cd_tasks.build_tasks import BuildPypi
 from build_support.ci_cd_tasks.push_tasks import PushAll, PushPypi, PushTags
 from build_support.ci_cd_tasks.validation_tasks import ValidateAll
 from build_support.ci_cd_vars.git_status_vars import MAIN_BRANCH_NAME
-from build_support.dag_engine import concatenate_args
+from build_support.process_runner import concatenate_args
 
 
 @pytest.fixture()

@@ -30,7 +30,7 @@ from build_support.ci_cd_vars.python_vars import (
     get_pytest_xml_report_path,
     get_test_report_name,
 )
-from build_support.dag_engine import concatenate_args
+from build_support.process_runner import concatenate_args
 
 pytest_contexts = list(SubprojectContext)
 
