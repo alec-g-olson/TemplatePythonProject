@@ -14,4 +14,9 @@ Modules:
     | docker_vars: Variables and functions that relate to making docker calls.
     | python_vars: Variables that are only useful in the context of python
         building and testing.
+    | project_structure: Variables and functions that relate to the top level structure
+        of this project.
+    | subproject_structure: Variables and functions that relate to the structure of
+        subprojects of this project.
+    | subproject_enum: An enum listing subprojects.
 """

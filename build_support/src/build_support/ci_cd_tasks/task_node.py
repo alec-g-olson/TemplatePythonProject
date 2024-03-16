@@ -13,6 +13,7 @@ from build_support.ci_cd_vars.subproject_structure import (
 
 @dataclass
 class BasicTaskInfo:
+    """Dataclass for the info required to run any task."""
     non_docker_project_root: Path
     docker_project_root: Path
     local_user_uid: int

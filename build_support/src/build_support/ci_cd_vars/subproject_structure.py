@@ -1,3 +1,4 @@
+"""Defines the structure of a python subproject."""
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
@@ -8,6 +9,7 @@ from build_support.ci_cd_vars.subproject_enum import SubprojectContext
 
 @dataclass(frozen=True)
 class PythonSubProject:
+    """Class that describes a python subproject."""
     project_root: Path
     subproject_name: str
 
@@ -111,10 +113,9 @@ def get_python_subproject(
         name = subproject_context.value
         msg = f"There is no Python subproject for the {name} subproject."
         raise ValueError(msg)
-    else:
-        return PythonSubProject(
-            project_root=project_root, subproject_name=subproject_context.value
-        )
+    return PythonSubProject(
+        project_root=project_root, subproject_name=subproject_context.value
+    )
 
 
 @cache

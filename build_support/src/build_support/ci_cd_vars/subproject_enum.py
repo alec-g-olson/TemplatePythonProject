@@ -1,3 +1,4 @@
+"""An enum listing possible subproject contexts."""
 from enum import Enum
 
 

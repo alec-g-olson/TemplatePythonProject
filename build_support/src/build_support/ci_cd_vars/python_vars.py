@@ -2,9 +2,6 @@
 
 from pathlib import Path
 
-from build_support.ci_cd_vars.file_and_dir_path_vars import (
-    SubprojectContext,
-)
 from build_support.ci_cd_vars.project_setting_vars import (
     get_project_name,
     get_project_version,
