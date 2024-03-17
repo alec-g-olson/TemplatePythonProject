@@ -152,6 +152,7 @@ class BuildDocs(PerSubprojectTask):
         copytree(
             src=self.subproject.get_docs_dir(),
             dst=self.subproject.get_build_docs_source_dir(),
+            dirs_exist_ok=True,
         )
         run_process(
             args=concatenate_args(

@@ -170,7 +170,8 @@ def test_run_build_docs(
             ],
         )
         BuildDocs(
-            basic_task_info=basic_task_info, subproject_context=subproject_context
+            basic_task_info=basic_task_info,
+            subproject_context=subproject_context,
         ).run()
         expected_run_process_calls = [
             call(args=sphinx_api_doc_args),
@@ -179,6 +180,7 @@ def test_run_build_docs(
         copytree_mock.assert_called_once_with(
             src=subproject.get_docs_dir(),
             dst=subproject.get_build_docs_source_dir(),
+            dirs_exist_ok=True,
         )
         assert run_process_mock.call_count == len(expected_run_process_calls)
         run_process_mock.assert_has_calls(calls=expected_run_process_calls)
