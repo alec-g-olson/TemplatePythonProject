@@ -5,6 +5,7 @@ Attributes:
 """
 
 from build_support.process_runner import (
+    ProcessVerbosity,
     concatenate_args,
     get_output_of_process,
     run_process,
@@ -30,7 +31,7 @@ def get_current_branch(
         args=["git", "rev-parse", "--abbrev-ref", "HEAD"],
         user_uid=local_user_uid,
         user_gid=local_user_gid,
-        silent=True,
+        verbosity=ProcessVerbosity.SILENT,
     )
 
 
@@ -70,7 +71,7 @@ def get_local_tags(
         args=["git", "tag"],
         user_uid=local_user_uid,
         user_gid=local_user_gid,
-        silent=True,
+        verbosity=ProcessVerbosity.SILENT,
     ).split("\n")
 
 
@@ -80,7 +81,9 @@ def get_git_diff() -> str:
     Returns:
         str: The results of running `git diff`.
     """
-    return get_output_of_process(args=["git", "diff"], silent=True)
+    return get_output_of_process(
+        args=["git", "diff"], verbosity=ProcessVerbosity.SILENT
+    )
 
 
 def commit_changes_if_diff(

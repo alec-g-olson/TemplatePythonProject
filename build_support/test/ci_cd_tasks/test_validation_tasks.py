@@ -120,7 +120,7 @@ def test_run_validate_python_style(basic_task_info: BasicTaskInfo) -> None:
                 "ruff",
                 "check",
                 "--ignore",
-                "D",
+                "D,FBT",
                 get_all_test_folders(project_root=basic_task_info.docker_project_root),
             ],
         )

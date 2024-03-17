@@ -2,6 +2,7 @@
 
 import itertools
 import sys
+from enum import Enum
 from os import environ
 from pwd import getpwuid
 
@@ -10,11 +11,18 @@ from subprocess import PIPE, Popen  # nosec: B404
 from typing import IO, Any
 
 
+class ProcessVerbosity(Enum):
+    """Enum for process verbosity to avoid boolean trap."""
+
+    SILENT = 1
+    ALL = 2
+
+
 def run_piped_processes(
     processes: list[list[Any]],
     user_uid: int = 0,
     user_gid: int = 0,
-    silent: bool = False,
+    verbosity: ProcessVerbosity = ProcessVerbosity.ALL,
 ) -> None:
     """Runs piped processes as they would be on the command line.
 
@@ -25,7 +33,7 @@ def run_piped_processes(
             the local user. Defaults to 0, runs as root.
         user_gid (int): The local user's group ID, used to run the process as
             the local user. Defaults to 0, runs as root.
-        silent (bool): Should the process be run silently.  Defaults to False.
+        verbosity (ProcessVerbosity): Should the process be run silently.
 
     Returns:
         None
@@ -33,7 +41,7 @@ def run_piped_processes(
     args_list = [get_str_args(args=args) for args in processes]
     process_strs = [" ".join(args) for args in args_list]
     command_as_str = " | ".join(process_strs)
-    if not silent:
+    if verbosity != ProcessVerbosity.SILENT:
         print(command_as_str, flush=True)  # noqa: T201
     p1 = build_popen_maybe_local_user(
         args=args_list[0],
@@ -57,7 +65,7 @@ def run_piped_processes(
         output=output,
         error=error,
         return_code=return_code,
-        silent=silent,
+        verbosity=verbosity,
     )
 
 
@@ -65,7 +73,7 @@ def get_output_of_process(
     args: list[Any],
     user_uid: int = 0,
     user_gid: int = 0,
-    silent: bool = False,
+    verbosity: ProcessVerbosity = ProcessVerbosity.ALL,
 ) -> str:
     """Runs a process and gets the output.
 
@@ -75,7 +83,7 @@ def get_output_of_process(
             the local user. Defaults to 0, runs as root.
         user_gid (int): The local user's group ID, used to run the process as
             the local user. Defaults to 0, runs as root.
-        silent (bool): Should the process be run silently.  Defaults to False.
+        verbosity (ProcessVerbosity): Should the process be run silently.
 
     Returns:
         str: The stdout from the subprocess that was run.
@@ -84,7 +92,7 @@ def get_output_of_process(
         args=args,
         user_uid=user_uid,
         user_gid=user_gid,
-        silent=silent,
+        verbosity=verbosity,
     )
     return output.decode("utf-8").strip()
 
@@ -93,7 +101,7 @@ def run_process(
     args: list[Any],
     user_uid: int = 0,
     user_gid: int = 0,
-    silent: bool = False,
+    verbosity: ProcessVerbosity = ProcessVerbosity.ALL,
 ) -> bytes:
     """Runs a process.
 
@@ -103,14 +111,14 @@ def run_process(
             the local user. Defaults to 0, runs as root.
         user_gid (int): The local user's group ID, used to run the process as
             the local user. Defaults to 0, runs as root.
-        silent (bool): Should the process be run silently.  Defaults to False.
+        verbosity (ProcessVerbosity): Should the process be run silently.
 
     Returns:
         bytes: The stdout from the subprocess that was run.
     """
     str_args = get_str_args(args=args)
     command_as_str = " ".join(str_args)
-    if not silent:
+    if verbosity != ProcessVerbosity.SILENT:
         print(command_as_str, flush=True)  # noqa: T201
     p = build_popen_maybe_local_user(
         args=str_args,
@@ -124,7 +132,7 @@ def run_process(
         output=output,
         error=error,
         return_code=return_code,
-        silent=silent,
+        verbosity=verbosity,
     )
     return output
 
@@ -168,7 +176,7 @@ def resolve_process_results(
     output: bytes,
     error: bytes,
     return_code: int,
-    silent: bool = False,
+    verbosity: ProcessVerbosity = ProcessVerbosity.ALL,
 ) -> None:
     """Prints outputs and errors and exits as appropriate when a command exits.
 
@@ -177,17 +185,17 @@ def resolve_process_results(
         output (bytes): The stdout from the subprocess that was run.
         error (bytes): The stderr from the subprocess that was run.
         return_code (int): The return code from the subprocess that was run.
-        silent (bool): Was the subprocess intended to run silently.
+        verbosity (ProcessVerbosity): Was the subprocess intended to run silently.
 
     Returns:
         None
     """
-    if output and not silent:
+    if output and verbosity != ProcessVerbosity.SILENT:
         print(output.decode("utf-8"), flush=True, end="")  # noqa: T201
     if error:
         print(error.decode("utf-8"), flush=True, end="", file=sys.stderr)  # noqa: T201
     if return_code != 0:
-        if silent:
+        if verbosity == ProcessVerbosity.SILENT:
             print(  # noqa: T201
                 f"{command_as_str}\nFailed with code: {return_code}",
                 flush=True,

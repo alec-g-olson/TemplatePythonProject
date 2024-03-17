@@ -4,6 +4,7 @@ from subprocess import PIPE
 from unittest.mock import MagicMock, call, patch
 
 from build_support.process_runner import (
+    ProcessVerbosity,
     concatenate_args,
     get_output_of_process,
     get_str_args,
@@ -39,7 +40,7 @@ def test_resolve_process_results_normal_process() -> None:
             output=b"output",
             error=b"",
             return_code=0,
-            silent=False,
+            verbosity=ProcessVerbosity.ALL,
         )
         mock_print.assert_called_once_with("output", flush=True, end="")
 
@@ -54,7 +55,7 @@ def test_resolve_process_results_normal_process_exit_1() -> None:
             output=b"output",
             error=b"",
             return_code=1,
-            silent=False,
+            verbosity=ProcessVerbosity.ALL,
         )
         mock_print.assert_called_once_with("output", flush=True, end="")
         mock_exit.assert_called_once_with(1)
@@ -67,7 +68,7 @@ def test_resolve_process_results_normal_process_has_error_text() -> None:
             output=b"output",
             error=b"error",
             return_code=0,
-            silent=False,
+            verbosity=ProcessVerbosity.ALL,
         )
         expected_print_calls = [
             call("output", flush=True, end=""),
@@ -87,7 +88,7 @@ def test_resolve_process_results_normal_process_has_error_text_exit_1() -> None:
             output=b"output",
             error=b"error",
             return_code=1,
-            silent=False,
+            verbosity=ProcessVerbosity.ALL,
         )
         expected_print_calls = [
             call("output", flush=True, end=""),
@@ -105,7 +106,7 @@ def test_resolve_process_results_normal_process_silent() -> None:
             output=b"output",
             error=b"error",
             return_code=0,
-            silent=True,
+            verbosity=ProcessVerbosity.SILENT,
         )
         assert mock_print.call_count == 1
         mock_print.assert_called_once_with("error", flush=True, end="", file=sys.stderr)
@@ -121,7 +122,7 @@ def test_resolve_process_results_normal_process_silent_exit_1() -> None:
             output=b"output",
             error=b"error",
             return_code=1,
-            silent=True,
+            verbosity=ProcessVerbosity.SILENT,
         )
         expected_print_calls = [
             call("error", flush=True, end="", file=sys.stderr),
@@ -159,7 +160,7 @@ def test_run_process() -> None:
             output=b"output",
             error=b"error",
             return_code=0,
-            silent=False,
+            verbosity=ProcessVerbosity.ALL,
         )
 
 
@@ -176,7 +177,10 @@ def test_run_process_silent() -> None:
         process_mock.returncode = 0
         mock_popen.return_value = process_mock
         assert (
-            run_process(args=["command", 0, 1.5, Path("/usr/dev")], silent=True)
+            run_process(
+                args=["command", 0, 1.5, Path("/usr/dev")],
+                verbosity=ProcessVerbosity.SILENT,
+            )
             == b"output"
         )
         mock_popen.assert_called_once_with(
@@ -193,7 +197,7 @@ def test_run_process_silent() -> None:
             output=b"output",
             error=b"error",
             return_code=0,
-            silent=True,
+            verbosity=ProcessVerbosity.SILENT,
         )
 
 
@@ -241,7 +245,7 @@ def test_run_process_as_user() -> None:
             output=b"output",
             error=b"error",
             return_code=0,
-            silent=False,
+            verbosity=ProcessVerbosity.ALL,
         )
 
 
@@ -271,7 +275,7 @@ def test_run_process_silent_as_user() -> None:
                 args=["command", 0, 1.5, Path("/usr/dev")],
                 user_uid=1337,
                 user_gid=42,
-                silent=True,
+                verbosity=ProcessVerbosity.SILENT,
             )
             == b"output"
         )
@@ -290,7 +294,7 @@ def test_run_process_silent_as_user() -> None:
             output=b"output",
             error=b"error",
             return_code=0,
-            silent=True,
+            verbosity=ProcessVerbosity.SILENT,
         )
 
 
@@ -349,7 +353,7 @@ def test_run_piped_processes() -> None:
             output=b"output",
             error=b"error",
             return_code=0,
-            silent=False,
+            verbosity=ProcessVerbosity.ALL,
         )
         mock_print.assert_called_once_with(command_as_str, flush=True)
 
@@ -371,7 +375,7 @@ def test_run_piped_processes_silent() -> None:
         mock_popen.return_value = process_mock
         run_piped_processes(
             processes=[["command", 0, 1.5, Path("/usr/dev")], ["second_command", 1337]],
-            silent=True,
+            verbosity=ProcessVerbosity.SILENT,
         )
         command_as_str = "command 0 1.5 /usr/dev | second_command 1337"
         expected_popen_calls = [
@@ -401,7 +405,7 @@ def test_run_piped_processes_silent() -> None:
             output=b"output",
             error=b"error",
             return_code=0,
-            silent=True,
+            verbosity=ProcessVerbosity.SILENT,
         )
         mock_print.assert_not_called()
 
@@ -464,7 +468,7 @@ def test_run_piped_processes_as_user() -> None:
             output=b"output",
             error=b"error",
             return_code=0,
-            silent=False,
+            verbosity=ProcessVerbosity.ALL,
         )
         mock_print.assert_called_once_with(command_as_str, flush=True)
 
@@ -497,7 +501,7 @@ def test_run_piped_processes_silent_as_user() -> None:
             processes=[["command", 0, 1.5, Path("/usr/dev")], ["second_command", 1337]],
             user_uid=1337,
             user_gid=42,
-            silent=True,
+            verbosity=ProcessVerbosity.SILENT,
         )
         assert len(mock_environ) == 1
         command_as_str = "command 0 1.5 /usr/dev | second_command 1337"
@@ -528,7 +532,7 @@ def test_run_piped_processes_silent_as_user() -> None:
             output=b"output",
             error=b"error",
             return_code=0,
-            silent=True,
+            verbosity=ProcessVerbosity.SILENT,
         )
         mock_print.assert_not_called()
 
@@ -564,7 +568,7 @@ def test_run_piped_processes_one_process() -> None:
             output=b"output",
             error=b"error",
             return_code=0,
-            silent=False,
+            verbosity=ProcessVerbosity.ALL,
         )
         mock_print.assert_called_once_with(command_as_str, flush=True)
 
@@ -586,7 +590,7 @@ def test_run_piped_processes_one_process_silent() -> None:
         mock_popen.return_value = process_mock
         run_piped_processes(
             processes=[["command", 0, 1.5, Path("/usr/dev")]],
-            silent=True,
+            verbosity=ProcessVerbosity.SILENT,
         )
         command_as_str = "command 0 1.5 /usr/dev"
         mock_popen.assert_called_once_with(
@@ -603,6 +607,6 @@ def test_run_piped_processes_one_process_silent() -> None:
             output=b"output",
             error=b"error",
             return_code=0,
-            silent=True,
+            verbosity=ProcessVerbosity.SILENT,
         )
         mock_print.assert_not_called()

@@ -138,7 +138,7 @@ class ValidatePythonStyle(TaskNode):
                     "ruff",
                     "check",
                     "--ignore",
-                    "D",
+                    "D,FBT",  # These are too onerous to enforce on test code
                     get_all_test_folders(project_root=self.docker_project_root),
                 ],
             ),

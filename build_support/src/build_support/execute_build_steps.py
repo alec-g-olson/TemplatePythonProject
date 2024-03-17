@@ -39,7 +39,7 @@ from build_support.ci_cd_tasks.validation_tasks import (
 from build_support.ci_cd_vars.subproject_structure import SubprojectContext
 from build_support.dag_engine import run_tasks
 from build_support.new_project_setup.setup_new_project import MakeProjectFromTemplate
-from build_support.process_runner import concatenate_args, run_process
+from build_support.process_runner import ProcessVerbosity, concatenate_args, run_process
 
 
 @dataclass(frozen=True)
@@ -154,7 +154,7 @@ def fix_permissions(local_user_uid: int, local_user_gid: int) -> None:
                 ],
             ],
         ),
-        silent=True,
+        verbosity=ProcessVerbosity.SILENT,
     )
 
 

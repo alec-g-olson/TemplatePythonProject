@@ -8,7 +8,7 @@ that is useful to your project!
 Contents:
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
 
     creating_a_new_project
     sub_projects

@@ -38,7 +38,7 @@ from build_support.execute_build_steps import (
     run_main,
 )
 from build_support.new_project_setup.setup_new_project import MakeProjectFromTemplate
-from build_support.process_runner import concatenate_args
+from build_support.process_runner import ProcessVerbosity, concatenate_args
 
 
 def test_constants_not_changed_by_accident() -> None:
@@ -79,7 +79,9 @@ def test_fix_permissions(real_project_root_dir: Path) -> None:
             ],
         )
         fix_permissions(local_user_uid=1337, local_user_gid=42)
-        run_process_mock.assert_called_once_with(args=fix_permissions_args, silent=True)
+        run_process_mock.assert_called_once_with(
+            args=fix_permissions_args, verbosity=ProcessVerbosity.SILENT
+        )
 
 
 @pytest.fixture(params=[Path("/usr/dev"), Path("/user/dev")])

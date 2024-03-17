@@ -12,7 +12,7 @@ from build_support.ci_cd_vars.git_status_vars import (
     get_git_diff,
     get_local_tags,
 )
-from build_support.process_runner import concatenate_args
+from build_support.process_runner import ProcessVerbosity, concatenate_args
 
 
 def test_get_current_branch() -> None:
@@ -26,7 +26,7 @@ def test_get_current_branch() -> None:
             args=["git", "rev-parse", "--abbrev-ref", "HEAD"],
             user_uid=0,
             user_gid=0,
-            silent=True,
+            verbosity=ProcessVerbosity.SILENT,
         )
 
 
@@ -44,7 +44,7 @@ def test_get_current_branch_as_user() -> None:
             args=["git", "rev-parse", "--abbrev-ref", "HEAD"],
             user_uid=1337,
             user_gid=42,
-            silent=True,
+            verbosity=ProcessVerbosity.SILENT,
         )
 
 
@@ -68,7 +68,10 @@ def test_get_local_tags() -> None:
         get_output_patch.return_value = patch_tag_values
         assert get_local_tags() == ["v0.0.0", "v0.0.1", "v0.1.0", "v1.0.0"]
         get_output_patch.assert_called_once_with(
-            args=["git", "tag"], user_uid=0, user_gid=0, silent=True
+            args=["git", "tag"],
+            user_uid=0,
+            user_gid=0,
+            verbosity=ProcessVerbosity.SILENT,
         )
 
 
@@ -85,7 +88,10 @@ def test_get_local_tags_as_user() -> None:
             "v1.0.0",
         ]
         get_output_patch.assert_called_once_with(
-            args=["git", "tag"], user_uid=1337, user_gid=42, silent=True
+            args=["git", "tag"],
+            user_uid=1337,
+            user_gid=42,
+            verbosity=ProcessVerbosity.SILENT,
         )
 
 
@@ -96,7 +102,9 @@ def test_get_git_diff() -> None:
     ) as get_output_patch:
         get_output_patch.return_value = patch_diff_result
         assert get_git_diff() == patch_diff_result
-        get_output_patch.assert_called_once_with(args=["git", "diff"], silent=True)
+        get_output_patch.assert_called_once_with(
+            args=["git", "diff"], verbosity=ProcessVerbosity.SILENT
+        )
 
 
 @pytest.fixture(params=["Valid message!", "Hasn't got double quotes."])
