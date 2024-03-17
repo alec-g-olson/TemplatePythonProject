@@ -112,6 +112,54 @@ def get_git_info_yaml(project_root: Path) -> Path:
     return get_build_dir(project_root=project_root).joinpath("git_info.yaml")
 
 
+def get_build_docs_dir(project_root: Path) -> Path:
+    """Gets the dir that will be used for building the documentation of this project.
+
+    Args:
+        project_root (Path): Path to this project's root.
+
+    Returns:
+        Path: Path to the directory that this project's documentation will be built in.
+    """
+    return maybe_build_dir(
+        dir_to_build=get_build_dir(project_root=project_root).joinpath(
+            "docs",
+        ),
+    )
+
+
+def get_build_docs_source_dir(project_root: Path) -> Path:
+    """Gets the dir that will hold the source files for this project's documentation.
+
+    Args:
+        project_root (Path): Path to this project's root.
+
+    Returns:
+        Path: Path to the directory for this project's documentation sphinx sources.
+    """
+    return maybe_build_dir(
+        dir_to_build=get_build_docs_dir(project_root=project_root).joinpath(
+            "source",
+        ),
+    )
+
+
+def get_build_docs_build_dir(project_root: Path) -> Path:
+    """Gets the dir that will hold this project's sphinx documentation.
+
+    Args:
+        project_root (Path): Path to this project's root.
+
+    Returns:
+        Path: Path to the directory for this project's final sphinx documentation.
+    """
+    return maybe_build_dir(
+        dir_to_build=get_build_docs_dir(project_root=project_root).joinpath(
+            "build",
+        ),
+    )
+
+
 ########################################
 # Files and folder collections that span domains
 ########################################

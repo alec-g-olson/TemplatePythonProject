@@ -70,6 +70,18 @@ def get_build_dir(project_root: Path) -> Path:
     return maybe_build_dir(dir_to_build=project_root.joinpath("build"))
 
 
+def get_docs_dir(project_root: Path) -> Path:
+    """Gets the docs directory for this project.
+
+    Args:
+        project_root (Path): Path to this project's root.
+
+    Returns:
+        Path: Path to the docs directory for this project.
+    """
+    return maybe_build_dir(dir_to_build=project_root.joinpath("docs"))
+
+
 def get_dockerfile(project_root: Path) -> Path:
     """Gets the Dockerfile for the project.
 

@@ -16,7 +16,7 @@ def test_get_python_subproject(mock_project_root: Path) -> None:
             assert get_python_subproject(
                 subproject_context=context, project_root=mock_project_root
             ) == PythonSubproject(
-                project_root=mock_project_root, subproject_name=context.value
+                project_root=mock_project_root, subproject_context=context
             )
 
 
@@ -32,7 +32,7 @@ def test_fail_to_get_python_subproject(mock_project_root: Path) -> None:
 def test_get_all_python_subprojects_dict(mock_project_root: Path) -> None:
     assert get_all_python_subprojects_dict(project_root=mock_project_root) == {
         subproject_context: PythonSubproject(
-            project_root=mock_project_root, subproject_name=subproject_context.value
+            project_root=mock_project_root, subproject_context=subproject_context
         )
         for subproject_context in SubprojectContext
         if subproject_context != SubprojectContext.ALL

@@ -28,7 +28,15 @@ class PythonSubproject:
     """Class that describes a python subproject."""
 
     project_root: Path
-    subproject_name: str
+    subproject_context: SubprojectContext
+
+    def get_subproject_name(self) -> str:
+        """Gets the name of the subproject.
+
+        Returns:
+            str: The name of the subproject.
+        """
+        return self.subproject_context.value
 
     def get_build_dir(self) -> Path:
         """Gets and possibly builds a directory in the build folder for this subproject.
@@ -37,7 +45,9 @@ class PythonSubproject:
             Path: Path to the build dir for this subproject.
         """
         return maybe_build_dir(
-            get_build_dir(project_root=self.project_root).joinpath(self.subproject_name)
+            get_build_dir(project_root=self.project_root).joinpath(
+                self.get_subproject_name()
+            )
         )
 
     def get_reports_dir(self) -> Path:
@@ -48,33 +58,13 @@ class PythonSubproject:
         """
         return maybe_build_dir(self.get_build_dir().joinpath("reports"))
 
-    def get_build_docs_build_dir(self) -> Path:
-        """Gets and possibly builds a dir for building the subproject docs.
-
-        Returns:
-            Path: Path to the subproject's docs build directory.
-        """
-        return maybe_build_dir(self.get_build_dir().joinpath("docs_build"))
-
-    def get_build_docs_source_dir(self) -> Path:
-        """Gets and possibly builds a dir for the subproject's docs sources.
-
-        This dir will have its contents copied in from the subproject's docs folder
-        from the subproject's root directory.  This allows for us to store the docs
-        in a safe place and keep all of our build processes in the build folder.
-
-        Returns:
-            Path: Path to the subproject's docs source directory.
-        """
-        return maybe_build_dir(self.get_build_dir().joinpath("docs_source"))
-
     def get_root_dir(self) -> Path:
         """Gets the root of the python subproject.
 
         Returns:
             Path: Path to the root of the python subproject.
         """
-        return self.project_root.joinpath(self.subproject_name)
+        return self.project_root.joinpath(self.get_subproject_name())
 
     def get_src_dir(self) -> Path:
         """Gets the src folder in a subproject.
@@ -104,7 +94,7 @@ class PythonSubproject:
         """Gets the documents folder in a subproject.
 
         This dir will have its contents copied to the subproject's docs source build
-         folder in the project's build directory.  This allows for us to store the docs
+        folder in the project's build directory.  This allows for us to store the docs
         in a safe place and keep all of our build processes in the build folder.
 
         Returns:
@@ -126,7 +116,7 @@ class PythonSubproject:
             [
                 get_project_name(project_root=self.project_root),
                 get_project_version(project_root=self.project_root),
-                self.subproject_name,
+                self.get_subproject_name(),
                 report_extension,
             ],
         )
@@ -257,7 +247,7 @@ def get_python_subproject(
         msg = f"There is no Python subproject for the {name} subproject."
         raise ValueError(msg)
     return PythonSubproject(
-        project_root=project_root, subproject_name=subproject_context.value
+        project_root=project_root, subproject_context=subproject_context
     )
 
 
@@ -276,7 +266,7 @@ def get_all_python_subprojects_dict(
     """
     return {
         subproject_context: PythonSubproject(
-            project_root=project_root, subproject_name=subproject_context.value
+            project_root=project_root, subproject_context=subproject_context
         )
         for subproject_context in SubprojectContext
         if subproject_context != SubprojectContext.ALL

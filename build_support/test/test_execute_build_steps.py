@@ -7,7 +7,6 @@ from _pytest.fixtures import SubRequest
 
 from build_support.ci_cd_tasks.build_tasks import (
     BuildAll,
-    BuildAllDocs,
     BuildDocs,
     BuildPypi,
 )
@@ -57,10 +56,7 @@ def test_constants_not_changed_by_accident() -> None:
         "ruff_fix_safe": CliTaskInfo(task_node=RuffFixSafe),
         "apply_unsafe_ruff_fixes": CliTaskInfo(task_node=ApplyRuffFixUnsafe),
         "build_pypi": CliTaskInfo(task_node=BuildPypi),
-        "build_docs": CliTaskInfo(task_node=BuildAllDocs),
-        "build_pypi_docs": CliTaskInfo(
-            task_node=BuildDocs, subproject_context=SubprojectContext.PYPI
-        ),
+        "build_docs": CliTaskInfo(task_node=BuildDocs),
         "build": CliTaskInfo(task_node=BuildAll),
         "push_pypi": CliTaskInfo(task_node=PushPypi),
         "push": CliTaskInfo(task_node=PushAll),

@@ -1,2 +1,0 @@
-* :ref:`genindex`
-* :ref:`search`
