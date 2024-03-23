@@ -1,4 +1,4 @@
 Creating a New Project
 ======================
 
-some instructions on making a new project
+The README.md has instructions for creating a new project.
