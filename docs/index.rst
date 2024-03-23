@@ -16,8 +16,8 @@ _________
     :maxdepth: 1
 
     creating_a_new_project
-    sub_projects
-    sub_project_code_docs
+    subprojects
+    subproject_code_docs
     software_development_process
     license
 
