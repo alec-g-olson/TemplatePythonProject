@@ -298,10 +298,10 @@ a line, branch, or function that is going to be too difficult to test you can ad
 [Ruff](https://docs.astral.sh/ruff/) is used by this project as both a formatter and a
 linter.
 
-When linting we run all stabilize rules that are compatible with the Ruff Formatter.
+When linting we run all stable rules that are compatible with the Ruff Formatter.
 Because Ruff is under active development and the list of new tests and stable tests
-is changing with some frequency we want to pin the Ruff version more specifically than
-we pin most packages we manage in poetry.
+is changing with some frequency we want to pin Ruff to a specific version, which is much
+stricter than we treat most packages we manage in poetry.
 
 Ruff is a drop in replacement for:
 - isort

@@ -3,7 +3,11 @@ import tomllib
 from pathlib import Path
 
 from build_support.ci_cd_tasks.env_setup_tasks import Clean
-from build_support.ci_cd_vars.file_and_dir_path_vars import get_pypi_src_dir
+from build_support.ci_cd_tasks.task_node import BasicTaskInfo
+from build_support.ci_cd_vars.subproject_structure import (
+    SubprojectContext,
+    get_python_subproject,
+)
 from build_support.new_project_setup.license_templates import ALL_RIGHTS_RESERVED_KEY
 from build_support.new_project_setup.new_project_data_models import (
     Organization,
@@ -43,9 +47,10 @@ def _check_license_file(license_path: Path, settings: ProjectSettings) -> None:
 
 
 def _check_folder_names(project_folder: Path, settings: ProjectSettings) -> None:
-    assert (
-        get_pypi_src_dir(project_root=project_folder).joinpath(settings.name).exists()
+    pypi_subproject = get_python_subproject(
+        subproject_context=SubprojectContext.PYPI, project_root=project_folder
     )
+    assert pypi_subproject.get_src_dir().joinpath(settings.name).exists()
 
 
 def _ensure_project_folder_matches_settings(
@@ -90,10 +95,12 @@ def test_make_new_project(tmp_path: Path, real_project_root_dir: Path) -> None:
     )
     project_settings_path.write_text(modified_project_settings.to_yaml())
     make_project_task = MakeProjectFromTemplate(
-        non_docker_project_root=tmp_project_path,
-        docker_project_root=tmp_project_path,
-        local_user_uid=1337,
-        local_user_gid=42,
+        basic_task_info=BasicTaskInfo(
+            non_docker_project_root=tmp_project_path,
+            docker_project_root=tmp_project_path,
+            local_user_uid=1337,
+            local_user_gid=42,
+        )
     )
     make_project_task.run()
     _ensure_project_folder_matches_settings(
@@ -111,10 +118,12 @@ def test_make_new_project(tmp_path: Path, real_project_root_dir: Path) -> None:
     )
     project_settings_path.write_text(modified_project_settings.to_yaml())
     make_project_task = MakeProjectFromTemplate(
-        non_docker_project_root=tmp_project_path,
-        docker_project_root=tmp_project_path,
-        local_user_uid=1337,
-        local_user_gid=42,
+        basic_task_info=BasicTaskInfo(
+            non_docker_project_root=tmp_project_path,
+            docker_project_root=tmp_project_path,
+            local_user_uid=1337,
+            local_user_gid=42,
+        )
     )
     make_project_task.run()
     _ensure_project_folder_matches_settings(
@@ -127,15 +136,19 @@ def test_make_new_project(tmp_path: Path, real_project_root_dir: Path) -> None:
 def test_setup_new_project_requires(tmp_path: Path) -> None:
     tmp_project_path = tmp_path.joinpath("template_python_project")
     assert MakeProjectFromTemplate(
-        non_docker_project_root=tmp_project_path,
-        docker_project_root=tmp_project_path,
-        local_user_uid=1337,
-        local_user_gid=42,
-    ).required_tasks() == [
-        Clean(
+        basic_task_info=BasicTaskInfo(
             non_docker_project_root=tmp_project_path,
             docker_project_root=tmp_project_path,
             local_user_uid=1337,
             local_user_gid=42,
+        )
+    ).required_tasks() == [
+        Clean(
+            basic_task_info=BasicTaskInfo(
+                non_docker_project_root=tmp_project_path,
+                docker_project_root=tmp_project_path,
+                local_user_uid=1337,
+                local_user_gid=42,
+            )
         )
     ]

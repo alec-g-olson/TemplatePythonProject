@@ -16,12 +16,13 @@ from build_support.ci_cd_vars.docker_vars import (
 )
 from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_all_python_folders,
-    get_build_support_src_dir,
-    get_dockerfile,
-    get_pulumi_dir,
-    get_pypi_src_dir,
 )
-from build_support.dag_engine import concatenate_args
+from build_support.ci_cd_vars.project_structure import get_dockerfile
+from build_support.ci_cd_vars.subproject_structure import (
+    SubprojectContext,
+    get_python_subproject,
+)
+from build_support.process_runner import concatenate_args
 
 docker_targets = list(DockerTarget)
 test_project_names = ["test_project_one", "some_other_project"]
@@ -55,10 +56,16 @@ def test_get_python_path_for_target_image(
         docker_project_root=docker_project_root,
         target_image=docker_target,
     )
+
     if docker_target == DockerTarget.BUILD:
         assert observed_python_path == ":".join(
             concatenate_args(
-                args=[get_build_support_src_dir(project_root=docker_project_root)],
+                args=[
+                    get_python_subproject(
+                        subproject_context=SubprojectContext.BUILD_SUPPORT,
+                        project_root=docker_project_root,
+                    ).get_src_dir()
+                ],
             ),
         )
     elif docker_target == DockerTarget.DEV:
@@ -69,11 +76,25 @@ def test_get_python_path_for_target_image(
         )
     elif docker_target == DockerTarget.PROD:
         assert observed_python_path == ":".join(
-            concatenate_args(args=[get_pypi_src_dir(project_root=docker_project_root)]),
+            concatenate_args(
+                args=[
+                    get_python_subproject(
+                        subproject_context=SubprojectContext.PYPI,
+                        project_root=docker_project_root,
+                    ).get_src_dir()
+                ]
+            ),
         )
     else:  # assume pulumi if not add the new case
         assert observed_python_path == ":".join(
-            concatenate_args(args=[get_pulumi_dir(project_root=docker_project_root)]),
+            concatenate_args(
+                args=[
+                    get_python_subproject(
+                        subproject_context=SubprojectContext.PULUMI,
+                        project_root=docker_project_root,
+                    ).get_src_dir()
+                ]
+            ),
         )
 
 
@@ -193,16 +214,16 @@ def test_get_docker_build_command_no_extras(
     docker_target: DockerTarget,
 ) -> None:
     standard = get_docker_build_command(
-        project_root=mock_project_root,
+        docker_project_root=mock_project_root,
         target_image=docker_target,
     )
     no_extra_explicit = get_docker_build_command(
-        project_root=mock_project_root,
+        docker_project_root=mock_project_root,
         target_image=docker_target,
         extra_args=None,
     )
     empty_extra_args = get_docker_build_command(
-        project_root=mock_project_root,
+        docker_project_root=mock_project_root,
         target_image=docker_target,
         extra_args={},
     )
@@ -235,7 +256,7 @@ def test_get_docker_build_command_with_extras(
     docker_target: DockerTarget,
 ) -> None:
     assert get_docker_build_command(
-        project_root=mock_project_root,
+        docker_project_root=mock_project_root,
         target_image=docker_target,
         extra_args={"--some-key": 8, "--no-val-with-key": None, "--other": "whee"},
     ) == concatenate_args(

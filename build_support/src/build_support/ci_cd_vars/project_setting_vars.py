@@ -9,7 +9,7 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
-from build_support.ci_cd_vars.file_and_dir_path_vars import (
+from build_support.ci_cd_vars.project_structure import (
     get_poetry_lock_file,
     get_pyproject_toml,
 )
@@ -97,13 +97,13 @@ def get_project_name(project_root: Path) -> str:
 
 
 def get_pulumi_version(project_root: Path) -> str:
-    """Get the pulumi version in the poetry.lock file.
+    """Get the pulumi version in the poetry lock file.
 
     Args:
         project_root (Path): Path to this project's root.
 
     Returns:
-        str: The pulumi version in the poetry.lock file.
+        str: The pulumi version in the poetry lock file.
     """
     lock_file = get_poetry_lock_file(project_root=project_root)
     lock_data = tomllib.loads(lock_file.read_text())

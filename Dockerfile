@@ -17,8 +17,28 @@ RUN poetry config virtualenvs.create false
 
 FROM base as git_enabled
 
-# Allow for git stuff to work in /usr/dev
-RUN git config --global --add safe.directory /usr/dev
+# create local user so local permissions can be mounted into the container
+# Should be safe, but avoid pushing images or containers that are based on `git_enabled`
+# As of March 24th, 2024 that is only the `build` and `dev` images and containiers
+
+# Require args to be passed from command line, do not set default value
+ARG CURRENT_USER
+ARG CURRENT_GROUP
+ARG CURRENT_USER_ID
+ARG CURRENT_GROUP_ID
+RUN groupadd --gid $CURRENT_GROUP_ID $CURRENT_GROUP || \
+    groupadd --gid $CURRENT_GROUP_ID hack-group || \
+    true
+RUN adduser --gid $CURRENT_GROUP_ID --uid $CURRENT_USER_ID $CURRENT_USER
+RUN mkdir -p /home/$CURRENT_USER/.ssh
+RUN chown -R $CURRENT_USER_ID:$CURRENT_GROUP_ID /home/$CURRENT_USER/.ssh
+
+# Setting ownership of the mounted project to the local user lets git work without error
+
+# Require args to be passed from command line, do not set default value
+ARG DOCKER_REMOTE_PROJECT_ROOT
+RUN mkdir -p DOCKER_REMOTE_PROJECT_ROOT
+RUN chown $CURRENT_USER_ID:$CURRENT_GROUP_ID DOCKER_REMOTE_PROJECT_ROOT
 
 FROM git_enabled AS build
 
@@ -28,27 +48,19 @@ RUN poetry install --with build
 RUN apt-get update
 RUN apt-get install ca-certificates curl gnupg
 RUN install -m 0755 -d /etc/apt/keyrings
-RUN curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+RUN curl -fsSL https://download.docker.com/linux/debian/gpg | \
+    gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 RUN chmod a+r /etc/apt/keyrings/docker.gpg
 
 # Add the repository to Apt sources:
 RUN echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+    https://download.docker.com/linux/debian \
   $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
   tee /etc/apt/sources.list.d/docker.list > /dev/null
 RUN apt-get update
-RUN apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-
-# create local user so local permissions can be mounted into the container
-# Should be safe, but never push build images or containers
-ARG CURRENT_USER=default_user
-ARG CURRENT_GROUP=default_group
-ARG CURRENT_USER_ID=1000
-ARG CURRENT_GROUP_ID=1000
-RUN groupadd --gid $CURRENT_GROUP_ID $CURRENT_GROUP || groupadd --gid $CURRENT_GROUP_ID hack-group || true
-RUN adduser --gid $CURRENT_GROUP_ID --uid $CURRENT_USER_ID $CURRENT_USER
-RUN mkdir -p /home/$CURRENT_USER/.ssh
-RUN chown -R $CURRENT_USER_ID:$CURRENT_GROUP_ID /home/$CURRENT_USER/.ssh
+RUN apt-get install -y docker-ce docker-ce-cli containerd.io \
+      docker-buildx-plugin docker-compose-plugin
 
 FROM git_enabled AS dev
 

@@ -8,4 +8,4 @@ import pulumi
 bucket = s3.Bucket("my-bucket")
 
 # Export the name of the bucket
-pulumi.export("bucket_name", bucket.id)
+pulumi.export("bucket_name", bucket.id)  # type: ignore[attr-defined]

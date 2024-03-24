@@ -5,8 +5,11 @@ import pytest
 from _pytest.fixtures import SubRequest
 
 from build_support.ci_cd_tasks.env_setup_tasks import GitInfo
+from build_support.ci_cd_tasks.task_node import BasicTaskInfo
 from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_git_info_yaml,
+)
+from build_support.ci_cd_vars.project_structure import (
     get_poetry_lock_file,
     get_pyproject_toml,
 )
@@ -29,25 +32,25 @@ mock_project_names = ["project_one", "project_two"]
 mock_local_user_ids = [(1, 20), (1337, 42)]
 
 
-@pytest.fixture(params=mock_project_versions, scope="session")
+@pytest.fixture(params=mock_project_versions)
 def project_version(request: SubRequest) -> str:
     """The version contained in the pyproject toml."""
     return request.param
 
 
-@pytest.fixture(params=mock_project_names, scope="session")
+@pytest.fixture(params=mock_project_names)
 def project_name(request: SubRequest) -> str:
     """The project name contained in the pyproject toml."""
     return request.param
 
 
-@pytest.fixture(params=mock_local_user_ids, scope="session")
+@pytest.fixture(params=mock_local_user_ids)
 def local_uid(request: SubRequest) -> str:
     """The name of the local user."""
     return request.param[0]
 
 
-@pytest.fixture(params=mock_local_user_ids, scope="session")
+@pytest.fixture(params=mock_local_user_ids)
 def local_gid(request: SubRequest) -> str:
     """The name of the local user."""
     return request.param[1]
@@ -61,13 +64,29 @@ def docker_project_root(tmp_path: Path) -> Path:
     return docker_project_root
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
+def basic_task_info(
+    mock_project_root: Path,
+    docker_project_root: Path,
+    local_uid: int,
+    local_gid: int,
+) -> BasicTaskInfo:
+    """Provides basic task info for setting up and testing tasks."""
+    return BasicTaskInfo(
+        non_docker_project_root=mock_project_root,
+        docker_project_root=docker_project_root,
+        local_user_uid=local_uid,
+        local_user_gid=local_gid,
+    )
+
+
+@pytest.fixture()
 def pyproject_toml_data(project_version: str, project_name: str) -> dict[Any, Any]:
     """The dictionary that would be read from the pyproject toml."""
     return {"tool": {"poetry": {"name": project_name, "version": project_version}}}
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def pyproject_toml_contents(project_version: str, project_name: str) -> str:
     """The contents of a pyproject toml to be used in testing."""
     return f'[tool.poetry]\nname = "{project_name}"\nversion = "{project_version}"'

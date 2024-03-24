@@ -5,7 +5,11 @@ from unittest.mock import patch
 import pytest
 from _pytest.fixtures import SubRequest
 
-from build_support.ci_cd_tasks.build_tasks import BuildAll, BuildDocs, BuildPypi
+from build_support.ci_cd_tasks.build_tasks import (
+    BuildAll,
+    BuildDocs,
+    BuildPypi,
+)
 from build_support.ci_cd_tasks.env_setup_tasks import (
     Clean,
     SetupDevEnvironment,
@@ -18,41 +22,48 @@ from build_support.ci_cd_tasks.lint_tasks import (
     RuffFixSafe,
 )
 from build_support.ci_cd_tasks.push_tasks import PushAll, PushPypi
+from build_support.ci_cd_tasks.task_node import (
+    BasicTaskInfo,
+    PerSubprojectTask,
+    TaskNode,
+)
 from build_support.ci_cd_tasks.validation_tasks import (
     ValidateAll,
     ValidateBuildSupport,
     ValidatePypi,
     ValidatePythonStyle,
 )
-from build_support.dag_engine import concatenate_args
+from build_support.ci_cd_vars.subproject_structure import SubprojectContext
 from build_support.execute_build_steps import (
     CLI_ARG_TO_TASK,
+    CliTaskInfo,
     fix_permissions,
     parse_args,
     run_main,
 )
 from build_support.new_project_setup.setup_new_project import MakeProjectFromTemplate
+from build_support.process_runner import ProcessVerbosity, concatenate_args
 
 
 def test_constants_not_changed_by_accident() -> None:
     assert CLI_ARG_TO_TASK.copy() == {
-        "make_new_project": MakeProjectFromTemplate,
-        "clean": Clean,
-        "setup_dev_env": SetupDevEnvironment,
-        "setup_prod_env": SetupProdEnvironment,
-        "setup_pulumi_env": SetupPulumiEnvironment,
-        "test_style": ValidatePythonStyle,
-        "test_build_support": ValidateBuildSupport,
-        "test_pypi": ValidatePypi,
-        "test": ValidateAll,
-        "lint": Lint,
-        "ruff_fix_safe": RuffFixSafe,
-        "apply_unsafe_ruff_fixes": ApplyRuffFixUnsafe,
-        "build_pypi": BuildPypi,
-        "build_docs": BuildDocs,
-        "build": BuildAll,
-        "push_pypi": PushPypi,
-        "push": PushAll,
+        "make_new_project": CliTaskInfo(task_node=MakeProjectFromTemplate),
+        "clean": CliTaskInfo(task_node=Clean),
+        "setup_dev_env": CliTaskInfo(task_node=SetupDevEnvironment),
+        "setup_prod_env": CliTaskInfo(task_node=SetupProdEnvironment),
+        "setup_pulumi_env": CliTaskInfo(task_node=SetupPulumiEnvironment),
+        "test_style": CliTaskInfo(task_node=ValidatePythonStyle),
+        "test_build_support": CliTaskInfo(task_node=ValidateBuildSupport),
+        "test_pypi": CliTaskInfo(task_node=ValidatePypi),
+        "test": CliTaskInfo(task_node=ValidateAll),
+        "lint": CliTaskInfo(task_node=Lint),
+        "ruff_fix_safe": CliTaskInfo(task_node=RuffFixSafe),
+        "apply_unsafe_ruff_fixes": CliTaskInfo(task_node=ApplyRuffFixUnsafe),
+        "build_pypi": CliTaskInfo(task_node=BuildPypi),
+        "build_docs": CliTaskInfo(task_node=BuildDocs),
+        "build": CliTaskInfo(task_node=BuildAll),
+        "push_pypi": CliTaskInfo(task_node=PushPypi),
+        "push": CliTaskInfo(task_node=PushAll),
     }
 
 
@@ -72,7 +83,9 @@ def test_fix_permissions(real_project_root_dir: Path) -> None:
             ],
         )
         fix_permissions(local_user_uid=1337, local_user_gid=42)
-        run_process_mock.assert_called_once_with(args=fix_permissions_args, silent=True)
+        run_process_mock.assert_called_once_with(
+            args=fix_permissions_args, verbosity=ProcessVerbosity.SILENT
+        )
 
 
 @pytest.fixture(params=[Path("/usr/dev"), Path("/user/dev")])
@@ -298,10 +311,12 @@ def test_run_main_success(
         mock_run_tasks.assert_called_once_with(
             tasks=[
                 Clean(
-                    non_docker_project_root=mock_project_root,
-                    docker_project_root=docker_project_root,
-                    local_user_uid=local_uid,
-                    local_user_gid=local_gid,
+                    basic_task_info=BasicTaskInfo(
+                        non_docker_project_root=mock_project_root,
+                        docker_project_root=docker_project_root,
+                        local_user_uid=local_uid,
+                        local_user_gid=local_gid,
+                    )
                 )
             ],
         )
@@ -309,6 +324,38 @@ def test_run_main_success(
             local_user_uid=local_uid,
             local_user_gid=local_gid,
         )
+
+
+def test_run_main_bad_cli_task(
+    mock_project_root: Path,
+    docker_project_root: Path,
+    local_uid: int,
+    local_gid: int,
+) -> None:
+    args = Namespace(
+        non_docker_project_root=mock_project_root,
+        docker_project_root=docker_project_root,
+        user_id=local_uid,
+        group_id=local_gid,
+        build_tasks=["clean"],
+    )
+    with (
+        patch(
+            "build_support.execute_build_steps.CLI_ARG_TO_TASK",
+            {
+                "clean": CliTaskInfo(
+                    task_node=Clean, subproject_context=SubprojectContext.PYPI
+                )
+            },
+        ),
+    ):
+        msg = (
+            "Incoherent CLI Task Info.\n"
+            "\ttask_node: Clean\n"
+            "\tsubproject_context: PYPI"
+        )
+        with pytest.raises(ValueError, match=msg):
+            run_main(args)
 
 
 def test_run_main_exception(
@@ -338,13 +385,13 @@ def test_run_main_exception(
         mock_run_tasks.side_effect = error_to_raise
         run_main(args)
         requested_tasks = [
-            CLI_ARG_TO_TASK[task_name](
+            CLI_ARG_TO_TASK[arg].get_task_node(
                 non_docker_project_root=mock_project_root,
                 docker_project_root=docker_project_root,
                 local_user_uid=local_uid,
                 local_user_gid=local_gid,
             )
-            for task_name in all_task_list
+            for arg in args.build_tasks
         ]
         mock_run_tasks.assert_called_once_with(tasks=requested_tasks)
         mock_print.assert_called_once_with(error_to_raise)
@@ -352,3 +399,65 @@ def test_run_main_exception(
             local_user_uid=local_uid,
             local_user_gid=local_gid,
         )
+
+
+def test_get_standard_task_node(
+    mock_project_root: Path,
+    docker_project_root: Path,
+    local_uid: int,
+    local_gid: int,
+) -> None:
+    class TestTaskNode(TaskNode):
+        def required_tasks(self) -> list[TaskNode]:
+            return []  # pragma: no cover - never called, just a test class
+
+        def run(self) -> None:
+            """Does nothing.  Pycharm doesn't like 'pass' for some reason."""
+
+    cli_task_info = CliTaskInfo(task_node=TestTaskNode)
+    assert cli_task_info.get_task_node(
+        non_docker_project_root=mock_project_root,
+        docker_project_root=docker_project_root,
+        local_user_uid=local_uid,
+        local_user_gid=local_gid,
+    ) == TestTaskNode(
+        basic_task_info=BasicTaskInfo(
+            non_docker_project_root=mock_project_root,
+            docker_project_root=docker_project_root,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
+        )
+    )
+
+
+def test_get_subproject_specific_task_node(
+    mock_project_root: Path,
+    docker_project_root: Path,
+    local_uid: int,
+    local_gid: int,
+) -> None:
+    class TestSubprojectSpecificTaskNode(PerSubprojectTask):
+        def required_tasks(self) -> list[TaskNode]:
+            return []  # pragma: no cover - never called, just a test class
+
+        def run(self) -> None:
+            """Does nothing.  Pycharm doesn't like 'pass' for some reason."""
+
+    cli_task_info = CliTaskInfo(
+        task_node=TestSubprojectSpecificTaskNode,
+        subproject_context=SubprojectContext.PYPI,
+    )
+    assert cli_task_info.get_task_node(
+        non_docker_project_root=mock_project_root,
+        docker_project_root=docker_project_root,
+        local_user_uid=local_uid,
+        local_user_gid=local_gid,
+    ) == TestSubprojectSpecificTaskNode(
+        basic_task_info=BasicTaskInfo(
+            non_docker_project_root=mock_project_root,
+            docker_project_root=docker_project_root,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
+        ),
+        subproject_context=SubprojectContext.PYPI,
+    )

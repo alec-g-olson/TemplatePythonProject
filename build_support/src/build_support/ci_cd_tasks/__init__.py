@@ -26,4 +26,5 @@ Modules:
         git before any artifacts are pushed.  If an artifact push fails after the git
         tags have been pushed then a new version should be used for the next attempted
         push.
+    | task_node: Contains the abstract class that other classes inherit from.
 """

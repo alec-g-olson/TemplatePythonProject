@@ -1,6 +1,7 @@
 """Should hold all tasks that push artifacts after testing."""
 
 from build_support.ci_cd_tasks.build_tasks import BuildPypi
+from build_support.ci_cd_tasks.task_node import TaskNode
 from build_support.ci_cd_tasks.validation_tasks import ValidateAll
 from build_support.ci_cd_vars.git_status_vars import (
     commit_changes_if_diff,
@@ -11,7 +12,7 @@ from build_support.ci_cd_vars.project_setting_vars import (
     get_project_version,
     is_dev_project_version,
 )
-from build_support.dag_engine import TaskNode, concatenate_args, run_process
+from build_support.process_runner import concatenate_args, run_process
 
 
 class PushAll(TaskNode):
@@ -24,18 +25,8 @@ class PushAll(TaskNode):
             list[TaskNode]: A list of all build tasks.
         """
         return [
-            PushTags(
-                non_docker_project_root=self.non_docker_project_root,
-                docker_project_root=self.docker_project_root,
-                local_user_uid=self.local_user_uid,
-                local_user_gid=self.local_user_gid,
-            ),
-            PushPypi(
-                non_docker_project_root=self.non_docker_project_root,
-                docker_project_root=self.docker_project_root,
-                local_user_uid=self.local_user_uid,
-                local_user_gid=self.local_user_gid,
-            ),
+            PushTags(basic_task_info=self.get_basic_task_info()),
+            PushPypi(basic_task_info=self.get_basic_task_info()),
         ]
 
     def run(self) -> None:
@@ -58,12 +49,7 @@ class PushTags(TaskNode):
             list[TaskNode]: A list of tasks required to push version tags.
         """
         return [
-            ValidateAll(
-                non_docker_project_root=self.non_docker_project_root,
-                docker_project_root=self.docker_project_root,
-                local_user_uid=self.local_user_uid,
-                local_user_gid=self.local_user_gid,
-            ),
+            ValidateAll(basic_task_info=self.get_basic_task_info()),
         ]
 
     def run(self) -> None:
@@ -74,8 +60,8 @@ class PushTags(TaskNode):
         built from.  If tags are pushed after some artifacts are built it would
         be possible for a build error to cause the tag to not be pushed. If that
         happened then the version check we do during testing would be invalid
-        because there could previously pushed artifacts for a version that passes
-        that test.
+        because there could have previously been artifacts pushed for a version that
+        passes that test.
 
         Returns:
             None
@@ -120,18 +106,8 @@ class PushPypi(TaskNode):
             list[TaskNode]: A list of tasks required to push the Pypi package.
         """
         return [
-            PushTags(
-                non_docker_project_root=self.non_docker_project_root,
-                docker_project_root=self.docker_project_root,
-                local_user_uid=self.local_user_uid,
-                local_user_gid=self.local_user_gid,
-            ),
-            BuildPypi(
-                non_docker_project_root=self.non_docker_project_root,
-                docker_project_root=self.docker_project_root,
-                local_user_uid=self.local_user_uid,
-                local_user_gid=self.local_user_gid,
-            ),
+            PushTags(basic_task_info=self.get_basic_task_info()),
+            BuildPypi(basic_task_info=self.get_basic_task_info()),
         ]
 
     def run(self) -> None:

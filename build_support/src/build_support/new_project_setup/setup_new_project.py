@@ -5,12 +5,12 @@ the logic for making a new project is executed from.
 """
 
 from build_support.ci_cd_tasks.env_setup_tasks import Clean
+from build_support.ci_cd_tasks.task_node import TaskNode
 from build_support.ci_cd_vars.file_and_dir_path_vars import (
-    get_license_file,
     get_new_project_settings,
 )
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
-from build_support.dag_engine import TaskNode
+from build_support.ci_cd_vars.project_structure import get_license_file
 from build_support.new_project_setup.new_project_data_models import ProjectSettings
 from build_support.new_project_setup.setup_license import (
     write_new_license_from_template,
@@ -30,14 +30,7 @@ class MakeProjectFromTemplate(TaskNode):
         Returns:
             list[TaskNode]: A list of tasks required to build a new project. [Clean]
         """
-        return [
-            Clean(
-                non_docker_project_root=self.non_docker_project_root,
-                docker_project_root=self.non_docker_project_root,
-                local_user_uid=self.local_user_uid,
-                local_user_gid=self.local_user_gid,
-            ),
-        ]
+        return [Clean(basic_task_info=self.get_basic_task_info())]
 
     def run(self) -> None:
         """Modifies the appropriate files to start a new project.

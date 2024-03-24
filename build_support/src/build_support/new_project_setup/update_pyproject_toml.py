@@ -5,7 +5,7 @@ from typing import Any
 
 from tomlkit import dumps, parse
 
-from build_support.ci_cd_vars.file_and_dir_path_vars import get_pyproject_toml
+from build_support.ci_cd_vars.project_structure import get_pyproject_toml
 from build_support.new_project_setup.new_project_data_models import ProjectSettings
 
 

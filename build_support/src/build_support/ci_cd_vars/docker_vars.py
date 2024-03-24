@@ -6,13 +6,14 @@ from typing import Any
 
 from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_all_python_folders,
-    get_build_support_src_dir,
-    get_dockerfile,
-    get_pulumi_dir,
-    get_pypi_src_dir,
 )
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
-from build_support.dag_engine import concatenate_args
+from build_support.ci_cd_vars.project_structure import get_dockerfile
+from build_support.ci_cd_vars.subproject_structure import (
+    SubprojectContext,
+    get_python_subproject,
+)
+from build_support.process_runner import concatenate_args
 
 
 class DockerTarget(Enum):
@@ -55,15 +56,28 @@ def get_python_path_for_target_image(
     """
     match target_image:
         case DockerTarget.BUILD:
-            python_folders: Path | list[str] = get_build_support_src_dir(
-                project_root=docker_project_root,
-            )
+            python_folders = [
+                get_python_subproject(
+                    subproject_context=SubprojectContext.BUILD_SUPPORT,
+                    project_root=docker_project_root,
+                ).get_src_dir()
+            ]
         case DockerTarget.DEV:
             python_folders = get_all_python_folders(project_root=docker_project_root)
         case DockerTarget.PROD:
-            python_folders = get_pypi_src_dir(project_root=docker_project_root)
+            python_folders = [
+                get_python_subproject(
+                    subproject_context=SubprojectContext.PYPI,
+                    project_root=docker_project_root,
+                ).get_src_dir()
+            ]
         case DockerTarget.PULUMI:
-            python_folders = get_pulumi_dir(project_root=docker_project_root)
+            python_folders = [
+                get_python_subproject(
+                    subproject_context=SubprojectContext.PULUMI,
+                    project_root=docker_project_root,
+                ).get_src_dir()
+            ]
         case _:  # pragma: no cover - can't hit if all enums are implemented
             msg = f"{target_image!r} is not a valid enum of DockerType."
             raise ValueError(msg)
@@ -235,14 +249,14 @@ def get_interactive_docker_command_for_image(
 
 
 def get_docker_build_command(
-    project_root: Path,
+    docker_project_root: Path,
     target_image: DockerTarget,
     extra_args: None | dict[str, Any] = None,
 ) -> list[str]:
     """Creates docker build command.
 
     Args:
-        project_root (Path): Path to this project's root.
+        docker_project_root (Path): Path to this project's root.
         target_image (DockerTarget): An enum specifying which type of docker image we
             are requesting the name of.
         extra_args (None | dict[str, Any]): Any extra arguments we want to add to the
@@ -254,23 +268,32 @@ def get_docker_build_command(
     """
     flattened_extra_args = []
     if extra_args is not None:
-        for extra_arg_key, extra_arg_val in extra_args.items():
-            flattened_extra_args.append(extra_arg_key)
-            if extra_arg_val is not None:
-                flattened_extra_args.append(extra_arg_val)
+        for extra_arg_key, extra_arg_vals in extra_args.items():
+            if not extra_arg_vals:
+                flattened_extra_args.append(extra_arg_key)
+            else:
+                if not isinstance(extra_arg_vals, list):
+                    extra_arg_val_list = [extra_arg_vals]
+                else:
+                    extra_arg_val_list = extra_arg_vals
+                for extra_arg_val in extra_arg_val_list:
+                    flattened_extra_args.append(extra_arg_key)
+                    flattened_extra_args.append(extra_arg_val)
     return concatenate_args(
         args=[
             "docker",
             "build",
             "-f",
-            get_dockerfile(project_root=project_root),
+            get_dockerfile(project_root=docker_project_root),
             "--target",
             target_image.value,
             "--build-arg",
             "BUILDKIT_INLINE_CACHE=1",
             flattened_extra_args,
             "-t",
-            get_docker_image_name(project_root=project_root, target_image=target_image),
-            project_root.absolute(),
+            get_docker_image_name(
+                project_root=docker_project_root, target_image=target_image
+            ),
+            docker_project_root.absolute(),
         ],
     )
