@@ -13,11 +13,6 @@ from build_support.ci_cd_vars.project_structure import (
     get_poetry_lock_file,
     get_pyproject_toml,
 )
-from build_support.ci_cd_vars.subproject_structure import (
-    PythonSubproject,
-    SubprojectContext,
-    get_python_subproject,
-)
 
 
 @pytest.fixture(scope="session")
@@ -82,25 +77,6 @@ def basic_task_info(
         docker_project_root=docker_project_root,
         local_user_uid=local_uid,
         local_user_gid=local_gid,
-    )
-
-
-mock_subproject_contexts = [SubprojectContext.BUILD_SUPPORT, SubprojectContext.PYPI]
-
-
-@pytest.fixture(params=mock_subproject_contexts)
-def subproject_context(request: SubRequest) -> SubprojectContext:
-    """The subproject context to use in test."""
-    return request.param
-
-
-@pytest.fixture(params=mock_subproject_contexts)
-def subproject(
-    subproject_context: SubprojectContext, docker_project_root: Path
-) -> PythonSubproject:
-    """The subproject to use in test."""
-    return get_python_subproject(
-        subproject_context=subproject_context, project_root=docker_project_root
     )
 
 

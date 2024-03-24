@@ -26,7 +26,8 @@ from build_support.ci_cd_vars.project_setting_vars import (
 )
 from build_support.ci_cd_vars.project_structure import get_docs_dir
 from build_support.ci_cd_vars.subproject_structure import (
-    get_all_python_subprojects_with_src,
+    SubprojectContext,
+    get_python_subproject,
 )
 from build_support.process_runner import concatenate_args
 
@@ -100,10 +101,21 @@ def test_run_build_docs(basic_task_info: BasicTaskInfo) -> None:
     with (
         patch("build_support.ci_cd_tasks.build_tasks.run_process") as run_process_mock,
         patch("build_support.ci_cd_tasks.build_tasks.copytree") as copytree_mock,
+        patch(
+            "build_support.ci_cd_tasks.build_tasks.get_all_python_subprojects_with_src"
+        ) as mock_get_subprojects_with_src,
     ):
-        subprojects_with_docs = get_all_python_subprojects_with_src(
-            project_root=basic_task_info.docker_project_root
-        )
+        mock_subprojects_with_docs = [
+            get_python_subproject(
+                subproject_context=SubprojectContext.BUILD_SUPPORT,
+                project_root=basic_task_info.docker_project_root,
+            ),
+            get_python_subproject(
+                subproject_context=SubprojectContext.PYPI,
+                project_root=basic_task_info.docker_project_root,
+            ),
+        ]
+        mock_get_subprojects_with_src.return_value = mock_subprojects_with_docs
         sphinx_api_doc_args_list = [
             concatenate_args(
                 [
@@ -130,7 +142,7 @@ def test_run_build_docs(basic_task_info: BasicTaskInfo) -> None:
                     current_subproject.get_src_dir(),
                 ],
             )
-            for current_subproject in subprojects_with_docs
+            for current_subproject in mock_subprojects_with_docs
         ]
         sphinx_build_args = concatenate_args(
             [

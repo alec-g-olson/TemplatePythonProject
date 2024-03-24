@@ -22,7 +22,11 @@ from build_support.ci_cd_tasks.lint_tasks import (
     RuffFixSafe,
 )
 from build_support.ci_cd_tasks.push_tasks import PushAll, PushPypi
-from build_support.ci_cd_tasks.task_node import BasicTaskInfo
+from build_support.ci_cd_tasks.task_node import (
+    BasicTaskInfo,
+    PerSubprojectTask,
+    TaskNode,
+)
 from build_support.ci_cd_tasks.validation_tasks import (
     ValidateAll,
     ValidateBuildSupport,
@@ -395,3 +399,65 @@ def test_run_main_exception(
             local_user_uid=local_uid,
             local_user_gid=local_gid,
         )
+
+
+def test_get_standard_task_node(
+    mock_project_root: Path,
+    docker_project_root: Path,
+    local_uid: int,
+    local_gid: int,
+) -> None:
+    class TestTaskNode(TaskNode):
+        def required_tasks(self) -> list[TaskNode]:
+            return []  # pragma: no cover - never called, just a test class
+
+        def run(self) -> None:
+            """Does nothing.  Pycharm doesn't like 'pass' for some reason."""
+
+    cli_task_info = CliTaskInfo(task_node=TestTaskNode)
+    assert cli_task_info.get_task_node(
+        non_docker_project_root=mock_project_root,
+        docker_project_root=docker_project_root,
+        local_user_uid=local_uid,
+        local_user_gid=local_gid,
+    ) == TestTaskNode(
+        basic_task_info=BasicTaskInfo(
+            non_docker_project_root=mock_project_root,
+            docker_project_root=docker_project_root,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
+        )
+    )
+
+
+def test_get_subproject_specific_task_node(
+    mock_project_root: Path,
+    docker_project_root: Path,
+    local_uid: int,
+    local_gid: int,
+) -> None:
+    class TestSubprojectSpecificTaskNode(PerSubprojectTask):
+        def required_tasks(self) -> list[TaskNode]:
+            return []  # pragma: no cover - never called, just a test class
+
+        def run(self) -> None:
+            """Does nothing.  Pycharm doesn't like 'pass' for some reason."""
+
+    cli_task_info = CliTaskInfo(
+        task_node=TestSubprojectSpecificTaskNode,
+        subproject_context=SubprojectContext.PYPI,
+    )
+    assert cli_task_info.get_task_node(
+        non_docker_project_root=mock_project_root,
+        docker_project_root=docker_project_root,
+        local_user_uid=local_uid,
+        local_user_gid=local_gid,
+    ) == TestSubprojectSpecificTaskNode(
+        basic_task_info=BasicTaskInfo(
+            non_docker_project_root=mock_project_root,
+            docker_project_root=docker_project_root,
+            local_user_uid=local_uid,
+            local_user_gid=local_gid,
+        ),
+        subproject_context=SubprojectContext.PYPI,
+    )

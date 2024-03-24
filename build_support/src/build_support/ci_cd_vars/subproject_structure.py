@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass
 from enum import Enum
-from functools import cache
 from pathlib import Path
 
 from build_support.ci_cd_vars.project_setting_vars import (
@@ -89,18 +88,6 @@ class PythonSubproject:
             list[path]: Path to the build_support src and test dirs for the project.
         """
         return [self.get_src_dir(), self.get_test_dir()]
-
-    def get_docs_dir(self) -> Path:
-        """Gets the documents folder in a subproject.
-
-        This dir will have its contents copied to the subproject's docs source build
-        folder in the project's build directory.  This allows for us to store the docs
-        in a safe place and keep all of our build processes in the build folder.
-
-        Returns:
-            Path: Path to the docs folder in the subproject.
-        """
-        return self.get_root_dir().joinpath("docs")
 
     def get_test_report_name(self, report_extension: str) -> str:
         """Enforces a consistent python report naming convention.
@@ -228,7 +215,6 @@ class PythonSubproject:
         )
 
 
-@cache
 def get_python_subproject(
     subproject_context: SubprojectContext, project_root: Path
 ) -> PythonSubproject:
@@ -251,7 +237,6 @@ def get_python_subproject(
     )
 
 
-@cache
 def get_all_python_subprojects_dict(
     project_root: Path,
 ) -> dict[SubprojectContext, PythonSubproject]:
