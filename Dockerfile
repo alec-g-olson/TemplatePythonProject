@@ -38,6 +38,7 @@ RUN chown -R $CURRENT_USER_ID:$CURRENT_GROUP_ID /home/$CURRENT_USER/.ssh
 # Require args to be passed from command line, do not set default value
 ARG DOCKER_REMOTE_PROJECT_ROOT
 RUN mkdir -p DOCKER_REMOTE_PROJECT_ROOT
+RUN git config --global --add safe.directory /usr/dev
 RUN chown $CURRENT_USER_ID:$CURRENT_GROUP_ID DOCKER_REMOTE_PROJECT_ROOT
 
 FROM git_enabled AS build
