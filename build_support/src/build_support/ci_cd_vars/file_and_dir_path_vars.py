@@ -6,6 +6,8 @@ from build_support.ci_cd_vars.project_structure import get_build_dir, maybe_buil
 from build_support.ci_cd_vars.subproject_structure import (
     SubprojectContext,
     get_all_python_subprojects_dict,
+    get_all_python_subprojects_with_src,
+    get_all_python_subprojects_with_test,
     get_python_subproject,
 )
 
@@ -214,8 +216,10 @@ def get_all_src_folders(project_root: Path) -> list[Path]:
     Returns:
         list[Path]: Path to all the python src folders in the project.
     """
-    subprojects = get_all_python_subprojects_dict(project_root=project_root)
-    src_dirs = sorted(subproject.get_src_dir() for subproject in subprojects.values())
+    src_dirs = sorted(
+        subproject.get_src_dir()
+        for subproject in get_all_python_subprojects_with_src(project_root=project_root)
+    )
     return [src_dir for src_dir in src_dirs if src_dir.exists()]
 
 
@@ -228,8 +232,12 @@ def get_all_test_folders(project_root: Path) -> list[Path]:
     Returns:
         list[Path]: Path to all the python test folders in the project.
     """
-    subprojects = get_all_python_subprojects_dict(project_root=project_root)
-    test_dirs = sorted(subproject.get_test_dir() for subproject in subprojects.values())
+    test_dirs = sorted(
+        subproject.get_test_dir()
+        for subproject in get_all_python_subprojects_with_test(
+            project_root=project_root
+        )
+    )
     return [test_dir for test_dir in test_dirs if test_dir.exists()]
 
 

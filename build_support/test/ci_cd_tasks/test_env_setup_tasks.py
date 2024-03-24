@@ -1,5 +1,6 @@
 from copy import copy
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import call, patch
 
@@ -31,12 +32,30 @@ def test_build_dev_env_requires(basic_task_info: BasicTaskInfo) -> None:
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
 def test_run_build_dev_env(basic_task_info: BasicTaskInfo) -> None:
-    with patch(
-        "build_support.ci_cd_tasks.env_setup_tasks.run_process",
-    ) as run_process_mock:
+    with (
+        patch(
+            "build_support.ci_cd_tasks.env_setup_tasks.run_process",
+        ) as run_process_mock,
+        patch("build_support.ci_cd_tasks.env_setup_tasks.getpwuid") as mock_getpwuid,
+        patch("build_support.ci_cd_tasks.env_setup_tasks.getgrgid") as mock_getgrgid,
+    ):
+        local_username = "some_username"
+        mock_getpwuid.return_value = SimpleNamespace(pw_name=local_username)
+        local_user_group = "some_user_group"
+        mock_getgrgid.return_value = SimpleNamespace(gr_name=local_user_group)
         build_dev_env_args = get_docker_build_command(
-            project_root=basic_task_info.docker_project_root,
+            docker_project_root=basic_task_info.docker_project_root,
             target_image=DockerTarget.DEV,
+            extra_args={
+                "--build-arg": [
+                    "DOCKER_REMOTE_PROJECT_ROOT="
+                    + str(basic_task_info.docker_project_root.absolute()),
+                    f"CURRENT_USER={local_username}",
+                    f"CURRENT_GROUP={local_user_group}",
+                    f"CURRENT_USER_ID={basic_task_info.local_user_uid}",
+                    f"CURRENT_GROUP_ID={basic_task_info.local_user_gid}",
+                ],
+            },
         )
         SetupDevEnvironment(basic_task_info=basic_task_info).run()
         run_process_mock.assert_called_once_with(args=build_dev_env_args)
@@ -53,7 +72,7 @@ def test_run_build_prod_env(basic_task_info: BasicTaskInfo) -> None:
         "build_support.ci_cd_tasks.env_setup_tasks.run_process",
     ) as run_process_mock:
         build_prod_env_args = get_docker_build_command(
-            project_root=basic_task_info.docker_project_root,
+            docker_project_root=basic_task_info.docker_project_root,
             target_image=DockerTarget.PROD,
         )
         SetupProdEnvironment(basic_task_info=basic_task_info).run()
@@ -75,7 +94,7 @@ def test_run_build_pulumi_env(basic_task_info: BasicTaskInfo) -> None:
         "build_support.ci_cd_tasks.env_setup_tasks.run_process",
     ) as run_process_mock:
         build_pulumi_env_args = get_docker_build_command(
-            project_root=basic_task_info.docker_project_root,
+            docker_project_root=basic_task_info.docker_project_root,
             target_image=DockerTarget.PULUMI,
             extra_args={
                 "--build-arg": "PULUMI_VERSION="
@@ -209,6 +228,8 @@ def test_run_get_git_info(basic_task_info: BasicTaskInfo) -> None:
         ) as get_tags_mock,
     ):
         branch_name = "some_branch"
+        # Some tags added to the repo might be for convenience and not strictly version
+        # tags.  This should be allowed behavior.
         tags = ["some_non_version_tag", "0.0.0", "0.1.0"]
         get_branch_mock.return_value = branch_name
         get_tags_mock.return_value = tags
@@ -217,19 +238,12 @@ def test_run_get_git_info(basic_task_info: BasicTaskInfo) -> None:
         )
         assert not git_info_yaml_dest.exists()
         GetGitInfo(basic_task_info=basic_task_info).run()
-        expected_fix_permissions_call = call(
-            args=[
-                "chown",
-                f"{basic_task_info.local_user_uid}:{basic_task_info.local_user_gid}",
-                str(basic_task_info.docker_project_root),
-            ]
-        )
         expected_git_fetch_call = call(
             args=["git", "fetch"],
             user_uid=basic_task_info.local_user_uid,
             user_gid=basic_task_info.local_user_gid,
         )
-        all_expected_calls = [expected_fix_permissions_call, expected_git_fetch_call]
+        all_expected_calls = [expected_git_fetch_call]
         assert run_process_mock.call_count == len(all_expected_calls)
         run_process_mock.assert_has_calls(calls=all_expected_calls, any_order=True)
         observed_git_info = GitInfo.from_yaml(git_info_yaml_dest.read_text())

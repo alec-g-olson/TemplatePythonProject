@@ -214,16 +214,16 @@ def test_get_docker_build_command_no_extras(
     docker_target: DockerTarget,
 ) -> None:
     standard = get_docker_build_command(
-        project_root=mock_project_root,
+        docker_project_root=mock_project_root,
         target_image=docker_target,
     )
     no_extra_explicit = get_docker_build_command(
-        project_root=mock_project_root,
+        docker_project_root=mock_project_root,
         target_image=docker_target,
         extra_args=None,
     )
     empty_extra_args = get_docker_build_command(
-        project_root=mock_project_root,
+        docker_project_root=mock_project_root,
         target_image=docker_target,
         extra_args={},
     )
@@ -256,7 +256,7 @@ def test_get_docker_build_command_with_extras(
     docker_target: DockerTarget,
 ) -> None:
     assert get_docker_build_command(
-        project_root=mock_project_root,
+        docker_project_root=mock_project_root,
         target_image=docker_target,
         extra_args={"--some-key": 8, "--no-val-with-key": None, "--other": "whee"},
     ) == concatenate_args(

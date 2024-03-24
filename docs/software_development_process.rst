@@ -43,8 +43,9 @@ possible and take priority over other tickets.  If other tickets are business cr
 and require immediate completion then process changes should be delayed until those
 critical tickets are completed.
 
-Once the process document is updated the reality is that sometimes it can take some time
-to complete the new enforcement tickets.  As a warning to software team stakeholders
+Once a new process is agreed on the reality is that sometimes it can take some time
+to complete the new enforcement tickets.  We will change this document to reflect the
+new process as soon as it is agreed to, but as a warning to software team stakeholders
 attempting to follow the process we will record incomplete process enforcement here.
 
 Tickets:
@@ -230,14 +231,193 @@ behavior before it can be closed.
 Continuous Integration and Deployment Process
 ---------------------------------------------
 
-Our CI/CD
+In order for a pull request to be completed our automated test suite must first
+successfully complete, and when a pull request is merged our deployment pipeline runs
+automatically.
+
+Ensuring a Consistent Testing and Deployment Environment
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Between this project's Makefile, Dockerfile, and :doc:`build_support` we have gone
+to great lengths to make sure that the build, testing, and deployment environments are
+the same across any machine.
+
+The Makefile is responsible for gathering variables from the machine (such as path to
+the project and user information), running docker prune commands that can't be run from
+a docker image, building the :code:`build` docker image, and running build commands
+using a :code:`build` container from that image.  All other build pipeline logic is
+contained in the :doc:`build_support`.
+
+The Dockerfile in this project is responsible for maintaining the environments we will
+use for building, testing, and deploying artifacts.  In the future there might be a
+docker image that we use as an artifact, but that is not the case today.
+
+The :doc:`build_support` is used for all the pipeline logic.  When the Makefile executes
+either the :code:`execute_build_steps.py` or :code:`report_build_var.py` scripts a DAG
+of tasks will be built and executed in the :code:`build` docker image.  Some of these
+tasks execute simple tasks such as parsing the pyproject.toml file for the project's
+current version number, executing a command like :code:`git fetch`, or making simple
+web requests.  However any moderately complex task or one that involves packages not in
+the :code:`build` container should be run in another docker container.  The
+:code:`build` container has been setup to make Docker out of Docker (DooD) calls where
+a command can be sent to the local machine's docker daemon and executed outside of the
+:code:`build` container in another container.  The docker container that is chosen to
+execute the commands is coded into the :doc:`build_support`'s code.
+
+This system should allow for the build, testing, and deployment of our project to be
+done in consistent environments across all \*nix based platforms.
 
 Automated Testing and Style Enforcement
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Testing to describe later
+Below is a description of the tests we run automatically in order for a pull request to
+be allowed to merge.
+
+Check if Project Version is Valid
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The first step in pushing artifacts during our deployment process is to tag the current
+commit with the projects version (located in the :code:`pyproject.toml` file).  Because
+of this we enforce the following checks on the project's version.
+
+- There are no existing tags in our git repo that match the project's version
+- If we are deploying from the :code:`main` branch we ensure the version follows the
+  standard `SemVer <https://semver.org>`_ format. :code:`MAJOR.MINOR.PATCH`
+- If we are deploying from any other branch we ensure the version follows our standard
+  for dev versions. :code:`MAJOR.MINOR.PATCH-dev.ATTEMPT`
+
+Major, Minor, Patch, and Attempt should all be integer numbers.
+
+Check the Structure of the README.md
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+We check that the :code:`README.md` of this project has exactly the headers we expect,
+and that the sections for those headers have some contents.
+
+When running tests on any branch other than :code:`main` we test to make sure that all
+URLs used in hyperlinks point to a valid website.
+
+Check the Contents of "docs" RST Files
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+We have some tests for a few of the :code:`docs` files to ensure that we don't forget to
+update them when required to.
+
+subprojects.rst
+'''''''''''''''
+
+We check to make sure that each subproject has a section in this file, and that the ones
+with python source files have a link to the sphinx generated documentation of their
+sources.
+
+subproject_code_docs.rst
+''''''''''''''''''''''''
+
+We check to make sure there is a link to the sphinx generated documentation of every
+subproject with source code.
+
+General Python Package Validation Strategy
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+There is a general validation strategy that the following python packages go through:
+ - :doc:`build_support`
+ - :doc:`pulumi`
+ - :doc:`template_python_project`
+ - :code:`process_and_style_enforcement`
+
+Each package generates reports during validation that are placed in
+:code:`build/{package_name}/reports`.
+
+For some packages it is inappropriate or incoherent to execute some steps of the
+validation process.  Those packages will be explicitly called out when describing the
+steps of the validation process.
+
+Ruff
+''''
+All python files are formatted and linted using the
+`Ruff <https://docs.astral.sh/ruff/>`_ tool.  The tool's version and settings are
+controlled in :code:`pyproject.toml`.  When we change versions of this tool we set it up
+so that all stable rules are run, and unstable rules are skipped.
+
+When running on test code we also turn off pydocstyle (D) and flake8-boolean-trap (FBT)
+rules, because they are onerous to enforce and provide very little benefit in test code.
+
+Testing Source Code
+'''''''''''''''''''
+We require 100% code coverage and all tests to pass.  Test reports are generated and put
+into the appropriate report folder.
+
+
+The :code:`process_and_style_enforcement` package in this project consists entirely of
+test code that is run to enforce our development practices.  There is no source code to
+test.
+
+
+MyPy Type Enforcement Tests
+'''''''''''''''''''''''''''
+
+We run :code:`mypy` on every package to ensure that typing in enforced.
+
+Bandit Security Tests
+'''''''''''''''''''''''''''
+
+We run :code:`bandit` on the source folder of each package to ensure there are no
+unknown security threats in our code.  Low risk threats can be specifically disabled
+using comments if both the exact threat rule is listed and an explanation is given
+about why we don't believe this threat is applicable to our code.
+
+Reports for each package are generated and put into the appropriate report folder.
+
+The :code:`process_and_style_enforcement` package has no source code to test.
+
+Complete Docstring Tests
+''''''''''''''''''''''''
+Our docstrings get parsed by :code:`sphinx` and turned into web pages, and so we have
+added additional docstring enforcement tests not covered by Ruff's pydocstyle (D) rules.
+
+For all packages with a src folder we enforce the following checks for each python
+element's docstring:
+
+Packages
+........
+
+  * A :code:`SubPackages` section exists where each subpackage in the package is given a
+    description, if there are any subpackages.
+  * A :code:`Modules` section exists where each module in the package is given a
+    description, if there are any modules.
+
+Modules
+.......
+
+  * A :code:`Attributes` section exists where each non-function and non-class element of
+    the module is described, if there are any it the module.
+
+Functions and Methods
+.....................
+
+  * An :code:`Args` section exists where the function or methods arguments are given a
+    description.
+  * Either a :code:`Returns` or :code:`Yields` section exists where the result of the
+    function or method is described.
+
+The :code:`process_and_style_enforcement` package has no source code and is not subject
+to these standards.
+
 
 Deployment Process
 ~~~~~~~~~~~~~~~~~~
 
-Deployment process to be described later
+Deployment process to be described when we figure out how we will push artifacts.
+
+Tagging Commits with the Project Version
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Before we push any other artifacts we tag the current commit with our project version.
+This ensures that if any artifacts experience issues when being used we can figure out
+exactly what code was used to create them.
+
+When tagging commits we first check to see if there are any uncommitted changes in our
+working environment.  These changes would have been used when testing, so we commit them
+with an automatically generated commit message before tagging the commit.  This should
+only be relevant for DEV versions, because :code:`main` can only be updated by pull
+requests.

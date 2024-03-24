@@ -23,7 +23,8 @@ else
 endif
 
 
-BASE_DOCKER_BUILD_ENV_COMMAND = docker run --rm --workdir=$(DOCKER_REMOTE_PROJECT_ROOT) \
+BASE_DOCKER_BUILD_ENV_COMMAND = docker run --rm \
+--workdir=$(DOCKER_REMOTE_PROJECT_ROOT) \
 -e PYTHONPATH=/usr/dev/build_support/src \
 -v ~/.ssh:/home/$(USER_NAME)/.ssh:ro \
 $(GIT_MOUNT) \
@@ -31,15 +32,18 @@ $(GIT_MOUNT) \
 -v $(MAKEFILE_DIR):$(DOCKER_REMOTE_PROJECT_ROOT)
 
 DOCKER_BUILD_ENV_COMMAND = $(BASE_DOCKER_BUILD_ENV_COMMAND) $(DOCKER_BUILD_IMAGE)
-INTERACTIVE_DOCKER_BUILD_ENV_COMMAND = $(BASE_DOCKER_BUILD_ENV_COMMAND) -it $(DOCKER_BUILD_IMAGE)
+INTERACTIVE_DOCKER_BUILD_ENV_COMMAND = $(BASE_DOCKER_BUILD_ENV_COMMAND) \
+-it $(DOCKER_BUILD_IMAGE)
 
-SHARED_BUILD_VARS = --non-docker-project-root $(MAKEFILE_DIR) --docker-project-root $(DOCKER_REMOTE_PROJECT_ROOT)
+SHARED_BUILD_VARS = --non-docker-project-root $(MAKEFILE_DIR) \
+--docker-project-root $(DOCKER_REMOTE_PROJECT_ROOT)
 
 EXECUTE_BUILD_STEPS_COMMAND = $(DOCKER_BUILD_ENV_COMMAND) \
 python build_support/src/build_support/execute_build_steps.py \
 $(SHARED_BUILD_VARS) --user-id $(USER_ID) --group-id $(GROUP_ID)
 
-GET_BUILD_VAR_COMMAND = $(DOCKER_BUILD_ENV_COMMAND) python build_support/src/build_support/report_build_var.py \
+GET_BUILD_VAR_COMMAND = $(DOCKER_BUILD_ENV_COMMAND) \
+python build_support/src/build_support/report_build_var.py \
 $(SHARED_BUILD_VARS) --build-variable-to-report
 
 .PHONY: push
@@ -139,7 +143,16 @@ setup_pulumi_env: setup_build_env
 .PHONY: setup_build_env
 setup_build_env:
 	docker login
-	docker build --build-arg CURRENT_USER_ID=$(USER_ID) --build-arg CURRENT_GROUP_ID=$(GROUP_ID) --build-arg CURRENT_USER=$(USER_NAME) --build-arg CURRENT_GROUP=$(GROUP_NAME) -f $(DOCKERFILE) --target build --build-arg BUILDKIT_INLINE_CACHE=1 -t $(DOCKER_BUILD_IMAGE) $(MAKEFILE_DIR)
+	docker build \
+--build-arg DOCKER_REMOTE_PROJECT_ROOT=$(DOCKER_REMOTE_PROJECT_ROOT) \
+--build-arg CURRENT_USER_ID=$(USER_ID) \
+--build-arg CURRENT_GROUP_ID=$(GROUP_ID) \
+--build-arg CURRENT_USER=$(USER_NAME) \
+--build-arg CURRENT_GROUP=$(GROUP_NAME) \
+-f $(DOCKERFILE) \
+--target build \
+--build-arg BUILDKIT_INLINE_CACHE=1 \
+-t $(DOCKER_BUILD_IMAGE) $(MAKEFILE_DIR)
 
 .PHONY: docker_prune_all
 docker_prune_all:

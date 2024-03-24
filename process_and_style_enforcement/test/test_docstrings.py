@@ -11,6 +11,12 @@ from typing import Any, Iterable, Pattern, Type, TypeAlias
 import pytest
 from _pytest.fixtures import SubRequest
 
+from build_support.ci_cd_vars.project_setting_vars import get_project_name
+from build_support.ci_cd_vars.subproject_structure import (
+    SubprojectContext,
+    get_all_python_subprojects_with_src,
+)
+
 ImportedElement: TypeAlias = (
     ModuleType | FunctionType | classmethod | staticmethod | Type
 )
@@ -51,13 +57,17 @@ class FunctionInfo:
 
 DocumentationElement: TypeAlias = PackageInfo | ModuleInfo | ClassInfo | FunctionInfo
 
+PROJECT_ROOT = Path(__file__).parent.parent.parent
 
-sub_projects_to_enforce_docstrings = ["template_python_project", "build_support"]
+subprojects_with_src = get_all_python_subprojects_with_src(project_root=PROJECT_ROOT)
 
 
-@pytest.fixture(params=sub_projects_to_enforce_docstrings, scope="module")
+@pytest.fixture(params=subprojects_with_src, scope="module")
 def package_to_test(request: SubRequest) -> str:
-    return request.param
+    context_with_src = request.param.subproject_context
+    if context_with_src == SubprojectContext.PYPI:
+        return get_project_name(project_root=PROJECT_ROOT)
+    return context_with_src.value
 
 
 def import_element(
@@ -708,8 +718,10 @@ def get_module_attributes_section_info(
     )
 
 
-def test_all_module_docstrings(all_modules_info: list[ModuleInfo]) -> None:
-    assert len(all_modules_info) != 0
+def test_all_module_docstrings(
+    all_modules_info: list[ModuleInfo], package_to_test: str
+) -> None:
+    assert len(all_modules_info) != 0 or package_to_test == "pulumi"
     modules_with_issues_in_docstrings = []
     for module_info in all_modules_info:
         contexts = get_docstring_contexts(docstring=module_info.docstring)
@@ -739,8 +751,10 @@ def test_all_module_docstrings(all_modules_info: list[ModuleInfo]) -> None:
     assert modules_with_issues_in_docstrings == []
 
 
-def test_all_class_docstrings(all_class_info: list[ClassInfo]) -> None:
-    assert len(all_class_info) != 0
+def test_all_class_docstrings(
+    all_class_info: list[ClassInfo], package_to_test: str
+) -> None:
+    assert len(all_class_info) != 0 or package_to_test == "pulumi"
     for class_info in all_class_info:
         assert class_info is not None
 
@@ -784,8 +798,10 @@ class FunctionDocstringData(ElementDocstringData):
         return False
 
 
-def test_all_function_docstrings(all_function_info: list[FunctionInfo]) -> None:
-    assert len(all_function_info) != 0
+def test_all_function_docstrings(
+    all_function_info: list[FunctionInfo], package_to_test: str
+) -> None:
+    assert len(all_function_info) != 0 or package_to_test == "pulumi"
     functions_with_issues_in_docstrings = []
     for function_info in all_function_info:
         contexts = get_docstring_contexts(docstring=function_info.docstring)

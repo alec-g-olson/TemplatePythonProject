@@ -157,7 +157,7 @@ def build_popen_maybe_local_user(
     env = None
     if user_uid or user_gid:
         env = environ.copy()
-        env["HOME"] = f"/home/{getpwuid(user_uid)[0]}/"
+        env["HOME"] = f"/home/{getpwuid(user_uid).pw_name}/"
 
     # As this is currently setup, commands are never injected by external users
     return Popen(  # nosec: B603

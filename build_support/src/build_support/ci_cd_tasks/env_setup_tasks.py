@@ -1,5 +1,8 @@
 """Holds all tasks that setup environments during the build process."""
 
+from grp import getgrgid
+from pwd import getpwuid
+
 from pydantic import BaseModel
 from yaml import safe_dump, safe_load
 
@@ -33,8 +36,18 @@ class SetupDevEnvironment(TaskNode):
         """
         run_process(
             args=get_docker_build_command(
-                project_root=self.docker_project_root,
+                docker_project_root=self.docker_project_root,
                 target_image=DockerTarget.DEV,
+                extra_args={
+                    "--build-arg": [
+                        "DOCKER_REMOTE_PROJECT_ROOT="
+                        + str(self.docker_project_root.absolute()),
+                        f"CURRENT_USER={getpwuid(self.local_user_uid).pw_name}",
+                        f"CURRENT_GROUP={getgrgid(self.local_user_gid).gr_name}",
+                        f"CURRENT_USER_ID={self.local_user_uid}",
+                        f"CURRENT_GROUP_ID={self.local_user_gid}",
+                    ],
+                },
             ),
         )
 
@@ -58,7 +71,7 @@ class SetupProdEnvironment(TaskNode):
         """
         run_process(
             args=get_docker_build_command(
-                project_root=self.docker_project_root,
+                docker_project_root=self.docker_project_root,
                 target_image=DockerTarget.PROD,
             ),
         )
@@ -83,7 +96,7 @@ class SetupPulumiEnvironment(TaskNode):
         """
         run_process(
             args=get_docker_build_command(
-                project_root=self.docker_project_root,
+                docker_project_root=self.docker_project_root,
                 target_image=DockerTarget.PULUMI,
                 extra_args={
                     "--build-arg": "PULUMI_VERSION="
@@ -168,15 +181,6 @@ class GetGitInfo(TaskNode):
         Returns:
             None
         """
-        run_process(
-            args=concatenate_args(
-                args=[
-                    "chown",
-                    f"{self.local_user_uid}:{self.local_user_gid}",
-                    self.docker_project_root,
-                ]
-            )
-        )
         run_process(
             args=concatenate_args(args=["git", "fetch"]),
             user_uid=self.local_user_uid,

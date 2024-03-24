@@ -249,14 +249,14 @@ def get_interactive_docker_command_for_image(
 
 
 def get_docker_build_command(
-    project_root: Path,
+    docker_project_root: Path,
     target_image: DockerTarget,
     extra_args: None | dict[str, Any] = None,
 ) -> list[str]:
     """Creates docker build command.
 
     Args:
-        project_root (Path): Path to this project's root.
+        docker_project_root (Path): Path to this project's root.
         target_image (DockerTarget): An enum specifying which type of docker image we
             are requesting the name of.
         extra_args (None | dict[str, Any]): Any extra arguments we want to add to the
@@ -268,23 +268,32 @@ def get_docker_build_command(
     """
     flattened_extra_args = []
     if extra_args is not None:
-        for extra_arg_key, extra_arg_val in extra_args.items():
-            flattened_extra_args.append(extra_arg_key)
-            if extra_arg_val is not None:
-                flattened_extra_args.append(extra_arg_val)
+        for extra_arg_key, extra_arg_vals in extra_args.items():
+            if not extra_arg_vals:
+                flattened_extra_args.append(extra_arg_key)
+            else:
+                if not isinstance(extra_arg_vals, list):
+                    extra_arg_val_list = [extra_arg_vals]
+                else:
+                    extra_arg_val_list = extra_arg_vals
+                for extra_arg_val in extra_arg_val_list:
+                    flattened_extra_args.append(extra_arg_key)
+                    flattened_extra_args.append(extra_arg_val)
     return concatenate_args(
         args=[
             "docker",
             "build",
             "-f",
-            get_dockerfile(project_root=project_root),
+            get_dockerfile(project_root=docker_project_root),
             "--target",
             target_image.value,
             "--build-arg",
             "BUILDKIT_INLINE_CACHE=1",
             flattened_extra_args,
             "-t",
-            get_docker_image_name(project_root=project_root, target_image=target_image),
-            project_root.absolute(),
+            get_docker_image_name(
+                project_root=docker_project_root, target_image=target_image
+            ),
+            docker_project_root.absolute(),
         ],
     )

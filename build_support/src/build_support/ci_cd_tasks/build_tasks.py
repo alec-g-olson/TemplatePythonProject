@@ -21,7 +21,7 @@ from build_support.ci_cd_vars.project_setting_vars import (
 )
 from build_support.ci_cd_vars.project_structure import get_docs_dir
 from build_support.ci_cd_vars.subproject_structure import (
-    get_all_python_subprojects_dict,
+    get_all_python_subprojects_with_src,
 )
 from build_support.process_runner import concatenate_args, run_process
 
@@ -121,16 +121,8 @@ class BuildDocs(TaskNode):
         Returns:
             None
         """
-        subprojects = get_all_python_subprojects_dict(
+        subprojects_with_docs = get_all_python_subprojects_with_src(
             project_root=self.docker_project_root
-        )
-        subprojects_with_docs = sorted(
-            (
-                subproject
-                for subproject in subprojects.values()
-                if subproject.get_src_dir().exists()
-            ),
-            key=lambda x: x.subproject_context.name,
         )
         copytree(
             src=get_docs_dir(project_root=self.docker_project_root),

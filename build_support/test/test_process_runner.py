@@ -1,6 +1,7 @@
 import sys
 from pathlib import Path
 from subprocess import PIPE
+from types import SimpleNamespace
 from unittest.mock import MagicMock, call, patch
 
 from build_support.process_runner import (
@@ -213,7 +214,7 @@ def test_run_process_as_user() -> None:
         ) as mock_environ,
     ):
         user_name = "user_name"
-        mock_getpwuid.return_value = [user_name]
+        mock_getpwuid.return_value = SimpleNamespace(pw_name=user_name)
         home_path = f"/home/{user_name}/"
         expected_new_env = mock_environ.copy()
         expected_new_env["HOME"] = home_path
@@ -261,7 +262,7 @@ def test_run_process_silent_as_user() -> None:
         ) as mock_environ,
     ):
         user_name = "user_name"
-        mock_getpwuid.return_value = [user_name]
+        mock_getpwuid.return_value = SimpleNamespace(pw_name=user_name)
         home_path = f"/home/{user_name}/"
         expected_new_env = mock_environ.copy()
         expected_new_env["HOME"] = home_path
@@ -425,7 +426,7 @@ def test_run_piped_processes_as_user() -> None:
         ) as mock_environ,
     ):
         user_name = "user_name"
-        mock_getpwuid.return_value = [user_name]
+        mock_getpwuid.return_value = SimpleNamespace(pw_name=user_name)
         home_path = f"/home/{user_name}/"
         expected_new_env = mock_environ.copy()
         expected_new_env["HOME"] = home_path
@@ -488,7 +489,7 @@ def test_run_piped_processes_silent_as_user() -> None:
         ) as mock_environ,
     ):
         user_name = "user_name"
-        mock_getpwuid.return_value = [user_name]
+        mock_getpwuid.return_value = SimpleNamespace(pw_name=user_name)
         home_path = f"/home/{user_name}/"
         expected_new_env = mock_environ.copy()
         expected_new_env["HOME"] = home_path

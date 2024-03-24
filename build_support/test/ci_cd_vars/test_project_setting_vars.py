@@ -99,7 +99,7 @@ class TestPyprojectToml:
 
 
 class TestPoetryLock:
-    """A class to hold poetry.lock tests and fixtures."""
+    """A class to hold poetry lock tests and fixtures."""
 
     @pytest.mark.usefixtures("mock_local_poetry_lock_file")
     def test_get_pulumi_version(

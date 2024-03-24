@@ -271,3 +271,53 @@ def get_all_python_subprojects_dict(
         for subproject_context in SubprojectContext
         if subproject_context != SubprojectContext.ALL
     }
+
+
+def get_all_python_subprojects_with_src(project_root: Path) -> list[PythonSubproject]:
+    """Gets all Python subprojects that have a src folder.
+
+    Args:
+        project_root (Path): The root directory of the project.
+
+    Returns:
+        list[PythonSubproject]: A list of all Python subprojects with a src dir.
+    """
+    return sorted(
+        (
+            subproject
+            for subproject in (
+                PythonSubproject(
+                    project_root=project_root, subproject_context=subproject_context
+                )
+                for subproject_context in SubprojectContext
+                if subproject_context != SubprojectContext.ALL
+            )
+            if subproject.get_src_dir().exists()
+        ),
+        key=lambda x: x.subproject_context.name,
+    )
+
+
+def get_all_python_subprojects_with_test(project_root: Path) -> list[PythonSubproject]:
+    """Gets all Python subprojects that have a test folder.
+
+    Args:
+        project_root (Path): The root directory of the project.
+
+    Returns:
+        list[PythonSubproject]: A list of all Python subprojects with a test dir.
+    """
+    return sorted(
+        (
+            subproject
+            for subproject in (
+                PythonSubproject(
+                    project_root=project_root, subproject_context=subproject_context
+                )
+                for subproject_context in SubprojectContext
+                if subproject_context != SubprojectContext.ALL
+            )
+            if subproject.get_test_dir().exists()
+        ),
+        key=lambda x: x.subproject_context.name,
+    )
