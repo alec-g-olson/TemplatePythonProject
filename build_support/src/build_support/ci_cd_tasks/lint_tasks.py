@@ -121,7 +121,7 @@ class RuffFixSafe(TaskNode):
                     "ruff",
                     "check",
                     "--ignore",
-                    "D",
+                    "D,FBT",  # These are too onerous to enforce on test code
                     "--fix",
                     get_all_test_folders(project_root=self.docker_project_root),
                 ],
@@ -187,7 +187,7 @@ class ApplyRuffFixUnsafe(TaskNode):
                     "ruff",
                     "check",
                     "--ignore",
-                    "D",
+                    "D,FBT",  # These are too onerous to enforce on test code
                     "--fix",
                     "--unsafe-fixes",
                     get_all_test_folders(project_root=self.docker_project_root),

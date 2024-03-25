@@ -19,6 +19,7 @@ from build_support.new_project_setup.update_folder_names import (
     update_folders_in_project,
 )
 from build_support.new_project_setup.update_pyproject_toml import update_pyproject_toml
+from build_support.new_project_setup.update_readme_md import update_readme
 
 
 class MakeProjectFromTemplate(TaskNode):
@@ -44,8 +45,9 @@ class MakeProjectFromTemplate(TaskNode):
                 project_root=self.docker_project_root,
             ).read_text(),
         )
-        update_pyproject_toml(
+        update_readme(
             project_root=self.docker_project_root,
+            original_project_name=original_project_name,
             new_project_settings=new_project_settings,
         )
         write_new_license_from_template(
@@ -56,5 +58,9 @@ class MakeProjectFromTemplate(TaskNode):
         update_folders_in_project(
             project_root=self.docker_project_root,
             original_project_name=original_project_name,
+            new_project_settings=new_project_settings,
+        )
+        update_pyproject_toml(
+            project_root=self.docker_project_root,
             new_project_settings=new_project_settings,
         )

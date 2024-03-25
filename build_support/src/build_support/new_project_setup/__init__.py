@@ -15,6 +15,8 @@ Modules:
         values in new_project_settings.yaml.
     | update_pyproject_toml: Contains the logic for updating pyproject.toml based on
         the new_project_settings.yaml.
+    | update_readme_md: Contains the logic for updating the README.md based on the
+        new_project_settings.yaml.
     | update_folder_names: Contains the logic for updating file and folder names
         based on the new_project_settings.yaml.
     | setup_new_project: Contains the MakeProjectFromTemplate Task.

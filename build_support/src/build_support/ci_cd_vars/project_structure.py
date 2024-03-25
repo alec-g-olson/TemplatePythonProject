@@ -92,3 +92,15 @@ def get_dockerfile(project_root: Path) -> Path:
         Path: Path to the Dockerfile for this project.
     """
     return project_root.joinpath("Dockerfile")
+
+
+def get_readme(project_root: Path) -> Path:
+    """Gets the README for the project.
+
+    Args:
+        project_root (Path): Path to this project's root.
+
+    Returns:
+        Path: Path to the README for this project.
+    """
+    return project_root.joinpath("README.md")
