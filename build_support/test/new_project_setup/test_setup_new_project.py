@@ -37,6 +37,15 @@ def _check_pyproject_toml(
     )
 
 
+def _check_readme(
+    readme_path: Path, new_project_name: str, old_project_name: str | None
+) -> None:
+    readme_contents = readme_path.read_text()
+    if old_project_name:
+        assert old_project_name not in readme_contents
+    assert new_project_name in readme_contents
+
+
 def _check_license_file(license_path: Path, settings: ProjectSettings) -> None:
     expected_license_content = get_new_license_content(
         template_key=settings.license,
@@ -55,19 +64,25 @@ def _check_folder_names(project_folder: Path, settings: ProjectSettings) -> None
 
 def _ensure_project_folder_matches_settings(
     project_folder: Path,
-    settings: ProjectSettings,
+    new_settings: ProjectSettings,
     version_reset: bool,
+    old_settings: ProjectSettings | None = None,
 ) -> None:
     _check_pyproject_toml(
         pyproject_toml_path=project_folder.joinpath("pyproject.toml"),
-        settings=settings,
+        settings=new_settings,
         version_reset=version_reset,
     )
     _check_license_file(
         license_path=project_folder.joinpath("LICENSE"),
-        settings=settings,
+        settings=new_settings,
     )
-    _check_folder_names(project_folder=project_folder, settings=settings)
+    _check_folder_names(project_folder=project_folder, settings=new_settings)
+    _check_readme(
+        readme_path=project_folder.joinpath("README.md"),
+        new_project_name=new_settings.name,
+        old_project_name=old_settings.name if old_settings else None,
+    )
 
 
 def test_make_new_project(tmp_path: Path, real_project_root_dir: Path) -> None:
@@ -82,10 +97,10 @@ def test_make_new_project(tmp_path: Path, real_project_root_dir: Path) -> None:
     )
     _ensure_project_folder_matches_settings(
         project_folder=tmp_project_path,
-        settings=original_project_settings,
+        new_settings=original_project_settings,
         version_reset=False,
     )
-    modified_project_settings = ProjectSettings(
+    modified_project_settings_1 = ProjectSettings(
         name="open_source_project",
         license="mit",
         organization=Organization(
@@ -93,7 +108,7 @@ def test_make_new_project(tmp_path: Path, real_project_root_dir: Path) -> None:
             contact_email="tastefully.zanny.email@selfhosted.com",
         ),
     )
-    project_settings_path.write_text(modified_project_settings.to_yaml())
+    project_settings_path.write_text(modified_project_settings_1.to_yaml())
     make_project_task = MakeProjectFromTemplate(
         basic_task_info=BasicTaskInfo(
             non_docker_project_root=tmp_project_path,
@@ -105,10 +120,11 @@ def test_make_new_project(tmp_path: Path, real_project_root_dir: Path) -> None:
     make_project_task.run()
     _ensure_project_folder_matches_settings(
         project_folder=tmp_project_path,
-        settings=modified_project_settings,
+        old_settings=original_project_settings,
+        new_settings=modified_project_settings_1,
         version_reset=True,
     )
-    modified_project_settings = ProjectSettings(
+    modified_project_settings_2 = ProjectSettings(
         name="closed_source_project",
         license=ALL_RIGHTS_RESERVED_KEY,
         organization=Organization(
@@ -116,7 +132,7 @@ def test_make_new_project(tmp_path: Path, real_project_root_dir: Path) -> None:
             contact_email="our.lawyers.are.mean@soulless.io",
         ),
     )
-    project_settings_path.write_text(modified_project_settings.to_yaml())
+    project_settings_path.write_text(modified_project_settings_2.to_yaml())
     make_project_task = MakeProjectFromTemplate(
         basic_task_info=BasicTaskInfo(
             non_docker_project_root=tmp_project_path,
@@ -128,7 +144,8 @@ def test_make_new_project(tmp_path: Path, real_project_root_dir: Path) -> None:
     make_project_task.run()
     _ensure_project_folder_matches_settings(
         project_folder=tmp_project_path,
-        settings=modified_project_settings,
+        old_settings=modified_project_settings_1,
+        new_settings=modified_project_settings_2,
         version_reset=True,
     )
 

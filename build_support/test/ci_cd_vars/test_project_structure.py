@@ -6,6 +6,7 @@ from build_support.ci_cd_vars.project_structure import (
     get_license_file,
     get_poetry_lock_file,
     get_pyproject_toml,
+    get_readme,
     maybe_build_dir,
 )
 
@@ -51,4 +52,10 @@ def test_get_build_dir(mock_project_root: Path) -> None:
 def test_get_dockerfile(mock_project_root: Path) -> None:
     assert get_dockerfile(project_root=mock_project_root) == mock_project_root.joinpath(
         "Dockerfile",
+    )
+
+
+def test_get_readme(mock_project_root: Path) -> None:
+    assert get_readme(project_root=mock_project_root) == mock_project_root.joinpath(
+        "README.md",
     )
