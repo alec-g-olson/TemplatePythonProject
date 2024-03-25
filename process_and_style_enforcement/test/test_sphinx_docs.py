@@ -1,6 +1,11 @@
+import re
+from dataclasses import dataclass
+from http import HTTPStatus
 from pathlib import Path
+from typing import Tuple
 
 import pytest
+import requests
 
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
 from build_support.ci_cd_vars.project_structure import get_docs_dir
@@ -73,3 +78,39 @@ def test_subproject_code_docs_exists_for_subprojects_with_code(
         if striped_line == ":maxdepth: 1":
             record_lines = True
     assert sorted(subprojects_with_code_docs) == expected_subprojects_with_code_docs
+
+
+def _is_broken_hyperlink(
+    hyperlink: Tuple[str, str],
+) -> bool:  # pragma: no cover - might not hit if check_weblinks is false
+    return (
+        hyperlink[1].startswith("http")
+        and requests.get(hyperlink[1]).status_code != HTTPStatus.OK
+    )
+
+
+@pytest.fixture()
+def check_weblinks(is_on_main: bool) -> bool:
+    return not is_on_main
+
+
+def test_docs_hyperlinks_are_valid(
+    real_project_root_dir: Path, check_weblinks: bool
+) -> None:
+    @dataclass
+    class BadHyperlinkInfo:
+        name: str
+        url: str
+
+    bad_hyperlinks = []
+
+    if check_weblinks:  # pragma: no cover - might not hit if check_weblinks is false
+        bad_hyperlinks = [
+            BadHyperlinkInfo(name=hyperlink[0], url=hyperlink[1])
+            for doc_file in get_docs_dir(project_root=real_project_root_dir).glob("*")
+            for line in doc_file.read_text().splitlines()
+            for hyperlink in re.findall(r"`(.+) <(.+)>`_", line)
+            if doc_file.name.endswith(".rst")
+            and _is_broken_hyperlink(hyperlink=hyperlink)
+        ]
+    assert bad_hyperlinks == []

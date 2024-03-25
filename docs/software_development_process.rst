@@ -316,6 +316,14 @@ subproject_code_docs.rst
 We check to make sure there is a link to the sphinx generated documentation of every
 subproject with source code.
 
+Check Hyperlinks are Valid
+''''''''''''''''''''''''''
+
+As long as we are not testing a commit on :code:`main` we check to make sure that all
+hyperlinks in the :code:`.rst` files are valid.  We don't check if we are on main,
+because we want to be able to rebuild an old version of our pipeline even if a
+referenced website has changed URLs since it was first built.
+
 General Python Package Validation Strategy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
