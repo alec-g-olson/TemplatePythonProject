@@ -11,7 +11,7 @@ from template_python_project.calculators.data_models import (
 
 @pytest.fixture()
 def calculator_input_dict() -> dict[Any, Any]:
-    return {"type_of_calc": "ADD", "value1": 5.1, "value2": 10}
+    return {"type_of_calc": CalculationType.ADD, "value1": 5.1, "value2": 10}
 
 
 @pytest.fixture()

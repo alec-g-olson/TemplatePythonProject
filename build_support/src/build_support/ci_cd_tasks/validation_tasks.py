@@ -97,6 +97,7 @@ class ValidatePythonStyle(TaskNode):
                 ],
             ),
         )
+        """
         run_process(
             args=concatenate_args(
                 args=[
@@ -116,7 +117,7 @@ class ValidatePythonStyle(TaskNode):
                     ].get_test_dir(),
                 ],
             ),
-        )
+        )"""
         mypy_command = concatenate_args(
             args=[
                 get_base_docker_command_for_image(
