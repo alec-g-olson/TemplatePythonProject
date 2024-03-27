@@ -10,8 +10,7 @@ from build_support.ci_cd_tasks.lint_tasks import (
 )
 from build_support.ci_cd_tasks.task_node import BasicTaskInfo
 from build_support.ci_cd_tasks.validation_tasks import (
-    ValidateBuildSupport,
-    ValidatePypi,
+    AllSubprojectUnitTests,
 )
 from build_support.ci_cd_vars.docker_vars import (
     DockerTarget,
@@ -77,8 +76,7 @@ def test_run_lint(basic_task_info: BasicTaskInfo) -> None:
 def test_ruff_fix_safe_requires(basic_task_info: BasicTaskInfo) -> None:
     assert RuffFixSafe(basic_task_info=basic_task_info).required_tasks() == [
         Lint(basic_task_info=basic_task_info),
-        ValidatePypi(basic_task_info=basic_task_info),
-        ValidateBuildSupport(basic_task_info=basic_task_info),
+        AllSubprojectUnitTests(basic_task_info=basic_task_info),
     ]
 
 

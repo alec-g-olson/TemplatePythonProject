@@ -1,7 +1,7 @@
 """Should hold all tasks that run tests, both on artifacts and style tests."""
 
 from build_support.ci_cd_tasks.env_setup_tasks import GetGitInfo, SetupDevEnvironment
-from build_support.ci_cd_tasks.task_node import TaskNode
+from build_support.ci_cd_tasks.task_node import PerSubprojectTask, TaskNode
 from build_support.ci_cd_vars.docker_vars import (
     DockerTarget,
     get_base_docker_command_for_image,
@@ -17,7 +17,7 @@ from build_support.ci_cd_vars.machine_introspection_vars import THREADS_AVAILABL
 from build_support.ci_cd_vars.subproject_structure import (
     SubprojectContext,
     get_all_python_subprojects_dict,
-    get_python_subproject,
+    get_sorted_subproject_contexts,
 )
 from build_support.process_runner import concatenate_args, run_process
 
@@ -32,62 +32,16 @@ class ValidateAll(TaskNode):
             list[TaskNode]: A list of all build tasks.
         """
         return [
-            ValidatePypi(basic_task_info=self.get_basic_task_info()),
-            ValidateBuildSupport(basic_task_info=self.get_basic_task_info()),
+            AllSubprojectUnitTests(basic_task_info=self.get_basic_task_info()),
             ValidatePythonStyle(basic_task_info=self.get_basic_task_info()),
         ]
 
     def run(self) -> None:
         """Does nothing.
 
-        Arguments are inherited from subclass.
-
         Returns:
             None
         """
-
-
-class ValidateBuildSupport(TaskNode):
-    """Runs tests to ensure all elements of the build pipeline are passing tests."""
-
-    def required_tasks(self) -> list[TaskNode]:
-        """Get the list of tasks to run before we can test the build pipeline.
-
-        Returns:
-            list[TaskNode]: A list of tasks required to test the build pipeline.
-        """
-        # Needs git info to tell if we are on main for some tests that could go stale
-        return [
-            GetGitInfo(basic_task_info=self.get_basic_task_info()),
-            SetupDevEnvironment(basic_task_info=self.get_basic_task_info()),
-        ]
-
-    def run(self) -> None:
-        """Runs tests in the build_support/test folder.
-
-        Returns:
-            None
-        """
-        build_support_subproject = get_python_subproject(
-            subproject_context=SubprojectContext.BUILD_SUPPORT,
-            project_root=self.docker_project_root,
-        )
-        run_process(
-            args=concatenate_args(
-                args=[
-                    get_docker_command_for_image(
-                        non_docker_project_root=self.non_docker_project_root,
-                        docker_project_root=self.docker_project_root,
-                        target_image=DockerTarget.DEV,
-                    ),
-                    "pytest",
-                    "-n",
-                    THREADS_AVAILABLE,
-                    build_support_subproject.get_pytest_report_args(),
-                    build_support_subproject.get_src_and_test_dir(),
-                ],
-            ),
-        )
 
 
 class ValidatePythonStyle(TaskNode):
@@ -277,7 +231,32 @@ class ValidatePythonStyle(TaskNode):
         )
 
 
-class ValidatePypi(TaskNode):
+class AllSubprojectUnitTests(TaskNode):
+    """Task for running unit tests in all subprojects."""
+
+    def required_tasks(self) -> list[TaskNode]:
+        """Gets the subproject specific unit test tasks.
+
+        Returns:
+            list[TaskNode]: All the subproject specific unit test tasks.
+        """
+        return [
+            SubprojectUnitTests(
+                basic_task_info=self.get_basic_task_info(),
+                subproject_context=subproject_context,
+            )
+            for subproject_context in get_sorted_subproject_contexts()
+        ]
+
+    def run(self) -> None:
+        """Does nothing.
+
+        Returns:
+            None
+        """
+
+
+class SubprojectUnitTests(PerSubprojectTask):
     """Task for testing PyPi package."""
 
     def required_tasks(self) -> list[TaskNode]:
@@ -286,9 +265,14 @@ class ValidatePypi(TaskNode):
         Returns:
             list[TaskNode]: A list of tasks required to test the pypi package.
         """
-        return [
+        required_tasks: list[TaskNode] = [
             SetupDevEnvironment(basic_task_info=self.get_basic_task_info()),
         ]
+        if self.subproject_context == SubprojectContext.BUILD_SUPPORT:
+            required_tasks.append(
+                GetGitInfo(basic_task_info=self.get_basic_task_info())
+            )
+        return required_tasks
 
     def run(self) -> None:
         """Tests the PyPi package.
@@ -296,23 +280,57 @@ class ValidatePypi(TaskNode):
         Returns:
             None
         """
-        pypi_subproject = get_python_subproject(
-            subproject_context=SubprojectContext.PYPI,
-            project_root=self.docker_project_root,
+        dev_docker_command = get_docker_command_for_image(
+            non_docker_project_root=self.non_docker_project_root,
+            docker_project_root=self.docker_project_root,
+            target_image=DockerTarget.DEV,
         )
-        run_process(
-            args=concatenate_args(
-                args=[
-                    get_docker_command_for_image(
-                        non_docker_project_root=self.non_docker_project_root,
-                        docker_project_root=self.docker_project_root,
-                        target_image=DockerTarget.DEV,
-                    ),
-                    "pytest",
-                    "-n",
-                    THREADS_AVAILABLE,
-                    pypi_subproject.get_pytest_report_args(),
-                    pypi_subproject.get_src_and_test_dir(),
-                ],
-            ),
-        )
+        src_root = self.subproject.get_python_package_dir()
+        if src_root.exists():
+            unit_test_root = self.subproject.get_unit_test_dir()
+            src_files = sorted(src_root.rglob("*"))
+            for src_file in src_files:
+                if (
+                    src_file.is_file()
+                    and src_file.name.endswith(".py")
+                    and src_file.name != "__init__.py"
+                ):
+                    relative_path = src_file.relative_to(src_root)
+                    test_folder = unit_test_root.joinpath(relative_path).parent
+                    test_file = test_folder.joinpath(f"test_{src_file.name}")
+                    run_process(
+                        args=concatenate_args(
+                            args=[
+                                dev_docker_command,
+                                "coverage",
+                                "run",
+                                "--include",
+                                src_file,
+                                "-m",
+                                "pytest",
+                                test_file,
+                            ],
+                        ),
+                    )
+                    run_process(
+                        args=concatenate_args(
+                            args=[
+                                dev_docker_command,
+                                "coverage",
+                                "report",
+                                "-m",
+                            ],
+                        ),
+                    )
+            run_process(
+                args=concatenate_args(
+                    args=[
+                        dev_docker_command,
+                        "pytest",
+                        "-n",
+                        THREADS_AVAILABLE,
+                        self.subproject.get_pytest_report_args(),
+                        self.subproject.get_src_and_test_dir(),
+                    ],
+                ),
+            )

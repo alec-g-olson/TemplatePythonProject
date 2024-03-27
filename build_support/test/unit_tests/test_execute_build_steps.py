@@ -28,9 +28,8 @@ from build_support.ci_cd_tasks.task_node import (
     TaskNode,
 )
 from build_support.ci_cd_tasks.validation_tasks import (
+    SubprojectUnitTests,
     ValidateAll,
-    ValidateBuildSupport,
-    ValidatePypi,
     ValidatePythonStyle,
 )
 from build_support.ci_cd_vars.subproject_structure import SubprojectContext
@@ -53,8 +52,13 @@ def test_constants_not_changed_by_accident() -> None:
         "setup_prod_env": CliTaskInfo(task_node=SetupProdEnvironment),
         "setup_pulumi_env": CliTaskInfo(task_node=SetupPulumiEnvironment),
         "test_style": CliTaskInfo(task_node=ValidatePythonStyle),
-        "test_build_support": CliTaskInfo(task_node=ValidateBuildSupport),
-        "test_pypi": CliTaskInfo(task_node=ValidatePypi),
+        "test_build_support": CliTaskInfo(
+            task_node=SubprojectUnitTests,
+            subproject_context=SubprojectContext.BUILD_SUPPORT,
+        ),
+        "test_pypi": CliTaskInfo(
+            task_node=SubprojectUnitTests, subproject_context=SubprojectContext.PYPI
+        ),
         "test": CliTaskInfo(task_node=ValidateAll),
         "lint": CliTaskInfo(task_node=Lint),
         "ruff_fix_safe": CliTaskInfo(task_node=RuffFixSafe),

@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from conftest import other_package_info
 
 from build_support.ci_cd_vars.project_setting_vars import (
     ALLOWED_VERSION_REGEX,
@@ -111,7 +110,9 @@ class TestPoetryLock:
 
     def test_get_pulumi_version_not_found(self, docker_project_root: Path) -> None:
         mock_poetry_lock_file = get_poetry_lock_file(project_root=docker_project_root)
-        mock_poetry_lock_file.write_text(other_package_info)
+        mock_poetry_lock_file.write_text(
+            '[[package]]\nname = "other_package"\nversion = "1.0.0"\n\n'
+        )
         expected_message = (
             "poetry.lock does not have a pulumi package installed, "
             "or is no longer a toml format."

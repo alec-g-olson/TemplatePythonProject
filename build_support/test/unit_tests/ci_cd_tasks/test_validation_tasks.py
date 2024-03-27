@@ -1,13 +1,16 @@
+import shutil
+from pathlib import Path
 from unittest.mock import call, patch
 
 import pytest
+from unit_tests.empty_function_check import is_an_empty_function
 
 from build_support.ci_cd_tasks.env_setup_tasks import GetGitInfo, SetupDevEnvironment
 from build_support.ci_cd_tasks.task_node import BasicTaskInfo
 from build_support.ci_cd_tasks.validation_tasks import (
+    AllSubprojectUnitTests,
+    SubprojectUnitTests,
     ValidateAll,
-    ValidateBuildSupport,
-    ValidatePypi,
     ValidatePythonStyle,
 )
 from build_support.ci_cd_vars.docker_vars import (
@@ -24,60 +27,23 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
 )
 from build_support.ci_cd_vars.machine_introspection_vars import THREADS_AVAILABLE
 from build_support.ci_cd_vars.subproject_structure import (
+    PythonSubproject,
     get_all_python_subprojects_dict,
     get_python_subproject,
+    get_sorted_subproject_contexts,
 )
 from build_support.process_runner import concatenate_args
 
 
 def test_validate_all_requires(basic_task_info: BasicTaskInfo) -> None:
     assert ValidateAll(basic_task_info=basic_task_info).required_tasks() == [
-        ValidatePypi(basic_task_info=basic_task_info),
-        ValidateBuildSupport(basic_task_info=basic_task_info),
+        AllSubprojectUnitTests(basic_task_info=basic_task_info),
         ValidatePythonStyle(basic_task_info=basic_task_info),
     ]
 
 
 def test_run_validate_all(basic_task_info: BasicTaskInfo) -> None:
-    with patch(
-        "build_support.ci_cd_tasks.validation_tasks.run_process"
-    ) as run_process_mock:
-        ValidateAll(basic_task_info=basic_task_info).run()
-        assert run_process_mock.call_count == 0
-
-
-def test_validate_build_support_requires(basic_task_info: BasicTaskInfo) -> None:
-    assert ValidateBuildSupport(basic_task_info=basic_task_info).required_tasks() == [
-        GetGitInfo(basic_task_info=basic_task_info),
-        SetupDevEnvironment(basic_task_info=basic_task_info),
-    ]
-
-
-@pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
-def test_run_validate_build_support(basic_task_info: BasicTaskInfo) -> None:
-    with patch(
-        "build_support.ci_cd_tasks.validation_tasks.run_process"
-    ) as run_process_mock:
-        build_support_subproject = get_python_subproject(
-            subproject_context=SubprojectContext.BUILD_SUPPORT,
-            project_root=basic_task_info.docker_project_root,
-        )
-        ValidateBuildSupport(basic_task_info=basic_task_info).run()
-        test_build_sanity_args = concatenate_args(
-            args=[
-                get_docker_command_for_image(
-                    non_docker_project_root=basic_task_info.non_docker_project_root,
-                    docker_project_root=basic_task_info.docker_project_root,
-                    target_image=DockerTarget.DEV,
-                ),
-                "pytest",
-                "-n",
-                THREADS_AVAILABLE,
-                build_support_subproject.get_pytest_report_args(),
-                build_support_subproject.get_src_and_test_dir(),
-            ],
-        )
-        run_process_mock.assert_called_once_with(args=test_build_sanity_args)
+    assert is_an_empty_function(func=ValidateAll(basic_task_info=basic_task_info).run)
 
 
 def test_validate_python_style_requires(basic_task_info: BasicTaskInfo) -> None:
@@ -251,34 +217,116 @@ def test_run_validate_python_style(basic_task_info: BasicTaskInfo) -> None:
         assert run_process_mock.call_count == len(all_call_args)
 
 
-def test_validate_pypi_requires(basic_task_info: BasicTaskInfo) -> None:
-    assert ValidatePypi(basic_task_info=basic_task_info).required_tasks() == [
-        SetupDevEnvironment(basic_task_info=basic_task_info)
+def test_all_subproject_unit_tests_requires(basic_task_info: BasicTaskInfo) -> None:
+    assert AllSubprojectUnitTests(basic_task_info=basic_task_info).required_tasks() == [
+        SubprojectUnitTests(
+            basic_task_info=basic_task_info,
+            subproject_context=subproject_context,
+        )
+        for subproject_context in get_sorted_subproject_contexts()
     ]
 
 
-@pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
-def test_run_validate_pypi(basic_task_info: BasicTaskInfo) -> None:
-    pypi_subproject = get_python_subproject(
-        subproject_context=SubprojectContext.PYPI,
-        project_root=basic_task_info.docker_project_root,
+def test_run_all_subproject_unit_tests(basic_task_info: BasicTaskInfo) -> None:
+    assert is_an_empty_function(
+        func=AllSubprojectUnitTests(basic_task_info=basic_task_info).run
     )
+
+
+def test_subproject_unit_tests_requires(
+    basic_task_info: BasicTaskInfo, subproject_context: SubprojectContext
+) -> None:
+    if subproject_context == SubprojectContext.BUILD_SUPPORT:
+        assert SubprojectUnitTests(
+            basic_task_info=basic_task_info, subproject_context=subproject_context
+        ).required_tasks() == [
+            SetupDevEnvironment(basic_task_info=basic_task_info),
+            GetGitInfo(basic_task_info=basic_task_info),
+        ]
+    else:
+        assert SubprojectUnitTests(
+            basic_task_info=basic_task_info, subproject_context=subproject_context
+        ).required_tasks() == [SetupDevEnvironment(basic_task_info=basic_task_info)]
+
+
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
+def test_run_subproject_unit_tests(
+    real_project_root_dir: Path,
+    basic_task_info: BasicTaskInfo,
+    subproject_context: SubprojectContext,
+    mock_docker_subproject: PythonSubproject,
+) -> None:
+    real_subproject_src = get_python_subproject(
+        project_root=real_project_root_dir, subproject_context=subproject_context
+    ).get_src_dir()
+    test_subproject_src = mock_docker_subproject.get_python_package_dir()
+    if real_subproject_src.exists():
+        shutil.copytree(src=real_subproject_src, dst=test_subproject_src)
     with patch(
         "build_support.ci_cd_tasks.validation_tasks.run_process"
     ) as run_process_mock:
-        ValidatePypi(basic_task_info=basic_task_info).run()
-        test_build_sanity_args = concatenate_args(
-            args=[
-                get_docker_command_for_image(
-                    non_docker_project_root=basic_task_info.non_docker_project_root,
-                    docker_project_root=basic_task_info.docker_project_root,
-                    target_image=DockerTarget.DEV,
-                ),
-                "pytest",
-                "-n",
-                THREADS_AVAILABLE,
-                pypi_subproject.get_pytest_report_args(),
-                pypi_subproject.get_src_and_test_dir(),
-            ],
+        SubprojectUnitTests(
+            basic_task_info=basic_task_info, subproject_context=subproject_context
+        ).run()
+        docker_command = get_docker_command_for_image(
+            non_docker_project_root=basic_task_info.non_docker_project_root,
+            docker_project_root=basic_task_info.docker_project_root,
+            target_image=DockerTarget.DEV,
         )
-        run_process_mock.assert_called_once_with(args=test_build_sanity_args)
+        expected_run_process_calls = []
+
+        if test_subproject_src.exists():
+            unit_test_root = mock_docker_subproject.get_unit_test_dir()
+            src_files = sorted(test_subproject_src.rglob("*"))
+            for src_file in src_files:
+                if (
+                    src_file.is_file()
+                    and src_file.name.endswith(".py")
+                    and src_file.name != "__init__.py"
+                ):
+                    relative_path = src_file.relative_to(test_subproject_src)
+                    test_folder = unit_test_root.joinpath(relative_path).parent
+                    test_file = test_folder.joinpath(f"test_{src_file.name}")
+                    expected_run_process_calls.append(
+                        call(
+                            args=concatenate_args(
+                                args=[
+                                    docker_command,
+                                    "coverage",
+                                    "run",
+                                    "--include",
+                                    src_file,
+                                    "-m",
+                                    "pytest",
+                                    test_file,
+                                ],
+                            ),
+                        )
+                    )
+                    expected_run_process_calls.append(
+                        call(
+                            args=concatenate_args(
+                                args=[
+                                    docker_command,
+                                    "coverage",
+                                    "report",
+                                    "-m",
+                                ],
+                            ),
+                        )
+                    )
+            expected_run_process_calls.append(
+                call(
+                    args=concatenate_args(
+                        args=[
+                            docker_command,
+                            "pytest",
+                            "-n",
+                            THREADS_AVAILABLE,
+                            mock_docker_subproject.get_pytest_report_args(),
+                            mock_docker_subproject.get_src_and_test_dir(),
+                        ],
+                    )
+                )
+            )
+        run_process_mock.assert_has_calls(calls=expected_run_process_calls)

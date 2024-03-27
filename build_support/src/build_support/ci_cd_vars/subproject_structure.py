@@ -19,7 +19,18 @@ class SubprojectContext(Enum):
     BUILD_SUPPORT = "build_support"
     PULUMI = "pulumi"
     DOCUMENTATION_ENFORCEMENT = "process_and_style_enforcement"
-    ALL = "all"
+
+
+def get_sorted_subproject_contexts() -> list[SubprojectContext]:
+    """List the subproject context enums in a repeatable manner.
+
+    Returns:
+        list[SubprojectContext]: A sorted list of subproject context enums.
+    """
+    return sorted(
+        (subproject_context for subproject_context in SubprojectContext),
+        key=lambda x: x.value,
+    )
 
 
 @dataclass(frozen=True)
@@ -73,6 +84,18 @@ class PythonSubproject:
         """
         return self.get_root_dir().joinpath("src")
 
+    def get_python_package_dir(self) -> Path:
+        """Gets the python package folder in a subproject.
+
+        Returns:
+            Path: Path to the python package folder in the subproject.
+        """
+        return self.get_src_dir().joinpath(
+            self.subproject_context.value
+            if self.subproject_context != SubprojectContext.PYPI
+            else get_project_name(project_root=self.project_root)
+        )
+
     def get_test_dir(self) -> Path:
         """Gets the test folder in a subproject.
 
@@ -80,6 +103,22 @@ class PythonSubproject:
             Path: Path to the test folder in the subproject.
         """
         return self.get_root_dir().joinpath("test")
+
+    def get_unit_test_dir(self) -> Path:
+        """Gets the unit test folder in a subproject.
+
+        Returns:
+            Path: Path to the unit test folder in the subproject.
+        """
+        return self.get_test_dir().joinpath("unit_tests")
+
+    def get_integration_test_dir(self) -> Path:
+        """Gets the integration test folder in a subproject.
+
+        Returns:
+            Path: Path to the integration test folder in the subproject.
+        """
+        return self.get_test_dir().joinpath("integration_tests")
 
     def get_src_and_test_dir(self) -> list[Path]:
         """Gets the src and test dirs for the subproject.
@@ -89,7 +128,7 @@ class PythonSubproject:
         """
         return [self.get_src_dir(), self.get_test_dir()]
 
-    def get_test_report_name(self, report_extension: str) -> str:
+    def _get_test_report_name(self, report_extension: str) -> str:
         """Enforces a consistent python report naming convention.
 
         Args:
@@ -114,7 +153,7 @@ class PythonSubproject:
         Returns:
             str: The name of a bandit report in a standardized format.
         """
-        return self.get_test_report_name(report_extension="bandit_report.txt")
+        return self._get_test_report_name(report_extension="bandit_report.txt")
 
     def get_bandit_report_path(self) -> Path:
         """Get the path of the pulumi bandit security report for this project.
@@ -130,7 +169,7 @@ class PythonSubproject:
         Returns:
             str: The name of a pytest html report in a standardized format.
         """
-        return self.get_test_report_name(report_extension="pytest_report.html")
+        return self._get_test_report_name(report_extension="pytest_report.html")
 
     def get_pytest_html_report_path(self) -> Path:
         """Get the path of the pytest html report for this subproject.
@@ -146,7 +185,7 @@ class PythonSubproject:
         Returns:
             str: The name of a pytest xml report in a standardized format.
         """
-        return self.get_test_report_name(report_extension="pytest_report.xml")
+        return self._get_test_report_name(report_extension="pytest_report.xml")
 
     def get_pytest_xml_report_path(self) -> Path:
         """Get the path of the pytest xml report for this subproject.
@@ -162,7 +201,7 @@ class PythonSubproject:
         Returns:
             str: The name of a pytest xml coverage report in a standardized format.
         """
-        return self.get_test_report_name(report_extension="pytest_coverage_report.xml")
+        return self._get_test_report_name(report_extension="pytest_coverage_report.xml")
 
     def get_pytest_xml_coverage_report_path(self) -> Path:
         """Get the path of the pytest xml coverage report for this subproject.
@@ -180,7 +219,7 @@ class PythonSubproject:
         Returns:
             str: The name of a pytest html coverage report in a standardized format.
         """
-        return self.get_test_report_name(report_extension="pytest_coverage_report")
+        return self._get_test_report_name(report_extension="pytest_coverage_report")
 
     def get_pytest_html_coverage_report_path(self) -> Path:
         """Get the path of the pytest html coverage report for this subproject.
@@ -228,10 +267,6 @@ def get_python_subproject(
     Returns:
         PythonSubproject: A dataclass that dictates the structure a python subproject.
     """
-    if subproject_context == SubprojectContext.ALL:
-        name = subproject_context.name
-        msg = f"There is no Python subproject for the {name} subproject."
-        raise ValueError(msg)
     return PythonSubproject(
         project_root=project_root, subproject_context=subproject_context
     )
@@ -254,7 +289,6 @@ def get_all_python_subprojects_dict(
             project_root=project_root, subproject_context=subproject_context
         )
         for subproject_context in SubprojectContext
-        if subproject_context != SubprojectContext.ALL
     }
 
 
@@ -267,20 +301,16 @@ def get_all_python_subprojects_with_src(project_root: Path) -> list[PythonSubpro
     Returns:
         list[PythonSubproject]: A list of all Python subprojects with a src dir.
     """
-    return sorted(
-        (
-            subproject
-            for subproject in (
-                PythonSubproject(
-                    project_root=project_root, subproject_context=subproject_context
-                )
-                for subproject_context in SubprojectContext
-                if subproject_context != SubprojectContext.ALL
+    return [
+        subproject
+        for subproject in (
+            PythonSubproject(
+                project_root=project_root, subproject_context=subproject_context
             )
-            if subproject.get_src_dir().exists()
-        ),
-        key=lambda x: x.subproject_context.name,
-    )
+            for subproject_context in get_sorted_subproject_contexts()
+        )
+        if subproject.get_src_dir().exists()
+    ]
 
 
 def get_all_python_subprojects_with_test(project_root: Path) -> list[PythonSubproject]:
@@ -292,17 +322,13 @@ def get_all_python_subprojects_with_test(project_root: Path) -> list[PythonSubpr
     Returns:
         list[PythonSubproject]: A list of all Python subprojects with a test dir.
     """
-    return sorted(
-        (
-            subproject
-            for subproject in (
-                PythonSubproject(
-                    project_root=project_root, subproject_context=subproject_context
-                )
-                for subproject_context in SubprojectContext
-                if subproject_context != SubprojectContext.ALL
+    return [
+        subproject
+        for subproject in (
+            PythonSubproject(
+                project_root=project_root, subproject_context=subproject_context
             )
-            if subproject.get_test_dir().exists()
-        ),
-        key=lambda x: x.subproject_context.name,
-    )
+            for subproject_context in get_sorted_subproject_contexts()
+        )
+        if subproject.get_test_dir().exists()
+    ]

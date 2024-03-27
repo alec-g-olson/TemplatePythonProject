@@ -5,21 +5,13 @@ from enum import Enum
 from pydantic import BaseModel
 
 
-class CalculationType(Enum):
+class CalculationType(str, Enum):
     """Enum representing types of calculations."""
 
-    ADD = 1
-    SUBTRACT = 2
-    MULTIPLY = 3
-    DIVIDE = 4
-
-    def __str__(self) -> str:
-        """Return the name of this enum to represent it as a string.
-
-        Returns:
-            str: A string representation of the enum. (name)
-        """
-        return self.name
+    ADD = "ADD"
+    SUBTRACT = "SUBTRACT"
+    MULTIPLY = "MULTIPLY"
+    DIVIDE = "DIVIDE"
 
 
 class CalculatorInput(BaseModel):

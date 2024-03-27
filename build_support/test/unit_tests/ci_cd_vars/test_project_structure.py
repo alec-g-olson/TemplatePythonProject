@@ -3,6 +3,7 @@ from pathlib import Path
 from build_support.ci_cd_vars.project_structure import (
     get_build_dir,
     get_dockerfile,
+    get_docs_dir,
     get_license_file,
     get_poetry_lock_file,
     get_pyproject_toml,
@@ -47,6 +48,13 @@ def test_get_build_dir(mock_project_root: Path) -> None:
     assert not expected_build_dir.exists()
     assert get_build_dir(project_root=mock_project_root) == expected_build_dir
     assert expected_build_dir.exists()
+
+
+def test_get_docs_dir(mock_project_root: Path) -> None:
+    expected_docs_dir = mock_project_root.joinpath("docs")
+    assert not expected_docs_dir.exists()
+    assert get_docs_dir(project_root=mock_project_root) == expected_docs_dir
+    assert expected_docs_dir.exists()
 
 
 def test_get_dockerfile(mock_project_root: Path) -> None:

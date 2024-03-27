@@ -6,6 +6,9 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_all_python_folders,
     get_all_src_folders,
     get_all_test_folders,
+    get_build_docs_build_dir,
+    get_build_docs_dir,
+    get_build_docs_source_dir,
     get_dist_dir,
     get_git_info_yaml,
     get_license_templates_dir,
@@ -64,6 +67,39 @@ def test_get_git_info_yaml(mock_project_root: Path) -> None:
     assert get_git_info_yaml(project_root=mock_project_root) == get_build_dir(
         project_root=mock_project_root,
     ).joinpath("git_info.yaml")
+
+
+def test_get_build_docs_dir(mock_project_root: Path) -> None:
+    expected_build_docs_dir = get_build_dir(project_root=mock_project_root).joinpath(
+        "docs"
+    )
+    assert not expected_build_docs_dir.exists()
+    assert get_build_docs_dir(project_root=mock_project_root) == expected_build_docs_dir
+    assert expected_build_docs_dir.exists()
+
+
+def test_get_build_docs_source_dir(mock_project_root: Path) -> None:
+    expected_build_docs_source_dir = get_build_docs_dir(
+        project_root=mock_project_root
+    ).joinpath("source")
+    assert not expected_build_docs_source_dir.exists()
+    assert (
+        get_build_docs_source_dir(project_root=mock_project_root)
+        == expected_build_docs_source_dir
+    )
+    assert expected_build_docs_source_dir.exists()
+
+
+def test_get_build_docs_build_dir(mock_project_root: Path) -> None:
+    expected_build_docs_build_dir = get_build_docs_dir(
+        project_root=mock_project_root
+    ).joinpath("build")
+    assert not expected_build_docs_build_dir.exists()
+    assert (
+        get_build_docs_build_dir(project_root=mock_project_root)
+        == expected_build_docs_build_dir
+    )
+    assert expected_build_docs_build_dir.exists()
 
 
 def test_get_all_python_folders(real_project_root_dir: Path) -> None:

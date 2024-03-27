@@ -1,6 +1,7 @@
 from unittest.mock import call, patch
 
 import pytest
+from unit_tests.empty_function_check import is_an_empty_function
 
 from build_support.ci_cd_tasks.build_tasks import BuildPypi
 from build_support.ci_cd_tasks.push_tasks import PushAll, PushPypi, PushTags
@@ -18,9 +19,7 @@ def test_push_all_requires(basic_task_info: BasicTaskInfo) -> None:
 
 
 def test_run_push_all(basic_task_info: BasicTaskInfo) -> None:
-    with patch("build_support.ci_cd_tasks.push_tasks.run_process") as run_process_mock:
-        PushAll(basic_task_info=basic_task_info).run()
-        assert run_process_mock.call_count == 0
+    assert is_an_empty_function(func=PushAll(basic_task_info=basic_task_info).run)
 
 
 def test_push_tags_requires(basic_task_info: BasicTaskInfo) -> None:
@@ -130,6 +129,4 @@ def test_push_pypi_requires(basic_task_info: BasicTaskInfo) -> None:
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
 def test_run_push_pypi(basic_task_info: BasicTaskInfo) -> None:
-    with patch("build_support.ci_cd_tasks.push_tasks.run_process") as run_process_mock:
-        PushPypi(basic_task_info=basic_task_info).run()
-        assert run_process_mock.call_count == 0
+    assert is_an_empty_function(func=PushPypi(basic_task_info=basic_task_info).run)

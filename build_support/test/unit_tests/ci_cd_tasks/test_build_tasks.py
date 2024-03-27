@@ -1,6 +1,7 @@
 from unittest.mock import call, patch
 
 import pytest
+from unit_tests.empty_function_check import is_an_empty_function
 
 from build_support.ci_cd_tasks.build_tasks import (
     BuildAll,
@@ -9,7 +10,10 @@ from build_support.ci_cd_tasks.build_tasks import (
 )
 from build_support.ci_cd_tasks.env_setup_tasks import SetupProdEnvironment
 from build_support.ci_cd_tasks.task_node import BasicTaskInfo
-from build_support.ci_cd_tasks.validation_tasks import ValidatePypi, ValidatePythonStyle
+from build_support.ci_cd_tasks.validation_tasks import (
+    SubprojectUnitTests,
+    ValidatePythonStyle,
+)
 from build_support.ci_cd_vars.docker_vars import (
     DockerTarget,
     get_docker_command_for_image,
@@ -40,14 +44,14 @@ def test_build_all_requires(basic_task_info: BasicTaskInfo) -> None:
 
 
 def test_run_build_all(basic_task_info: BasicTaskInfo) -> None:
-    with patch("build_support.ci_cd_tasks.build_tasks.run_process") as run_process_mock:
-        BuildAll(basic_task_info=basic_task_info).run()
-        assert run_process_mock.call_count == 0
+    assert is_an_empty_function(func=BuildAll(basic_task_info=basic_task_info).run)
 
 
 def test_build_pypi_requires(basic_task_info: BasicTaskInfo) -> None:
     assert BuildPypi(basic_task_info=basic_task_info).required_tasks() == [
-        ValidatePypi(basic_task_info=basic_task_info),
+        SubprojectUnitTests(
+            basic_task_info=basic_task_info, subproject_context=SubprojectContext.PYPI
+        ),
         ValidatePythonStyle(basic_task_info=basic_task_info),
         SetupProdEnvironment(basic_task_info=basic_task_info),
     ]

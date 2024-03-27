@@ -6,8 +6,8 @@ from unittest.mock import call, patch
 
 import pytest
 import yaml
-from conftest import mock_project_versions
 from pydantic import ValidationError
+from unit_tests.conftest import mock_project_versions
 
 from build_support.ci_cd_tasks.env_setup_tasks import (
     Clean,

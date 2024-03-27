@@ -58,3 +58,9 @@ def test_load_bad_organization() -> None:
 def test_dump(project_yaml_str: str) -> None:
     project_setting = ProjectSettings.model_validate(project_settings_data_dict)
     assert project_setting.to_yaml() == project_yaml_str
+
+
+def test_org_formatted_name_and_email() -> None:
+    project_setting = ProjectSettings.model_validate(project_settings_data_dict)
+    org = project_setting.organization
+    assert org.formatted_name_and_email() == "Someone Nice <someone@nice.com>"

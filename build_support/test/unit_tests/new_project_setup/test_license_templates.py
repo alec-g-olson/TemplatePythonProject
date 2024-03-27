@@ -39,7 +39,7 @@ def test_constants_not_changed_by_accident() -> None:
             "THE SOFTWARE.\n"
         )
     )
-    assert copy(REAL_PROJECT_ROOT) == Path(__file__).parent.parent.parent.parent
+    assert copy(REAL_PROJECT_ROOT) == Path(__file__).parent.parent.parent.parent.parent
     assert copy(REAL_LICENSE_TEMPLATE_DIR) == get_license_templates_dir(
         project_root=REAL_PROJECT_ROOT,
     )

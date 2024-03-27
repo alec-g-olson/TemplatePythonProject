@@ -251,7 +251,7 @@ def test_get_docker_build_command_no_extras(
 
 
 @pytest.mark.usefixtures("mock_local_pyproject_toml_file")
-def test_get_docker_build_command_with_extras(
+def test_get_docker_build_command_with_flat_extras(
     mock_project_root: Path,
     docker_target: DockerTarget,
 ) -> None:
@@ -270,6 +270,48 @@ def test_get_docker_build_command_with_extras(
             "--build-arg",
             "BUILDKIT_INLINE_CACHE=1",
             ["--some-key", "8", "--no-val-with-key", "--other", "whee"],
+            "-t",
+            get_docker_image_name(
+                project_root=mock_project_root,
+                target_image=docker_target,
+            ),
+            mock_project_root.absolute(),
+        ],
+    )
+
+
+@pytest.mark.usefixtures("mock_local_pyproject_toml_file")
+def test_get_docker_build_command_with_list_extras(
+    mock_project_root: Path,
+    docker_target: DockerTarget,
+) -> None:
+    assert get_docker_build_command(
+        docker_project_root=mock_project_root,
+        target_image=docker_target,
+        extra_args={
+            "--some-key": [8, 10],
+            "--no-val-with-key": None,
+            "--other": "whee",
+        },
+    ) == concatenate_args(
+        args=[
+            "docker",
+            "build",
+            "-f",
+            get_dockerfile(project_root=mock_project_root),
+            "--target",
+            docker_target.value,
+            "--build-arg",
+            "BUILDKIT_INLINE_CACHE=1",
+            [
+                "--some-key",
+                "8",
+                "--some-key",
+                "10",
+                "--no-val-with-key",
+                "--other",
+                "whee",
+            ],
             "-t",
             get_docker_image_name(
                 project_root=mock_project_root,

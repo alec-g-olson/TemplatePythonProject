@@ -26,7 +26,7 @@ def parse_args(args: list[str] | None = None) -> Namespace:
     parser.add_argument(
         "--type",
         type=str,
-        choices=[str(x) for x in CalculationType],
+        choices=list(CalculationType),
         help="The type of calculation to do.",
     )
     parser.add_argument(

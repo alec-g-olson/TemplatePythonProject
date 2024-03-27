@@ -1,5 +1,6 @@
 import re
 from datetime import datetime, timezone
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -14,6 +15,7 @@ from build_support.new_project_setup.setup_license import (
     COPYRIGHT_OWNER_TEMPLATE_FIELDS,
     YEAR_TEMPLATE_FIELDS,
     get_new_license_content,
+    write_new_license_from_template,
 )
 
 
@@ -82,3 +84,22 @@ def test_all_templates_supported(check_template_compatability: bool) -> None:
             fields_to_fill = re.findall(template_field_regex, template_text)
             for field_to_fill in fields_to_fill:
                 assert field_to_fill in allowed_fields
+
+
+def test_write_new_license_from_template(tmp_path: Path) -> None:
+    license_dest = tmp_path.joinpath("LICENSE")
+    template_key = "mit"
+    organization = Organization.model_validate(
+        {"name": "Some small group", "contact_email": "an.email@gmail.com"}
+    )
+    expected_contents = get_new_license_content(
+        template_key=template_key,
+        organization=organization,
+    )
+    assert not license_dest.exists()
+    write_new_license_from_template(
+        license_file_path=license_dest,
+        template_key=template_key,
+        organization=organization,
+    )
+    assert license_dest.read_text() == expected_contents
