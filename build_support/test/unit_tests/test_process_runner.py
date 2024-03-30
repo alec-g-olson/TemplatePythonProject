@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 from subprocess import PIPE
 from types import SimpleNamespace
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import Mock, call, patch
 
 from build_support.process_runner import (
     ProcessVerbosity,
@@ -141,8 +141,8 @@ def test_run_process() -> None:
             "build_support.process_runner.resolve_process_results",
         ) as mock_resolve_process_results,
     ):
-        process_mock = MagicMock()
-        process_mock.communicate = MagicMock()
+        process_mock = Mock()
+        process_mock.communicate = Mock()
         process_mock.communicate.return_value = b"output", b"error"
         process_mock.returncode = 0
         mock_popen.return_value = process_mock
@@ -172,8 +172,8 @@ def test_run_process_silent() -> None:
             "build_support.process_runner.resolve_process_results",
         ) as mock_resolve_process_results,
     ):
-        process_mock = MagicMock()
-        process_mock.communicate = MagicMock()
+        process_mock = Mock()
+        process_mock.communicate = Mock()
         process_mock.communicate.return_value = b"output", b"error"
         process_mock.returncode = 0
         mock_popen.return_value = process_mock
@@ -218,8 +218,8 @@ def test_run_process_as_user() -> None:
         home_path = f"/home/{user_name}/"
         expected_new_env = mock_environ.copy()
         expected_new_env["HOME"] = home_path
-        process_mock = MagicMock()
-        process_mock.communicate = MagicMock()
+        process_mock = Mock()
+        process_mock.communicate = Mock()
         process_mock.communicate.return_value = b"output", b"error"
         process_mock.returncode = 0
         mock_popen.return_value = process_mock
@@ -266,8 +266,8 @@ def test_run_process_silent_as_user() -> None:
         home_path = f"/home/{user_name}/"
         expected_new_env = mock_environ.copy()
         expected_new_env["HOME"] = home_path
-        process_mock = MagicMock()
-        process_mock.communicate = MagicMock()
+        process_mock = Mock()
+        process_mock.communicate = Mock()
         process_mock.communicate.return_value = b"output", b"error"
         process_mock.returncode = 0
         mock_popen.return_value = process_mock
@@ -318,8 +318,8 @@ def test_run_piped_processes() -> None:
             "build_support.process_runner.resolve_process_results",
         ) as mock_resolve_process_results,
     ):
-        process_mock = MagicMock()
-        process_mock.communicate = MagicMock()
+        process_mock = Mock()
+        process_mock.communicate = Mock()
         process_mock.communicate.return_value = b"output", b"error"
         process_mock.returncode = 0
         mock_popen.return_value = process_mock
@@ -369,8 +369,8 @@ def test_run_piped_processes_silent() -> None:
             "build_support.process_runner.resolve_process_results",
         ) as mock_resolve_process_results,
     ):
-        process_mock = MagicMock()
-        process_mock.communicate = MagicMock()
+        process_mock = Mock()
+        process_mock.communicate = Mock()
         process_mock.communicate.return_value = b"output", b"error"
         process_mock.returncode = 0
         mock_popen.return_value = process_mock
@@ -430,8 +430,8 @@ def test_run_piped_processes_as_user() -> None:
         home_path = f"/home/{user_name}/"
         expected_new_env = mock_environ.copy()
         expected_new_env["HOME"] = home_path
-        process_mock = MagicMock()
-        process_mock.communicate = MagicMock()
+        process_mock = Mock()
+        process_mock.communicate = Mock()
         process_mock.communicate.return_value = b"output", b"error"
         process_mock.returncode = 0
         mock_popen.return_value = process_mock
@@ -493,8 +493,8 @@ def test_run_piped_processes_silent_as_user() -> None:
         home_path = f"/home/{user_name}/"
         expected_new_env = mock_environ.copy()
         expected_new_env["HOME"] = home_path
-        process_mock = MagicMock()
-        process_mock.communicate = MagicMock()
+        process_mock = Mock()
+        process_mock.communicate = Mock()
         process_mock.communicate.return_value = b"output", b"error"
         process_mock.returncode = 0
         mock_popen.return_value = process_mock
@@ -548,8 +548,8 @@ def test_run_piped_processes_one_process() -> None:
             "build_support.process_runner.resolve_process_results",
         ) as mock_resolve_process_results,
     ):
-        process_mock = MagicMock()
-        process_mock.communicate = MagicMock()
+        process_mock = Mock()
+        process_mock.communicate = Mock()
         process_mock.communicate.return_value = b"output", b"error"
         process_mock.returncode = 0
         mock_popen.return_value = process_mock
@@ -584,8 +584,8 @@ def test_run_piped_processes_one_process_silent() -> None:
             "build_support.process_runner.resolve_process_results",
         ) as mock_resolve_process_results,
     ):
-        process_mock = MagicMock()
-        process_mock.communicate = MagicMock()
+        process_mock = Mock()
+        process_mock.communicate = Mock()
         process_mock.communicate.return_value = b"output", b"error"
         process_mock.returncode = 0
         mock_popen.return_value = process_mock

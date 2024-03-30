@@ -63,7 +63,7 @@ RUN apt-get update
 RUN apt-get install -y docker-ce docker-ce-cli containerd.io \
       docker-buildx-plugin docker-compose-plugin
 
-FROM git_enabled AS dev
+FROM base AS dev
 
 RUN poetry install --with dev --with build --with pulumi
 

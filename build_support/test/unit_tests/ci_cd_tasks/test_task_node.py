@@ -1,5 +1,5 @@
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import Mock
 
 from build_support.ci_cd_tasks.task_node import (
     BasicTaskInfo,
@@ -33,8 +33,8 @@ def build_mock_basic_task(
         task_name,
         (TaskNode,),
         {
-            "required_tasks": MagicMock(return_value=required_mock_tasks),
-            "run": MagicMock(),
+            "required_tasks": Mock(return_value=required_mock_tasks),
+            "run": Mock(),
         },
     )(basic_task_info=expected_basic_task_info)
 
@@ -50,8 +50,8 @@ def build_mock_per_subproject_task(
         task_name,
         (PerSubprojectTask,),
         {
-            "required_tasks": MagicMock(return_value=required_mock_tasks),
-            "run": MagicMock(),
+            "required_tasks": Mock(return_value=required_mock_tasks),
+            "run": Mock(),
         },
     )(
         basic_task_info=expected_basic_task_info,

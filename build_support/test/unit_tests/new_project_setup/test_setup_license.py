@@ -1,7 +1,7 @@
 import re
 from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -44,7 +44,7 @@ def test_get_new_license_content() -> None:
     with patch(
         "build_support.new_project_setup.setup_license.datetime",
     ) as mock_datetime:
-        mock_datetime.now = MagicMock(
+        mock_datetime.now = Mock(
             return_value=datetime(year=2024, month=1, day=28, tzinfo=timezone.utc)
         )
         new_license_content = get_new_license_content(

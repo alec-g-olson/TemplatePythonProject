@@ -1,238 +1,177 @@
-import re
-from unittest.mock import call, patch
+from pathlib import Path
 
 import pytest
 from _pytest.fixtures import SubRequest
+from git import Head, Repo, TagReference
 
 from build_support.ci_cd_vars.git_status_vars import (
     MAIN_BRANCH_NAME,
     commit_changes_if_diff,
     current_branch_is_main,
-    get_current_branch,
+    get_current_branch_name,
     get_git_diff,
+    get_git_head,
     get_local_tags,
 )
-from build_support.process_runner import ProcessVerbosity, concatenate_args
 
 
-def test_get_current_branch() -> None:
-    patch_branch_name = "some_branch_name"
-    with patch(
-        "build_support.ci_cd_vars.git_status_vars.get_output_of_process",
-    ) as get_output_patch:
-        get_output_patch.return_value = patch_branch_name
-        assert get_current_branch() == patch_branch_name
-        get_output_patch.assert_called_once_with(
-            args=["git", "rev-parse", "--abbrev-ref", "HEAD"],
-            user_uid=0,
-            user_gid=0,
-            verbosity=ProcessVerbosity.SILENT,
-        )
+@pytest.fixture()
+def mock_remote_git_folder(mock_project_root: Path) -> Path:
+    remote_folder = mock_project_root.joinpath("remote_repo")
+    remote_folder.mkdir()
+    return remote_folder
 
 
-def test_get_current_branch_as_user() -> None:
-    patch_branch_name = "some_branch_name"
-    with patch(
-        "build_support.ci_cd_vars.git_status_vars.get_output_of_process",
-    ) as get_output_patch:
-        get_output_patch.return_value = patch_branch_name
-        assert (
-            get_current_branch(local_user_uid=1337, local_user_gid=42)
-            == patch_branch_name
-        )
-        get_output_patch.assert_called_once_with(
-            args=["git", "rev-parse", "--abbrev-ref", "HEAD"],
-            user_uid=1337,
-            user_gid=42,
-            verbosity=ProcessVerbosity.SILENT,
-        )
+@pytest.fixture()
+def mock_git_folder(mock_project_root: Path) -> Path:
+    local_folder = mock_project_root.joinpath("local_repo")
+    local_folder.mkdir()
+    return local_folder
+
+
+@pytest.fixture()
+def mock_remote_git_repo(mock_remote_git_folder: Path) -> Repo:
+    repo = Repo.init(path=mock_remote_git_folder, bare=True, initial_branch=MAIN_BRANCH_NAME)
+    repo.index.commit("initial remote commit")
+    return repo
+
+
+@pytest.fixture()
+def mock_git_repo(mock_git_folder: Path, mock_remote_git_folder: Path, mock_remote_git_repo: Repo) -> Repo:
+    remote_repo_url = str(mock_remote_git_folder)
+    repo = Repo.clone_from(url=remote_repo_url, to_path=mock_git_folder)
+    repo.remote().push()
+    new_file = mock_git_folder.joinpath("first_file.txt")
+    new_file.write_text("some_text")
+    repo.index.add([new_file])
+    repo.index.commit("initial local commit")
+    repo.remote().push()
+    return repo
+
+
+@pytest.fixture()
+def mock_git_branch(mock_remote_git_repo: Repo, mock_git_repo: Repo) -> Head:
+    branch_name = "some_branch_name"
+    mock_remote_git_repo.create_head(branch_name)
+    mock_git_repo.remote().fetch()
+    mock_git_repo.git.checkout(branch_name)
+    return mock_git_repo.active_branch
+
+
+@pytest.fixture()
+def mock_git_tags(
+    mock_git_folder: Path, mock_git_repo: Repo, mock_git_branch: Head
+) -> list[TagReference]:
+    tag_1_name = "inital_local_commit"
+    mock_git_repo.create_tag(tag_1_name)
+    mock_git_repo.remote().push(tag_1_name)
+    new_file = mock_git_folder.joinpath("new_file.txt")
+    new_file.touch()
+    mock_git_repo.index.add([new_file])
+    mock_git_repo.index.commit("new commit")
+    tag_2_name = "new_commit"
+    mock_git_repo.create_tag("new_commit")
+    mock_git_repo.remote().push(tag_2_name)
+    return mock_git_repo.tags
+
+
+def test_get_git_head(mock_git_folder: Path, mock_git_branch: Head) -> None:
+    assert get_git_head(project_root=mock_git_folder) == mock_git_branch
+
+
+def test_get_current_branch_name(
+    mock_git_folder: Path, mock_git_branch: Head
+) -> None:
+    assert (
+        get_current_branch_name(project_root=mock_git_folder) == mock_git_branch.name
+    )
 
 
 def test_constants_not_changed_by_accident() -> None:
     assert MAIN_BRANCH_NAME == "main"
 
 
-def test_current_branch_is_main() -> None:
-    assert current_branch_is_main(current_branch=MAIN_BRANCH_NAME)
+@pytest.mark.usefixtures("mock_git_repo")
+def test_current_branch_is_main(mock_git_folder: Path) -> None:
+    assert current_branch_is_main(project_root=mock_git_folder)
 
 
-def test_current_branch_is_not_main() -> None:
-    assert not current_branch_is_main(current_branch="not_" + MAIN_BRANCH_NAME)
+@pytest.mark.usefixtures("mock_git_branch")
+def test_current_branch_is_not_main(mock_git_folder: Path) -> None:
+    assert not current_branch_is_main(project_root=mock_git_folder)
 
 
-def test_get_local_tags() -> None:
-    patch_tag_values = "v0.0.0\nv0.0.1\nv0.1.0\nv1.0.0"
-    with patch(
-        "build_support.ci_cd_vars.git_status_vars.get_output_of_process",
-    ) as get_output_patch:
-        get_output_patch.return_value = patch_tag_values
-        assert get_local_tags() == ["v0.0.0", "v0.0.1", "v0.1.0", "v1.0.0"]
-        get_output_patch.assert_called_once_with(
-            args=["git", "tag"],
-            user_uid=0,
-            user_gid=0,
-            verbosity=ProcessVerbosity.SILENT,
-        )
+def test_get_local_tags(
+    mock_git_folder: Path, mock_git_tags: list[TagReference]
+) -> None:
+    assert get_local_tags(project_root=mock_git_folder) == [
+        tag.name for tag in mock_git_tags
+    ]
 
 
-def test_get_local_tags_as_user() -> None:
-    patch_tag_values = "v0.0.0\nv0.0.1\nv0.1.0\nv1.0.0"
-    with patch(
-        "build_support.ci_cd_vars.git_status_vars.get_output_of_process",
-    ) as get_output_patch:
-        get_output_patch.return_value = patch_tag_values
-        assert get_local_tags(local_user_uid=1337, local_user_gid=42) == [
-            "v0.0.0",
-            "v0.0.1",
-            "v0.1.0",
-            "v1.0.0",
-        ]
-        get_output_patch.assert_called_once_with(
-            args=["git", "tag"],
-            user_uid=1337,
-            user_gid=42,
-            verbosity=ProcessVerbosity.SILENT,
-        )
+@pytest.mark.usefixtures()
+def test_get_git_diff(mock_git_folder: Path, mock_git_repo: Repo) -> None:
+    diff_file = mock_git_folder.joinpath("diff_file")
+    diff_file.touch()
+    mock_git_repo.index.add([diff_file])
+    assert len(get_git_diff(project_root=mock_git_folder)) > 0
 
 
-def test_get_git_diff() -> None:
-    patch_diff_result = "some_diff"
-    with patch(
-        "build_support.ci_cd_vars.git_status_vars.get_output_of_process",
-    ) as get_output_patch:
-        get_output_patch.return_value = patch_diff_result
-        assert get_git_diff() == patch_diff_result
-        get_output_patch.assert_called_once_with(
-            args=["git", "diff"], verbosity=ProcessVerbosity.SILENT
-        )
+@pytest.mark.usefixtures("mock_git_repo")
+def test_get_git_diff_no_diff(mock_git_folder: Path) -> None:
+    assert len(get_git_diff(project_root=mock_git_folder)) == 0
 
 
-@pytest.fixture(params=["Valid message!", "Hasn't got double quotes."])
+@pytest.fixture(
+    params=["Valid message!", "Has a single quote(').", 'Has a double quote(")']
+)
 def valid_commit_message(request: SubRequest) -> str:
     return request.param
 
 
 def test_commit_changes_no_diff(
-    valid_commit_message: str,
-    local_uid: int,
-    local_gid: int,
+    valid_commit_message: str, mock_git_folder: Path, mock_git_branch: Head
 ) -> None:
-    with (
-        patch(
-            "build_support.ci_cd_vars.git_status_vars.run_process",
-        ) as run_process_mock,
-        patch(
-            "build_support.ci_cd_vars.git_status_vars.get_git_diff",
-        ) as get_git_diff_mock,
-    ):
-        get_git_diff_mock.return_value = ""
-        commit_changes_if_diff(
-            commit_message_no_quotes=valid_commit_message,
-            local_user_uid=local_uid,
-            local_user_gid=local_gid,
-        )
-        assert run_process_mock.call_count == 0
-
-
-def test_commit_changes_bad_message(
-    local_uid: int,
-    local_gid: int,
-) -> None:
-    bad_message = 'A message with a double quote! (")'
-    with patch(
-        "build_support.ci_cd_vars.git_status_vars.run_process",
-    ) as run_process_mock:
-        expected_message = (
-            "Commit message is not allowed to have double quotes. "
-            f"commit_message_no_quotes='{bad_message}'"
-        )
-        with pytest.raises(ValueError, match=re.escape(expected_message)):
-            commit_changes_if_diff(
-                commit_message_no_quotes=bad_message,
-                local_user_uid=local_uid,
-                local_user_gid=local_gid,
-            )
-        assert run_process_mock.call_count == 0
+    initial_commit_sha = mock_git_branch.commit.binsha
+    commit_changes_if_diff(
+        commit_message=valid_commit_message, project_root=mock_git_folder
+    )
+    assert initial_commit_sha == mock_git_branch.commit.binsha
 
 
 def test_commit_changes_with_diff_on_main(
-    valid_commit_message: str,
-    local_uid: int,
-    local_gid: int,
+    valid_commit_message: str, mock_git_folder: Path, mock_git_repo: Repo
 ) -> None:
-    branch_name = MAIN_BRANCH_NAME
-    with (
-        patch(
-            "build_support.ci_cd_vars.git_status_vars.run_process",
-        ) as run_process_mock,
-        patch(
-            "build_support.ci_cd_vars.git_status_vars.get_git_diff",
-        ) as get_git_diff_mock,
-        patch(
-            "build_support.ci_cd_vars.git_status_vars.get_current_branch",
-        ) as get_branch_mock,
-    ):
-        get_git_diff_mock.return_value = "some_diff"
-        get_branch_mock.return_value = branch_name
-        expected_message = (
-            f"Attempting to push tags with unstaged changes to {MAIN_BRANCH_NAME}."
+    diff_file = mock_git_folder.joinpath("diff_file")
+    diff_file.touch()
+    mock_git_repo.index.add([diff_file])
+    main_branch = mock_git_repo.active_branch
+    initial_commit_sha = main_branch.commit.binsha
+    expected_message = (
+        f"Attempting to push tags with unstaged changes to {MAIN_BRANCH_NAME}."
+    )
+    with pytest.raises(RuntimeError, match=expected_message):
+        commit_changes_if_diff(
+            commit_message=valid_commit_message, project_root=mock_git_folder
         )
-        with pytest.raises(RuntimeError, match=expected_message):
-            commit_changes_if_diff(
-                commit_message_no_quotes=valid_commit_message,
-                local_user_uid=local_uid,
-                local_user_gid=local_gid,
-            )
-        assert run_process_mock.call_count == 0
+    assert initial_commit_sha == main_branch.commit.binsha
 
 
 def test_run_push_tags_allowed_with_diff_not_main(
     valid_commit_message: str,
-    local_uid: int,
-    local_gid: int,
+    mock_git_folder: Path,
+    mock_git_repo: Repo,
+    mock_git_branch: Head,
 ) -> None:
-    branch_name = "not_" + MAIN_BRANCH_NAME
-    with (
-        patch(
-            "build_support.ci_cd_vars.git_status_vars.run_process",
-        ) as run_process_mock,
-        patch(
-            "build_support.ci_cd_vars.git_status_vars.get_git_diff",
-        ) as get_git_diff_mock,
-        patch(
-            "build_support.ci_cd_vars.git_status_vars.get_current_branch",
-        ) as get_branch_mock,
-    ):
-        get_git_diff_mock.return_value = "some_diff"
-        get_branch_mock.return_value = branch_name
-        commit_changes_if_diff(
-            commit_message_no_quotes=valid_commit_message,
-            local_user_uid=local_uid,
-            local_user_gid=local_gid,
-        )
-        git_add_args = concatenate_args(args=["git", "add", "-u"])
-        git_commit_args = concatenate_args(
-            args=[
-                "git",
-                "commit",
-                "-m",
-                f'"{valid_commit_message}"',
-            ],
-        )
-        git_push_args = concatenate_args(args=["git", "push"])
-        run_process_call_args = [
-            git_add_args,
-            git_commit_args,
-            git_push_args,
-        ]
-        assert run_process_mock.call_count == len(run_process_call_args)
-        run_process_mock.assert_has_calls(
-            calls=[
-                call(
-                    args=args,
-                    user_uid=local_uid,
-                    user_gid=local_gid,
-                )
-                for args in run_process_call_args
-            ],
-        )
+    mock_initial_git_file = mock_git_folder.joinpath("first_file.txt")
+    mock_initial_git_file.write_text(
+        mock_initial_git_file.read_text() + "some extra text"
+    )
+    diff_file = mock_git_folder.joinpath("diff_file")
+    diff_file.touch()
+    mock_git_repo.index.add([diff_file])
+    initial_commit_sha = mock_git_branch.commit.binsha
+    commit_changes_if_diff(
+        commit_message=valid_commit_message, project_root=mock_git_folder
+    )
+    assert initial_commit_sha != mock_git_branch.commit.binsha

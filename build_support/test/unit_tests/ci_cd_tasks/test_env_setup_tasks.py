@@ -241,7 +241,7 @@ def test_run_get_git_info(basic_task_info: BasicTaskInfo) -> None:
             "build_support.ci_cd_tasks.env_setup_tasks.run_process",
         ) as run_process_mock,
         patch(
-            "build_support.ci_cd_tasks.env_setup_tasks.get_current_branch",
+            "build_support.ci_cd_tasks.env_setup_tasks.get_current_branch_name",
         ) as get_branch_mock,
         patch(
             "build_support.ci_cd_tasks.env_setup_tasks.get_local_tags",

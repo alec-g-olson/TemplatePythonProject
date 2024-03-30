@@ -6,13 +6,13 @@ from build_support.ci_cd_tasks.validation_tasks import ValidateAll
 from build_support.ci_cd_vars.git_status_vars import (
     commit_changes_if_diff,
     current_branch_is_main,
-    get_current_branch,
+    get_current_branch_name,
+    tag_current_commit_and_push,
 )
 from build_support.ci_cd_vars.project_setting_vars import (
     get_project_version,
     is_dev_project_version,
 )
-from build_support.process_runner import concatenate_args, run_process
 
 
 class PushAll(TaskNode):
@@ -66,32 +66,23 @@ class PushTags(TaskNode):
         Returns:
             None
         """
-        current_branch = get_current_branch(
-            local_user_uid=self.local_user_uid,
-            local_user_gid=self.local_user_gid,
-        )
         current_version = get_project_version(project_root=self.docker_project_root)
-        currently_on_main = current_branch_is_main(current_branch=current_branch)
+        currently_on_main = current_branch_is_main(
+            project_root=self.docker_project_root
+        )
         is_dev_version = is_dev_project_version(project_version=current_version)
         if currently_on_main ^ is_dev_version:
             commit_changes_if_diff(
-                commit_message_no_quotes=(
-                    f"Committing staged changes for {current_version}"
-                ),
-                local_user_uid=self.local_user_uid,
-                local_user_gid=self.local_user_gid,
+                commit_message=(f"Committing staged changes for {current_version}"),
+                project_root=self.docker_project_root,
             )
-            run_process(
-                args=concatenate_args(args=["git", "tag", current_version]),
-                user_uid=self.local_user_uid,
-                user_gid=self.local_user_gid,
-            )
-            run_process(
-                args=concatenate_args(args=["git", "push", "--tags"]),
-                user_uid=self.local_user_uid,
-                user_gid=self.local_user_gid,
+            tag_current_commit_and_push(
+                tag=current_version, project_root=self.docker_project_root
             )
         else:
+            current_branch = get_current_branch_name(
+                project_root=self.docker_project_root
+            )
             msg = f"Tag {current_version} is incompatible with branch {current_branch}."
             raise ValueError(msg)
 

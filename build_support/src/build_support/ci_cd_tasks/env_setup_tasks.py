@@ -18,7 +18,10 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_build_dir,
     get_git_info_yaml,
 )
-from build_support.ci_cd_vars.git_status_vars import get_current_branch, get_local_tags
+from build_support.ci_cd_vars.git_status_vars import (
+    get_current_branch_name,
+    get_local_tags,
+)
 from build_support.ci_cd_vars.project_setting_vars import get_pulumi_version
 from build_support.process_runner import concatenate_args, run_process
 
@@ -220,13 +223,7 @@ class GetGitInfo(TaskNode):
         )
         get_git_info_yaml(project_root=self.docker_project_root).write_text(
             GitInfo(
-                branch=get_current_branch(
-                    local_user_uid=self.local_user_uid,
-                    local_user_gid=self.local_user_gid,
-                ),
-                tags=get_local_tags(
-                    local_user_uid=self.local_user_uid,
-                    local_user_gid=self.local_user_gid,
-                ),
+                branch=get_current_branch_name(project_root=self.docker_project_root),
+                tags=get_local_tags(project_root=self.docker_project_root),
             ).to_yaml(),
         )
