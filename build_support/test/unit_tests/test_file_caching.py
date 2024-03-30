@@ -95,7 +95,7 @@ def test_check_on_file_different(tmp_path: Path) -> None:
     a_file.parent.mkdir(parents=True)
     a_file.write_text("The contents of a file!")
     assert file_cache_info.file_has_been_changed(file_path=a_file)
-    sleep(0.0001)
+    sleep(0.01)
     a_file.write_text("A file now has new contents!!!! Very shocking.")
     assert file_cache_info.file_has_been_changed(file_path=a_file)
 
@@ -105,7 +105,7 @@ def test_check_on_file_different_dump_and_read_cache(tmp_path: Path) -> None:
     a_file = tmp_path.joinpath("a_file")
     a_file.write_text("The contents of a file!")
     assert file_cache_info.file_has_been_changed(file_path=a_file)
-    sleep(0.0001)
+    sleep(0.01)
     a_file.write_text("A file now has new contents!!!! Very shocking.")
     cache_file = tmp_path.joinpath("cache_file")
     cache_file.write_text(file_cache_info.to_yaml())
