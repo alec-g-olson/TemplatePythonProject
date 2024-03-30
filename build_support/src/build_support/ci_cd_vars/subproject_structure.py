@@ -253,6 +253,22 @@ class PythonSubproject:
             ],
         )
 
+    def get_file_cache_dir(self) -> Path:
+        """Gets the directory that will be used for storing file cache information.
+
+        Returns:
+            Path: Path to this subproject's cache dir in its build dir.
+        """
+        return maybe_build_dir(self.get_build_dir().joinpath("file_caches"))
+
+    def get_unit_test_cache_yaml(self) -> Path:
+        """Gets the file that holds this subproject's unit test cache information.
+
+        Returns:
+            Path: Path to this subproject's unit test cache info.
+        """
+        return self.get_file_cache_dir().joinpath("unit_test_cache.yaml")
+
 
 def get_python_subproject(
     subproject_context: SubprojectContext, project_root: Path

@@ -329,7 +329,7 @@ General Python Package Validation Strategy
 
 There is a general validation strategy that the following python packages go through:
  - :doc:`build_support`
- - :doc:`pulumi`
+ - :doc:`infra`
  - :doc:`template_python_project`
  - :code:`process_and_style_enforcement`
 
@@ -361,8 +361,9 @@ test.
 Unit Tests
 """"""""""
 For each subproject we test each src file with a corresponding test file in the unit
-test folder of the subproject name :code:`test_{src_file_name}`.  Each src file must
-have 100% coverage when it's corresponding test file is executed.
+test folder of the subproject. The test file should have the name
+:code:`test_{src_file_name}`.  Each src file must have 100% coverage when it's
+corresponding test file is executed.
 
 After all individual files are checked for 100% coverage we run all unit tests for the
 subproject at once and generate test reports that we put in the subproject's report
