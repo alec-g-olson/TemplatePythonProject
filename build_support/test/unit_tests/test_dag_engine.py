@@ -16,19 +16,12 @@ def build_mock_basic_task(
 ) -> TaskNode:
     """Builds a mock task for testing task interactions."""
 
-    # dummy method for test class
-    def required_tasks(self) -> list[TaskNode]:  # noqa: ANN001, ARG001
-        return required_mock_tasks
-
-    def run(self) -> None:  # noqa: ANN001, ARG001 - dummy method for test class
-        return None
-
     return type(
         task_name,
         (TaskNode,),
         {
-            "required_tasks": required_tasks,
-            "run": run,
+            "required_tasks": MagicMock(return_value=required_mock_tasks),
+            "run": MagicMock(),
         },
     )(
         basic_task_info=BasicTaskInfo(
@@ -150,26 +143,13 @@ def test_run_tasks(
     task_execution_order: list[TaskNode],
     all_tasks: set[TaskNode],
 ) -> None:
-    all_task_labels = {task.task_label() for task in all_tasks}
-    expected_executed_task_names = {task.task_label() for task in task_execution_order}
-    mock_task_lookup = {
-        task.task_label(): MagicMock(wraps=task, autospec=True) for task in all_tasks
-    }
-
-    for mock_task in mock_task_lookup.values():
-        mock_required_task_list = [
-            mock_task_lookup[task.task_label()] for task in mock_task.required_tasks()
-        ]
-        mock_task.required_tasks = MagicMock(return_value=mock_required_task_list)
-
-    mock_tasks_requested = [
-        mock_task_lookup[task.task_label()] for task in tasks_requested
-    ]
-    run_tasks(tasks=mock_tasks_requested)  # type: ignore[arg-type]
-    for mock_task in mock_task_lookup.values():
-        # checks to make sure that we've mocked up the task correctly
-        assert mock_task.task_label() in all_task_labels
-        if mock_task.task_label() in expected_executed_task_names:
-            mock_task.run.assert_called_once_with()
-        else:
-            assert mock_task.run.call_count == 0
+    run_tasks(tasks=tasks_requested)
+    for task in all_tasks:
+        task_run = task.run
+        if isinstance(task_run, MagicMock):
+            if task in task_execution_order:
+                task_run.assert_called_once_with()
+            else:
+                assert task_run.run.call_count == 0
+        else:  # pragma: no cover - will only hit if setup incorrectly
+            pytest.fail("This test was setup incorrectly, task.run should be a mock.")
