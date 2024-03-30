@@ -150,10 +150,10 @@ def test_run_validate_python_style(basic_task_info: BasicTaskInfo) -> None:
                 subprojects[SubprojectContext.DOCUMENTATION_ENFORCEMENT].get_root_dir(),
             ]
         )
-        mypy_pulumi_args = concatenate_args(
+        mypy_infra_args = concatenate_args(
             args=[
                 mypy_command,
-                subprojects[SubprojectContext.PULUMI].get_root_dir(),
+                subprojects[SubprojectContext.INFRA].get_root_dir(),
             ],
         )
         bandit_pypi_args = concatenate_args(
@@ -170,7 +170,7 @@ def test_run_validate_python_style(basic_task_info: BasicTaskInfo) -> None:
                 subprojects[SubprojectContext.PYPI].get_src_dir(),
             ],
         )
-        bandit_pulumi_args = concatenate_args(
+        bandit_infra_args = concatenate_args(
             args=[
                 get_docker_command_for_image(
                     non_docker_project_root=basic_task_info.non_docker_project_root,
@@ -179,9 +179,9 @@ def test_run_validate_python_style(basic_task_info: BasicTaskInfo) -> None:
                 ),
                 "bandit",
                 "-o",
-                subprojects[SubprojectContext.PULUMI].get_bandit_report_path(),
+                subprojects[SubprojectContext.INFRA].get_bandit_report_path(),
                 "-r",
-                subprojects[SubprojectContext.PULUMI].get_src_dir(),
+                subprojects[SubprojectContext.INFRA].get_src_dir(),
             ],
         )
         bandit_build_support_args = concatenate_args(
@@ -206,9 +206,9 @@ def test_run_validate_python_style(basic_task_info: BasicTaskInfo) -> None:
             mypy_build_support_src_args,
             mypy_build_support_test_args,
             mypy_process_and_style_enforcement_args,
-            mypy_pulumi_args,
+            mypy_infra_args,
             bandit_pypi_args,
-            bandit_pulumi_args,
+            bandit_infra_args,
             bandit_build_support_args,
         ]
         run_process_mock.assert_has_calls(

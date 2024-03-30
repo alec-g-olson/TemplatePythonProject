@@ -68,7 +68,7 @@ as you see fit.  There are 4 top-level folders that are worth discussing:
   - The tests that are run as part of the ValidatePythonStyle task.  Tests should be 
   added here when there isn't an off the shelf tool for enforcing style or process that 
   the devs want to enforce.
-- [pulumi](pulumi)
+- [pulumi](infra)
   - The pulumi code that sets up and manages cloud resources and deployments.
 - [pypi_package](pypi_package)
   - The pypi package that will contain our business logic and will be deployed to
@@ -195,7 +195,7 @@ folder in the project view. There will be a `Mark Directory as` option.  Hover o
 and then select `Sources Root`.
 
 - [build_support/src](build_support/src)
-- [pulumi/src](pulumi/src)
+- [pulumi/src](infra/src)
 - [pypi_package/src](pypi_package/src)
 
 For each of the following test folders you will repeat the process described for the 

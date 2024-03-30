@@ -175,7 +175,7 @@ class ValidatePythonStyle(TaskNode):
             args=concatenate_args(
                 args=[
                     mypy_command,
-                    subproject[SubprojectContext.PULUMI].get_root_dir(),
+                    subproject[SubprojectContext.INFRA].get_root_dir(),
                 ],
             ),
         )
@@ -205,9 +205,9 @@ class ValidatePythonStyle(TaskNode):
                     ),
                     "bandit",
                     "-o",
-                    subproject[SubprojectContext.PULUMI].get_bandit_report_path(),
+                    subproject[SubprojectContext.INFRA].get_bandit_report_path(),
                     "-r",
-                    subproject[SubprojectContext.PULUMI].get_src_dir(),
+                    subproject[SubprojectContext.INFRA].get_src_dir(),
                 ],
             ),
         )

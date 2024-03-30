@@ -16,7 +16,7 @@ def test_allowed_cli_ars_not_changed_by_accident() -> None:
     assert {arg: arg.value for arg in AllowedCliArgs} == {
         AllowedCliArgs.DEV_DOCKER_INTERACTIVE: "interactive-dev-docker-command",
         AllowedCliArgs.PROD_DOCKER_INTERACTIVE: "interactive-prod-docker-command",
-        AllowedCliArgs.PULUMI_DOCKER_INTERACTIVE: "interactive-pulumi-docker-command",
+        AllowedCliArgs.INFRA_DOCKER_INTERACTIVE: "interactive-infra-docker-command",
     }
 
 
@@ -184,14 +184,14 @@ def test_run_main_for_get_interactive_prod(
 
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
-def test_run_main_for_get_interactive_pulumi(
+def test_run_main_for_get_interactive_infra(
     mock_project_root: Path,
     docker_project_root: Path,
 ) -> None:
     args = Namespace(
         non_docker_project_root=mock_project_root,
         docker_project_root=docker_project_root,
-        build_variable_to_report=AllowedCliArgs.PULUMI_DOCKER_INTERACTIVE,
+        build_variable_to_report=AllowedCliArgs.INFRA_DOCKER_INTERACTIVE,
     )
     with patch("builtins.print") as mock_print:
         run_main(args)
@@ -200,7 +200,7 @@ def test_run_main_for_get_interactive_pulumi(
                 get_interactive_docker_command_for_image(
                     non_docker_project_root=mock_project_root,
                     docker_project_root=docker_project_root,
-                    target_image=DockerTarget.PULUMI,
+                    target_image=DockerTarget.INFRA,
                 ),
             ),
         )

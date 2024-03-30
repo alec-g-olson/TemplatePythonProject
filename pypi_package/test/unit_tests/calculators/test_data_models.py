@@ -1,12 +1,22 @@
 from typing import Any
 
 import pytest
+from _pytest.fixtures import SubRequest
 from pydantic import ValidationError
 from template_python_project.calculators.data_models import (
     CalculationType,
     CalculatorInput,
     CalculatorOutput,
 )
+
+
+@pytest.fixture(params=list(CalculationType))
+def calculation_type(request: SubRequest) -> CalculationType:
+    return request.param
+
+
+def test_calculation_type_to_str(calculation_type: CalculationType) -> None:
+    assert str(calculation_type) == calculation_type.name
 
 
 @pytest.fixture()

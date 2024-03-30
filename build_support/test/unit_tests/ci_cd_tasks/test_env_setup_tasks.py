@@ -14,8 +14,8 @@ from build_support.ci_cd_tasks.env_setup_tasks import (
     GetGitInfo,
     GitInfo,
     SetupDevEnvironment,
+    SetupInfraEnvironment,
     SetupProdEnvironment,
-    SetupPulumiEnvironment,
 )
 from build_support.ci_cd_tasks.task_node import BasicTaskInfo
 from build_support.ci_cd_vars.docker_vars import DockerTarget, get_docker_build_command
@@ -80,29 +80,27 @@ def test_run_build_prod_env(basic_task_info: BasicTaskInfo) -> None:
 
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
-def test_build_pulumi_env_requires(basic_task_info: BasicTaskInfo) -> None:
-    assert (
-        SetupPulumiEnvironment(basic_task_info=basic_task_info).required_tasks() == []
-    )
+def test_build_infra_env_requires(basic_task_info: BasicTaskInfo) -> None:
+    assert SetupInfraEnvironment(basic_task_info=basic_task_info).required_tasks() == []
 
 
 @pytest.mark.usefixtures(
     "mock_docker_pyproject_toml_file", "mock_docker_poetry_lock_file"
 )
-def test_run_build_pulumi_env(basic_task_info: BasicTaskInfo) -> None:
+def test_run_build_infra_env(basic_task_info: BasicTaskInfo) -> None:
     with patch(
         "build_support.ci_cd_tasks.env_setup_tasks.run_process",
     ) as run_process_mock:
-        build_pulumi_env_args = get_docker_build_command(
+        build_infra_env_args = get_docker_build_command(
             docker_project_root=basic_task_info.docker_project_root,
-            target_image=DockerTarget.PULUMI,
+            target_image=DockerTarget.INFRA,
             extra_args={
                 "--build-arg": "PULUMI_VERSION="
                 + get_pulumi_version(project_root=basic_task_info.docker_project_root),
             },
         )
-        SetupPulumiEnvironment(basic_task_info=basic_task_info).run()
-        run_process_mock.assert_called_once_with(args=build_pulumi_env_args)
+        SetupInfraEnvironment(basic_task_info=basic_task_info).run()
+        run_process_mock.assert_called_once_with(args=build_infra_env_args)
 
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")

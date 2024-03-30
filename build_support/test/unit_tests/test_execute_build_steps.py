@@ -13,8 +13,8 @@ from build_support.ci_cd_tasks.build_tasks import (
 from build_support.ci_cd_tasks.env_setup_tasks import (
     Clean,
     SetupDevEnvironment,
+    SetupInfraEnvironment,
     SetupProdEnvironment,
-    SetupPulumiEnvironment,
 )
 from build_support.ci_cd_tasks.lint_tasks import (
     ApplyRuffFixUnsafe,
@@ -50,7 +50,7 @@ def test_constants_not_changed_by_accident() -> None:
         "clean": CliTaskInfo(task_node=Clean),
         "setup_dev_env": CliTaskInfo(task_node=SetupDevEnvironment),
         "setup_prod_env": CliTaskInfo(task_node=SetupProdEnvironment),
-        "setup_pulumi_env": CliTaskInfo(task_node=SetupPulumiEnvironment),
+        "setup_infra_env": CliTaskInfo(task_node=SetupInfraEnvironment),
         "test_style": CliTaskInfo(task_node=ValidatePythonStyle),
         "test_build_support": CliTaskInfo(
             task_node=SubprojectUnitTests,

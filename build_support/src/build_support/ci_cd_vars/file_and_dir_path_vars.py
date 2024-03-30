@@ -57,7 +57,7 @@ def get_new_project_settings(project_root: Path) -> Path:
 
 
 ########################################
-# Extra files and folders contained in pulumi
+# Extra files and folders contained in infra
 ########################################
 
 
@@ -184,27 +184,6 @@ def get_all_python_folders(project_root: Path) -> list[Path]:
         if python_folder.exists()
     ] + [get_sphinx_conf_dir(project_root=project_root)]
     return sorted(python_folders)
-
-
-def get_all_non_pulumi_python_folders(project_root: Path) -> list[Path]:
-    """Gets all the non-pulumi python folders in the project.
-
-    Args:
-        project_root (Path): Path to this project's root.
-
-    Returns:
-        list[Path]: Path to all the non-pulumi python folders in the project.
-    """
-    pulumi_subproject = get_python_subproject(
-        subproject_context=SubprojectContext.PULUMI, project_root=project_root
-    )
-    pulumi_folders = pulumi_subproject.get_src_and_test_dir()
-    non_pulumi_python_folders = [
-        folder
-        for folder in get_all_python_folders(project_root=project_root)
-        if folder not in pulumi_folders
-    ]
-    return sorted(non_pulumi_python_folders)
 
 
 def get_all_src_folders(project_root: Path) -> list[Path]:

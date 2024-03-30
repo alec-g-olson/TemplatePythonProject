@@ -77,19 +77,19 @@ class SetupProdEnvironment(TaskNode):
         )
 
 
-class SetupPulumiEnvironment(TaskNode):
-    """Builds a docker image with a stable environment for running pulumi commands."""
+class SetupInfraEnvironment(TaskNode):
+    """Builds a docker image with a stable environment for running infra commands."""
 
     def required_tasks(self) -> list[TaskNode]:
-        """Get the list of tasks to run before we can build a pulumi environment.
+        """Get the list of tasks to run before we can build a infra environment.
 
         Returns:
-            list[TaskNode]: A list of tasks required to build a pulumi env. (Empty)
+            list[TaskNode]: A list of tasks required to build a infra env. (Empty)
         """
         return []
 
     def run(self) -> None:
-        """Builds a stable environment for running pulumi commands.
+        """Builds a stable environment for running infra commands.
 
         Returns:
             None
@@ -97,7 +97,7 @@ class SetupPulumiEnvironment(TaskNode):
         run_process(
             args=get_docker_build_command(
                 docker_project_root=self.docker_project_root,
-                target_image=DockerTarget.PULUMI,
+                target_image=DockerTarget.INFRA,
                 extra_args={
                     "--build-arg": "PULUMI_VERSION="
                     + get_pulumi_version(project_root=self.docker_project_root),

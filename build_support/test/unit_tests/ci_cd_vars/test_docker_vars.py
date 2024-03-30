@@ -85,12 +85,12 @@ def test_get_python_path_for_target_image(
                 ]
             ),
         )
-    else:  # assume pulumi if not add the new case
+    else:  # assume infra if not add the new case
         assert observed_python_path == ":".join(
             concatenate_args(
                 args=[
                     get_python_subproject(
-                        subproject_context=SubprojectContext.PULUMI,
+                        subproject_context=SubprojectContext.INFRA,
                         project_root=docker_project_root,
                     ).get_src_dir()
                 ]

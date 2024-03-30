@@ -22,7 +22,7 @@ class DockerTarget(Enum):
     BUILD = "build"
     DEV = "dev"
     PROD = "prod"
-    PULUMI = "pulumi"
+    INFRA = "infra"
 
 
 def get_docker_image_name(project_root: Path, target_image: DockerTarget) -> str:
@@ -71,10 +71,10 @@ def get_python_path_for_target_image(
                     project_root=docker_project_root,
                 ).get_src_dir()
             ]
-        case DockerTarget.PULUMI:
+        case DockerTarget.INFRA:
             python_folders = [
                 get_python_subproject(
-                    subproject_context=SubprojectContext.PULUMI,
+                    subproject_context=SubprojectContext.INFRA,
                     project_root=docker_project_root,
                 ).get_src_dir()
             ]

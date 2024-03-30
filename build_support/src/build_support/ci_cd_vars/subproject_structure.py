@@ -17,7 +17,7 @@ class SubprojectContext(Enum):
 
     PYPI = "pypi_package"
     BUILD_SUPPORT = "build_support"
-    PULUMI = "pulumi"
+    INFRA = "infra"
     DOCUMENTATION_ENFORCEMENT = "process_and_style_enforcement"
 
 
@@ -156,7 +156,7 @@ class PythonSubproject:
         return self._get_test_report_name(report_extension="bandit_report.txt")
 
     def get_bandit_report_path(self) -> Path:
-        """Get the path of the pulumi bandit security report for this project.
+        """Get the path of the infra bandit security report for this project.
 
         Returns:
             Path: Path to the bandit report for this subproject.
