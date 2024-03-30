@@ -208,6 +208,28 @@ def test_dump_git_info(git_info_yaml_str: str) -> None:
     assert git_info.to_yaml() == git_info_yaml_str
 
 
+def test_get_primary_branch_name() -> None:
+    assert GitInfo.get_primary_branch_name() == "main"
+
+
+@pytest.mark.parametrize(
+    argnames=("branch_name", "ticket_id"),
+    argvalues=[
+        ("main", None),
+        ("branch", "branch"),
+        ("42-branch-name", "42"),
+        ("INFRA001-an-infra-ticket", "INFRA001"),
+    ],
+)
+def test_get_ticket_id(branch_name: str, ticket_id: str | None) -> None:
+    assert (
+        GitInfo.model_validate(
+            {"branch": branch_name, "tags": ["some", "tags"]}
+        ).get_ticket_id()
+        == ticket_id
+    )
+
+
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
 def test_get_git_info_requires(basic_task_info: BasicTaskInfo) -> None:
     assert GetGitInfo(basic_task_info=basic_task_info).required_tasks() == []

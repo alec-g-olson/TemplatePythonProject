@@ -1,9 +1,15 @@
-"""Holds all tasks that setup environments during the build process."""
+"""Holds all tasks that setup environments during the build process.
 
+Attributes:
+    | GIT_BRANCH_NAME_REGEX:  The regex we use to extract the ticket ID from branch
+        names.
+"""
+
+import re
 from grp import getgrgid
 from pwd import getpwuid
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from yaml import safe_dump, safe_load
 
 from build_support.ci_cd_tasks.task_node import TaskNode
@@ -81,10 +87,10 @@ class SetupInfraEnvironment(TaskNode):
     """Builds a docker image with a stable environment for running infra commands."""
 
     def required_tasks(self) -> list[TaskNode]:
-        """Get the list of tasks to run before we can build a infra environment.
+        """Get the list of tasks to run before we can build an infra environment.
 
         Returns:
-            list[TaskNode]: A list of tasks required to build a infra env. (Empty)
+            list[TaskNode]: A list of tasks required to build an infra env. (Empty)
         """
         return []
 
@@ -137,11 +143,37 @@ class Clean(TaskNode):
         )
 
 
+GIT_BRANCH_NAME_REGEX = r"^([^-]+)-?.*$"
+
+
 class GitInfo(BaseModel):
     """An object containing the current git information."""
 
-    branch: str
+    branch: str = Field(pattern=GIT_BRANCH_NAME_REGEX)
     tags: list[str]
+
+    @staticmethod
+    def get_primary_branch_name() -> str:
+        """Gets the primary branch name for the repo.
+
+        Returns:
+            str: The primary branch name for this repo.
+        """
+        return "main"
+
+    def get_ticket_id(self) -> str | None:
+        """Extracts the ticket id from the branch name.
+
+        Returns:
+            str: The id of the ticket associated with the branch.
+        """
+        match = re.search(pattern=GIT_BRANCH_NAME_REGEX, string=self.branch)
+        ticket_id = match.group(1) if match is not None else None
+        return (
+            ticket_id
+            if ticket_id is not None and ticket_id != self.get_primary_branch_name()
+            else None
+        )
 
     @staticmethod
     def from_yaml(yaml_str: str) -> "GitInfo":

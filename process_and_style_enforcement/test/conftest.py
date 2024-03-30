@@ -23,4 +23,4 @@ def real_git_info(real_project_root_dir: Path) -> GitInfo:
 @pytest.fixture(scope="session")
 def is_on_main(real_git_info: GitInfo) -> bool:
     """Determine if the main branch is currently checked out."""
-    return real_git_info.branch == "main"
+    return real_git_info.branch == GitInfo.get_primary_branch_name()
