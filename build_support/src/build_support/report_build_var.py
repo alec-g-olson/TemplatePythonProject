@@ -15,7 +15,7 @@ class AllowedCliArgs(Enum):
 
     DEV_DOCKER_INTERACTIVE = "interactive-dev-docker-command"
     PROD_DOCKER_INTERACTIVE = "interactive-prod-docker-command"
-    PULUMI_DOCKER_INTERACTIVE = "interactive-pulumi-docker-command"
+    INFRA_DOCKER_INTERACTIVE = "interactive-infra-docker-command"
 
 
 def parse_args(args: list[str] | None = None) -> Namespace:
@@ -81,11 +81,11 @@ def run_main(args: Namespace) -> None:
                 docker_project_root=docker_project_root,
                 target_image=DockerTarget.PROD,
             )
-        case AllowedCliArgs.PULUMI_DOCKER_INTERACTIVE:
+        case AllowedCliArgs.INFRA_DOCKER_INTERACTIVE:
             values = get_interactive_docker_command_for_image(
                 non_docker_project_root=non_docker_project_root,
                 docker_project_root=docker_project_root,
-                target_image=DockerTarget.PULUMI,
+                target_image=DockerTarget.INFRA,
             )
         case _:  # pragma: no cover - can't hit if all enums are implemented
             msg = f"{command!r} is not a supported enum of AllowedCliArgs."

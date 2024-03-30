@@ -10,5 +10,5 @@ Code Docs:
     :maxdepth: 1
 
     build_support
-    pulumi
+    infra
     template_python_project

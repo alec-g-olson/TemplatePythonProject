@@ -721,7 +721,7 @@ def get_module_attributes_section_info(
 def test_all_module_docstrings(
     all_modules_info: list[ModuleInfo], package_to_test: str
 ) -> None:
-    assert len(all_modules_info) != 0 or package_to_test == "pulumi"
+    assert len(all_modules_info) != 0 or package_to_test == "infra"
     modules_with_issues_in_docstrings = []
     for module_info in all_modules_info:
         contexts = get_docstring_contexts(docstring=module_info.docstring)
@@ -754,7 +754,7 @@ def test_all_module_docstrings(
 def test_all_class_docstrings(
     all_class_info: list[ClassInfo], package_to_test: str
 ) -> None:
-    assert len(all_class_info) != 0 or package_to_test == "pulumi"
+    assert len(all_class_info) != 0 or package_to_test == "infra"
     for class_info in all_class_info:
         assert class_info is not None
 
@@ -801,7 +801,7 @@ class FunctionDocstringData(ElementDocstringData):
 def test_all_function_docstrings(
     all_function_info: list[FunctionInfo], package_to_test: str
 ) -> None:
-    assert len(all_function_info) != 0 or package_to_test == "pulumi"
+    assert len(all_function_info) != 0 or package_to_test == "infra"
     functions_with_issues_in_docstrings = []
     for function_info in all_function_info:
         contexts = get_docstring_contexts(docstring=function_info.docstring)

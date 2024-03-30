@@ -8,10 +8,10 @@ from pydantic import BaseModel
 class CalculationType(Enum):
     """Enum representing types of calculations."""
 
-    ADD = 1
-    SUBTRACT = 2
-    MULTIPLY = 3
-    DIVIDE = 4
+    ADD = "ADD"
+    SUBTRACT = "SUBTRACT"
+    MULTIPLY = "MULTIPLY"
+    DIVIDE = "DIVIDE"
 
     def __str__(self) -> str:
         """Return the name of this enum to represent it as a string.

@@ -1,0 +1,332 @@
+import shutil
+from pathlib import Path
+from unittest.mock import call, patch
+
+import pytest
+from unit_tests.empty_function_check import is_an_empty_function
+
+from build_support.ci_cd_tasks.env_setup_tasks import GetGitInfo, SetupDevEnvironment
+from build_support.ci_cd_tasks.task_node import BasicTaskInfo
+from build_support.ci_cd_tasks.validation_tasks import (
+    AllSubprojectUnitTests,
+    SubprojectUnitTests,
+    ValidateAll,
+    ValidatePythonStyle,
+)
+from build_support.ci_cd_vars.docker_vars import (
+    DockerTarget,
+    get_base_docker_command_for_image,
+    get_docker_command_for_image,
+    get_docker_image_name,
+    get_mypy_path_env,
+)
+from build_support.ci_cd_vars.file_and_dir_path_vars import (
+    SubprojectContext,
+    get_all_non_test_folders,
+    get_all_test_folders,
+)
+from build_support.ci_cd_vars.machine_introspection_vars import THREADS_AVAILABLE
+from build_support.ci_cd_vars.subproject_structure import (
+    PythonSubproject,
+    get_all_python_subprojects_dict,
+    get_python_subproject,
+    get_sorted_subproject_contexts,
+)
+from build_support.process_runner import concatenate_args
+
+
+def test_validate_all_requires(basic_task_info: BasicTaskInfo) -> None:
+    assert ValidateAll(basic_task_info=basic_task_info).required_tasks() == [
+        AllSubprojectUnitTests(basic_task_info=basic_task_info),
+        ValidatePythonStyle(basic_task_info=basic_task_info),
+    ]
+
+
+def test_run_validate_all(basic_task_info: BasicTaskInfo) -> None:
+    assert is_an_empty_function(func=ValidateAll(basic_task_info=basic_task_info).run)
+
+
+def test_validate_python_style_requires(basic_task_info: BasicTaskInfo) -> None:
+    assert ValidatePythonStyle(basic_task_info=basic_task_info).required_tasks() == [
+        GetGitInfo(basic_task_info=basic_task_info),
+        SetupDevEnvironment(basic_task_info=basic_task_info),
+    ]
+
+
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
+def test_run_validate_python_style(basic_task_info: BasicTaskInfo) -> None:
+    subprojects = get_all_python_subprojects_dict(
+        project_root=basic_task_info.docker_project_root
+    )
+    with patch(
+        "build_support.ci_cd_tasks.validation_tasks.run_process"
+    ) as run_process_mock:
+        ValidatePythonStyle(basic_task_info=basic_task_info).run()
+        ruff_check_src_args = concatenate_args(
+            args=[
+                get_docker_command_for_image(
+                    non_docker_project_root=basic_task_info.non_docker_project_root,
+                    docker_project_root=basic_task_info.docker_project_root,
+                    target_image=DockerTarget.DEV,
+                ),
+                "ruff",
+                "check",
+                get_all_non_test_folders(
+                    project_root=basic_task_info.docker_project_root
+                ),
+            ],
+        )
+        ruff_check_test_args = concatenate_args(
+            args=[
+                get_docker_command_for_image(
+                    non_docker_project_root=basic_task_info.non_docker_project_root,
+                    docker_project_root=basic_task_info.docker_project_root,
+                    target_image=DockerTarget.DEV,
+                ),
+                "ruff",
+                "check",
+                "--ignore",
+                "D,FBT",
+                get_all_test_folders(project_root=basic_task_info.docker_project_root),
+            ],
+        )
+        test_documentation_enforcement_args = concatenate_args(
+            args=[
+                get_docker_command_for_image(
+                    non_docker_project_root=basic_task_info.non_docker_project_root,
+                    docker_project_root=basic_task_info.docker_project_root,
+                    target_image=DockerTarget.DEV,
+                ),
+                "pytest",
+                "-n",
+                THREADS_AVAILABLE,
+                subprojects[
+                    SubprojectContext.DOCUMENTATION_ENFORCEMENT
+                ].get_pytest_report_args(),
+                subprojects[SubprojectContext.DOCUMENTATION_ENFORCEMENT].get_test_dir(),
+            ],
+        )
+        mypy_command = concatenate_args(
+            args=[
+                get_base_docker_command_for_image(
+                    non_docker_project_root=basic_task_info.non_docker_project_root,
+                    docker_project_root=basic_task_info.docker_project_root,
+                    target_image=DockerTarget.DEV,
+                ),
+                "-e",
+                get_mypy_path_env(
+                    docker_project_root=basic_task_info.docker_project_root,
+                    target_image=DockerTarget.DEV,
+                ),
+                get_docker_image_name(
+                    project_root=basic_task_info.docker_project_root,
+                    target_image=DockerTarget.DEV,
+                ),
+                "mypy",
+                "--explicit-package-bases",
+            ],
+        )
+        mypy_pypi_args = concatenate_args(
+            args=[
+                mypy_command,
+                subprojects[SubprojectContext.PYPI].get_root_dir(),
+            ],
+        )
+        mypy_build_support_src_args = concatenate_args(
+            args=[
+                mypy_command,
+                subprojects[SubprojectContext.BUILD_SUPPORT].get_src_dir(),
+            ],
+        )
+        mypy_build_support_test_args = concatenate_args(
+            args=[
+                mypy_command,
+                subprojects[SubprojectContext.BUILD_SUPPORT].get_test_dir(),
+            ],
+        )
+        mypy_process_and_style_enforcement_args = concatenate_args(
+            args=[
+                mypy_command,
+                subprojects[SubprojectContext.DOCUMENTATION_ENFORCEMENT].get_root_dir(),
+            ]
+        )
+        mypy_infra_args = concatenate_args(
+            args=[
+                mypy_command,
+                subprojects[SubprojectContext.INFRA].get_root_dir(),
+            ],
+        )
+        bandit_pypi_args = concatenate_args(
+            args=[
+                get_docker_command_for_image(
+                    non_docker_project_root=basic_task_info.non_docker_project_root,
+                    docker_project_root=basic_task_info.docker_project_root,
+                    target_image=DockerTarget.DEV,
+                ),
+                "bandit",
+                "-o",
+                subprojects[SubprojectContext.PYPI].get_bandit_report_path(),
+                "-r",
+                subprojects[SubprojectContext.PYPI].get_src_dir(),
+            ],
+        )
+        bandit_infra_args = concatenate_args(
+            args=[
+                get_docker_command_for_image(
+                    non_docker_project_root=basic_task_info.non_docker_project_root,
+                    docker_project_root=basic_task_info.docker_project_root,
+                    target_image=DockerTarget.DEV,
+                ),
+                "bandit",
+                "-o",
+                subprojects[SubprojectContext.INFRA].get_bandit_report_path(),
+                "-r",
+                subprojects[SubprojectContext.INFRA].get_src_dir(),
+            ],
+        )
+        bandit_build_support_args = concatenate_args(
+            args=[
+                get_docker_command_for_image(
+                    non_docker_project_root=basic_task_info.non_docker_project_root,
+                    docker_project_root=basic_task_info.docker_project_root,
+                    target_image=DockerTarget.DEV,
+                ),
+                "bandit",
+                "-o",
+                subprojects[SubprojectContext.BUILD_SUPPORT].get_bandit_report_path(),
+                "-r",
+                subprojects[SubprojectContext.BUILD_SUPPORT].get_src_dir(),
+            ],
+        )
+        all_call_args = [
+            ruff_check_src_args,
+            ruff_check_test_args,
+            test_documentation_enforcement_args,
+            mypy_pypi_args,
+            mypy_build_support_src_args,
+            mypy_build_support_test_args,
+            mypy_process_and_style_enforcement_args,
+            mypy_infra_args,
+            bandit_pypi_args,
+            bandit_infra_args,
+            bandit_build_support_args,
+        ]
+        run_process_mock.assert_has_calls(
+            calls=[call(args=args) for args in all_call_args],
+        )
+        assert run_process_mock.call_count == len(all_call_args)
+
+
+def test_all_subproject_unit_tests_requires(basic_task_info: BasicTaskInfo) -> None:
+    assert AllSubprojectUnitTests(basic_task_info=basic_task_info).required_tasks() == [
+        SubprojectUnitTests(
+            basic_task_info=basic_task_info,
+            subproject_context=subproject_context,
+        )
+        for subproject_context in get_sorted_subproject_contexts()
+    ]
+
+
+def test_run_all_subproject_unit_tests(basic_task_info: BasicTaskInfo) -> None:
+    assert is_an_empty_function(
+        func=AllSubprojectUnitTests(basic_task_info=basic_task_info).run
+    )
+
+
+def test_subproject_unit_tests_requires(
+    basic_task_info: BasicTaskInfo, subproject_context: SubprojectContext
+) -> None:
+    if subproject_context == SubprojectContext.BUILD_SUPPORT:
+        assert SubprojectUnitTests(
+            basic_task_info=basic_task_info, subproject_context=subproject_context
+        ).required_tasks() == [
+            SetupDevEnvironment(basic_task_info=basic_task_info),
+            GetGitInfo(basic_task_info=basic_task_info),
+        ]
+    else:
+        assert SubprojectUnitTests(
+            basic_task_info=basic_task_info, subproject_context=subproject_context
+        ).required_tasks() == [SetupDevEnvironment(basic_task_info=basic_task_info)]
+
+
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
+def test_run_subproject_unit_tests(
+    real_project_root_dir: Path,
+    basic_task_info: BasicTaskInfo,
+    subproject_context: SubprojectContext,
+    mock_docker_subproject: PythonSubproject,
+) -> None:
+    real_subproject_src = get_python_subproject(
+        project_root=real_project_root_dir, subproject_context=subproject_context
+    ).get_src_dir()
+    test_subproject_src = mock_docker_subproject.get_python_package_dir()
+    if real_subproject_src.exists():
+        shutil.copytree(src=real_subproject_src, dst=test_subproject_src)
+    with patch(
+        "build_support.ci_cd_tasks.validation_tasks.run_process"
+    ) as run_process_mock:
+        SubprojectUnitTests(
+            basic_task_info=basic_task_info, subproject_context=subproject_context
+        ).run()
+        docker_command = get_docker_command_for_image(
+            non_docker_project_root=basic_task_info.non_docker_project_root,
+            docker_project_root=basic_task_info.docker_project_root,
+            target_image=DockerTarget.DEV,
+        )
+        expected_run_process_calls = []
+
+        if test_subproject_src.exists():
+            unit_test_root = mock_docker_subproject.get_unit_test_dir()
+            src_files = sorted(test_subproject_src.rglob("*"))
+            for src_file in src_files:
+                if (
+                    src_file.is_file()
+                    and src_file.name.endswith(".py")
+                    and src_file.name != "__init__.py"
+                ):
+                    relative_path = src_file.relative_to(test_subproject_src)
+                    test_folder = unit_test_root.joinpath(relative_path).parent
+                    test_file = test_folder.joinpath(f"test_{src_file.name}")
+                    expected_run_process_calls.append(
+                        call(
+                            args=concatenate_args(
+                                args=[
+                                    docker_command,
+                                    "coverage",
+                                    "run",
+                                    "--include",
+                                    src_file,
+                                    "-m",
+                                    "pytest",
+                                    test_file,
+                                ],
+                            ),
+                        )
+                    )
+                    expected_run_process_calls.append(
+                        call(
+                            args=concatenate_args(
+                                args=[
+                                    docker_command,
+                                    "coverage",
+                                    "report",
+                                    "-m",
+                                ],
+                            ),
+                        )
+                    )
+            expected_run_process_calls.append(
+                call(
+                    args=concatenate_args(
+                        args=[
+                            docker_command,
+                            "pytest",
+                            "-n",
+                            THREADS_AVAILABLE,
+                            mock_docker_subproject.get_pytest_report_args(),
+                            mock_docker_subproject.get_src_and_test_dir(),
+                        ],
+                    )
+                )
+            )
+        run_process_mock.assert_has_calls(calls=expected_run_process_calls)

@@ -30,12 +30,12 @@ There are some elements of our process that don't have corresponding off-the-she
 party tools we can use for enforcement.  To keep our project organized process and style
 tests that don't fit neatly into one of our other sub-projects go here.
 
-Pulumi
-------
+Infra
+-----
 
 Pulumi stuff!
 
-:doc:`pulumi`
+:doc:`infra`
 
 Pypi Package
 ------------

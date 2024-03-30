@@ -2,10 +2,7 @@
 
 from build_support.ci_cd_tasks.env_setup_tasks import SetupDevEnvironment
 from build_support.ci_cd_tasks.task_node import TaskNode
-from build_support.ci_cd_tasks.validation_tasks import (
-    ValidateBuildSupport,
-    ValidatePypi,
-)
+from build_support.ci_cd_tasks.validation_tasks import AllSubprojectUnitTests
 from build_support.ci_cd_vars.docker_vars import (
     DockerTarget,
     get_all_python_folders,
@@ -85,8 +82,7 @@ class RuffFixSafe(TaskNode):
         """
         return [
             Lint(basic_task_info=self.get_basic_task_info()),
-            ValidatePypi(basic_task_info=self.get_basic_task_info()),
-            ValidateBuildSupport(basic_task_info=self.get_basic_task_info()),
+            AllSubprojectUnitTests(basic_task_info=self.get_basic_task_info()),
         ]
 
     def run(self) -> None:

@@ -4,7 +4,10 @@ from shutil import copytree
 
 from build_support.ci_cd_tasks.env_setup_tasks import SetupProdEnvironment
 from build_support.ci_cd_tasks.task_node import TaskNode
-from build_support.ci_cd_tasks.validation_tasks import ValidatePypi, ValidatePythonStyle
+from build_support.ci_cd_tasks.validation_tasks import (
+    SubprojectUnitTests,
+    ValidatePythonStyle,
+)
 from build_support.ci_cd_vars.docker_vars import (
     DockerTarget,
     get_docker_command_for_image,
@@ -21,6 +24,7 @@ from build_support.ci_cd_vars.project_setting_vars import (
 )
 from build_support.ci_cd_vars.project_structure import get_docs_dir
 from build_support.ci_cd_vars.subproject_structure import (
+    SubprojectContext,
     get_all_python_subprojects_with_src,
 )
 from build_support.process_runner import concatenate_args, run_process
@@ -60,7 +64,10 @@ class BuildPypi(TaskNode):
             list[TaskNode]: A list of tasks required to build Pypi package.
         """
         return [
-            ValidatePypi(basic_task_info=self.get_basic_task_info()),
+            SubprojectUnitTests(
+                basic_task_info=self.get_basic_task_info(),
+                subproject_context=SubprojectContext.PYPI,
+            ),
             ValidatePythonStyle(basic_task_info=self.get_basic_task_info()),
             SetupProdEnvironment(basic_task_info=self.get_basic_task_info()),
         ]

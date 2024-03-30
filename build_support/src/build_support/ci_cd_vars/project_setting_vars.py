@@ -97,13 +97,13 @@ def get_project_name(project_root: Path) -> str:
 
 
 def get_pulumi_version(project_root: Path) -> str:
-    """Get the pulumi version in the poetry lock file.
+    """Get the infra version in the poetry lock file.
 
     Args:
         project_root (Path): Path to this project's root.
 
     Returns:
-        str: The pulumi version in the poetry lock file.
+        str: The infra version in the poetry lock file.
     """
     lock_file = get_poetry_lock_file(project_root=project_root)
     lock_data = tomllib.loads(lock_file.read_text())

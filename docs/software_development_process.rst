@@ -352,22 +352,29 @@ rules, because they are onerous to enforce and provide very little benefit in te
 
 Testing Source Code
 '''''''''''''''''''
-We require 100% code coverage and all tests to pass.  Test reports are generated and put
-into the appropriate report folder.
-
+All subprojects with source code follow the same testing standards.
 
 The :code:`process_and_style_enforcement` package in this project consists entirely of
 test code that is run to enforce our development practices.  There is no source code to
 test.
 
+Unit Tests
+""""""""""
+For each subproject we test each src file with a corresponding test file in the unit
+test folder of the subproject name :code:`test_{src_file_name}`.  Each src file must
+have 100% coverage when it's corresponding test file is executed.
 
-MyPy Type Enforcement Tests
+After all individual files are checked for 100% coverage we run all unit tests for the
+subproject at once and generate test reports that we put in the subproject's report
+folder.
+
+Static Type Checking - MyPy
 '''''''''''''''''''''''''''
 
 We run :code:`mypy` on every package to ensure that typing in enforced.
 
 Bandit Security Tests
-'''''''''''''''''''''''''''
+'''''''''''''''''''''
 
 We run :code:`bandit` on the source folder of each package to ensure there are no
 unknown security threats in our code.  Low risk threats can be specifically disabled
