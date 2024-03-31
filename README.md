@@ -30,12 +30,9 @@ a cloud VM.
 
 The enforcement of development practices is done in the CI/CD pipeline and controlled in
 the [build_support](build_support/src/build_support) package.  Any practices the
-development team wants to enforce should be added into the tasks implemented here, or
-in another location that is called and run by a task in the CI/CD pipeline.  For example
-the ValidatePythonStyle Task in the 
-[validation_tasks.py](build_support/src/build_support/ci_cd_tasks/validation_tasks.py)
-module makes a call that runs the tests in the 
-[process_and_style_enforcement](process_and_style_enforcement) directory.
+development team wants to enforce should be added into the tasks implemented here.  For
+process or style enforcement where an off the shelf tool does not exist we have added 
+test suites to this package that those tests should go in.
 
 #### Enforcement of Development and Production Environments
 
@@ -64,11 +61,11 @@ as you see fit.  There are 4 top-level folders that are worth discussing:
   - [report_build_var.py](build_support/src/build_support/report_build_var.py)
   Contains the "main" that should be called within the build container to report 
   variables.
-- [process_and_style_enforcement](process_and_style_enforcement)
-  - The tests that are run as part of the ValidatePythonStyle task.  Tests should be 
-  added here when there isn't an off the shelf tool for enforcing style or process that 
-  the devs want to enforce.
-- [pulumi](infra)
+  - [process_enforcement](build_support/test/process_enforcement) This test suite
+  is where we put process enforcement tests that don't have a natural 3rd party tool.
+  - [style_enforcement](build_support/test/style_enforcement) This test suite is 
+  where we put style enforcement tests that don't have a 3rd party tool.
+- [infra](infra)
   - The pulumi code that sets up and manages cloud resources and deployments.
 - [pypi_package](pypi_package)
   - The pypi package that will contain our business logic and will be deployed to
@@ -195,7 +192,7 @@ folder in the project view. There will be a `Mark Directory as` option.  Hover o
 and then select `Sources Root`.
 
 - [build_support/src](build_support/src)
-- [pulumi/src](infra/src)
+- [infra/src](infra/src)
 - [pypi_package/src](pypi_package/src)
 
 For each of the following test folders you will repeat the process described for the 
@@ -203,7 +200,7 @@ source folders, but instead of selecting `Sources Root`, you will mark these as
 `Test Sources Root`.
 
 - [build_support/test](build_support/test)
-- [process_and_style_enforcement/test](process_and_style_enforcement/test)
+- [infra/test](infra/test)
 - [pypi_package/test](pypi_package/test)
 
 #### PyCharm: Configuring PyCharm to Use Pytest
@@ -313,10 +310,10 @@ Ruff is a drop in replacement for:
 
 ### Process and Style Enforcement
 
-[process_and_style_enforcement/test](process_and_style_enforcement/test) contains a 
-number of tests that we have implemented to enforce standards for which no off the shelf
-tools exist.  Additional style or process enforcement without off the shelf tooling 
-should go here.
+[style_enforcement](build_support/test/style_enforcement) and 
+[process_enforcement](build_support/test/process_enforcement) contains a number of tests
+that we have implemented to enforce standards for which no off the shelf tools exist.  
+Additional style or process enforcement without off the shelf tooling should go here.
 
 ### MyPy
 

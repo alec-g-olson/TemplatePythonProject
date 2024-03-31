@@ -91,7 +91,7 @@ def test_run_validate_python_style(basic_task_info: BasicTaskInfo) -> None:
                 get_all_test_folders(project_root=basic_task_info.docker_project_root),
             ],
         )
-        test_documentation_enforcement_args = concatenate_args(
+        test_style_enforcement_args = concatenate_args(
             args=[
                 get_docker_command_for_image(
                     non_docker_project_root=basic_task_info.non_docker_project_root,
@@ -101,10 +101,30 @@ def test_run_validate_python_style(basic_task_info: BasicTaskInfo) -> None:
                 "pytest",
                 "-n",
                 THREADS_AVAILABLE,
-                subprojects[
-                    SubprojectContext.DOCUMENTATION_ENFORCEMENT
-                ].get_pytest_report_args(),
-                subprojects[SubprojectContext.DOCUMENTATION_ENFORCEMENT].get_test_dir(),
+                subprojects[SubprojectContext.BUILD_SUPPORT].get_pytest_report_args(
+                    test_suite=PythonSubproject.TestSuite.STYLE_ENFORCEMENT
+                ),
+                subprojects[SubprojectContext.BUILD_SUPPORT].get_test_suite_dir(
+                    test_suite=PythonSubproject.TestSuite.STYLE_ENFORCEMENT
+                ),
+            ],
+        )
+        test_process_enforcement_args = concatenate_args(
+            args=[
+                get_docker_command_for_image(
+                    non_docker_project_root=basic_task_info.non_docker_project_root,
+                    docker_project_root=basic_task_info.docker_project_root,
+                    target_image=DockerTarget.DEV,
+                ),
+                "pytest",
+                "-n",
+                THREADS_AVAILABLE,
+                subprojects[SubprojectContext.BUILD_SUPPORT].get_pytest_report_args(
+                    test_suite=PythonSubproject.TestSuite.PROCESS_ENFORCEMENT
+                ),
+                subprojects[SubprojectContext.BUILD_SUPPORT].get_test_suite_dir(
+                    test_suite=PythonSubproject.TestSuite.PROCESS_ENFORCEMENT
+                ),
             ],
         )
         mypy_command = concatenate_args(
@@ -144,12 +164,6 @@ def test_run_validate_python_style(basic_task_info: BasicTaskInfo) -> None:
                 mypy_command,
                 subprojects[SubprojectContext.BUILD_SUPPORT].get_test_dir(),
             ],
-        )
-        mypy_process_and_style_enforcement_args = concatenate_args(
-            args=[
-                mypy_command,
-                subprojects[SubprojectContext.DOCUMENTATION_ENFORCEMENT].get_root_dir(),
-            ]
         )
         mypy_infra_args = concatenate_args(
             args=[
@@ -202,11 +216,11 @@ def test_run_validate_python_style(basic_task_info: BasicTaskInfo) -> None:
         all_call_args = [
             ruff_check_src_args,
             ruff_check_test_args,
-            test_documentation_enforcement_args,
+            test_style_enforcement_args,
+            test_process_enforcement_args,
             mypy_pypi_args,
             mypy_build_support_src_args,
             mypy_build_support_test_args,
-            mypy_process_and_style_enforcement_args,
             mypy_infra_args,
             bandit_pypi_args,
             bandit_infra_args,
@@ -284,7 +298,9 @@ def test_run_subproject_unit_tests_test_all(
         expected_run_process_calls = []
 
         if test_subproject_src.exists():
-            unit_test_root = mock_docker_subproject.get_unit_test_dir()
+            unit_test_root = mock_docker_subproject.get_test_suite_dir(
+                test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+            )
             src_files = sorted(test_subproject_src.rglob("*"))
             for src_file in src_files:
                 if (
@@ -331,8 +347,13 @@ def test_run_subproject_unit_tests_test_all(
                             "pytest",
                             "-n",
                             THREADS_AVAILABLE,
-                            mock_docker_subproject.get_pytest_report_args(),
-                            mock_docker_subproject.get_src_and_test_dir(),
+                            mock_docker_subproject.get_pytest_report_args(
+                                test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+                            ),
+                            mock_docker_subproject.get_src_dir(),
+                            mock_docker_subproject.get_test_suite_dir(
+                                test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+                            ),
                         ],
                     )
                 )
@@ -347,7 +368,9 @@ def test_run_subproject_unit_tests_all_cached(
     mock_docker_subproject: PythonSubproject,
 ) -> None:
     src_root = mock_docker_subproject.get_python_package_dir()
-    unit_test_root = mock_docker_subproject.get_unit_test_dir()
+    unit_test_root = mock_docker_subproject.get_test_suite_dir(
+        test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+    )
     unit_test_cache_file = mock_docker_subproject.get_unit_test_cache_yaml()
     unit_test_cache = FileCacheInfo(
         group_root_dir=mock_docker_subproject.get_root_dir(), cache_info={}
@@ -384,7 +407,9 @@ def test_run_subproject_unit_tests_some_cached(
     mock_docker_subproject: PythonSubproject,
 ) -> None:
     src_root = mock_docker_subproject.get_python_package_dir()
-    unit_test_root = mock_docker_subproject.get_unit_test_dir()
+    unit_test_root = mock_docker_subproject.get_test_suite_dir(
+        test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+    )
     unit_test_cache_file = mock_docker_subproject.get_unit_test_cache_yaml()
     unit_test_cache = FileCacheInfo(
         group_root_dir=mock_docker_subproject.get_root_dir(), cache_info={}
@@ -437,7 +462,9 @@ def test_run_subproject_unit_tests_some_cached(
         skipped_tests = 0
         if src_root.exists():
             assert len(src_files_to_skip_tests_for) > 0
-            unit_test_root = mock_docker_subproject.get_unit_test_dir()
+            unit_test_root = mock_docker_subproject.get_test_suite_dir(
+                test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+            )
             src_files = sorted(src_root.rglob("*"))
             for src_file in src_files:
                 if (
@@ -490,8 +517,13 @@ def test_run_subproject_unit_tests_some_cached(
                                 "pytest",
                                 "-n",
                                 THREADS_AVAILABLE,
-                                mock_docker_subproject.get_pytest_report_args(),
-                                mock_docker_subproject.get_src_and_test_dir(),
+                                mock_docker_subproject.get_pytest_report_args(
+                                    test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+                                ),
+                                mock_docker_subproject.get_src_dir(),
+                                mock_docker_subproject.get_test_suite_dir(
+                                    test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+                                ),
                             ],
                         )
                     )

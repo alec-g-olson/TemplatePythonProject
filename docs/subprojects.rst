@@ -21,14 +21,11 @@ The goal of this project is that everything is handled and run in controlled doc
 environments which make it so that you can run the CI/CD pipeline on any machine and
 ensure that the environment will be the same.
 
-:doc:`build_support`
-
-Process and Style Enforcement
------------------------------
-
 There are some elements of our process that don't have corresponding off-the-shelf 3rd
-party tools we can use for enforcement.  To keep our project organized process and style
-tests that don't fit neatly into one of our other sub-projects go here.
+party tools we can use for enforcement.  To keep our project organized we have added
+both process and style enforcement test suites to our build support tests.
+
+:doc:`build_support`
 
 Infra
 -----

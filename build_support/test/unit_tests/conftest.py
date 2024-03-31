@@ -4,11 +4,7 @@ from typing import Any
 import pytest
 from _pytest.fixtures import SubRequest
 
-from build_support.ci_cd_tasks.env_setup_tasks import GitInfo
 from build_support.ci_cd_tasks.task_node import BasicTaskInfo
-from build_support.ci_cd_vars.file_and_dir_path_vars import (
-    get_git_info_yaml,
-)
 from build_support.ci_cd_vars.project_structure import (
     get_poetry_lock_file,
     get_pyproject_toml,
@@ -132,17 +128,3 @@ def mock_docker_poetry_lock_file(
     mock_poetry_lock_file = get_poetry_lock_file(project_root=docker_project_root)
     mock_poetry_lock_file.write_text(poetry_lock_contents)
     return mock_poetry_lock_file
-
-
-@pytest.fixture(scope="session")
-def real_git_info(real_project_root_dir: Path) -> GitInfo:
-    """Return the git information at the time of this test."""
-    return GitInfo.from_yaml(
-        get_git_info_yaml(project_root=real_project_root_dir).read_text(),
-    )
-
-
-@pytest.fixture(scope="session")
-def is_on_main(real_git_info: GitInfo) -> bool:
-    """Determine if the main branch is currently checked out."""
-    return real_git_info.branch == GitInfo.get_primary_branch_name()

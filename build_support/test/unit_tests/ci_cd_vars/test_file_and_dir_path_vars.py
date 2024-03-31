@@ -14,7 +14,7 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_new_project_settings,
     get_sphinx_conf_dir,
 )
-from build_support.ci_cd_vars.project_structure import get_build_dir
+from build_support.ci_cd_vars.project_structure import get_build_dir, get_docs_dir
 from build_support.ci_cd_vars.subproject_structure import (
     SubprojectContext,
     get_all_python_subprojects_dict,
@@ -23,14 +23,9 @@ from build_support.ci_cd_vars.subproject_structure import (
 
 
 def test_get_sphinx_conf_dir(mock_project_root: Path) -> None:
-    expected_process_and_style_dir = get_python_subproject(
-        subproject_context=SubprojectContext.DOCUMENTATION_ENFORCEMENT,
-        project_root=mock_project_root,
-    ).get_root_dir()
-    expected_sphinx_conf_dir = expected_process_and_style_dir.joinpath("sphinx_conf")
-    assert (
-        get_sphinx_conf_dir(project_root=mock_project_root) == expected_sphinx_conf_dir
-    )
+    assert get_sphinx_conf_dir(project_root=mock_project_root) == get_docs_dir(
+        project_root=mock_project_root
+    ).joinpath("sphinx_conf")
 
 
 def test_get_new_project_settings(mock_project_root: Path) -> None:
@@ -106,10 +101,9 @@ def test_get_all_python_folders(real_project_root_dir: Path) -> None:
     assert get_all_python_folders(project_root=real_project_root_dir) == [
         subprojects[SubprojectContext.BUILD_SUPPORT].get_src_dir(),
         subprojects[SubprojectContext.BUILD_SUPPORT].get_test_dir(),
+        get_sphinx_conf_dir(project_root=real_project_root_dir),
         subprojects[SubprojectContext.INFRA].get_src_dir(),
         subprojects[SubprojectContext.INFRA].get_test_dir(),
-        get_sphinx_conf_dir(project_root=real_project_root_dir),
-        subprojects[SubprojectContext.DOCUMENTATION_ENFORCEMENT].get_test_dir(),
         subprojects[SubprojectContext.PYPI].get_src_dir(),
         subprojects[SubprojectContext.PYPI].get_test_dir(),
     ]
@@ -129,7 +123,6 @@ def test_get_all_test_folders(real_project_root_dir: Path) -> None:
     assert get_all_test_folders(project_root=real_project_root_dir) == [
         subprojects[SubprojectContext.BUILD_SUPPORT].get_test_dir(),
         subprojects[SubprojectContext.INFRA].get_test_dir(),
-        subprojects[SubprojectContext.DOCUMENTATION_ENFORCEMENT].get_test_dir(),
         subprojects[SubprojectContext.PYPI].get_test_dir(),
     ]
 
@@ -138,7 +131,7 @@ def test_get_all_non_test_folders(real_project_root_dir: Path) -> None:
     subprojects = get_all_python_subprojects_dict(project_root=real_project_root_dir)
     assert get_all_non_test_folders(project_root=real_project_root_dir) == [
         subprojects[SubprojectContext.BUILD_SUPPORT].get_src_dir(),
-        subprojects[SubprojectContext.INFRA].get_src_dir(),
         get_sphinx_conf_dir(project_root=real_project_root_dir),
+        subprojects[SubprojectContext.INFRA].get_src_dir(),
         subprojects[SubprojectContext.PYPI].get_src_dir(),
     ]

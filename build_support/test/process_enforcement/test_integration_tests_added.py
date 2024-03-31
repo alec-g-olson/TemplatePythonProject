@@ -3,6 +3,7 @@ from pathlib import Path
 from build_support.ci_cd_tasks.env_setup_tasks import GitInfo
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
 from build_support.ci_cd_vars.subproject_structure import (
+    PythonSubproject,
     get_all_python_subprojects_with_test,
 )
 
@@ -20,7 +21,9 @@ def test_integration_tests_exist_for_ticket(
                 for subproject in get_all_python_subprojects_with_test(
                     project_root=real_project_root_dir
                 )
-                for test_file in subproject.get_integration_test_dir().rglob("*")
+                for test_file in subproject.get_test_suite_dir(
+                    test_suite=PythonSubproject.TestSuite.INTEGRATION_TESTS
+                ).rglob("*")
                 if test_file.name == test_name
             ),
             None,

@@ -1,4 +1,5 @@
 from pathlib import Path
+from unittest.mock import MagicMock
 
 from build_support.ci_cd_tasks.task_node import (
     BasicTaskInfo,
@@ -28,19 +29,12 @@ def build_mock_basic_task(
 ) -> TaskNode:
     """Builds a mock task for testing task interactions."""
 
-    # dummy method for test class
-    def required_tasks(self) -> list[TaskNode]:  # noqa: ANN001, ARG001
-        return required_mock_tasks
-
-    def run(self) -> None:  # noqa: ANN001, ARG001 - dummy method for test class
-        return None
-
     return type(
         task_name,
         (TaskNode,),
         {
-            "required_tasks": required_tasks,
-            "run": run,
+            "required_tasks": MagicMock(return_value=required_mock_tasks),
+            "run": MagicMock(),
         },
     )(basic_task_info=expected_basic_task_info)
 
@@ -52,19 +46,12 @@ def build_mock_per_subproject_task(
 ) -> PerSubprojectTask:
     """Builds a mock task for testing task interactions."""
 
-    # dummy method for test class
-    def required_tasks(self) -> list[TaskNode]:  # noqa: ANN001, ARG001
-        return required_mock_tasks
-
-    def run(self) -> None:  # noqa: ANN001, ARG001 - dummy method for test class
-        return None
-
     return type(
         task_name,
         (PerSubprojectTask,),
         {
-            "required_tasks": required_tasks,
-            "run": run,
+            "required_tasks": MagicMock(return_value=required_mock_tasks),
+            "run": MagicMock(),
         },
     )(
         basic_task_info=expected_basic_task_info,

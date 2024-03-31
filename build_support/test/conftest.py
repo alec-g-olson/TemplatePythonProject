@@ -3,6 +3,8 @@ from pathlib import Path
 import pytest
 from _pytest.fixtures import SubRequest
 
+from build_support.ci_cd_tasks.env_setup_tasks import GitInfo
+from build_support.ci_cd_vars.file_and_dir_path_vars import get_git_info_yaml
 from build_support.ci_cd_vars.subproject_structure import (
     PythonSubproject,
     SubprojectContext,
@@ -55,3 +57,29 @@ def mock_docker_subproject(
     return get_python_subproject(
         subproject_context=subproject_context, project_root=docker_project_root
     )
+
+
+@pytest.fixture(scope="session")
+def real_git_info(real_project_root_dir: Path) -> GitInfo:
+    """Return the git information at the time of this test."""
+    return GitInfo.from_yaml(
+        get_git_info_yaml(project_root=real_project_root_dir).read_text(),
+    )
+
+
+@pytest.fixture(scope="session")
+def is_on_main(real_git_info: GitInfo) -> bool:
+    """Determine if the main branch is currently checked out."""
+    return real_git_info.branch == GitInfo.get_primary_branch_name()
+
+
+@pytest.fixture()
+def check_weblinks(is_on_main: bool) -> bool:
+    return not is_on_main
+
+
+@pytest.fixture()
+def mock_lightweight_project(tmp_path: Path) -> Path:
+    lightweight_project_root = tmp_path.joinpath("lightweight_project")
+    lightweight_project_root.mkdir()
+    return lightweight_project_root

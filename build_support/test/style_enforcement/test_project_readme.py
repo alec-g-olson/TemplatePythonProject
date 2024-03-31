@@ -7,10 +7,6 @@ import pytest
 import requests
 from pydantic import BaseModel
 
-PROJECT_ROOT_DIR = Path(__file__).parent.parent.parent
-
-TOP_LEVEL_README_PATH = PROJECT_ROOT_DIR.joinpath("README.md")
-
 # Anything that isn't a square closing bracket
 hyperlink_display_name = "[^]]+"
 # Anything that isn't a closing paren
@@ -22,8 +18,8 @@ HYPERLINK_PATTERN = r"\[({0})]\(\s*({1})\s*\)".format(
 
 
 @pytest.fixture()
-def check_weblinks(is_on_main: bool) -> bool:
-    return not is_on_main
+def project_readme(real_project_root_dir: Path) -> Path:
+    return real_project_root_dir.joinpath("README.md")
 
 
 def _build_header_regex(header_level: int, header_title: str) -> str:
@@ -61,7 +57,7 @@ def _get_missing_headers(
                     break
     return [
         ReadmeHeaderInfo(
-            readme_path=readme_path.relative_to(PROJECT_ROOT_DIR),
+            readme_path=readme_path.relative_to(readme_path.parent),
             header=regex_str[1:-1].replace("\\", ""),
         )
         for regex_str in headers_found
@@ -96,7 +92,7 @@ def _get_headers_missing_details(
 
     return [
         ReadmeHeaderInfo(
-            readme_path=readme_path.relative_to(PROJECT_ROOT_DIR),
+            readme_path=readme_path.relative_to(readme_path.parent),
             header=regex_str[1:-1].replace("\\", ""),
         )
         for regex_str in headers_with_details_found
@@ -121,7 +117,7 @@ def _get_extra_headers(
                 if not expected_header:
                     extra_headers.append(
                         ReadmeHeaderInfo(
-                            readme_path=readme_path.relative_to(PROJECT_ROOT_DIR),
+                            readme_path=readme_path.relative_to(readme_path.parent),
                             header=line,
                         )
                     )
@@ -166,7 +162,7 @@ def _get_all_bad_hyperlinks(
             possible_header_links.append(strip_header)
         bad_hyperlinks = [
             BadHyperlinkInfo(
-                readme_path=readme_path.relative_to(PROJECT_ROOT_DIR),
+                readme_path=readme_path.relative_to(readme_path.parent),
                 line_number=line_number,
                 hyperlink=str(hyperlink),
             )
@@ -227,34 +223,36 @@ TOP_LEVEL_README_HEADER_REGEXES = _build_header_regexes(
 )
 
 
-def test_top_level_readme_has_required_headers() -> None:
+def test_top_level_readme_has_required_headers(project_readme: Path) -> None:
     missing_headers = _get_missing_headers(
         header_regexes=TOP_LEVEL_README_HEADER_REGEXES,
-        readme_path=TOP_LEVEL_README_PATH,
+        readme_path=project_readme,
     )
     assert missing_headers == []
 
 
-def test_top_level_header_have_details() -> None:
+def test_top_level_header_have_details(project_readme: Path) -> None:
     headers_missing_details = _get_headers_missing_details(
         header_regexes=TOP_LEVEL_README_HEADER_REGEXES,
-        readme_path=TOP_LEVEL_README_PATH,
+        readme_path=project_readme,
     )
     assert headers_missing_details == []
 
 
-def test_top_level_readme_has_no_extra_headers() -> None:
+def test_top_level_readme_has_no_extra_headers(project_readme: Path) -> None:
     extra_headers = _get_extra_headers(
         header_regexes=TOP_LEVEL_README_HEADER_REGEXES,
-        readme_path=TOP_LEVEL_README_PATH,
+        readme_path=project_readme,
     )
     assert extra_headers == []
 
 
-def test_top_level_readme_hyperlinks_are_valid(check_weblinks: bool) -> None:
+def test_top_level_readme_hyperlinks_are_valid(
+    project_readme: Path, check_weblinks: bool
+) -> None:
     assert (
         _get_all_bad_hyperlinks(
-            readme_path=TOP_LEVEL_README_PATH, check_weblinks=check_weblinks
+            readme_path=project_readme, check_weblinks=check_weblinks
         )
         == []
     )

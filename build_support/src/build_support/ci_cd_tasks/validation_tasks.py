@@ -15,6 +15,7 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
 )
 from build_support.ci_cd_vars.machine_introspection_vars import THREADS_AVAILABLE
 from build_support.ci_cd_vars.subproject_structure import (
+    PythonSubproject,
     SubprojectContext,
     get_all_python_subprojects_dict,
     get_sorted_subproject_contexts,
@@ -109,12 +110,32 @@ class ValidatePythonStyle(TaskNode):
                     "pytest",
                     "-n",
                     THREADS_AVAILABLE,
-                    subproject[
-                        SubprojectContext.DOCUMENTATION_ENFORCEMENT
-                    ].get_pytest_report_args(),
-                    subproject[
-                        SubprojectContext.DOCUMENTATION_ENFORCEMENT
-                    ].get_test_dir(),
+                    subproject[SubprojectContext.BUILD_SUPPORT].get_pytest_report_args(
+                        test_suite=PythonSubproject.TestSuite.STYLE_ENFORCEMENT
+                    ),
+                    subproject[SubprojectContext.BUILD_SUPPORT].get_test_suite_dir(
+                        test_suite=PythonSubproject.TestSuite.STYLE_ENFORCEMENT
+                    ),
+                ],
+            ),
+        )
+        run_process(
+            args=concatenate_args(
+                args=[
+                    get_docker_command_for_image(
+                        non_docker_project_root=self.non_docker_project_root,
+                        docker_project_root=self.docker_project_root,
+                        target_image=DockerTarget.DEV,
+                    ),
+                    "pytest",
+                    "-n",
+                    THREADS_AVAILABLE,
+                    subproject[SubprojectContext.BUILD_SUPPORT].get_pytest_report_args(
+                        test_suite=PythonSubproject.TestSuite.PROCESS_ENFORCEMENT
+                    ),
+                    subproject[SubprojectContext.BUILD_SUPPORT].get_test_suite_dir(
+                        test_suite=PythonSubproject.TestSuite.PROCESS_ENFORCEMENT
+                    ),
                 ],
             ),
         )
@@ -159,16 +180,6 @@ class ValidatePythonStyle(TaskNode):
                 args=[
                     mypy_command,
                     subproject[SubprojectContext.BUILD_SUPPORT].get_test_dir(),
-                ],
-            ),
-        )
-        run_process(
-            args=concatenate_args(
-                args=[
-                    mypy_command,
-                    subproject[
-                        SubprojectContext.DOCUMENTATION_ENFORCEMENT
-                    ].get_root_dir(),
                 ],
             ),
         )
@@ -298,7 +309,9 @@ class SubprojectUnitTests(PerSubprojectTask):
                 unit_test_cache = FileCacheInfo(
                     group_root_dir=subproject_root, cache_info={}
                 )
-            unit_test_root = self.subproject.get_unit_test_dir()
+            unit_test_root = self.subproject.get_test_suite_dir(
+                test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+            )
             src_files = sorted(src_root.rglob("*"))
             src_files_checked = 0
             for src_file in src_files:
@@ -354,8 +367,13 @@ class SubprojectUnitTests(PerSubprojectTask):
                             "pytest",
                             "-n",
                             THREADS_AVAILABLE,
-                            self.subproject.get_pytest_report_args(),
-                            self.subproject.get_src_and_test_dir(),
+                            self.subproject.get_pytest_report_args(
+                                test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+                            ),
+                            self.subproject.get_src_dir(),
+                            self.subproject.get_test_suite_dir(
+                                test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+                            ),
                         ],
                     ),
                 )

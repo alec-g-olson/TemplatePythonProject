@@ -11,7 +11,6 @@ from build_support.ci_cd_vars.project_setting_vars import get_project_name
 from build_support.ci_cd_vars.project_structure import get_docs_dir
 from build_support.ci_cd_vars.subproject_structure import (
     SubprojectContext,
-    get_all_python_subprojects_dict,
     get_all_python_subprojects_with_src,
 )
 
@@ -23,21 +22,16 @@ def docs_dir(real_project_root_dir: Path) -> Path:
 
 def test_subprojects_documented(real_project_root_dir: Path, docs_dir: Path) -> None:
     subprojects_doc_file = docs_dir.joinpath("subprojects.rst")
-    subproject_dict = get_all_python_subprojects_dict(
-        project_root=real_project_root_dir
-    )
-    subproject_name_to_doc_link: dict[str, list[str]] = {}
-    for context, subproject in subproject_dict.items():
+    expected_subproject_name_to_doc_link: dict[str, list[str]] = {}
+    for context in SubprojectContext:
         subproject_name = (
             context.value
             if context != SubprojectContext.PYPI
             else get_project_name(project_root=real_project_root_dir)
         )
-        subproject_name_to_doc_link[context.value] = []
-        if subproject.get_src_dir().exists():
-            subproject_name_to_doc_link[context.value].append(
-                f":doc:`{subproject_name}`"
-            )
+        expected_subproject_name_to_doc_link[context.value] = [
+            f":doc:`{subproject_name}`"
+        ]
     observed_header_to_doc_links: dict[str, list[str]] = {}
     current_header = None
     last_line = None
@@ -49,7 +43,7 @@ def test_subprojects_documented(real_project_root_dir: Path, docs_dir: Path) -> 
         if striped_line and current_header and striped_line.startswith(":doc:`"):
             observed_header_to_doc_links[current_header].append(striped_line)
         last_line = striped_line
-    assert observed_header_to_doc_links == subproject_name_to_doc_link
+    assert observed_header_to_doc_links == expected_subproject_name_to_doc_link
 
 
 def test_subproject_code_docs_exists_for_subprojects_with_code(
@@ -89,11 +83,6 @@ def _is_broken_hyperlink(
     )
 
 
-@pytest.fixture()
-def check_weblinks(is_on_main: bool) -> bool:
-    return not is_on_main
-
-
 def test_docs_hyperlinks_are_valid(
     real_project_root_dir: Path, check_weblinks: bool
 ) -> None:
@@ -107,10 +96,11 @@ def test_docs_hyperlinks_are_valid(
     if check_weblinks:  # pragma: no cover - might not hit if check_weblinks is false
         bad_hyperlinks = [
             BadHyperlinkInfo(name=hyperlink[0], url=hyperlink[1])
-            for doc_file in get_docs_dir(project_root=real_project_root_dir).glob("*")
+            for doc_file in get_docs_dir(project_root=real_project_root_dir).rglob(
+                "*.rst"
+            )
             for line in doc_file.read_text().splitlines()
             for hyperlink in re.findall(r"`(.+) <(.+)>`_", line)
-            if doc_file.name.endswith(".rst")
-            and _is_broken_hyperlink(hyperlink=hyperlink)
+            if _is_broken_hyperlink(hyperlink=hyperlink)
         ]
     assert bad_hyperlinks == []
