@@ -10,6 +10,14 @@ from git import DiffIndex, Head, Repo
 
 
 def get_git_repo(project_root: Path) -> Repo:
+    """Gets a python representation of the project's git repo.
+
+    Args:
+        project_root (Path): Path to this project's root.
+
+    Returns:
+        Repo: This project's git repo.
+    """
     return Repo(project_root)
 
 

@@ -31,14 +31,16 @@ def mock_git_folder(mock_project_root: Path) -> Path:
 
 @pytest.fixture()
 def mock_remote_git_repo(mock_remote_git_folder: Path) -> Repo:
-    repo = Repo.init(path=mock_remote_git_folder, bare=True, initial_branch=MAIN_BRANCH_NAME)
+    repo = Repo.init(
+        path=mock_remote_git_folder, bare=True, initial_branch=MAIN_BRANCH_NAME
+    )
     repo.index.commit("initial remote commit")
     return repo
 
 
 @pytest.fixture()
-def mock_git_repo(mock_git_folder: Path, mock_remote_git_folder: Path, mock_remote_git_repo: Repo) -> Repo:
-    remote_repo_url = str(mock_remote_git_folder)
+def mock_git_repo(mock_git_folder: Path, mock_remote_git_repo: Repo) -> Repo:
+    remote_repo_url = str(mock_remote_git_repo.working_dir)
     repo = Repo.clone_from(url=remote_repo_url, to_path=mock_git_folder)
     repo.remote().push()
     new_file = mock_git_folder.joinpath("first_file.txt")
@@ -59,13 +61,11 @@ def mock_git_branch(mock_remote_git_repo: Repo, mock_git_repo: Repo) -> Head:
 
 
 @pytest.fixture()
-def mock_git_tags(
-    mock_git_folder: Path, mock_git_repo: Repo, mock_git_branch: Head
-) -> list[TagReference]:
+def mock_git_tags(mock_git_repo: Repo, mock_git_branch: Head) -> list[TagReference]:
     tag_1_name = "inital_local_commit"
     mock_git_repo.create_tag(tag_1_name)
     mock_git_repo.remote().push(tag_1_name)
-    new_file = mock_git_folder.joinpath("new_file.txt")
+    new_file = Path(mock_git_branch.repo.working_dir).joinpath("new_file.txt")
     new_file.touch()
     mock_git_repo.index.add([new_file])
     mock_git_repo.index.commit("new commit")
@@ -79,12 +79,8 @@ def test_get_git_head(mock_git_folder: Path, mock_git_branch: Head) -> None:
     assert get_git_head(project_root=mock_git_folder) == mock_git_branch
 
 
-def test_get_current_branch_name(
-    mock_git_folder: Path, mock_git_branch: Head
-) -> None:
-    assert (
-        get_current_branch_name(project_root=mock_git_folder) == mock_git_branch.name
-    )
+def test_get_current_branch_name(mock_git_folder: Path, mock_git_branch: Head) -> None:
+    assert get_current_branch_name(project_root=mock_git_folder) == mock_git_branch.name
 
 
 def test_constants_not_changed_by_accident() -> None:
@@ -109,7 +105,6 @@ def test_get_local_tags(
     ]
 
 
-@pytest.mark.usefixtures()
 def test_get_git_diff(mock_git_folder: Path, mock_git_repo: Repo) -> None:
     diff_file = mock_git_folder.joinpath("diff_file")
     diff_file.touch()

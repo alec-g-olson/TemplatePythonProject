@@ -150,11 +150,10 @@ class ApplyRuffFixUnsafe(TaskNode):
             None
         """
         commit_changes_if_diff(
-            commit_message_no_quotes=(
+            commit_message=(
                 "Committing staged changes for before applying unsafe ruff fixes."
             ),
-            local_user_uid=self.local_user_uid,
-            local_user_gid=self.local_user_gid,
+            project_root=self.docker_project_root,
         )
         run_process(
             args=concatenate_args(
