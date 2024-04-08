@@ -1,8 +1,7 @@
 from copy import copy
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Any
-from unittest.mock import call, patch
+from unittest.mock import patch
 
 import pytest
 import yaml
@@ -36,13 +35,7 @@ def test_run_build_dev_env(basic_task_info: BasicTaskInfo) -> None:
         patch(
             "build_support.ci_cd_tasks.env_setup_tasks.run_process",
         ) as run_process_mock,
-        patch("build_support.ci_cd_tasks.env_setup_tasks.getpwuid") as mock_getpwuid,
-        patch("build_support.ci_cd_tasks.env_setup_tasks.getgrgid") as mock_getgrgid,
     ):
-        local_username = "some_username"
-        mock_getpwuid.return_value = SimpleNamespace(pw_name=local_username)
-        local_user_group = "some_user_group"
-        mock_getgrgid.return_value = SimpleNamespace(gr_name=local_user_group)
         build_dev_env_args = get_docker_build_command(
             docker_project_root=basic_task_info.docker_project_root,
             target_image=DockerTarget.DEV,
@@ -50,10 +43,6 @@ def test_run_build_dev_env(basic_task_info: BasicTaskInfo) -> None:
                 "--build-arg": [
                     "DOCKER_REMOTE_PROJECT_ROOT="
                     + str(basic_task_info.docker_project_root.absolute()),
-                    f"CURRENT_USER={local_username}",
-                    f"CURRENT_GROUP={local_user_group}",
-                    f"CURRENT_USER_ID={basic_task_info.local_user_uid}",
-                    f"CURRENT_GROUP_ID={basic_task_info.local_user_gid}",
                 ],
             },
         )
@@ -238,9 +227,6 @@ def test_get_git_info_requires(basic_task_info: BasicTaskInfo) -> None:
 def test_run_get_git_info(basic_task_info: BasicTaskInfo) -> None:
     with (
         patch(
-            "build_support.ci_cd_tasks.env_setup_tasks.run_process",
-        ) as run_process_mock,
-        patch(
             "build_support.ci_cd_tasks.env_setup_tasks.get_current_branch_name",
         ) as get_branch_mock,
         patch(
@@ -258,14 +244,6 @@ def test_run_get_git_info(basic_task_info: BasicTaskInfo) -> None:
         )
         assert not git_info_yaml_dest.exists()
         GetGitInfo(basic_task_info=basic_task_info).run()
-        expected_git_fetch_call = call(
-            args=["git", "fetch"],
-            user_uid=basic_task_info.local_user_uid,
-            user_gid=basic_task_info.local_user_gid,
-        )
-        all_expected_calls = [expected_git_fetch_call]
-        assert run_process_mock.call_count == len(all_expected_calls)
-        run_process_mock.assert_has_calls(calls=all_expected_calls, any_order=True)
         observed_git_info = GitInfo.from_yaml(git_info_yaml_dest.read_text())
         expected_git_info = GitInfo(branch=branch_name, tags=tags)
         assert observed_git_info == expected_git_info

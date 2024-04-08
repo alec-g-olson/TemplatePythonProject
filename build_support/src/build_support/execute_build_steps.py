@@ -52,8 +52,6 @@ class CliTaskInfo:
         self,
         non_docker_project_root: Path,
         docker_project_root: Path,
-        local_user_uid: int,
-        local_user_gid: int,
     ) -> TaskNode:
         """Builds a task node based on the contents of this dataclass.
 
@@ -62,10 +60,6 @@ class CliTaskInfo:
                 machine.
             docker_project_root (Path): Path to this project's root when running
                 in docker containers.
-            local_user_uid (int): The local user's users id, used when tasks need to be
-                run by the local user.
-            local_user_gid (int): The local user's group id, used when tasks need to be
-                run by the local user.
 
         Returns:
             TaskNode: The task node based on the contents of this dataclass.
@@ -74,8 +68,6 @@ class CliTaskInfo:
         basic_task_info = BasicTaskInfo(
             non_docker_project_root=non_docker_project_root,
             docker_project_root=docker_project_root,
-            local_user_uid=local_user_uid,
-            local_user_gid=local_user_gid,
         )
 
         if self.subproject_context and issubclass(self.task_node, PerSubprojectTask):
@@ -226,8 +218,6 @@ def run_main(args: Namespace) -> None:
         CLI_ARG_TO_TASK[arg].get_task_node(
             non_docker_project_root=args.non_docker_project_root,
             docker_project_root=args.docker_project_root,
-            local_user_uid=args.user_id,
-            local_user_gid=args.group_id,
         )
         for arg in args.build_tasks
     ]

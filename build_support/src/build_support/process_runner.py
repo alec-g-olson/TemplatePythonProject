@@ -3,8 +3,6 @@
 import itertools
 import sys
 from enum import Enum
-from os import environ
-from pwd import getpwuid
 
 # The purpose of this module is to make subprocess calls
 from subprocess import PIPE, Popen  # nosec: B404
@@ -20,8 +18,6 @@ class ProcessVerbosity(Enum):
 
 def run_piped_processes(
     processes: list[list[Any]],
-    user_uid: int = 0,
-    user_gid: int = 0,
     verbosity: ProcessVerbosity = ProcessVerbosity.ALL,
 ) -> None:
     """Runs piped processes as they would be on the command line.
@@ -29,10 +25,6 @@ def run_piped_processes(
     Args:
         processes (list[list[Any]]): The list of process arguments that will be run
             sequentially.
-        user_uid (int): The local user's user ID, used to run the process as
-            the local user. Defaults to 0, runs as root.
-        user_gid (int): The local user's group ID, used to run the process as
-            the local user. Defaults to 0, runs as root.
         verbosity (ProcessVerbosity): Should the process be run silently.
 
     Returns:
@@ -43,19 +35,15 @@ def run_piped_processes(
     command_as_str = " | ".join(process_strs)
     if verbosity != ProcessVerbosity.SILENT:
         print(command_as_str, flush=True)  # noqa: T201
-    p1 = build_popen_maybe_local_user(
+    p1 = build_popen(
         args=args_list[0],
-        user_uid=user_uid,
-        user_gid=user_gid,
     )
     popen_processes = [p1]
     for args in args_list[1:]:
         last_process = popen_processes[-1]
-        next_process = build_popen_maybe_local_user(
+        next_process = build_popen(
             args=args,
             stdin=last_process.stdout,
-            user_uid=user_uid,
-            user_gid=user_gid,
         )
         popen_processes.append(next_process)
     output, error = popen_processes[-1].communicate()
@@ -71,18 +59,12 @@ def run_piped_processes(
 
 def get_output_of_process(
     args: list[Any],
-    user_uid: int = 0,
-    user_gid: int = 0,
     verbosity: ProcessVerbosity = ProcessVerbosity.ALL,
 ) -> str:
     """Runs a process and gets the output.
 
     Args:
         args (list[Any]): A list of arguments that could be run on the command line.
-        user_uid (int): The local user's user ID, used to run the process as
-            the local user. Defaults to 0, runs as root.
-        user_gid (int): The local user's group ID, used to run the process as
-            the local user. Defaults to 0, runs as root.
         verbosity (ProcessVerbosity): Should the process be run silently.
 
     Returns:
@@ -90,8 +72,6 @@ def get_output_of_process(
     """
     output = run_process(
         args=args,
-        user_uid=user_uid,
-        user_gid=user_gid,
         verbosity=verbosity,
     )
     return output.decode("utf-8").strip()
@@ -99,18 +79,12 @@ def get_output_of_process(
 
 def run_process(
     args: list[Any],
-    user_uid: int = 0,
-    user_gid: int = 0,
     verbosity: ProcessVerbosity = ProcessVerbosity.ALL,
 ) -> bytes:
     """Runs a process.
 
     Args:
         args (list[Any]): A list of arguments that could be run on the command line.
-        user_uid (int): The local user's user ID, used to run the process as
-            the local user. Defaults to 0, runs as root.
-        user_gid (int): The local user's group ID, used to run the process as
-            the local user. Defaults to 0, runs as root.
         verbosity (ProcessVerbosity): Should the process be run silently.
 
     Returns:
@@ -120,10 +94,8 @@ def run_process(
     command_as_str = " ".join(str_args)
     if verbosity != ProcessVerbosity.SILENT:
         print(command_as_str, flush=True)  # noqa: T201
-    p = build_popen_maybe_local_user(
+    p = build_popen(
         args=str_args,
-        user_uid=user_uid,
-        user_gid=user_gid,
     )
     output, error = p.communicate()
     return_code = p.returncode
@@ -137,37 +109,25 @@ def run_process(
     return output
 
 
-def build_popen_maybe_local_user(
+def build_popen(
     args: list[str],
     stdin: IO | int | None = None,
-    user_uid: int = 0,
-    user_gid: int = 0,
 ) -> Popen:
     """Creates a Popes instance based on the arguments.
 
     Args:
         args (list[str]): The args to pass to the new process.
         stdin (IO | int | None): The stdin to use with the new process.
-        user_uid (int | None): The user's OS user ID.
-        user_gid (int | None): The user's OS group ID.
 
     Returns:
         Popen: A Popen instance with parameters set by the inputs to this function.
     """
-    env = None
-    if user_uid or user_gid:
-        env = environ.copy()
-        env["HOME"] = f"/home/{getpwuid(user_uid).pw_name}/"
-
     # As this is currently setup, commands are never injected by external users
     return Popen(  # nosec: B603
         args=args,
         stdin=stdin,
         stdout=PIPE,
         stderr=PIPE,
-        user=user_uid if user_uid else None,
-        group=user_gid if user_gid else None,
-        env=env,
     )
 
 

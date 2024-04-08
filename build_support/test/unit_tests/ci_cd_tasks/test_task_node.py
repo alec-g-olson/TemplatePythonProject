@@ -13,14 +13,10 @@ from build_support.ci_cd_vars.subproject_structure import (
 
 expected_non_docker_project_root = Path("/non/docker/project/root")
 expected_docker_project_root = Path("/docker/project/root")
-expected_local_user_uid = 42
-expected_local_user_gid = 10
 
 expected_basic_task_info = BasicTaskInfo(
     non_docker_project_root=expected_non_docker_project_root,
     docker_project_root=expected_docker_project_root,
-    local_user_uid=expected_local_user_uid,
-    local_user_gid=expected_local_user_gid,
 )
 
 
@@ -64,8 +60,6 @@ def test_task_init() -> None:
     mock_task = build_mock_basic_task(task_name=task_name, required_mock_tasks=[])
     assert mock_task.non_docker_project_root == expected_non_docker_project_root
     assert mock_task.docker_project_root == expected_docker_project_root
-    assert mock_task.local_user_uid == expected_local_user_uid
-    assert mock_task.local_user_gid == expected_local_user_gid
 
 
 def test_task_required_tasks() -> None:
@@ -156,8 +150,6 @@ def test_subproject_task_init(subproject_context: SubprojectContext) -> None:
     )
     assert mock_task.non_docker_project_root == expected_non_docker_project_root
     assert mock_task.docker_project_root == expected_docker_project_root
-    assert mock_task.local_user_uid == expected_local_user_uid
-    assert mock_task.local_user_gid == expected_local_user_gid
     assert mock_task.subproject_context == subproject_context
     assert mock_task.subproject == get_python_subproject(
         subproject_context=subproject_context,

@@ -17,8 +17,6 @@ class BasicTaskInfo:
 
     non_docker_project_root: Path
     docker_project_root: Path
-    local_user_uid: int
-    local_user_gid: int
 
 
 class TaskNode(ABC):
@@ -26,8 +24,6 @@ class TaskNode(ABC):
 
     non_docker_project_root: Path
     docker_project_root: Path
-    local_user_uid: int
-    local_user_gid: int
 
     def __init__(self, basic_task_info: BasicTaskInfo) -> None:
         """Init method for TaskNode.
@@ -40,8 +36,6 @@ class TaskNode(ABC):
         """
         self.non_docker_project_root = basic_task_info.non_docker_project_root
         self.docker_project_root = basic_task_info.docker_project_root
-        self.local_user_uid = basic_task_info.local_user_uid
-        self.local_user_gid = basic_task_info.local_user_gid
 
     def get_basic_task_info(self) -> BasicTaskInfo:
         """Get the basic info used to run this task.
@@ -52,8 +46,6 @@ class TaskNode(ABC):
         return BasicTaskInfo(
             non_docker_project_root=self.non_docker_project_root,
             docker_project_root=self.docker_project_root,
-            local_user_uid=self.local_user_uid,
-            local_user_gid=self.local_user_gid,
         )
 
     def task_label(self) -> str:

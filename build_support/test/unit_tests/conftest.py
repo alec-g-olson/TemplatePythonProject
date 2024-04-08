@@ -12,7 +12,6 @@ from build_support.ci_cd_vars.project_structure import (
 
 mock_project_versions = ["0.0.0", "0.0.1", "0.1.0", "1.0.0", "1.0.0-dev.1"]
 mock_project_names = ["project_one", "project_two"]
-mock_local_user_ids = [(1, 20), (1337, 42)]
 
 
 @pytest.fixture(params=mock_project_versions)
@@ -27,31 +26,15 @@ def project_name(request: SubRequest) -> str:
     return request.param
 
 
-@pytest.fixture(params=mock_local_user_ids)
-def local_uid(request: SubRequest) -> str:
-    """The name of the local user."""
-    return request.param[0]
-
-
-@pytest.fixture(params=mock_local_user_ids)
-def local_gid(request: SubRequest) -> str:
-    """The name of the local user."""
-    return request.param[1]
-
-
 @pytest.fixture()
 def basic_task_info(
     mock_project_root: Path,
     docker_project_root: Path,
-    local_uid: int,
-    local_gid: int,
 ) -> BasicTaskInfo:
     """Provides basic task info for setting up and testing tasks."""
     return BasicTaskInfo(
         non_docker_project_root=mock_project_root,
         docker_project_root=docker_project_root,
-        local_user_uid=local_uid,
-        local_user_gid=local_gid,
     )
 
 

@@ -73,7 +73,7 @@ class PushTags(TaskNode):
         is_dev_version = is_dev_project_version(project_version=current_version)
         if currently_on_main ^ is_dev_version:
             commit_changes_if_diff(
-                commit_message=(f"Committing staged changes for {current_version}"),
+                commit_message=f"Committing staged changes for {current_version}",
                 project_root=self.docker_project_root,
             )
             tag_current_commit_and_push(

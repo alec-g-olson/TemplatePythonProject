@@ -74,6 +74,20 @@ def get_local_tags(project_root: Path) -> list[str]:
     return [tag.name for tag in get_git_repo(project_root=project_root).tags]
 
 
+def git_add_all(project_root: Path) -> Head:
+    """Adds all files te the current git index.
+
+    Args:
+        project_root (Path): Path to this project's root.
+
+    Returns:
+        Head: The active commit/branch of the git repo.
+    """
+    repo = get_git_repo(project_root=project_root)
+    repo.git.add(update=True)
+    return repo.active_branch
+
+
 def get_git_diff(project_root: Path) -> DiffIndex:
     """Gets the result of `git diff`.  If not empty, there are unstaged changes.
 
@@ -83,7 +97,7 @@ def get_git_diff(project_root: Path) -> DiffIndex:
     Returns:
         str: The results of running `git diff`.
     """
-    return get_git_head(project_root=project_root).commit.diff()
+    return git_add_all(project_root=project_root).commit.diff()
 
 
 def commit_changes_if_diff(commit_message: str, project_root: Path) -> None:
@@ -105,7 +119,7 @@ def commit_changes_if_diff(commit_message: str, project_root: Path) -> None:
             )
             raise RuntimeError(msg)
         repo = get_git_repo(project_root=project_root)
-        repo.git.add(update=True)
+        git_add_all(project_root=project_root)
         repo.index.commit(commit_message)
         repo.remote().push()
 

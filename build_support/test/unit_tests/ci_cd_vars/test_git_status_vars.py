@@ -12,6 +12,7 @@ from build_support.ci_cd_vars.git_status_vars import (
     get_git_diff,
     get_git_head,
     get_local_tags,
+    tag_current_commit_and_push,
 )
 
 
@@ -170,3 +171,26 @@ def test_run_push_tags_allowed_with_diff_not_main(
         commit_message=valid_commit_message, project_root=mock_git_folder
     )
     assert initial_commit_sha != mock_git_branch.commit.binsha
+
+
+def test_tag_current_commit_and_push(
+    mock_git_folder: Path, mock_git_repo: Repo, mock_git_branch: Head
+) -> None:
+    mock_initial_git_file = mock_git_folder.joinpath("first_file.txt")
+    mock_initial_git_file.write_text(
+        mock_initial_git_file.read_text() + "some extra text"
+    )
+    diff_file = mock_git_folder.joinpath("diff_file")
+    diff_file.touch()
+    mock_git_repo.index.add([diff_file])
+    mock_git_repo.index.commit("commit_that_will_be_tagged")
+    tag = "0.0.1"
+    assert not any(
+        tag for tag in mock_git_repo.tags if tag.commit == mock_git_branch.commit
+    )
+    tag_current_commit_and_push(tag=tag, project_root=mock_git_folder)
+    commit_tags = [
+        tag for tag in mock_git_repo.tags if tag.commit == mock_git_branch.commit
+    ]
+    assert len(commit_tags) == 1
+    assert commit_tags[0].name == tag

@@ -6,8 +6,6 @@ Attributes:
 """
 
 import re
-from grp import getgrgid
-from pwd import getpwuid
 
 from pydantic import BaseModel, Field
 from yaml import safe_dump, safe_load
@@ -23,7 +21,7 @@ from build_support.ci_cd_vars.git_status_vars import (
     get_local_tags,
 )
 from build_support.ci_cd_vars.project_setting_vars import get_pulumi_version
-from build_support.process_runner import concatenate_args, run_process
+from build_support.process_runner import run_process
 
 
 class SetupDevEnvironment(TaskNode):
@@ -51,10 +49,6 @@ class SetupDevEnvironment(TaskNode):
                     "--build-arg": [
                         "DOCKER_REMOTE_PROJECT_ROOT="
                         + str(self.docker_project_root.absolute()),
-                        f"CURRENT_USER={getpwuid(self.local_user_uid).pw_name}",
-                        f"CURRENT_GROUP={getgrgid(self.local_user_gid).gr_name}",
-                        f"CURRENT_USER_ID={self.local_user_uid}",
-                        f"CURRENT_GROUP_ID={self.local_user_gid}",
                     ],
                 },
             ),
@@ -216,11 +210,6 @@ class GetGitInfo(TaskNode):
         Returns:
             None
         """
-        run_process(
-            args=concatenate_args(args=["git", "fetch"]),
-            user_uid=self.local_user_uid,
-            user_gid=self.local_user_gid,
-        )
         get_git_info_yaml(project_root=self.docker_project_root).write_text(
             GitInfo(
                 branch=get_current_branch_name(project_root=self.docker_project_root),
