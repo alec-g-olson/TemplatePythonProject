@@ -19,6 +19,7 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
 from build_support.ci_cd_vars.git_status_vars import (
     get_current_branch_name,
     get_local_tags,
+    git_fetch,
 )
 from build_support.ci_cd_vars.project_setting_vars import get_pulumi_version
 from build_support.process_runner import run_process
@@ -41,6 +42,12 @@ class SetupDevEnvironment(TaskNode):
         Returns:
             None
         """
+        git_fetch(
+            project_root=self.docker_project_root,
+            local_uid=self.local_uid,
+            local_gid=self.local_gid,
+            local_user_env=self.local_user_env,
+        )
         run_process(
             args=get_docker_build_command(
                 docker_project_root=self.docker_project_root,

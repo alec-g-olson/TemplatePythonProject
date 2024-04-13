@@ -43,20 +43,6 @@ from build_support.execute_build_steps import (
 from build_support.new_project_setup.setup_new_project import MakeProjectFromTemplate
 from build_support.process_runner import ProcessVerbosity, concatenate_args
 
-mock_local_user_ids = [(1, 20), (1337, 42)]
-
-
-@pytest.fixture(params=mock_local_user_ids)
-def local_uid(request: SubRequest) -> str:
-    """The name of the local user."""
-    return request.param[0]
-
-
-@pytest.fixture(params=mock_local_user_ids)
-def local_gid(request: SubRequest) -> str:
-    """The name of the local user."""
-    return request.param[1]
-
 
 def test_constants_not_changed_by_accident() -> None:
     assert CLI_ARG_TO_TASK.copy() == {
@@ -306,17 +292,12 @@ def test_parse_args_no_non_docker_project_root() -> None:
         )
 
 
-def test_run_main_success(
-    mock_project_root: Path,
-    docker_project_root: Path,
-    local_uid: int,
-    local_gid: int,
-) -> None:
+def test_run_main_success(basic_task_info: BasicTaskInfo) -> None:
     args = Namespace(
-        non_docker_project_root=mock_project_root,
-        docker_project_root=docker_project_root,
-        user_id=local_uid,
-        group_id=local_gid,
+        non_docker_project_root=basic_task_info.non_docker_project_root,
+        docker_project_root=basic_task_info.docker_project_root,
+        user_id=basic_task_info.local_uid,
+        group_id=basic_task_info.local_gid,
         build_tasks=["clean"],
     )
     with (
@@ -330,15 +311,18 @@ def test_run_main_success(
             tasks=[
                 Clean(
                     basic_task_info=BasicTaskInfo(
-                        non_docker_project_root=mock_project_root,
-                        docker_project_root=docker_project_root,
+                        non_docker_project_root=basic_task_info.non_docker_project_root,
+                        docker_project_root=basic_task_info.docker_project_root,
+                        local_uid=basic_task_info.local_uid,
+                        local_gid=basic_task_info.local_gid,
+                        local_user_env=basic_task_info.local_user_env,
                     )
                 )
             ],
         )
         mock_fix_permissions.assert_called_once_with(
-            local_user_uid=local_uid,
-            local_user_gid=local_gid,
+            local_user_uid=basic_task_info.local_uid,
+            local_user_gid=basic_task_info.local_gid,
         )
 
 
@@ -374,18 +358,13 @@ def test_run_main_bad_cli_task(
             run_main(args)
 
 
-def test_run_main_exception(
-    mock_project_root: Path,
-    docker_project_root: Path,
-    local_uid: int,
-    local_gid: int,
-) -> None:
+def test_run_main_exception(basic_task_info: BasicTaskInfo) -> None:
     all_task_list = list(CLI_ARG_TO_TASK.keys())
     args = Namespace(
-        non_docker_project_root=mock_project_root,
-        docker_project_root=docker_project_root,
-        user_id=local_uid,
-        group_id=local_gid,
+        non_docker_project_root=basic_task_info.non_docker_project_root,
+        docker_project_root=basic_task_info.docker_project_root,
+        user_id=basic_task_info.local_uid,
+        group_id=basic_task_info.local_gid,
         build_tasks=all_task_list,
     )
     with (
@@ -401,24 +380,18 @@ def test_run_main_exception(
         mock_run_tasks.side_effect = error_to_raise
         run_main(args)
         requested_tasks = [
-            CLI_ARG_TO_TASK[arg].get_task_node(
-                non_docker_project_root=mock_project_root,
-                docker_project_root=docker_project_root,
-            )
+            CLI_ARG_TO_TASK[arg].get_task_node(basic_task_info=basic_task_info)
             for arg in args.build_tasks
         ]
         mock_run_tasks.assert_called_once_with(tasks=requested_tasks)
         mock_print.assert_called_once_with(error_to_raise)
         mock_fix_permissions.assert_called_once_with(
-            local_user_uid=local_uid,
-            local_user_gid=local_gid,
+            local_user_uid=basic_task_info.local_uid,
+            local_user_gid=basic_task_info.local_gid,
         )
 
 
-def test_get_standard_task_node(
-    mock_project_root: Path,
-    docker_project_root: Path,
-) -> None:
+def test_get_standard_task_node(basic_task_info: BasicTaskInfo) -> None:
     class TestTaskNode(TaskNode):
         def required_tasks(self) -> list[TaskNode]:
             return []  # pragma: no cover - never called, just a test class
@@ -427,21 +400,12 @@ def test_get_standard_task_node(
             """Does nothing.  Pycharm doesn't like 'pass' for some reason."""
 
     cli_task_info = CliTaskInfo(task_node=TestTaskNode)
-    assert cli_task_info.get_task_node(
-        non_docker_project_root=mock_project_root,
-        docker_project_root=docker_project_root,
-    ) == TestTaskNode(
-        basic_task_info=BasicTaskInfo(
-            non_docker_project_root=mock_project_root,
-            docker_project_root=docker_project_root,
-        )
+    assert cli_task_info.get_task_node(basic_task_info=basic_task_info) == TestTaskNode(
+        basic_task_info=basic_task_info
     )
 
 
-def test_get_subproject_specific_task_node(
-    mock_project_root: Path,
-    docker_project_root: Path,
-) -> None:
+def test_get_subproject_specific_task_node(basic_task_info: BasicTaskInfo) -> None:
     class TestSubprojectSpecificTaskNode(PerSubprojectTask):
         def required_tasks(self) -> list[TaskNode]:
             return []  # pragma: no cover - never called, just a test class
@@ -454,12 +418,8 @@ def test_get_subproject_specific_task_node(
         subproject_context=SubprojectContext.PYPI,
     )
     assert cli_task_info.get_task_node(
-        non_docker_project_root=mock_project_root,
-        docker_project_root=docker_project_root,
+        basic_task_info=basic_task_info
     ) == TestSubprojectSpecificTaskNode(
-        basic_task_info=BasicTaskInfo(
-            non_docker_project_root=mock_project_root,
-            docker_project_root=docker_project_root,
-        ),
+        basic_task_info=basic_task_info,
         subproject_context=SubprojectContext.PYPI,
     )

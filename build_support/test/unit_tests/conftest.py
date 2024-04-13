@@ -1,4 +1,6 @@
+from os import environ
 from pathlib import Path
+from pwd import getpwuid
 from typing import Any
 
 import pytest
@@ -12,6 +14,7 @@ from build_support.ci_cd_vars.project_structure import (
 
 mock_project_versions = ["0.0.0", "0.0.1", "0.1.0", "1.0.0", "1.0.0-dev.1"]
 mock_project_names = ["project_one", "project_two"]
+mock_local_user_ids = [(0, 0), (2, 1)]
 
 
 @pytest.fixture(params=mock_project_versions)
@@ -26,15 +29,42 @@ def project_name(request: SubRequest) -> str:
     return request.param
 
 
+@pytest.fixture(params=mock_local_user_ids)
+def local_uid(request: SubRequest) -> str:
+    """The name of the local user."""
+    return request.param[0]
+
+
+@pytest.fixture(params=mock_local_user_ids)
+def local_gid(request: SubRequest) -> str:
+    """The name of the local user."""
+    return request.param[1]
+
+
+@pytest.fixture()
+def local_user_env(local_uid: int, local_gid: int) -> dict[str, str] | None:
+    if local_uid or local_gid:
+        env = environ.copy()
+        env["HOME"] = f"/home/{getpwuid(local_uid).pw_name}/"
+        return env
+    return None
+
+
 @pytest.fixture()
 def basic_task_info(
     mock_project_root: Path,
     docker_project_root: Path,
+    local_uid: int,
+    local_gid: int,
+    local_user_env: dict[str, str],
 ) -> BasicTaskInfo:
     """Provides basic task info for setting up and testing tasks."""
     return BasicTaskInfo(
         non_docker_project_root=mock_project_root,
         docker_project_root=docker_project_root,
+        local_uid=local_uid,
+        local_gid=local_gid,
+        local_user_env=local_user_env,
     )
 
 

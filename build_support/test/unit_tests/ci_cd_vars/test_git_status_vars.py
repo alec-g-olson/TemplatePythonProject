@@ -12,6 +12,7 @@ from build_support.ci_cd_vars.git_status_vars import (
     get_git_diff,
     get_git_head,
     get_local_tags,
+    git_fetch,
     tag_current_commit_and_push,
 )
 
@@ -96,6 +97,19 @@ def test_current_branch_is_main(mock_git_folder: Path) -> None:
 @pytest.mark.usefixtures("mock_git_branch")
 def test_current_branch_is_not_main(mock_git_folder: Path) -> None:
     assert not current_branch_is_main(project_root=mock_git_folder)
+
+
+def test_git_fetch(
+    mock_remote_git_repo: Repo, mock_git_repo: Repo, mock_git_folder: Path
+) -> None:
+    assert len(mock_git_repo.tags) == 0
+    assert len(mock_remote_git_repo.tags) == 0
+    mock_remote_git_repo.create_tag("RemoteTag")
+    assert len(mock_git_repo.tags) == 0
+    assert len(mock_remote_git_repo.tags) == 1
+    git_fetch(project_root=mock_git_folder)
+    assert len(mock_git_repo.tags) == 1
+    assert len(mock_remote_git_repo.tags) == 1
 
 
 def test_get_local_tags(

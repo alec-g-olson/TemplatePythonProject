@@ -17,6 +17,9 @@ expected_docker_project_root = Path("/docker/project/root")
 expected_basic_task_info = BasicTaskInfo(
     non_docker_project_root=expected_non_docker_project_root,
     docker_project_root=expected_docker_project_root,
+    local_uid=10,
+    local_gid=2,
+    local_user_env=None,
 )
 
 

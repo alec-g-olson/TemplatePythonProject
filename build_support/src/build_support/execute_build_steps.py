@@ -6,7 +6,9 @@ Attributes:
 
 from argparse import ArgumentParser, Namespace
 from dataclasses import dataclass
+from os import environ
 from pathlib import Path
+from pwd import getpwuid
 
 from build_support.ci_cd_tasks.build_tasks import (
     BuildAll,
@@ -50,26 +52,17 @@ class CliTaskInfo:
 
     def get_task_node(
         self,
-        non_docker_project_root: Path,
-        docker_project_root: Path,
+        basic_task_info: BasicTaskInfo,
     ) -> TaskNode:
         """Builds a task node based on the contents of this dataclass.
 
         Args:
-            non_docker_project_root (Path): Path to this project's root on the local
-                machine.
-            docker_project_root (Path): Path to this project's root when running
-                in docker containers.
+            basic_task_info (BasicTaskInfo): The information required to setup a task.
 
         Returns:
             TaskNode: The task node based on the contents of this dataclass.
 
         """
-        basic_task_info = BasicTaskInfo(
-            non_docker_project_root=non_docker_project_root,
-            docker_project_root=docker_project_root,
-        )
-
         if self.subproject_context and issubclass(self.task_node, PerSubprojectTask):
             return self.task_node(
                 basic_task_info=basic_task_info,
@@ -214,11 +207,21 @@ def run_main(args: Namespace) -> None:
     Returns:
         None
     """
+    local_uid = args.user_id
+    local_gid = args.group_id
+    local_user_env = None
+    if local_uid or local_gid:
+        env = environ.copy()
+        env["HOME"] = f"/home/{getpwuid(local_uid).pw_name}/"
+    basic_task_info = BasicTaskInfo(
+        non_docker_project_root=args.non_docker_project_root,
+        docker_project_root=args.docker_project_root,
+        local_uid=args.user_id,
+        local_gid=args.group_id,
+        local_user_env=local_user_env,
+    )
     requested_tasks = [
-        CLI_ARG_TO_TASK[arg].get_task_node(
-            non_docker_project_root=args.non_docker_project_root,
-            docker_project_root=args.docker_project_root,
-        )
+        CLI_ARG_TO_TASK[arg].get_task_node(basic_task_info=basic_task_info)
         for arg in args.build_tasks
     ]
     try:

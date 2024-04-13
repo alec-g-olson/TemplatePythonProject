@@ -5,8 +5,10 @@ Attributes:
 """
 
 from pathlib import Path
+from typing import Iterable
 
-from git import DiffIndex, Head, Repo
+from git import DiffIndex, FetchInfo, Head, Repo
+from git.cmd import execute_kwargs
 
 
 def get_git_repo(project_root: Path) -> Repo:
@@ -60,6 +62,44 @@ def current_branch_is_main(project_root: Path) -> bool:
     return get_current_branch_name(project_root=project_root) == MAIN_BRANCH_NAME
 
 
+def _monkeypatch_execute_kwargs() -> None:
+    """Monkey patches some execute kwargs so we can run git as a local user in docker.
+
+    Returns:
+        None
+    """
+    execute_kwargs.add("user")
+    execute_kwargs.add("group")
+
+
+def git_fetch(
+    project_root: Path,
+    local_uid: int = 0,
+    local_gid: int = 0,
+    local_user_env: dict[str, str] | None = None,
+) -> Iterable[FetchInfo]:
+    """Fetches from the remote repo.
+
+    Args:
+        project_root (Path): Path to this project's root.
+        local_uid (int): The local user's users id, allows running git as local user
+            from inside a docker container.
+        local_gid (int): The local user's group id, allows running git as local user
+            from inside a docker container.
+        local_user_env (dict[str, str] | None): The environment variables to use
+            when running git commands as the local user from inside a docker container.
+
+    Returns:
+        Iterable[FetchInfo]: The name of the active commit/branch of the git repo.
+    """
+    _monkeypatch_execute_kwargs()
+    return (
+        get_git_repo(project_root=project_root)
+        .remote()
+        .fetch(user=local_uid, group=local_gid, env=local_user_env)
+    )
+
+
 def get_local_tags(project_root: Path) -> list[str]:
     """Gets the tags on your local git instance.
 
@@ -100,13 +140,25 @@ def get_git_diff(project_root: Path) -> DiffIndex:
     return git_add_all(project_root=project_root).commit.diff()
 
 
-def commit_changes_if_diff(commit_message: str, project_root: Path) -> None:
+def commit_changes_if_diff(
+    commit_message: str,
+    project_root: Path,
+    local_uid: int = 0,
+    local_gid: int = 0,
+    local_user_env: dict[str, str] | None = None,
+) -> None:
     """Commits changes to the active branch if there are any uncommitted changes.
 
     Args:
         commit_message (str): The message that will be put on the commit if the commit
             is successful.
         project_root (Path): Path to this project's root.
+        local_uid (int): The local user's users id, allows running git as local user
+            from inside a docker container.
+        local_gid (int): The local user's group id, allows running git as local user
+            from inside a docker container.
+        local_user_env (dict[str, str] | None): The environment variables to use
+            when running git commands as the local user from inside a docker container.
 
     Returns:
         None
@@ -121,19 +173,33 @@ def commit_changes_if_diff(commit_message: str, project_root: Path) -> None:
         repo = get_git_repo(project_root=project_root)
         git_add_all(project_root=project_root)
         repo.index.commit(commit_message)
-        repo.remote().push()
+        _monkeypatch_execute_kwargs()
+        repo.remote().push(user=local_uid, group=local_gid, env=local_user_env)
 
 
-def tag_current_commit_and_push(tag: str, project_root: Path) -> None:
+def tag_current_commit_and_push(
+    tag: str,
+    project_root: Path,
+    local_uid: int = 0,
+    local_gid: int = 0,
+    local_user_env: dict[str, str] | None = None,
+) -> None:
     """Tags the working commit with the supplied tag, and pushes to remote.
 
     Args:
         tag (str): The message that the working commit will be tagged with.
         project_root (Path): Path to this project's root.
+        local_uid (int): The local user's users id, allows running git as local user
+            from inside a docker container.
+        local_gid (int): The local user's group id, allows running git as local user
+            from inside a docker container.
+        local_user_env (dict[str, str] | None): The environment variables to use
+            when running git commands as the local user from inside a docker container.
 
     Returns:
         None
     """
     repo = get_git_repo(project_root=project_root)
     repo.create_tag(tag)
-    repo.remote().push(tag)
+    _monkeypatch_execute_kwargs()
+    repo.remote().push(tag, user=local_uid, group=local_gid, env=local_user_env)

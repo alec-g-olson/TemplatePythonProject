@@ -47,103 +47,98 @@ python build_support/src/build_support/report_build_var.py \
 $(SHARED_BUILD_VARS) --build-variable-to-report
 
 .PHONY: push
-push: git_fetch
+push: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) push
 
 .PHONY: push_pypi
-push_pypi: git_fetch
+push_pypi: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) push_pypi
 
 .PHONY: build
-build: git_fetch
+build: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) build
 
 .PHONY: build_docs
-build_docs: git_fetch
+build_docs: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) build_docs
 
 .PHONY: build_pypi
-build_pypi: git_fetch
+build_pypi: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) build_pypi
 
 .PHONY: test
-test: git_fetch
+test: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) test
 
 .PHONY: apply_unsafe_ruff_fixes
-apply_unsafe_ruff_fixes: git_fetch
+apply_unsafe_ruff_fixes: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) apply_unsafe_ruff_fixes
 
 .PHONY: list_unsafe_ruff_fixes
-list_unsafe_ruff_fixes: git_fetch
+list_unsafe_ruff_fixes: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) list_unsafe_ruff_fixes
 
 .PHONY: ruff_fix_safe
-ruff_fix_safe: git_fetch
+ruff_fix_safe: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) ruff_fix_safe
 
 .PHONY: lint
-lint: git_fetch
+lint: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) lint
 
 .PHONY: test_build_support
-test_build_support: git_fetch
+test_build_support: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) test_build_support
 
 .PHONY: test_pypi
-test_pypi: git_fetch
+test_pypi: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) test_pypi
 
 .PHONY: test_style
-test_style: git_fetch
+test_style: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) test_style
 
 .PHONY: open_build_docker_shell
-open_build_docker_shell: git_fetch
+open_build_docker_shell: setup_build_env
 	$(INTERACTIVE_DOCKER_BUILD_ENV_COMMAND) /bin/bash
 
 .PHONY: open_dev_docker_shell
-open_dev_docker_shell: git_fetch
+open_dev_docker_shell: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) setup_dev_env
 	$(eval INTERACTIVE_DEV_COMMAND := $(shell $(GET_BUILD_VAR_COMMAND) interactive-dev-docker-command))
 	$(INTERACTIVE_DEV_COMMAND) /bin/bash
 
 .PHONY: open_prod_docker_shell
-open_prod_docker_shell: git_fetch
+open_prod_docker_shell: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) setup_prod_env
 	$(eval INTERACTIVE_PROD_COMMAND := $(shell $(GET_BUILD_VAR_COMMAND) interactive-prod-docker-command))
 	$(INTERACTIVE_PROD_COMMAND) /bin/bash
 
 .PHONY: open_pulumi_docker_shell
-open_pulumi_docker_shell: git_fetch
+open_pulumi_docker_shell: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) setup_pulumi_env
 	$(eval INTERACTIVE_PULUMI_COMMAND := $(shell $(GET_BUILD_VAR_COMMAND) interactive-pulumi-docker-command))
 	$(INTERACTIVE_PULUMI_COMMAND) /bin/bash
 
 .PHONY: clean
-clean: git_fetch
+clean: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) clean
 
 .PHONY: make_new_project
-make_new_project: git_fetch
+make_new_project: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) make_new_project
 
 .PHONY: setup_dev_env
-setup_dev_env: git_fetch
+setup_dev_env: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) setup_dev_env
 
 .PHONY: setup_prod_env
-setup_prod_env: git_fetch
+setup_prod_env: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) setup_prod_env
 
 .PHONY: setup_pulumi_env
-setup_pulumi_env: git_fetch
+setup_pulumi_env: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) setup_pulumi_env
-
-.PHONY: git_fetch
-git_fetch: setup_build_env
-	# This is really hard to do from within the docker container
-	git fetch
 
 .PHONY: setup_build_env
 setup_build_env:

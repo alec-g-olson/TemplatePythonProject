@@ -27,6 +27,9 @@ def build_mock_basic_task(
         basic_task_info=BasicTaskInfo(
             non_docker_project_root=Path("/root"),
             docker_project_root=Path("/root"),
+            local_uid=10,
+            local_gid=2,
+            local_user_env=None,
         )
     )
 

@@ -35,6 +35,9 @@ def test_run_build_dev_env(basic_task_info: BasicTaskInfo) -> None:
         patch(
             "build_support.ci_cd_tasks.env_setup_tasks.run_process",
         ) as run_process_mock,
+        patch(
+            "build_support.ci_cd_tasks.env_setup_tasks.git_fetch",
+        ) as git_fetch_mock,
     ):
         build_dev_env_args = get_docker_build_command(
             docker_project_root=basic_task_info.docker_project_root,
@@ -47,6 +50,12 @@ def test_run_build_dev_env(basic_task_info: BasicTaskInfo) -> None:
             },
         )
         SetupDevEnvironment(basic_task_info=basic_task_info).run()
+        git_fetch_mock.assert_called_once_with(
+            project_root=basic_task_info.docker_project_root,
+            local_uid=basic_task_info.local_uid,
+            local_gid=basic_task_info.local_gid,
+            local_user_env=basic_task_info.local_user_env,
+        )
         run_process_mock.assert_called_once_with(args=build_dev_env_args)
 
 
