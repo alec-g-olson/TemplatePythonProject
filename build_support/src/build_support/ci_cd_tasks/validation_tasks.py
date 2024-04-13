@@ -36,6 +36,7 @@ class ValidateAll(TaskNode):
         return [
             AllSubprojectUnitTests(basic_task_info=self.get_basic_task_info()),
             ValidatePythonStyle(basic_task_info=self.get_basic_task_info()),
+            AllSubprojectIntegrationTests(basic_task_info=self.get_basic_task_info()),
         ]
 
     def run(self) -> None:
@@ -269,13 +270,13 @@ class AllSubprojectUnitTests(TaskNode):
 
 
 class SubprojectUnitTests(PerSubprojectTask):
-    """Task for testing PyPi package."""
+    """Task for running unit tests in a single subproject."""
 
     def required_tasks(self) -> list[TaskNode]:
-        """Get the list of tasks to run before we can test the pypi package.
+        """Get the list of tasks to run before we can unit test the subproject.
 
         Returns:
-            list[TaskNode]: A list of tasks required to test the pypi package.
+            list[TaskNode]: A list of tasks required to unit test the subproject.
         """
         required_tasks: list[TaskNode] = [
             SetupDevEnvironment(basic_task_info=self.get_basic_task_info()),
@@ -287,7 +288,7 @@ class SubprojectUnitTests(PerSubprojectTask):
         return required_tasks
 
     def run(self) -> None:
-        """Tests the PyPi package.
+        """Runs unit tests for the subproject.
 
         Returns:
             None
@@ -377,3 +378,74 @@ class SubprojectUnitTests(PerSubprojectTask):
                         ],
                     ),
                 )
+
+
+class AllSubprojectIntegrationTests(TaskNode):
+    """Task for running integration tests in all subprojects."""
+
+    def required_tasks(self) -> list[TaskNode]:
+        """Gets the subproject specific integration test tasks.
+
+        Returns:
+            list[TaskNode]: All the subproject specific integration test tasks.
+        """
+        return [
+            SubprojectIntegrationTests(
+                basic_task_info=self.get_basic_task_info(),
+                subproject_context=subproject_context,
+            )
+            for subproject_context in get_sorted_subproject_contexts()
+        ]
+
+    def run(self) -> None:
+        """Does nothing.
+
+        Returns:
+            None
+        """
+
+
+class SubprojectIntegrationTests(PerSubprojectTask):
+    """Task for running integration tests in a single subproject."""
+
+    def required_tasks(self) -> list[TaskNode]:
+        """Get the list of tasks to run before we can integration test the subproject.
+
+        Returns:
+            list[TaskNode]: A list of tasks required to integration test the subproject.
+        """
+        return [
+            SubprojectUnitTests(
+                basic_task_info=self.get_basic_task_info(),
+                subproject_context=self.subproject_context,
+            )
+        ]
+
+    def run(self) -> None:
+        """Runs integration tests for the subproject.
+
+        Returns:
+            None
+        """
+        dev_docker_command = get_docker_command_for_image(
+            non_docker_project_root=self.non_docker_project_root,
+            docker_project_root=self.docker_project_root,
+            target_image=DockerTarget.DEV,
+        )
+        run_process(
+            args=concatenate_args(
+                args=[
+                    dev_docker_command,
+                    "pytest",
+                    "-n",
+                    THREADS_AVAILABLE,
+                    self.subproject.get_pytest_report_args(
+                        test_suite=PythonSubproject.TestSuite.INTEGRATION_TESTS
+                    ),
+                    self.subproject.get_src_dir(),
+                    self.subproject.get_test_suite_dir(
+                        test_suite=PythonSubproject.TestSuite.INTEGRATION_TESTS
+                    ),
+                ],
+            ),
+        )

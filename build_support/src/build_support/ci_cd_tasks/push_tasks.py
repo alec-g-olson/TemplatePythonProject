@@ -53,7 +53,7 @@ class PushTags(TaskNode):
         ]
 
     def run(self) -> None:
-        """Tags commit with versio and pushes tag to origin.
+        """Tags commit with version and pushes tag to origin.
 
         This task must be run before any other artifacts are pushed.  This is so
         if any artifacts are pushed anyone can easily find the commit they were

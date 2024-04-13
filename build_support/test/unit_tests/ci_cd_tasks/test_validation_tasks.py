@@ -8,7 +8,9 @@ from unit_tests.empty_function_check import is_an_empty_function
 from build_support.ci_cd_tasks.env_setup_tasks import GetGitInfo, SetupDevEnvironment
 from build_support.ci_cd_tasks.task_node import BasicTaskInfo
 from build_support.ci_cd_tasks.validation_tasks import (
+    AllSubprojectIntegrationTests,
     AllSubprojectUnitTests,
+    SubprojectIntegrationTests,
     SubprojectUnitTests,
     ValidateAll,
     ValidatePythonStyle,
@@ -40,6 +42,7 @@ def test_validate_all_requires(basic_task_info: BasicTaskInfo) -> None:
     assert ValidateAll(basic_task_info=basic_task_info).required_tasks() == [
         AllSubprojectUnitTests(basic_task_info=basic_task_info),
         ValidatePythonStyle(basic_task_info=basic_task_info),
+        AllSubprojectIntegrationTests(basic_task_info=basic_task_info),
     ]
 
 
@@ -530,3 +533,72 @@ def test_run_subproject_unit_tests_some_cached(
                 )
         assert skipped_tests == len(src_files_to_skip_tests_for)
         run_process_mock.assert_has_calls(calls=expected_run_process_calls)
+
+
+def test_all_subproject_integration_tests_requires(
+    basic_task_info: BasicTaskInfo,
+) -> None:
+    assert AllSubprojectIntegrationTests(
+        basic_task_info=basic_task_info
+    ).required_tasks() == [
+        SubprojectIntegrationTests(
+            basic_task_info=basic_task_info,
+            subproject_context=subproject_context,
+        )
+        for subproject_context in get_sorted_subproject_contexts()
+    ]
+
+
+def test_run_all_subproject_integration_tests(basic_task_info: BasicTaskInfo) -> None:
+    assert is_an_empty_function(
+        func=AllSubprojectIntegrationTests(basic_task_info=basic_task_info).run
+    )
+
+
+def test_subproject_integration_tests_requires(
+    basic_task_info: BasicTaskInfo, subproject_context: SubprojectContext
+) -> None:
+    assert SubprojectIntegrationTests(
+        basic_task_info=basic_task_info, subproject_context=subproject_context
+    ).required_tasks() == [
+        SubprojectUnitTests(
+            basic_task_info=basic_task_info, subproject_context=subproject_context
+        )
+    ]
+
+
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
+def test_run_subproject_integration_tests_requires(
+    basic_task_info: BasicTaskInfo, subproject_context: SubprojectContext
+) -> None:
+    subproject = get_python_subproject(
+        subproject_context=subproject_context,
+        project_root=basic_task_info.docker_project_root,
+    )
+    with patch(
+        "build_support.ci_cd_tasks.validation_tasks.run_process"
+    ) as run_process_mock:
+        SubprojectIntegrationTests(
+            basic_task_info=basic_task_info, subproject_context=subproject_context
+        ).run()
+        run_process_mock.assert_called_once_with(
+            args=concatenate_args(
+                args=[
+                    get_docker_command_for_image(
+                        non_docker_project_root=basic_task_info.non_docker_project_root,
+                        docker_project_root=basic_task_info.docker_project_root,
+                        target_image=DockerTarget.DEV,
+                    ),
+                    "pytest",
+                    "-n",
+                    THREADS_AVAILABLE,
+                    subproject.get_pytest_report_args(
+                        test_suite=PythonSubproject.TestSuite.INTEGRATION_TESTS
+                    ),
+                    subproject.get_src_dir(),
+                    subproject.get_test_suite_dir(
+                        test_suite=PythonSubproject.TestSuite.INTEGRATION_TESTS
+                    ),
+                ],
+            ),
+        )
