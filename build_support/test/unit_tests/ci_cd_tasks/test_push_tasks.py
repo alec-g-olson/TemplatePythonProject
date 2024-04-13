@@ -96,9 +96,16 @@ def test_run_push_tags_allowed(
         commit_changes_mock.assert_called_once_with(
             commit_message=f"Committing staged changes for {current_version}",
             project_root=basic_task_info.docker_project_root,
+            local_uid=basic_task_info.local_uid,
+            local_gid=basic_task_info.local_gid,
+            local_user_env=basic_task_info.local_user_env,
         )
         tag_and_push_mock.assert_called_once_with(
-            tag=current_version, project_root=basic_task_info.docker_project_root
+            tag=current_version,
+            project_root=basic_task_info.docker_project_root,
+            local_uid=basic_task_info.local_uid,
+            local_gid=basic_task_info.local_gid,
+            local_user_env=basic_task_info.local_user_env,
         )
 
 

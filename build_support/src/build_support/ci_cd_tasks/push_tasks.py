@@ -75,9 +75,16 @@ class PushTags(TaskNode):
             commit_changes_if_diff(
                 commit_message=f"Committing staged changes for {current_version}",
                 project_root=self.docker_project_root,
+                local_uid=self.local_uid,
+                local_gid=self.local_gid,
+                local_user_env=self.local_user_env,
             )
             tag_current_commit_and_push(
-                tag=current_version, project_root=self.docker_project_root
+                tag=current_version,
+                project_root=self.docker_project_root,
+                local_uid=self.local_uid,
+                local_gid=self.local_gid,
+                local_user_env=self.local_user_env,
             )
         else:
             current_branch = get_current_branch_name(

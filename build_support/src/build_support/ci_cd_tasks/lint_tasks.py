@@ -154,6 +154,9 @@ class ApplyRuffFixUnsafe(TaskNode):
                 "Committing staged changes for before applying unsafe ruff fixes."
             ),
             project_root=self.docker_project_root,
+            local_uid=self.local_uid,
+            local_gid=self.local_gid,
+            local_user_env=self.local_user_env,
         )
         run_process(
             args=concatenate_args(

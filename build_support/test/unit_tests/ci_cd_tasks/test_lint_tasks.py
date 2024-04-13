@@ -180,4 +180,7 @@ def test_apply_run_ruff_fix_unsafe(basic_task_info: BasicTaskInfo) -> None:
                 "Committing staged changes for before applying unsafe ruff fixes."
             ),
             project_root=basic_task_info.docker_project_root,
+            local_uid=basic_task_info.local_uid,
+            local_gid=basic_task_info.local_gid,
+            local_user_env=basic_task_info.local_user_env,
         )
