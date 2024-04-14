@@ -94,7 +94,7 @@ def git_fetch(
         Iterable[FetchInfo]: The name of the active commit/branch of the git repo.
     """
     monkeypatch_git_python_execute_kwargs()
-    run("git fetch -v -- origin", shell=True)
+    run("git fetch -v -- origin")
     print("ran git fetch", flush=True)
     return (
         get_git_repo(project_root=project_root)
