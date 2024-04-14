@@ -5,6 +5,7 @@ Attributes:
 """
 
 from pathlib import Path
+from subprocess import run
 from typing import Iterable
 
 from git import DiffIndex, FetchInfo, Head, Repo
@@ -93,7 +94,8 @@ def git_fetch(
         Iterable[FetchInfo]: The name of the active commit/branch of the git repo.
     """
     monkeypatch_git_python_execute_kwargs()
-    print(execute_kwargs, flush=True)
+    run("git fetch -v -- origin", shell=True)
+    print("ran git fetch", flush=True)
     return (
         get_git_repo(project_root=project_root)
         .remote()

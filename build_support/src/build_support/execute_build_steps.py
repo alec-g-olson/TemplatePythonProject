@@ -191,7 +191,7 @@ def run_main(args: Namespace) -> None:
     """
     local_info_yaml = get_local_info_yaml(project_root=args.docker_project_root)
     basic_task_info = BasicTaskInfo.from_yaml(local_info_yaml.read_text())
-    print(basic_task_info.to_yaml())
+    print(basic_task_info.to_yaml(), flush=True)
     requested_tasks = [
         CLI_ARG_TO_TASK[arg].get_task_node(basic_task_info=basic_task_info)
         for arg in args.build_tasks
