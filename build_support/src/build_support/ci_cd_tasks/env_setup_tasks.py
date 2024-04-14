@@ -45,12 +45,6 @@ class SetupDevEnvironment(TaskNode):
         Returns:
             None
         """
-        git_fetch(
-            project_root=self.docker_project_root,
-            local_uid=self.local_uid,
-            local_gid=self.local_gid,
-            local_user_env=self.local_user_env,
-        )
         run_process(
             args=get_docker_build_command(
                 docker_project_root=self.docker_project_root,
@@ -229,6 +223,12 @@ class GetGitInfo(TaskNode):
         Returns:
             None
         """
+        git_fetch(
+            project_root=self.docker_project_root,
+            local_uid=self.local_uid,
+            local_gid=self.local_gid,
+            local_user_env=self.local_user_env,
+        )
         get_git_info_yaml(project_root=self.docker_project_root).write_text(
             GitInfo(
                 branch=get_current_branch_name(project_root=self.docker_project_root),

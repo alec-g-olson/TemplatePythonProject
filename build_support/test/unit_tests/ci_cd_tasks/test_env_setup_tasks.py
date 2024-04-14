@@ -34,14 +34,9 @@ def test_build_dev_env_requires(basic_task_info: BasicTaskInfo) -> None:
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
 def test_run_build_dev_env(basic_task_info: BasicTaskInfo) -> None:
-    with (
-        patch(
-            "build_support.ci_cd_tasks.env_setup_tasks.run_process",
-        ) as run_process_mock,
-        patch(
-            "build_support.ci_cd_tasks.env_setup_tasks.git_fetch",
-        ) as git_fetch_mock,
-    ):
+    with patch(
+        "build_support.ci_cd_tasks.env_setup_tasks.run_process",
+    ) as run_process_mock:
         build_dev_env_args = get_docker_build_command(
             docker_project_root=basic_task_info.docker_project_root,
             target_image=DockerTarget.DEV,
@@ -53,12 +48,6 @@ def test_run_build_dev_env(basic_task_info: BasicTaskInfo) -> None:
             },
         )
         SetupDevEnvironment(basic_task_info=basic_task_info).run()
-        git_fetch_mock.assert_called_once_with(
-            project_root=basic_task_info.docker_project_root,
-            local_uid=basic_task_info.local_uid,
-            local_gid=basic_task_info.local_gid,
-            local_user_env=basic_task_info.local_user_env,
-        )
         run_process_mock.assert_called_once_with(args=build_dev_env_args)
 
 
@@ -250,6 +239,9 @@ def test_run_get_git_info(basic_task_info: BasicTaskInfo) -> None:
         patch(
             "build_support.ci_cd_tasks.env_setup_tasks.get_local_tags",
         ) as get_tags_mock,
+        patch(
+            "build_support.ci_cd_tasks.env_setup_tasks.git_fetch",
+        ) as git_fetch_mock,
     ):
         branch_name = "some_branch"
         # Some tags added to the repo might be for convenience and not strictly version
@@ -262,6 +254,12 @@ def test_run_get_git_info(basic_task_info: BasicTaskInfo) -> None:
         )
         assert not git_info_yaml_dest.exists()
         GetGitInfo(basic_task_info=basic_task_info).run()
+        git_fetch_mock.assert_called_once_with(
+            project_root=basic_task_info.docker_project_root,
+            local_uid=basic_task_info.local_uid,
+            local_gid=basic_task_info.local_gid,
+            local_user_env=basic_task_info.local_user_env,
+        )
         observed_git_info = GitInfo.from_yaml(git_info_yaml_dest.read_text())
         expected_git_info = GitInfo(branch=branch_name, tags=tags)
         assert observed_git_info == expected_git_info
