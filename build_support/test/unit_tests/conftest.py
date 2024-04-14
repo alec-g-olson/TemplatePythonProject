@@ -30,15 +30,21 @@ def project_name(request: SubRequest) -> str:
 
 
 @pytest.fixture(params=mock_local_user_ids)
-def local_uid(request: SubRequest) -> str:
-    """The name of the local user."""
-    return request.param[0]
+def local_id_pairs(request: SubRequest) -> tuple[int, int]:
+    """The local user uid and gid as a pair."""
+    return request.param
 
 
-@pytest.fixture(params=mock_local_user_ids)
-def local_gid(request: SubRequest) -> str:
-    """The name of the local user."""
-    return request.param[1]
+@pytest.fixture()
+def local_uid(local_id_pairs: tuple[int, int]) -> int:
+    """The uid of the local user."""
+    return local_id_pairs[0]
+
+
+@pytest.fixture()
+def local_gid(local_id_pairs: tuple[int, int]) -> int:
+    """The gid of the local user."""
+    return local_id_pairs[1]
 
 
 @pytest.fixture()

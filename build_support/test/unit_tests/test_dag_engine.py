@@ -29,7 +29,7 @@ def build_mock_basic_task(
             docker_project_root=Path("/root"),
             local_uid=10,
             local_gid=2,
-            local_user_env=None,
+            local_user_env={"ENV1": "VAL1", "ENV2": "VAL2"},
         )
     )
 

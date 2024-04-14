@@ -33,6 +33,8 @@ from build_support.ci_cd_tasks.validation_tasks import (
     ValidateAll,
     ValidatePythonStyle,
 )
+from build_support.ci_cd_vars.file_and_dir_path_vars import get_local_info_yaml
+from build_support.ci_cd_vars.project_structure import maybe_build_dir
 from build_support.ci_cd_vars.subproject_structure import SubprojectContext
 from build_support.execute_build_steps import (
     CLI_ARG_TO_TASK,
@@ -94,14 +96,14 @@ def test_fix_permissions(real_project_root_dir: Path) -> None:
         )
 
 
-@pytest.fixture(params=[Path("/usr/dev"), Path("/user/dev")])
-def docker_project_root_arg(request: SubRequest) -> Path:
-    return request.param
+@pytest.fixture(params=[Path("usr/dev"), Path("user/dev")])
+def docker_project_root_arg(request: SubRequest, tmp_path: Path) -> Path:
+    return maybe_build_dir(dir_to_build=tmp_path.joinpath(request.param))
 
 
-@pytest.fixture(params=[Path("/path/to/project"), Path("/some/other/path")])
-def non_docker_project_root_arg(request: SubRequest) -> Path:
-    return request.param
+@pytest.fixture(params=[Path("path/to/project"), Path("some/other/path")])
+def non_docker_project_root_arg(request: SubRequest, tmp_path: Path) -> Path:
+    return maybe_build_dir(dir_to_build=tmp_path.joinpath(request.param))
 
 
 @pytest.fixture(params=[True, False])
@@ -132,42 +134,29 @@ def cli_arg_combo(
 
 
 @pytest.fixture()
+def _setup_run_info_yaml(cli_arg_combo: BasicTaskInfo) -> None:
+    get_local_info_yaml(project_root=cli_arg_combo.docker_project_root).write_text(
+        cli_arg_combo.to_yaml()
+    )
+
+
+@pytest.fixture()
 def args_to_test_single_task(
-    cli_arg_combo: BasicTaskInfo,
+    docker_project_root_arg: Path,
     build_task: str,
 ) -> list[str]:
     return [
-        str(x)
-        for x in [
-            "--non-docker-project-root",
-            cli_arg_combo.non_docker_project_root,
-            "--docker-project-root",
-            cli_arg_combo.docker_project_root,
-            "--user-id",
-            cli_arg_combo.local_uid,
-            "--group-id",
-            cli_arg_combo.local_gid,
-        ]
-        + (
-            ["--ci-cd-integration-test-mode"]
-            if cli_arg_combo.ci_cd_integration_test_mode
-            else []
-        )
-        + [build_task]
+        str(x) for x in ["--docker-project-root", docker_project_root_arg, build_task]
     ]
 
 
 @pytest.fixture()
 def expected_namespace_single_task(
-    cli_arg_combo: BasicTaskInfo,
+    docker_project_root_arg: Path,
     build_task: str,
 ) -> Namespace:
     return Namespace(
-        non_docker_project_root=cli_arg_combo.non_docker_project_root,
-        docker_project_root=cli_arg_combo.docker_project_root,
-        user_id=cli_arg_combo.local_uid,
-        group_id=cli_arg_combo.local_gid,
-        ci_cd_integration_test_mode=cli_arg_combo.ci_cd_integration_test_mode,
+        docker_project_root=docker_project_root_arg,
         build_tasks=[build_task],
     )
 
@@ -181,38 +170,24 @@ def test_parse_args_single_task(
 
 @pytest.fixture()
 def args_to_test_all_tasks(
-    cli_arg_combo: BasicTaskInfo,
+    docker_project_root_arg: Path,
 ) -> list[str]:
     return [
         str(x)
         for x in [
-            "--non-docker-project-root",
-            cli_arg_combo.non_docker_project_root,
             "--docker-project-root",
-            cli_arg_combo.docker_project_root,
-            "--user-id",
-            cli_arg_combo.local_uid,
-            "--group-id",
-            cli_arg_combo.local_gid,
+            docker_project_root_arg,
+            *CLI_ARG_TO_TASK.keys(),
         ]
-        + (
-            ["--ci-cd-integration-test-mode"]
-            if cli_arg_combo.ci_cd_integration_test_mode
-            else []
-        )
-    ] + list(CLI_ARG_TO_TASK.keys())
+    ]
 
 
 @pytest.fixture()
 def expected_namespace_all_tasks(
-    cli_arg_combo: BasicTaskInfo,
+    docker_project_root_arg: Path,
 ) -> Namespace:
     return Namespace(
-        non_docker_project_root=cli_arg_combo.non_docker_project_root,
-        docker_project_root=cli_arg_combo.docker_project_root,
-        user_id=cli_arg_combo.local_uid,
-        group_id=cli_arg_combo.local_gid,
-        ci_cd_integration_test_mode=cli_arg_combo.ci_cd_integration_test_mode,
+        docker_project_root=docker_project_root_arg,
         build_tasks=list(CLI_ARG_TO_TASK.keys()),
     )
 
@@ -226,103 +201,28 @@ def test_parse_args_all_task(
 def test_parse_args_no_task() -> None:
     with pytest.raises(SystemExit):
         parse_args(
-            args=[
-                "--non-docker-project-root",
-                "non_docker_project_root",
-                "--docker-project-root",
-                "docker_project_root",
-                "--user-id",
-                "20",
-                "--group-id",
-                "101",
-            ],
+            args=["--docker-project-root", "docker_project_root"],
         )
 
 
 def test_parse_args_bad_task() -> None:
     with pytest.raises(SystemExit):
         parse_args(
-            args=[
-                "--non-docker-project-root",
-                "non_docker_project_root",
-                "--docker-project-root",
-                "docker_project_root",
-                "--user-id",
-                "20",
-                "--group-id",
-                "101",
-                "INVALID_TASK_NAME",
-            ],
-        )
-
-
-def test_parse_args_no_group_id() -> None:
-    with pytest.raises(SystemExit):
-        parse_args(
-            args=[
-                "--non-docker-project-root",
-                "non_docker_project_root",
-                "--docker-project-root",
-                "docker_project_root",
-                "--user-id",
-                "20",
-                "clean",
-            ],
-        )
-
-
-def test_parse_args_no_user_id() -> None:
-    with pytest.raises(SystemExit):
-        parse_args(
-            args=[
-                "--non-docker-project-root",
-                "non_docker_project_root",
-                "--docker-project-root",
-                "docker_project_root",
-                "--group-id",
-                "101",
-                "clean",
-            ],
+            args=["--docker-project-root", "docker_project_root", "INVALID_TASK_NAME"],
         )
 
 
 def test_parse_args_no_docker_project_root() -> None:
     with pytest.raises(SystemExit):
         parse_args(
-            args=[
-                "--non-docker-project-root",
-                "non_docker_project_root",
-                "--user-id",
-                "20",
-                "--group-id",
-                "101",
-                "clean",
-            ],
+            args=["clean"],
         )
 
 
-def test_parse_args_no_non_docker_project_root() -> None:
-    with pytest.raises(SystemExit):
-        parse_args(
-            args=[
-                "--docker-project-root",
-                "docker_project_root",
-                "--user-id",
-                "20",
-                "--group-id",
-                "101",
-                "clean",
-            ],
-        )
-
-
+@pytest.mark.usefixtures("_setup_run_info_yaml")
 def test_run_main_success(cli_arg_combo: BasicTaskInfo) -> None:
     args = Namespace(
-        non_docker_project_root=cli_arg_combo.non_docker_project_root,
         docker_project_root=cli_arg_combo.docker_project_root,
-        user_id=cli_arg_combo.local_uid,
-        group_id=cli_arg_combo.local_gid,
-        ci_cd_integration_test_mode=cli_arg_combo.ci_cd_integration_test_mode,
         build_tasks=["clean"],
     )
     with (
@@ -341,62 +241,10 @@ def test_run_main_success(cli_arg_combo: BasicTaskInfo) -> None:
         )
 
 
-def test_run_main_success_keep_original_non_docker_path(
-    cli_arg_combo: BasicTaskInfo,
-) -> None:
-    args = Namespace(
-        non_docker_project_root=cli_arg_combo.non_docker_project_root,
-        docker_project_root=cli_arg_combo.docker_project_root,
-        user_id=cli_arg_combo.local_uid,
-        group_id=cli_arg_combo.local_gid,
-        ci_cd_integration_test_mode=cli_arg_combo.ci_cd_integration_test_mode,
-        build_tasks=["clean"],
-    )
-    with (
-        patch("build_support.execute_build_steps.run_tasks") as mock_run_tasks,
-        patch(
-            "build_support.execute_build_steps.fix_permissions",
-        ) as mock_fix_permissions,
-    ):
-        run_main(args)
-        mock_run_tasks.assert_called_once_with(
-            tasks=[Clean(basic_task_info=cli_arg_combo)],
-        )
-        mock_fix_permissions.assert_called_once_with(
-            local_user_uid=cli_arg_combo.local_uid,
-            local_user_gid=cli_arg_combo.local_gid,
-        )
-    new_args = Namespace(
-        non_docker_project_root=Path("/some/weird/new/docker/project/root"),
-        docker_project_root=cli_arg_combo.docker_project_root,
-        user_id=cli_arg_combo.local_uid,
-        group_id=cli_arg_combo.local_gid,
-        ci_cd_integration_test_mode=cli_arg_combo.ci_cd_integration_test_mode,
-        build_tasks=["clean"],
-    )
-    with (
-        patch("build_support.execute_build_steps.run_tasks") as mock_run_tasks,
-        patch(
-            "build_support.execute_build_steps.fix_permissions",
-        ) as mock_fix_permissions,
-    ):
-        run_main(new_args)
-        mock_run_tasks.assert_called_once_with(
-            tasks=[Clean(basic_task_info=cli_arg_combo)],
-        )
-        mock_fix_permissions.assert_called_once_with(
-            local_user_uid=cli_arg_combo.local_uid,
-            local_user_gid=cli_arg_combo.local_gid,
-        )
-
-
+@pytest.mark.usefixtures("_setup_run_info_yaml")
 def test_run_main_bad_cli_task(cli_arg_combo: BasicTaskInfo) -> None:
     args = Namespace(
-        non_docker_project_root=cli_arg_combo.non_docker_project_root,
         docker_project_root=cli_arg_combo.docker_project_root,
-        user_id=cli_arg_combo.local_uid,
-        group_id=cli_arg_combo.local_gid,
-        ci_cd_integration_test_mode=cli_arg_combo.ci_cd_integration_test_mode,
         build_tasks=["clean"],
     )
     with (
@@ -418,14 +266,11 @@ def test_run_main_bad_cli_task(cli_arg_combo: BasicTaskInfo) -> None:
             run_main(args)
 
 
+@pytest.mark.usefixtures("_setup_run_info_yaml")
 def test_run_main_exception(cli_arg_combo: BasicTaskInfo) -> None:
     all_task_list = list(CLI_ARG_TO_TASK.keys())
     args = Namespace(
-        non_docker_project_root=cli_arg_combo.non_docker_project_root,
         docker_project_root=cli_arg_combo.docker_project_root,
-        user_id=cli_arg_combo.local_uid,
-        group_id=cli_arg_combo.local_gid,
-        ci_cd_integration_test_mode=cli_arg_combo.ci_cd_integration_test_mode,
         build_tasks=all_task_list,
     )
     with (

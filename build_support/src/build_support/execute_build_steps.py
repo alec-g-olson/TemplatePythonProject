@@ -6,11 +6,7 @@ Attributes:
 
 from argparse import ArgumentParser, Namespace
 from dataclasses import dataclass
-from os import environ
 from pathlib import Path
-from pwd import getpwuid
-
-import yaml
 
 from build_support.ci_cd_tasks.build_tasks import (
     BuildAll,
@@ -194,9 +190,7 @@ def run_main(args: Namespace) -> None:
         None
     """
     local_info_yaml = get_local_info_yaml(project_root=args.docker_project_root)
-    basic_task_info = BasicTaskInfo.model_validate(
-        yaml.safe_load(local_info_yaml.read_text())
-    )
+    basic_task_info = BasicTaskInfo.from_yaml(local_info_yaml.read_text())
     requested_tasks = [
         CLI_ARG_TO_TASK[arg].get_task_node(basic_task_info=basic_task_info)
         for arg in args.build_tasks

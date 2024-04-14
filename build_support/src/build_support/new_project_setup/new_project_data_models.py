@@ -68,7 +68,7 @@ class ProjectSettings(BaseModel):
                 instance.
 
         Returns:
-            GitInfo: A ProjectSettings object parsed from the YAML.
+            ProjectSettings: A ProjectSettings object parsed from the YAML.
         """
         return ProjectSettings.model_validate(safe_load(yaml_str))
 

@@ -11,6 +11,8 @@ SubPackages:
 Modules:
     | dag_engine: Contains the logic for resolving task dependencies and running
         tasks in a coherent order.
+    | dump_ci_cd_run_info: A "main" that records project level variables for the CI/CD
+        pipeline to a file for use during CI/CD.
     | execute_build_steps: A "main" that runs tasks.
     | file_caching: Logic for checking if a file has been modified since last execution.
     | process_runner: Contains the logic for executing subprocesses.

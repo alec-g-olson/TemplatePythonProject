@@ -1,11 +1,11 @@
+"""Executable that dumps project level information for the CI/CD pipeline to use."""
+
 from argparse import ArgumentParser, Namespace
-from os import environ, getcwd, getgid, getuid
+from os import environ
 from pathlib import Path
 from pwd import getpwuid
 
-import yaml
-from ci_cd_tasks.task_node import BasicTaskInfo
-
+from build_support.ci_cd_tasks.task_node import BasicTaskInfo
 from build_support.ci_cd_vars.file_and_dir_path_vars import get_local_info_yaml
 
 
@@ -72,8 +72,8 @@ def run_main(args: Namespace) -> None:
     local_gid = args.group_id
     local_user_env = None
     if local_uid or local_gid:
-        env = environ.copy()
-        env["HOME"] = f"/home/{getpwuid(local_uid).pw_name}/"
+        local_user_env = environ.copy()
+        local_user_env["HOME"] = f"/home/{getpwuid(local_uid).pw_name}/"
     docker_project_root = args.docker_project_root
     non_docker_project_root = args.non_docker_project_root
     basic_task_info = BasicTaskInfo(
@@ -85,7 +85,7 @@ def run_main(args: Namespace) -> None:
         ci_cd_integration_test_mode=args.ci_cd_integration_test_mode,
     )
     local_info_yaml = get_local_info_yaml(project_root=docker_project_root)
-    local_info_yaml.write_text(yaml.dump(basic_task_info.model_dump()))
+    local_info_yaml.write_text(basic_task_info.to_yaml())
 
 
 if __name__ == "__main__":  # pragma: no cover - main

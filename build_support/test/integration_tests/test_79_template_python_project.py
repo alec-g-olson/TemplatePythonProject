@@ -31,9 +31,18 @@ def test_check_integration_test_added(
 
 
 @pytest.mark.usefixtures("mock_new_branch")
-def test_check_integration_test_not_added(
+def test_fail_check_integration_test_not_added_to_branch(
     mock_project_root: Path, make_command_prefix: list[str]
 ) -> None:
     cmd = Popen(args=(*make_command_prefix, "check_process"), cwd=mock_project_root)
     cmd.communicate()
     assert cmd.returncode != 0
+
+
+@pytest.mark.usefixtures("mock_lightweight_project")
+def test_pass_check_integration_test_not_added_to_main(
+    mock_project_root: Path, make_command_prefix: list[str]
+) -> None:
+    cmd = Popen(args=(*make_command_prefix, "check_process"), cwd=mock_project_root)
+    cmd.communicate()
+    assert cmd.returncode == 0
