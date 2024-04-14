@@ -17,8 +17,14 @@ NON_DOCKER_ROOT = $(MAKEFILE_DIR)
 
 CI_CD_INTEGRATION_TEST_MODE_FLAG =
 
-GIT_MOUNT = -v ~/.ssh:/home/$(USER_NAME)/.ssh:ro \
-    -v ~/.gitconfig:/home/$(USER_NAME)/.gitconfig
+USER_HOME_DIR = ${HOME}
+GIT_CONFIG_PATH = $(USER_HOME_DIR)/.gitconfig
+
+ifneq ("$(wildcard $(GIT_CONFIG_PATH))","")
+	GIT_MOUNT ?= -v ~/.ssh:/home/$(USER_NAME)/.ssh:ro -v ~/.gitconfig:/home/$(USER_NAME)/.gitconfig
+else
+	GIT_MOUNT ?= -v ~/.ssh:/home/$(USER_NAME)/.ssh:ro
+endif
 
 BASE_DOCKER_BUILD_ENV_COMMAND = docker run --rm \
 --workdir=$(DOCKER_REMOTE_PROJECT_ROOT) \
