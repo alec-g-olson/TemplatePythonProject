@@ -22,6 +22,9 @@ from build_support.ci_cd_vars.git_status_vars import (
     git_fetch,
 )
 from build_support.ci_cd_vars.project_setting_vars import get_pulumi_version
+from build_support.ci_cd_vars.project_structure import (
+    get_integration_test_scratch_folder,
+)
 from build_support.process_runner import run_process
 
 
@@ -135,6 +138,15 @@ class Clean(TaskNode):
         """
         run_process(
             args=["rm", "-rf", get_build_dir(project_root=self.docker_project_root)],
+        )
+        run_process(
+            args=[
+                "rm",
+                "-rf",
+                get_integration_test_scratch_folder(
+                    project_root=self.docker_project_root
+                ),
+            ],
         )
         run_process(
             args=["rm", "-rf", self.docker_project_root.joinpath(".mypy_cache")],

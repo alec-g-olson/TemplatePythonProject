@@ -11,6 +11,7 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_dist_dir,
     get_git_info_yaml,
     get_license_templates_dir,
+    get_local_info_yaml,
     get_new_project_settings,
     get_sphinx_conf_dir,
 )
@@ -55,6 +56,12 @@ def test_get_license_templates_dir(mock_project_root: Path) -> None:
         == expected_license_template_dir
     )
     assert expected_license_template_dir.exists()
+
+
+def test_get_local_info_yaml(mock_project_root: Path) -> None:
+    assert get_local_info_yaml(project_root=mock_project_root) == get_build_dir(
+        project_root=mock_project_root,
+    ).joinpath("local_info.yaml")
 
 
 def test_get_git_info_yaml(mock_project_root: Path) -> None:

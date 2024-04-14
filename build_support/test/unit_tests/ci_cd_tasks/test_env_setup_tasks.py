@@ -23,6 +23,9 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_git_info_yaml,
 )
 from build_support.ci_cd_vars.project_setting_vars import get_pulumi_version
+from build_support.ci_cd_vars.project_structure import (
+    get_integration_test_scratch_folder,
+)
 
 
 def test_build_dev_env_requires(basic_task_info: BasicTaskInfo) -> None:
@@ -135,11 +138,17 @@ def test_run_clean(basic_task_info: BasicTaskInfo) -> None:
     build_dir = get_build_dir(project_root=basic_task_info.docker_project_root)
     _add_some_folders_and_files_to_folder(current_folder=build_dir)
 
+    test_scratch_folder = get_integration_test_scratch_folder(
+        project_root=basic_task_info.docker_project_root
+    )
+    _add_some_folders_and_files_to_folder(current_folder=test_scratch_folder)
+
     folders_that_will_be_completely_removed = [
         mypy_cache,
         pytest_cache,
         ruff_cache,
         build_dir,
+        test_scratch_folder,
     ]
 
     for folder in folders_that_will_be_completely_removed:

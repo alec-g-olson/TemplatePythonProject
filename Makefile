@@ -13,38 +13,40 @@ USER_NAME = $(shell id -un)
 GROUP_NAME = $(shell id -gn)
 USER = $(USER_ID):$(GROUP_ID)
 
-USER_HOME_DIR = ${HOME}
-GIT_CONFIG_PATH = $(USER_HOME_DIR)/.gitconfig
+NON_DOCKER_ROOT = $(MAKEFILE_DIR)
 
-ifneq ("$(wildcard $(GIT_CONFIG_PATH))","")
-    GIT_MOUNT = -v ~/.gitconfig:/home/$(USER_NAME)/.gitconfig
-else
-    GIT_MOUNT =
-endif
+CI_CD_INTEGRATION_TEST_MODE_FLAG =
 
+GIT_MOUNT = -v ~/.ssh:/home/$(USER_NAME)/.ssh:ro \
+    -v ~/.gitconfig:/home/$(USER_NAME)/.gitconfig
 
 BASE_DOCKER_BUILD_ENV_COMMAND = docker run --rm \
 --workdir=$(DOCKER_REMOTE_PROJECT_ROOT) \
 -e PYTHONPATH=/usr/dev/build_support/src \
--v ~/.ssh:/home/$(USER_NAME)/.ssh:ro \
 $(GIT_MOUNT) \
 -v /var/run/docker.sock:/var/run/docker.sock \
--v $(MAKEFILE_DIR):$(DOCKER_REMOTE_PROJECT_ROOT)
+-v $(NON_DOCKER_ROOT):$(DOCKER_REMOTE_PROJECT_ROOT)
 
 DOCKER_BUILD_ENV_COMMAND = $(BASE_DOCKER_BUILD_ENV_COMMAND) $(DOCKER_BUILD_IMAGE)
 INTERACTIVE_DOCKER_BUILD_ENV_COMMAND = $(BASE_DOCKER_BUILD_ENV_COMMAND) \
 -it $(DOCKER_BUILD_IMAGE)
 
-SHARED_BUILD_VARS = --non-docker-project-root $(MAKEFILE_DIR) \
---docker-project-root $(DOCKER_REMOTE_PROJECT_ROOT)
+SHARED_BUILD_VARS = --docker-project-root $(DOCKER_REMOTE_PROJECT_ROOT)
 
 EXECUTE_BUILD_STEPS_COMMAND = $(DOCKER_BUILD_ENV_COMMAND) \
 python build_support/src/build_support/execute_build_steps.py \
-$(SHARED_BUILD_VARS) --user-id $(USER_ID) --group-id $(GROUP_ID)
+$(SHARED_BUILD_VARS)
 
 GET_BUILD_VAR_COMMAND = $(DOCKER_BUILD_ENV_COMMAND) \
 python build_support/src/build_support/report_build_var.py \
+--non-docker-project-root $(NON_DOCKER_ROOT) \
 $(SHARED_BUILD_VARS) --build-variable-to-report
+
+DUMP_RUN_INFO_COMMAND = $(DOCKER_BUILD_ENV_COMMAND) \
+python build_support/src/build_support/dump_ci_cd_run_info.py \
+--user-id $(USER_ID) --group-id $(GROUP_ID) \
+--non-docker-project-root $(NON_DOCKER_ROOT) \
+$(SHARED_BUILD_VARS) $(CI_CD_INTEGRATION_TEST_MODE_FLAG)
 
 .PHONY: push
 push: setup_build_env
@@ -98,6 +100,10 @@ test_pypi: setup_build_env
 test_style: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) test_style
 
+.PHONY: check_process
+check_process: setup_build_env
+	$(EXECUTE_BUILD_STEPS_COMMAND) check_process
+
 .PHONY: open_build_docker_shell
 open_build_docker_shell: setup_build_env
 	$(INTERACTIVE_DOCKER_BUILD_ENV_COMMAND) /bin/bash
@@ -142,7 +148,6 @@ setup_pulumi_env: setup_build_env
 
 .PHONY: setup_build_env
 setup_build_env:
-	docker login
 	docker build \
 --build-arg DOCKER_REMOTE_PROJECT_ROOT=$(DOCKER_REMOTE_PROJECT_ROOT) \
 --build-arg CURRENT_USER_ID=$(USER_ID) \
@@ -153,8 +158,13 @@ setup_build_env:
 --target build \
 --build-arg BUILDKIT_INLINE_CACHE=1 \
 -t $(DOCKER_BUILD_IMAGE) $(MAKEFILE_DIR)
+	$(DUMP_RUN_INFO_COMMAND)
 
 .PHONY: docker_prune_all
 docker_prune_all:
 	docker ps -q | xargs -r docker stop
 	docker system prune --all --force
+
+.PHONY: echo_v
+echo_v:
+	echo $(BASE_DOCKER_BUILD_ENV_COMMAND)

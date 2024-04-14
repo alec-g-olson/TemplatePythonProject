@@ -62,8 +62,8 @@ def current_branch_is_main(project_root: Path) -> bool:
     return get_current_branch_name(project_root=project_root) == MAIN_BRANCH_NAME
 
 
-def _monkeypatch_execute_kwargs() -> None:
-    """Monkey patches some execute kwargs so we can run git as a local user in docker.
+def monkeypatch_git_python_execute_kwargs() -> None:
+    """Monkey patches some execute kwargs, so we can run git as a local user in docker.
 
     Returns:
         None
@@ -92,7 +92,7 @@ def git_fetch(
     Returns:
         Iterable[FetchInfo]: The name of the active commit/branch of the git repo.
     """
-    _monkeypatch_execute_kwargs()
+    monkeypatch_git_python_execute_kwargs()
     return (
         get_git_repo(project_root=project_root)
         .remote()
@@ -173,7 +173,7 @@ def commit_changes_if_diff(
         repo = get_git_repo(project_root=project_root)
         git_add_all(project_root=project_root)
         repo.index.commit(commit_message)
-        _monkeypatch_execute_kwargs()
+        monkeypatch_git_python_execute_kwargs()
         repo.remote().push(user=local_uid, group=local_gid, env=local_user_env)
 
 
@@ -201,5 +201,5 @@ def tag_current_commit_and_push(
     """
     repo = get_git_repo(project_root=project_root)
     repo.create_tag(tag)
-    _monkeypatch_execute_kwargs()
+    monkeypatch_git_python_execute_kwargs()
     repo.remote().push(tag, user=local_uid, group=local_gid, env=local_user_env)

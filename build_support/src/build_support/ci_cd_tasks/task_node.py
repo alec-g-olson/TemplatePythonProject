@@ -4,6 +4,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 
+from pydantic import BaseModel, field_serializer
+
 from build_support.ci_cd_vars.subproject_structure import (
     PythonSubproject,
     SubprojectContext,
@@ -11,8 +13,7 @@ from build_support.ci_cd_vars.subproject_structure import (
 )
 
 
-@dataclass
-class BasicTaskInfo:
+class BasicTaskInfo(BaseModel):
     """Dataclass for the info required to run any task."""
 
     non_docker_project_root: Path
@@ -20,6 +21,19 @@ class BasicTaskInfo:
     local_uid: int
     local_gid: int
     local_user_env: dict[str, str] | None
+    ci_cd_integration_test_mode: bool = False
+
+    @field_serializer("non_docker_project_root", "docker_project_root")
+    def serialize_path_as_str(self, path: Path) -> str:
+        """Serializes the path fields as strings.
+
+        Args:
+            path (Path): A path.
+
+        Returns:
+            str: A string representation of the path obj.
+        """
+        return str(path)
 
 
 class TaskNode(ABC):
@@ -30,6 +44,7 @@ class TaskNode(ABC):
     local_uid: int
     local_gid: int
     local_user_env: dict[str, str] | None
+    ci_cd_integration_test_mode: bool
 
     def __init__(self, basic_task_info: BasicTaskInfo) -> None:
         """Init method for TaskNode.
@@ -45,6 +60,7 @@ class TaskNode(ABC):
         self.local_uid = basic_task_info.local_uid
         self.local_gid = basic_task_info.local_gid
         self.local_user_env = basic_task_info.local_user_env
+        self.ci_cd_integration_test_mode = basic_task_info.ci_cd_integration_test_mode
 
     def get_basic_task_info(self) -> BasicTaskInfo:
         """Get the basic info used to run this task.
@@ -58,6 +74,7 @@ class TaskNode(ABC):
             local_uid=self.local_uid,
             local_gid=self.local_gid,
             local_user_env=self.local_user_env,
+            ci_cd_integration_test_mode=self.ci_cd_integration_test_mode,
         )
 
     def task_label(self) -> str:

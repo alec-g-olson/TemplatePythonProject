@@ -18,34 +18,11 @@ from build_support.ci_cd_vars.git_status_vars import (
 
 
 @pytest.fixture()
-def mock_remote_git_folder(mock_project_root: Path) -> Path:
-    remote_folder = mock_project_root.joinpath("remote_repo")
-    remote_folder.mkdir()
-    return remote_folder
-
-
-@pytest.fixture()
-def mock_git_folder(mock_project_root: Path) -> Path:
-    local_folder = mock_project_root.joinpath("local_repo")
-    local_folder.mkdir()
-    return local_folder
-
-
-@pytest.fixture()
-def mock_remote_git_repo(mock_remote_git_folder: Path) -> Repo:
-    repo = Repo.init(
-        path=mock_remote_git_folder, bare=True, initial_branch=MAIN_BRANCH_NAME
-    )
-    repo.index.commit("initial remote commit")
-    return repo
-
-
-@pytest.fixture()
-def mock_git_repo(mock_git_folder: Path, mock_remote_git_repo: Repo) -> Repo:
+def mock_git_repo(mock_project_root: Path, mock_remote_git_repo: Repo) -> Repo:
     remote_repo_url = str(mock_remote_git_repo.working_dir)
-    repo = Repo.clone_from(url=remote_repo_url, to_path=mock_git_folder)
+    repo = Repo.clone_from(url=remote_repo_url, to_path=mock_project_root)
     repo.remote().push()
-    new_file = mock_git_folder.joinpath("first_file.txt")
+    new_file = mock_project_root.joinpath("first_file.txt")
     new_file.write_text("some_text")
     repo.index.add([new_file])
     repo.index.commit("initial local commit")
@@ -77,12 +54,16 @@ def mock_git_tags(mock_git_repo: Repo, mock_git_branch: Head) -> list[TagReferen
     return mock_git_repo.tags
 
 
-def test_get_git_head(mock_git_folder: Path, mock_git_branch: Head) -> None:
-    assert get_git_head(project_root=mock_git_folder) == mock_git_branch
+def test_get_git_head(mock_project_root: Path, mock_git_branch: Head) -> None:
+    assert get_git_head(project_root=mock_project_root) == mock_git_branch
 
 
-def test_get_current_branch_name(mock_git_folder: Path, mock_git_branch: Head) -> None:
-    assert get_current_branch_name(project_root=mock_git_folder) == mock_git_branch.name
+def test_get_current_branch_name(
+    mock_project_root: Path, mock_git_branch: Head
+) -> None:
+    assert (
+        get_current_branch_name(project_root=mock_project_root) == mock_git_branch.name
+    )
 
 
 def test_constants_not_changed_by_accident() -> None:
@@ -90,46 +71,46 @@ def test_constants_not_changed_by_accident() -> None:
 
 
 @pytest.mark.usefixtures("mock_git_repo")
-def test_current_branch_is_main(mock_git_folder: Path) -> None:
-    assert current_branch_is_main(project_root=mock_git_folder)
+def test_current_branch_is_main(mock_project_root: Path) -> None:
+    assert current_branch_is_main(project_root=mock_project_root)
 
 
 @pytest.mark.usefixtures("mock_git_branch")
-def test_current_branch_is_not_main(mock_git_folder: Path) -> None:
-    assert not current_branch_is_main(project_root=mock_git_folder)
+def test_current_branch_is_not_main(mock_project_root: Path) -> None:
+    assert not current_branch_is_main(project_root=mock_project_root)
 
 
 def test_git_fetch(
-    mock_remote_git_repo: Repo, mock_git_repo: Repo, mock_git_folder: Path
+    mock_remote_git_repo: Repo, mock_git_repo: Repo, mock_project_root: Path
 ) -> None:
     assert len(mock_git_repo.tags) == 0
     assert len(mock_remote_git_repo.tags) == 0
     mock_remote_git_repo.create_tag("RemoteTag")
     assert len(mock_git_repo.tags) == 0
     assert len(mock_remote_git_repo.tags) == 1
-    git_fetch(project_root=mock_git_folder)
+    git_fetch(project_root=mock_project_root)
     assert len(mock_git_repo.tags) == 1
     assert len(mock_remote_git_repo.tags) == 1
 
 
 def test_get_local_tags(
-    mock_git_folder: Path, mock_git_tags: list[TagReference]
+    mock_project_root: Path, mock_git_tags: list[TagReference]
 ) -> None:
-    assert get_local_tags(project_root=mock_git_folder) == [
+    assert get_local_tags(project_root=mock_project_root) == [
         tag.name for tag in mock_git_tags
     ]
 
 
-def test_get_git_diff(mock_git_folder: Path, mock_git_repo: Repo) -> None:
-    diff_file = mock_git_folder.joinpath("diff_file")
+def test_get_git_diff(mock_project_root: Path, mock_git_repo: Repo) -> None:
+    diff_file = mock_project_root.joinpath("diff_file")
     diff_file.touch()
     mock_git_repo.index.add([diff_file])
-    assert len(get_git_diff(project_root=mock_git_folder)) > 0
+    assert len(get_git_diff(project_root=mock_project_root)) > 0
 
 
 @pytest.mark.usefixtures("mock_git_repo")
-def test_get_git_diff_no_diff(mock_git_folder: Path) -> None:
-    assert len(get_git_diff(project_root=mock_git_folder)) == 0
+def test_get_git_diff_no_diff(mock_project_root: Path) -> None:
+    assert len(get_git_diff(project_root=mock_project_root)) == 0
 
 
 @pytest.fixture(
@@ -140,19 +121,19 @@ def valid_commit_message(request: SubRequest) -> str:
 
 
 def test_commit_changes_no_diff(
-    valid_commit_message: str, mock_git_folder: Path, mock_git_branch: Head
+    valid_commit_message: str, mock_project_root: Path, mock_git_branch: Head
 ) -> None:
     initial_commit_sha = mock_git_branch.commit.binsha
     commit_changes_if_diff(
-        commit_message=valid_commit_message, project_root=mock_git_folder
+        commit_message=valid_commit_message, project_root=mock_project_root
     )
     assert initial_commit_sha == mock_git_branch.commit.binsha
 
 
 def test_commit_changes_with_diff_on_main(
-    valid_commit_message: str, mock_git_folder: Path, mock_git_repo: Repo
+    valid_commit_message: str, mock_project_root: Path, mock_git_repo: Repo
 ) -> None:
-    diff_file = mock_git_folder.joinpath("diff_file")
+    diff_file = mock_project_root.joinpath("diff_file")
     diff_file.touch()
     mock_git_repo.index.add([diff_file])
     main_branch = mock_git_repo.active_branch
@@ -162,39 +143,39 @@ def test_commit_changes_with_diff_on_main(
     )
     with pytest.raises(RuntimeError, match=expected_message):
         commit_changes_if_diff(
-            commit_message=valid_commit_message, project_root=mock_git_folder
+            commit_message=valid_commit_message, project_root=mock_project_root
         )
     assert initial_commit_sha == main_branch.commit.binsha
 
 
 def test_run_push_tags_allowed_with_diff_not_main(
     valid_commit_message: str,
-    mock_git_folder: Path,
+    mock_project_root: Path,
     mock_git_repo: Repo,
     mock_git_branch: Head,
 ) -> None:
-    mock_initial_git_file = mock_git_folder.joinpath("first_file.txt")
+    mock_initial_git_file = mock_project_root.joinpath("first_file.txt")
     mock_initial_git_file.write_text(
         mock_initial_git_file.read_text() + "some extra text"
     )
-    diff_file = mock_git_folder.joinpath("diff_file")
+    diff_file = mock_project_root.joinpath("diff_file")
     diff_file.touch()
     mock_git_repo.index.add([diff_file])
     initial_commit_sha = mock_git_branch.commit.binsha
     commit_changes_if_diff(
-        commit_message=valid_commit_message, project_root=mock_git_folder
+        commit_message=valid_commit_message, project_root=mock_project_root
     )
     assert initial_commit_sha != mock_git_branch.commit.binsha
 
 
 def test_tag_current_commit_and_push(
-    mock_git_folder: Path, mock_git_repo: Repo, mock_git_branch: Head
+    mock_project_root: Path, mock_git_repo: Repo, mock_git_branch: Head
 ) -> None:
-    mock_initial_git_file = mock_git_folder.joinpath("first_file.txt")
+    mock_initial_git_file = mock_project_root.joinpath("first_file.txt")
     mock_initial_git_file.write_text(
         mock_initial_git_file.read_text() + "some extra text"
     )
-    diff_file = mock_git_folder.joinpath("diff_file")
+    diff_file = mock_project_root.joinpath("diff_file")
     diff_file.touch()
     mock_git_repo.index.add([diff_file])
     mock_git_repo.index.commit("commit_that_will_be_tagged")
@@ -202,7 +183,7 @@ def test_tag_current_commit_and_push(
     assert not any(
         tag for tag in mock_git_repo.tags if tag.commit == mock_git_branch.commit
     )
-    tag_current_commit_and_push(tag=tag, project_root=mock_git_folder)
+    tag_current_commit_and_push(tag=tag, project_root=mock_project_root)
     commit_tags = [
         tag for tag in mock_git_repo.tags if tag.commit == mock_git_branch.commit
     ]

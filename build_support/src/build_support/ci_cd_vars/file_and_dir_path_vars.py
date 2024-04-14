@@ -102,6 +102,18 @@ def get_license_templates_dir(project_root: Path) -> Path:
     )
 
 
+def get_local_info_yaml(project_root: Path) -> Path:
+    """Gets the location of the local_info.yaml for the project.
+
+    Args:
+        project_root (Path): Path to this project's root.
+
+    Returns:
+        Path: Path to the local_info.yaml for the project.
+    """
+    return get_build_dir(project_root=project_root).joinpath("local_info.yaml")
+
+
 def get_git_info_yaml(project_root: Path) -> Path:
     """Gets the location of the git_info.yaml for the project.
 

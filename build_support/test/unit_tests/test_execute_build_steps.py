@@ -28,6 +28,7 @@ from build_support.ci_cd_tasks.task_node import (
     TaskNode,
 )
 from build_support.ci_cd_tasks.validation_tasks import (
+    EnforceProcess,
     SubprojectUnitTests,
     ValidateAll,
     ValidatePythonStyle,
@@ -52,6 +53,7 @@ def test_constants_not_changed_by_accident() -> None:
         "setup_prod_env": CliTaskInfo(task_node=SetupProdEnvironment),
         "setup_infra_env": CliTaskInfo(task_node=SetupInfraEnvironment),
         "test_style": CliTaskInfo(task_node=ValidatePythonStyle),
+        "check_process": CliTaskInfo(task_node=EnforceProcess),
         "test_build_support": CliTaskInfo(
             task_node=SubprojectUnitTests,
             subproject_context=SubprojectContext.BUILD_SUPPORT,
@@ -82,7 +84,7 @@ def test_fix_permissions(real_project_root_dir: Path) -> None:
                 [
                     path.absolute()
                     for path in real_project_root_dir.glob("*")
-                    if path.name != ".git"
+                    if path.name not in [".git", "test_scratch_folder"]
                 ],
             ],
         )
@@ -102,48 +104,70 @@ def non_docker_project_root_arg(request: SubRequest) -> Path:
     return request.param
 
 
+@pytest.fixture(params=[True, False])
+def ci_cd_integration_test_mode(request: SubRequest) -> bool:
+    return request.param
+
+
 @pytest.fixture(params=CLI_ARG_TO_TASK.keys())
 def build_task(request: SubRequest) -> str:
     return request.param
 
 
 @pytest.fixture()
-def args_to_test_single_task(
-    docker_project_root_arg: Path,
+def cli_arg_combo(
     non_docker_project_root_arg: Path,
-    local_uid: int,
-    local_gid: int,
+    docker_project_root_arg: Path,
+    basic_task_info: BasicTaskInfo,
+    ci_cd_integration_test_mode: bool,
+) -> BasicTaskInfo:
+    return BasicTaskInfo(
+        non_docker_project_root=non_docker_project_root_arg,
+        docker_project_root=docker_project_root_arg,
+        local_uid=basic_task_info.local_uid,
+        local_gid=basic_task_info.local_gid,
+        ci_cd_integration_test_mode=ci_cd_integration_test_mode,
+        local_user_env=basic_task_info.local_user_env,
+    )
+
+
+@pytest.fixture()
+def args_to_test_single_task(
+    cli_arg_combo: BasicTaskInfo,
     build_task: str,
 ) -> list[str]:
     return [
         str(x)
         for x in [
             "--non-docker-project-root",
-            non_docker_project_root_arg,
+            cli_arg_combo.non_docker_project_root,
             "--docker-project-root",
-            docker_project_root_arg,
+            cli_arg_combo.docker_project_root,
             "--user-id",
-            local_uid,
+            cli_arg_combo.local_uid,
             "--group-id",
-            local_gid,
-            build_task,
+            cli_arg_combo.local_gid,
         ]
+        + (
+            ["--ci-cd-integration-test-mode"]
+            if cli_arg_combo.ci_cd_integration_test_mode
+            else []
+        )
+        + [build_task]
     ]
 
 
 @pytest.fixture()
 def expected_namespace_single_task(
-    docker_project_root_arg: Path,
-    non_docker_project_root_arg: Path,
-    local_uid: int,
-    local_gid: int,
+    cli_arg_combo: BasicTaskInfo,
     build_task: str,
 ) -> Namespace:
     return Namespace(
-        non_docker_project_root=non_docker_project_root_arg,
-        docker_project_root=docker_project_root_arg,
-        user_id=local_uid,
-        group_id=local_gid,
+        non_docker_project_root=cli_arg_combo.non_docker_project_root,
+        docker_project_root=cli_arg_combo.docker_project_root,
+        user_id=cli_arg_combo.local_uid,
+        group_id=cli_arg_combo.local_gid,
+        ci_cd_integration_test_mode=cli_arg_combo.ci_cd_integration_test_mode,
         build_tasks=[build_task],
     )
 
@@ -157,38 +181,38 @@ def test_parse_args_single_task(
 
 @pytest.fixture()
 def args_to_test_all_tasks(
-    docker_project_root_arg: Path,
-    non_docker_project_root_arg: Path,
-    local_uid: int,
-    local_gid: int,
+    cli_arg_combo: BasicTaskInfo,
 ) -> list[str]:
     return [
         str(x)
         for x in [
             "--non-docker-project-root",
-            non_docker_project_root_arg,
+            cli_arg_combo.non_docker_project_root,
             "--docker-project-root",
-            docker_project_root_arg,
+            cli_arg_combo.docker_project_root,
             "--user-id",
-            local_uid,
+            cli_arg_combo.local_uid,
             "--group-id",
-            local_gid,
+            cli_arg_combo.local_gid,
         ]
+        + (
+            ["--ci-cd-integration-test-mode"]
+            if cli_arg_combo.ci_cd_integration_test_mode
+            else []
+        )
     ] + list(CLI_ARG_TO_TASK.keys())
 
 
 @pytest.fixture()
 def expected_namespace_all_tasks(
-    docker_project_root_arg: Path,
-    non_docker_project_root_arg: Path,
-    local_uid: int,
-    local_gid: int,
+    cli_arg_combo: BasicTaskInfo,
 ) -> Namespace:
     return Namespace(
-        non_docker_project_root=non_docker_project_root_arg,
-        docker_project_root=docker_project_root_arg,
-        user_id=local_uid,
-        group_id=local_gid,
+        non_docker_project_root=cli_arg_combo.non_docker_project_root,
+        docker_project_root=cli_arg_combo.docker_project_root,
+        user_id=cli_arg_combo.local_uid,
+        group_id=cli_arg_combo.local_gid,
+        ci_cd_integration_test_mode=cli_arg_combo.ci_cd_integration_test_mode,
         build_tasks=list(CLI_ARG_TO_TASK.keys()),
     )
 
@@ -292,12 +316,13 @@ def test_parse_args_no_non_docker_project_root() -> None:
         )
 
 
-def test_run_main_success(basic_task_info: BasicTaskInfo) -> None:
+def test_run_main_success(cli_arg_combo: BasicTaskInfo) -> None:
     args = Namespace(
-        non_docker_project_root=basic_task_info.non_docker_project_root,
-        docker_project_root=basic_task_info.docker_project_root,
-        user_id=basic_task_info.local_uid,
-        group_id=basic_task_info.local_gid,
+        non_docker_project_root=cli_arg_combo.non_docker_project_root,
+        docker_project_root=cli_arg_combo.docker_project_root,
+        user_id=cli_arg_combo.local_uid,
+        group_id=cli_arg_combo.local_gid,
+        ci_cd_integration_test_mode=cli_arg_combo.ci_cd_integration_test_mode,
         build_tasks=["clean"],
     )
     with (
@@ -308,35 +333,70 @@ def test_run_main_success(basic_task_info: BasicTaskInfo) -> None:
     ):
         run_main(args)
         mock_run_tasks.assert_called_once_with(
-            tasks=[
-                Clean(
-                    basic_task_info=BasicTaskInfo(
-                        non_docker_project_root=basic_task_info.non_docker_project_root,
-                        docker_project_root=basic_task_info.docker_project_root,
-                        local_uid=basic_task_info.local_uid,
-                        local_gid=basic_task_info.local_gid,
-                        local_user_env=basic_task_info.local_user_env,
-                    )
-                )
-            ],
+            tasks=[Clean(basic_task_info=cli_arg_combo)],
         )
         mock_fix_permissions.assert_called_once_with(
-            local_user_uid=basic_task_info.local_uid,
-            local_user_gid=basic_task_info.local_gid,
+            local_user_uid=cli_arg_combo.local_uid,
+            local_user_gid=cli_arg_combo.local_gid,
         )
 
 
-def test_run_main_bad_cli_task(
-    mock_project_root: Path,
-    docker_project_root: Path,
-    local_uid: int,
-    local_gid: int,
+def test_run_main_success_keep_original_non_docker_path(
+    cli_arg_combo: BasicTaskInfo,
 ) -> None:
     args = Namespace(
-        non_docker_project_root=mock_project_root,
-        docker_project_root=docker_project_root,
-        user_id=local_uid,
-        group_id=local_gid,
+        non_docker_project_root=cli_arg_combo.non_docker_project_root,
+        docker_project_root=cli_arg_combo.docker_project_root,
+        user_id=cli_arg_combo.local_uid,
+        group_id=cli_arg_combo.local_gid,
+        ci_cd_integration_test_mode=cli_arg_combo.ci_cd_integration_test_mode,
+        build_tasks=["clean"],
+    )
+    with (
+        patch("build_support.execute_build_steps.run_tasks") as mock_run_tasks,
+        patch(
+            "build_support.execute_build_steps.fix_permissions",
+        ) as mock_fix_permissions,
+    ):
+        run_main(args)
+        mock_run_tasks.assert_called_once_with(
+            tasks=[Clean(basic_task_info=cli_arg_combo)],
+        )
+        mock_fix_permissions.assert_called_once_with(
+            local_user_uid=cli_arg_combo.local_uid,
+            local_user_gid=cli_arg_combo.local_gid,
+        )
+    new_args = Namespace(
+        non_docker_project_root=Path("/some/weird/new/docker/project/root"),
+        docker_project_root=cli_arg_combo.docker_project_root,
+        user_id=cli_arg_combo.local_uid,
+        group_id=cli_arg_combo.local_gid,
+        ci_cd_integration_test_mode=cli_arg_combo.ci_cd_integration_test_mode,
+        build_tasks=["clean"],
+    )
+    with (
+        patch("build_support.execute_build_steps.run_tasks") as mock_run_tasks,
+        patch(
+            "build_support.execute_build_steps.fix_permissions",
+        ) as mock_fix_permissions,
+    ):
+        run_main(new_args)
+        mock_run_tasks.assert_called_once_with(
+            tasks=[Clean(basic_task_info=cli_arg_combo)],
+        )
+        mock_fix_permissions.assert_called_once_with(
+            local_user_uid=cli_arg_combo.local_uid,
+            local_user_gid=cli_arg_combo.local_gid,
+        )
+
+
+def test_run_main_bad_cli_task(cli_arg_combo: BasicTaskInfo) -> None:
+    args = Namespace(
+        non_docker_project_root=cli_arg_combo.non_docker_project_root,
+        docker_project_root=cli_arg_combo.docker_project_root,
+        user_id=cli_arg_combo.local_uid,
+        group_id=cli_arg_combo.local_gid,
+        ci_cd_integration_test_mode=cli_arg_combo.ci_cd_integration_test_mode,
         build_tasks=["clean"],
     )
     with (
@@ -358,13 +418,14 @@ def test_run_main_bad_cli_task(
             run_main(args)
 
 
-def test_run_main_exception(basic_task_info: BasicTaskInfo) -> None:
+def test_run_main_exception(cli_arg_combo: BasicTaskInfo) -> None:
     all_task_list = list(CLI_ARG_TO_TASK.keys())
     args = Namespace(
-        non_docker_project_root=basic_task_info.non_docker_project_root,
-        docker_project_root=basic_task_info.docker_project_root,
-        user_id=basic_task_info.local_uid,
-        group_id=basic_task_info.local_gid,
+        non_docker_project_root=cli_arg_combo.non_docker_project_root,
+        docker_project_root=cli_arg_combo.docker_project_root,
+        user_id=cli_arg_combo.local_uid,
+        group_id=cli_arg_combo.local_gid,
+        ci_cd_integration_test_mode=cli_arg_combo.ci_cd_integration_test_mode,
         build_tasks=all_task_list,
     )
     with (
@@ -380,14 +441,14 @@ def test_run_main_exception(basic_task_info: BasicTaskInfo) -> None:
         mock_run_tasks.side_effect = error_to_raise
         run_main(args)
         requested_tasks = [
-            CLI_ARG_TO_TASK[arg].get_task_node(basic_task_info=basic_task_info)
+            CLI_ARG_TO_TASK[arg].get_task_node(basic_task_info=cli_arg_combo)
             for arg in args.build_tasks
         ]
         mock_run_tasks.assert_called_once_with(tasks=requested_tasks)
         mock_print.assert_called_once_with(error_to_raise)
         mock_fix_permissions.assert_called_once_with(
-            local_user_uid=basic_task_info.local_uid,
-            local_user_gid=basic_task_info.local_gid,
+            local_user_uid=cli_arg_combo.local_uid,
+            local_user_gid=cli_arg_combo.local_gid,
         )
 
 
