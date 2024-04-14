@@ -84,6 +84,7 @@ def run_main(args: Namespace) -> None:
         local_user_env=local_user_env,
         ci_cd_integration_test_mode=args.ci_cd_integration_test_mode,
     )
+    print(basic_task_info.to_yaml())
     local_info_yaml = get_local_info_yaml(project_root=docker_project_root)
     local_info_yaml.write_text(basic_task_info.to_yaml())
 
