@@ -21,8 +21,12 @@ USER_HOME_DIR = ${HOME}
 GIT_CONFIG_PATH = $(USER_HOME_DIR)/.gitconfig
 
 ifneq ("$(wildcard $(GIT_CONFIG_PATH))","")
+	# If there is a .gitconfig file, mount it (there isn't one on GitHub)
+	# Don't override GIT_MOUNT if set from command line
 	GIT_MOUNT ?= -v ~/.ssh:/home/$(USER_NAME)/.ssh:ro -v ~/.gitconfig:/home/$(USER_NAME)/.gitconfig
 else
+	# If no .gitconfig, don't mount it
+	# Don't override GIT_MOUNT if set from command line
 	GIT_MOUNT ?= -v ~/.ssh:/home/$(USER_NAME)/.ssh:ro
 endif
 
