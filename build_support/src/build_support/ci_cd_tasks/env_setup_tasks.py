@@ -4,8 +4,9 @@ Attributes:
     | GIT_BRANCH_NAME_REGEX:  The regex we use to extract the ticket ID from branch
         names.
 """
-
+import os
 import re
+from pathlib import Path
 
 from pydantic import BaseModel, Field
 from yaml import safe_dump, safe_load
@@ -223,6 +224,8 @@ class GetGitInfo(TaskNode):
         Returns:
             None
         """
+        git_config = Path(os.environ["HOME"]).joinpath(".gitconfig")
+        print(git_config.read_text(), flush=True)
         git_fetch(
             project_root=self.docker_project_root,
             local_uid=self.local_uid,
