@@ -4,9 +4,8 @@ Attributes:
     | GIT_BRANCH_NAME_REGEX:  The regex we use to extract the ticket ID from branch
         names.
 """
-import os
+
 import re
-from pathlib import Path
 
 from pydantic import BaseModel, Field
 from yaml import safe_dump, safe_load

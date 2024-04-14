@@ -5,7 +5,6 @@ Attributes:
 """
 
 from pathlib import Path
-from subprocess import run, Popen
 from typing import Iterable
 
 from git import DiffIndex, FetchInfo, Head, Repo
