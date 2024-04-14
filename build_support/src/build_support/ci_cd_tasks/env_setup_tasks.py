@@ -226,6 +226,8 @@ class GetGitInfo(TaskNode):
         """
         git_config = Path(os.environ["HOME"]).joinpath(".gitconfig")
         print(git_config.read_text(), flush=True)
+        print("getting project git config")
+        print(Path().joinpath(".git", "config").read_text())
         git_fetch(
             project_root=self.docker_project_root,
             local_uid=self.local_uid,
