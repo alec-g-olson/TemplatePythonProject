@@ -14,9 +14,14 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_all_test_folders,
 )
 from build_support.ci_cd_vars.machine_introspection_vars import THREADS_AVAILABLE
+from build_support.ci_cd_vars.project_structure import (
+    get_integration_test_scratch_folder,
+)
 from build_support.ci_cd_vars.subproject_structure import (
+    PythonSubproject,
     SubprojectContext,
     get_all_python_subprojects_dict,
+    get_python_subproject,
     get_sorted_subproject_contexts,
 )
 from build_support.file_caching import FileCacheInfo
@@ -32,9 +37,12 @@ class ValidateAll(TaskNode):
         Returns:
             list[TaskNode]: A list of all build tasks.
         """
+        basic_task_info = self.get_basic_task_info()
         return [
-            AllSubprojectUnitTests(basic_task_info=self.get_basic_task_info()),
-            ValidatePythonStyle(basic_task_info=self.get_basic_task_info()),
+            AllSubprojectUnitTests(basic_task_info=basic_task_info),
+            AllSubprojectIntegrationTests(basic_task_info=basic_task_info),
+            ValidatePythonStyle(basic_task_info=basic_task_info),
+            EnforceProcess(basic_task_info=basic_task_info),
         ]
 
     def run(self) -> None:
@@ -43,6 +51,52 @@ class ValidateAll(TaskNode):
         Returns:
             None
         """
+
+
+class EnforceProcess(TaskNode):
+    """Task enforces the team's agreed build process for this project."""
+
+    def required_tasks(self) -> list[TaskNode]:
+        """Get the list of tasks that need to be run before enforcing the build process.
+
+        Returns:
+            list[TaskNode]: A list of tasks required to enforce the build process.
+        """
+        return [
+            GetGitInfo(basic_task_info=self.get_basic_task_info()),
+            SetupDevEnvironment(basic_task_info=self.get_basic_task_info()),
+        ]
+
+    def run(self) -> None:
+        """Runs tests that enforce the build process.
+
+        Returns:
+            None
+        """
+        build_support_subproject = get_python_subproject(
+            subproject_context=SubprojectContext.BUILD_SUPPORT,
+            project_root=self.docker_project_root,
+        )
+        run_process(
+            args=concatenate_args(
+                args=[
+                    get_docker_command_for_image(
+                        non_docker_project_root=self.non_docker_project_root,
+                        docker_project_root=self.docker_project_root,
+                        target_image=DockerTarget.DEV,
+                    ),
+                    "pytest",
+                    "-n",
+                    THREADS_AVAILABLE,
+                    build_support_subproject.get_pytest_report_args(
+                        test_suite=PythonSubproject.TestSuite.PROCESS_ENFORCEMENT
+                    ),
+                    build_support_subproject.get_test_suite_dir(
+                        test_suite=PythonSubproject.TestSuite.PROCESS_ENFORCEMENT
+                    ),
+                ],
+            ),
+        )
 
 
 class ValidatePythonStyle(TaskNode):
@@ -109,12 +163,12 @@ class ValidatePythonStyle(TaskNode):
                     "pytest",
                     "-n",
                     THREADS_AVAILABLE,
-                    subproject[
-                        SubprojectContext.DOCUMENTATION_ENFORCEMENT
-                    ].get_pytest_report_args(),
-                    subproject[
-                        SubprojectContext.DOCUMENTATION_ENFORCEMENT
-                    ].get_test_dir(),
+                    subproject[SubprojectContext.BUILD_SUPPORT].get_pytest_report_args(
+                        test_suite=PythonSubproject.TestSuite.STYLE_ENFORCEMENT
+                    ),
+                    subproject[SubprojectContext.BUILD_SUPPORT].get_test_suite_dir(
+                        test_suite=PythonSubproject.TestSuite.STYLE_ENFORCEMENT
+                    ),
                 ],
             ),
         )
@@ -159,16 +213,6 @@ class ValidatePythonStyle(TaskNode):
                 args=[
                     mypy_command,
                     subproject[SubprojectContext.BUILD_SUPPORT].get_test_dir(),
-                ],
-            ),
-        )
-        run_process(
-            args=concatenate_args(
-                args=[
-                    mypy_command,
-                    subproject[
-                        SubprojectContext.DOCUMENTATION_ENFORCEMENT
-                    ].get_root_dir(),
                 ],
             ),
         )
@@ -258,13 +302,13 @@ class AllSubprojectUnitTests(TaskNode):
 
 
 class SubprojectUnitTests(PerSubprojectTask):
-    """Task for testing PyPi package."""
+    """Task for running unit tests in a single subproject."""
 
     def required_tasks(self) -> list[TaskNode]:
-        """Get the list of tasks to run before we can test the pypi package.
+        """Get the list of tasks to run before we can unit test the subproject.
 
         Returns:
-            list[TaskNode]: A list of tasks required to test the pypi package.
+            list[TaskNode]: A list of tasks required to unit test the subproject.
         """
         required_tasks: list[TaskNode] = [
             SetupDevEnvironment(basic_task_info=self.get_basic_task_info()),
@@ -276,7 +320,7 @@ class SubprojectUnitTests(PerSubprojectTask):
         return required_tasks
 
     def run(self) -> None:
-        """Tests the PyPi package.
+        """Runs unit tests for the subproject.
 
         Returns:
             None
@@ -298,7 +342,9 @@ class SubprojectUnitTests(PerSubprojectTask):
                 unit_test_cache = FileCacheInfo(
                     group_root_dir=subproject_root, cache_info={}
                 )
-            unit_test_root = self.subproject.get_unit_test_dir()
+            unit_test_root = self.subproject.get_test_suite_dir(
+                test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+            )
             src_files = sorted(src_root.rglob("*"))
             src_files_checked = 0
             for src_file in src_files:
@@ -354,8 +400,90 @@ class SubprojectUnitTests(PerSubprojectTask):
                             "pytest",
                             "-n",
                             THREADS_AVAILABLE,
-                            self.subproject.get_pytest_report_args(),
-                            self.subproject.get_src_and_test_dir(),
+                            self.subproject.get_pytest_report_args(
+                                test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+                            ),
+                            self.subproject.get_src_dir(),
+                            self.subproject.get_test_suite_dir(
+                                test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+                            ),
                         ],
                     ),
                 )
+
+
+class AllSubprojectIntegrationTests(TaskNode):
+    """Task for running integration tests in all subprojects."""
+
+    def required_tasks(self) -> list[TaskNode]:
+        """Gets the subproject specific integration test tasks.
+
+        Returns:
+            list[TaskNode]: All the subproject specific integration test tasks.
+        """
+        return [
+            SubprojectIntegrationTests(
+                basic_task_info=self.get_basic_task_info(),
+                subproject_context=subproject_context,
+            )
+            for subproject_context in get_sorted_subproject_contexts()
+        ]
+
+    def run(self) -> None:
+        """Does nothing.
+
+        Returns:
+            None
+        """
+
+
+class SubprojectIntegrationTests(PerSubprojectTask):
+    """Task for running integration tests in a single subproject."""
+
+    def required_tasks(self) -> list[TaskNode]:
+        """Get the list of tasks to run before we can integration test the subproject.
+
+        Returns:
+            list[TaskNode]: A list of tasks required to integration test the subproject.
+        """
+        return [
+            SubprojectUnitTests(
+                basic_task_info=self.get_basic_task_info(),
+                subproject_context=self.subproject_context,
+            )
+        ]
+
+    def run(self) -> None:
+        """Runs integration tests for the subproject.
+
+        Returns:
+            None
+        """
+        if (
+            self.ci_cd_integration_test_mode
+            and self.subproject_context == SubprojectContext.BUILD_SUPPORT
+        ):
+            return
+        dev_docker_command = get_docker_command_for_image(
+            non_docker_project_root=self.non_docker_project_root,
+            docker_project_root=self.docker_project_root,
+            target_image=DockerTarget.DEV,
+        )
+        run_process(
+            args=concatenate_args(
+                args=[
+                    dev_docker_command,
+                    "pytest",
+                    "--basetemp",
+                    get_integration_test_scratch_folder(
+                        project_root=self.docker_project_root
+                    ),
+                    self.subproject.get_pytest_report_args(
+                        test_suite=PythonSubproject.TestSuite.INTEGRATION_TESTS
+                    ),
+                    self.subproject.get_test_suite_dir(
+                        test_suite=PythonSubproject.TestSuite.INTEGRATION_TESTS
+                    ),
+                ],
+            ),
+        )

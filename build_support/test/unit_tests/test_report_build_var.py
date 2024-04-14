@@ -9,6 +9,7 @@ from build_support.ci_cd_vars.docker_vars import (
     DockerTarget,
     get_interactive_docker_command_for_image,
 )
+from build_support.ci_cd_vars.project_structure import maybe_build_dir
 from build_support.report_build_var import AllowedCliArgs, parse_args, run_main
 
 
@@ -20,14 +21,14 @@ def test_allowed_cli_ars_not_changed_by_accident() -> None:
     }
 
 
-@pytest.fixture(params=[Path("/usr/dev"), Path("/user/dev")])
-def docker_project_root_arg(request: SubRequest) -> Path:
-    return request.param
+@pytest.fixture(params=[Path("usr/dev"), Path("user/dev")])
+def docker_project_root_arg(request: SubRequest, tmp_path: Path) -> Path:
+    return maybe_build_dir(dir_to_build=tmp_path.joinpath(request.param))
 
 
-@pytest.fixture(params=[Path("/path/to/project"), Path("/some/other/path")])
-def non_docker_project_root_arg(request: SubRequest) -> Path:
-    return request.param
+@pytest.fixture(params=[Path("path/to/project"), Path("some/other/path")])
+def non_docker_project_root_arg(request: SubRequest, tmp_path: Path) -> Path:
+    return maybe_build_dir(dir_to_build=tmp_path.joinpath(request.param))
 
 
 @pytest.fixture(params=[arg.value for arg in AllowedCliArgs])

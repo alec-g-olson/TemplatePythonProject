@@ -113,8 +113,9 @@ def test_make_new_project(tmp_path: Path, real_project_root_dir: Path) -> None:
         basic_task_info=BasicTaskInfo(
             non_docker_project_root=tmp_project_path,
             docker_project_root=tmp_project_path,
-            local_user_uid=1337,
-            local_user_gid=42,
+            local_uid=10,
+            local_gid=2,
+            local_user_env={"ENV1": "VAL1", "ENV2": "VAL2"},
         )
     )
     make_project_task.run()
@@ -137,8 +138,9 @@ def test_make_new_project(tmp_path: Path, real_project_root_dir: Path) -> None:
         basic_task_info=BasicTaskInfo(
             non_docker_project_root=tmp_project_path,
             docker_project_root=tmp_project_path,
-            local_user_uid=1337,
-            local_user_gid=42,
+            local_uid=10,
+            local_gid=2,
+            local_user_env={"ENV1": "VAL1", "ENV2": "VAL2"},
         )
     )
     make_project_task.run()
@@ -156,16 +158,18 @@ def test_setup_new_project_requires(tmp_path: Path) -> None:
         basic_task_info=BasicTaskInfo(
             non_docker_project_root=tmp_project_path,
             docker_project_root=tmp_project_path,
-            local_user_uid=1337,
-            local_user_gid=42,
+            local_uid=10,
+            local_gid=2,
+            local_user_env={"ENV1": "VAL1", "ENV2": "VAL2"},
         )
     ).required_tasks() == [
         Clean(
             basic_task_info=BasicTaskInfo(
                 non_docker_project_root=tmp_project_path,
                 docker_project_root=tmp_project_path,
-                local_user_uid=1337,
-                local_user_gid=42,
+                local_uid=10,
+                local_gid=2,
+                local_user_env={"ENV1": "VAL1", "ENV2": "VAL2"},
             )
         )
     ]

@@ -1,5 +1,5 @@
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import Mock
 
 import pytest
 from _pytest.fixtures import SubRequest
@@ -20,15 +20,16 @@ def build_mock_basic_task(
         task_name,
         (TaskNode,),
         {
-            "required_tasks": MagicMock(return_value=required_mock_tasks),
-            "run": MagicMock(),
+            "required_tasks": Mock(return_value=required_mock_tasks),
+            "run": Mock(),
         },
     )(
         basic_task_info=BasicTaskInfo(
             non_docker_project_root=Path("/root"),
             docker_project_root=Path("/root"),
-            local_user_uid=42,
-            local_user_gid=10,
+            local_uid=10,
+            local_gid=2,
+            local_user_env={"ENV1": "VAL1", "ENV2": "VAL2"},
         )
     )
 
@@ -146,7 +147,7 @@ def test_run_tasks(
     run_tasks(tasks=tasks_requested)
     for task in all_tasks:
         task_run = task.run
-        if isinstance(task_run, MagicMock):
+        if isinstance(task_run, Mock):
             if task in task_execution_order:
                 task_run.assert_called_once_with()
             else:

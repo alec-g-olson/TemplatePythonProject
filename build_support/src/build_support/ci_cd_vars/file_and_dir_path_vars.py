@@ -2,7 +2,11 @@
 
 from pathlib import Path
 
-from build_support.ci_cd_vars.project_structure import get_build_dir, maybe_build_dir
+from build_support.ci_cd_vars.project_structure import (
+    get_build_dir,
+    get_docs_dir,
+    maybe_build_dir,
+)
 from build_support.ci_cd_vars.subproject_structure import (
     SubprojectContext,
     get_all_python_subprojects_dict,
@@ -25,11 +29,7 @@ def get_sphinx_conf_dir(project_root: Path) -> Path:
     Returns:
         Path: Path to the sphinx config directory in this project.
     """
-    process_and_style_subproject = get_python_subproject(
-        subproject_context=SubprojectContext.DOCUMENTATION_ENFORCEMENT,
-        project_root=project_root,
-    )
-    return process_and_style_subproject.get_root_dir().joinpath(
+    return get_docs_dir(project_root=project_root).joinpath(
         "sphinx_conf",
     )
 
@@ -100,6 +100,18 @@ def get_license_templates_dir(project_root: Path) -> Path:
             "license_templates",
         ),
     )
+
+
+def get_local_info_yaml(project_root: Path) -> Path:
+    """Gets the location of the local_info.yaml for the project.
+
+    Args:
+        project_root (Path): Path to this project's root.
+
+    Returns:
+        Path: Path to the local_info.yaml for the project.
+    """
+    return get_build_dir(project_root=project_root).joinpath("local_info.yaml")
 
 
 def get_git_info_yaml(project_root: Path) -> Path:
@@ -180,7 +192,7 @@ def get_all_python_folders(project_root: Path) -> list[Path]:
     python_folders = [
         python_folder
         for subproject in subprojects.values()
-        for python_folder in subproject.get_src_and_test_dir()
+        for python_folder in (subproject.get_src_dir(), subproject.get_test_dir())
         if python_folder.exists()
     ] + [get_sphinx_conf_dir(project_root=project_root)]
     return sorted(python_folders)

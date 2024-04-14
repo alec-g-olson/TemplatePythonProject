@@ -31,10 +31,12 @@ from build_support.ci_cd_tasks.task_node import (
     TaskNode,
 )
 from build_support.ci_cd_tasks.validation_tasks import (
+    EnforceProcess,
     SubprojectUnitTests,
     ValidateAll,
     ValidatePythonStyle,
 )
+from build_support.ci_cd_vars.file_and_dir_path_vars import get_local_info_yaml
 from build_support.ci_cd_vars.subproject_structure import SubprojectContext
 from build_support.dag_engine import run_tasks
 from build_support.new_project_setup.setup_new_project import MakeProjectFromTemplate
@@ -50,34 +52,17 @@ class CliTaskInfo:
 
     def get_task_node(
         self,
-        non_docker_project_root: Path,
-        docker_project_root: Path,
-        local_user_uid: int,
-        local_user_gid: int,
+        basic_task_info: BasicTaskInfo,
     ) -> TaskNode:
         """Builds a task node based on the contents of this dataclass.
 
         Args:
-            non_docker_project_root (Path): Path to this project's root on the local
-                machine.
-            docker_project_root (Path): Path to this project's root when running
-                in docker containers.
-            local_user_uid (int): The local user's users id, used when tasks need to be
-                run by the local user.
-            local_user_gid (int): The local user's group id, used when tasks need to be
-                run by the local user.
+            basic_task_info (BasicTaskInfo): The information required to set up a task.
 
         Returns:
             TaskNode: The task node based on the contents of this dataclass.
 
         """
-        basic_task_info = BasicTaskInfo(
-            non_docker_project_root=non_docker_project_root,
-            docker_project_root=docker_project_root,
-            local_user_uid=local_user_uid,
-            local_user_gid=local_user_gid,
-        )
-
         if self.subproject_context and issubclass(self.task_node, PerSubprojectTask):
             return self.task_node(
                 basic_task_info=basic_task_info,
@@ -115,6 +100,7 @@ CLI_ARG_TO_TASK: dict[str, CliTaskInfo] = {
     "setup_prod_env": CliTaskInfo(task_node=SetupProdEnvironment),
     "setup_infra_env": CliTaskInfo(task_node=SetupInfraEnvironment),
     "test_style": CliTaskInfo(task_node=ValidatePythonStyle),
+    "check_process": CliTaskInfo(task_node=EnforceProcess),
     "test_build_support": CliTaskInfo(
         task_node=SubprojectUnitTests,
         subproject_context=SubprojectContext.BUILD_SUPPORT,
@@ -154,7 +140,7 @@ def fix_permissions(local_user_uid: int, local_user_gid: int) -> None:
                 [
                     path.absolute()
                     for path in Path(__file__).parent.parent.parent.parent.glob("*")
-                    if path.name != ".git"
+                    if path.name not in [".git", "test_scratch_folder"]
                 ],
             ],
         ),
@@ -185,30 +171,11 @@ def parse_args(args: list[str] | None = None) -> Namespace:
         choices=CLI_ARG_TO_TASK.keys(),
     )
     parser.add_argument(
-        "--non-docker-project-root",
-        type=Path,
-        required=True,
-        help="Path to project root on local machine, used to mount project "
-        "when launching docker containers.",
-    )
-    parser.add_argument(
         "--docker-project-root",
         type=Path,
         required=True,
         help="Path to project root on docker machines, used to mount project "
         "when launching docker containers.",
-    )
-    parser.add_argument(
-        "--user-id",
-        type=int,
-        required=True,
-        help="User ID, used to return files made by docker to owner.",
-    )
-    parser.add_argument(
-        "--group-id",
-        type=int,
-        required=True,
-        help="User's Group ID, used to return files made by docker to owner.",
     )
     return parser.parse_args(args=args)
 
@@ -222,13 +189,10 @@ def run_main(args: Namespace) -> None:
     Returns:
         None
     """
+    local_info_yaml = get_local_info_yaml(project_root=args.docker_project_root)
+    basic_task_info = BasicTaskInfo.from_yaml(local_info_yaml.read_text())
     requested_tasks = [
-        CLI_ARG_TO_TASK[arg].get_task_node(
-            non_docker_project_root=args.non_docker_project_root,
-            docker_project_root=args.docker_project_root,
-            local_user_uid=args.user_id,
-            local_user_gid=args.group_id,
-        )
+        CLI_ARG_TO_TASK[arg].get_task_node(basic_task_info=basic_task_info)
         for arg in args.build_tasks
     ]
     try:
@@ -236,7 +200,10 @@ def run_main(args: Namespace) -> None:
     except Exception as e:
         print(e)  # noqa: T201
     finally:
-        fix_permissions(local_user_uid=args.user_id, local_user_gid=args.group_id)
+        fix_permissions(
+            local_user_uid=basic_task_info.local_uid,
+            local_user_gid=basic_task_info.local_gid,
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover - main

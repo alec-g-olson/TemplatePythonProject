@@ -1,5 +1,5 @@
 /build/
-/dist/
+/test_scratch_folder/
 .idea
 .coverage
 *.pyc

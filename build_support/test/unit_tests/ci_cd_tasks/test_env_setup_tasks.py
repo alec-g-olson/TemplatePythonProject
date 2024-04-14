@@ -1,8 +1,7 @@
 from copy import copy
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Any
-from unittest.mock import call, patch
+from unittest.mock import patch
 
 import pytest
 import yaml
@@ -24,6 +23,9 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_git_info_yaml,
 )
 from build_support.ci_cd_vars.project_setting_vars import get_pulumi_version
+from build_support.ci_cd_vars.project_structure import (
+    get_integration_test_scratch_folder,
+)
 
 
 def test_build_dev_env_requires(basic_task_info: BasicTaskInfo) -> None:
@@ -32,17 +34,9 @@ def test_build_dev_env_requires(basic_task_info: BasicTaskInfo) -> None:
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
 def test_run_build_dev_env(basic_task_info: BasicTaskInfo) -> None:
-    with (
-        patch(
-            "build_support.ci_cd_tasks.env_setup_tasks.run_process",
-        ) as run_process_mock,
-        patch("build_support.ci_cd_tasks.env_setup_tasks.getpwuid") as mock_getpwuid,
-        patch("build_support.ci_cd_tasks.env_setup_tasks.getgrgid") as mock_getgrgid,
-    ):
-        local_username = "some_username"
-        mock_getpwuid.return_value = SimpleNamespace(pw_name=local_username)
-        local_user_group = "some_user_group"
-        mock_getgrgid.return_value = SimpleNamespace(gr_name=local_user_group)
+    with patch(
+        "build_support.ci_cd_tasks.env_setup_tasks.run_process",
+    ) as run_process_mock:
         build_dev_env_args = get_docker_build_command(
             docker_project_root=basic_task_info.docker_project_root,
             target_image=DockerTarget.DEV,
@@ -50,10 +44,6 @@ def test_run_build_dev_env(basic_task_info: BasicTaskInfo) -> None:
                 "--build-arg": [
                     "DOCKER_REMOTE_PROJECT_ROOT="
                     + str(basic_task_info.docker_project_root.absolute()),
-                    f"CURRENT_USER={local_username}",
-                    f"CURRENT_GROUP={local_user_group}",
-                    f"CURRENT_USER_ID={basic_task_info.local_user_uid}",
-                    f"CURRENT_GROUP_ID={basic_task_info.local_user_gid}",
                 ],
             },
         )
@@ -137,11 +127,17 @@ def test_run_clean(basic_task_info: BasicTaskInfo) -> None:
     build_dir = get_build_dir(project_root=basic_task_info.docker_project_root)
     _add_some_folders_and_files_to_folder(current_folder=build_dir)
 
+    test_scratch_folder = get_integration_test_scratch_folder(
+        project_root=basic_task_info.docker_project_root
+    )
+    _add_some_folders_and_files_to_folder(current_folder=test_scratch_folder)
+
     folders_that_will_be_completely_removed = [
         mypy_cache,
         pytest_cache,
         ruff_cache,
         build_dir,
+        test_scratch_folder,
     ]
 
     for folder in folders_that_will_be_completely_removed:
@@ -208,6 +204,28 @@ def test_dump_git_info(git_info_yaml_str: str) -> None:
     assert git_info.to_yaml() == git_info_yaml_str
 
 
+def test_get_primary_branch_name() -> None:
+    assert GitInfo.get_primary_branch_name() == "main"
+
+
+@pytest.mark.parametrize(
+    argnames=("branch_name", "ticket_id"),
+    argvalues=[
+        ("main", None),
+        ("branch", "branch"),
+        ("42-branch-name", "42"),
+        ("INFRA001-an-infra-ticket", "INFRA001"),
+    ],
+)
+def test_get_ticket_id(branch_name: str, ticket_id: str | None) -> None:
+    assert (
+        GitInfo.model_validate(
+            {"branch": branch_name, "tags": ["some", "tags"]}
+        ).get_ticket_id()
+        == ticket_id
+    )
+
+
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
 def test_get_git_info_requires(basic_task_info: BasicTaskInfo) -> None:
     assert GetGitInfo(basic_task_info=basic_task_info).required_tasks() == []
@@ -216,14 +234,14 @@ def test_get_git_info_requires(basic_task_info: BasicTaskInfo) -> None:
 def test_run_get_git_info(basic_task_info: BasicTaskInfo) -> None:
     with (
         patch(
-            "build_support.ci_cd_tasks.env_setup_tasks.run_process",
-        ) as run_process_mock,
-        patch(
-            "build_support.ci_cd_tasks.env_setup_tasks.get_current_branch",
+            "build_support.ci_cd_tasks.env_setup_tasks.get_current_branch_name",
         ) as get_branch_mock,
         patch(
             "build_support.ci_cd_tasks.env_setup_tasks.get_local_tags",
         ) as get_tags_mock,
+        patch(
+            "build_support.ci_cd_tasks.env_setup_tasks.git_fetch",
+        ) as git_fetch_mock,
     ):
         branch_name = "some_branch"
         # Some tags added to the repo might be for convenience and not strictly version
@@ -236,14 +254,12 @@ def test_run_get_git_info(basic_task_info: BasicTaskInfo) -> None:
         )
         assert not git_info_yaml_dest.exists()
         GetGitInfo(basic_task_info=basic_task_info).run()
-        expected_git_fetch_call = call(
-            args=["git", "fetch"],
-            user_uid=basic_task_info.local_user_uid,
-            user_gid=basic_task_info.local_user_gid,
+        git_fetch_mock.assert_called_once_with(
+            project_root=basic_task_info.docker_project_root,
+            local_uid=basic_task_info.local_uid,
+            local_gid=basic_task_info.local_gid,
+            local_user_env=basic_task_info.local_user_env,
         )
-        all_expected_calls = [expected_git_fetch_call]
-        assert run_process_mock.call_count == len(all_expected_calls)
-        run_process_mock.assert_has_calls(calls=all_expected_calls, any_order=True)
         observed_git_info = GitInfo.from_yaml(git_info_yaml_dest.read_text())
         expected_git_info = GitInfo(branch=branch_name, tags=tags)
         assert observed_git_info == expected_git_info

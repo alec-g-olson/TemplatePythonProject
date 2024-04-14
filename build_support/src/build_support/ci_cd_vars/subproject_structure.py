@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
+from typing import Any
 
 from build_support.ci_cd_vars.project_setting_vars import (
     get_project_name,
@@ -13,12 +14,11 @@ from build_support.process_runner import concatenate_args
 
 
 class SubprojectContext(Enum):
-    """An Enum to track the possible docker targets and images."""
+    """An Enum to track the python subprojects with similar structure."""
 
     PYPI = "pypi_package"
     BUILD_SUPPORT = "build_support"
     INFRA = "infra"
-    DOCUMENTATION_ENFORCEMENT = "process_and_style_enforcement"
 
 
 def get_sorted_subproject_contexts() -> list[SubprojectContext]:
@@ -39,6 +39,15 @@ class PythonSubproject:
 
     project_root: Path
     subproject_context: SubprojectContext
+
+    class TestSuite(Enum):
+        """An Enum to track the possible test contexts."""
+
+        UNIT_TESTS = "unit_tests"
+        INTEGRATION_TESTS = "integration_tests"
+        # The Enums below should only be used in the BUILD_SUPPORT subproject
+        PROCESS_ENFORCEMENT = "process_enforcement"
+        STYLE_ENFORCEMENT = "style_enforcement"
 
     def get_subproject_name(self) -> str:
         """Gets the name of the subproject.
@@ -104,34 +113,25 @@ class PythonSubproject:
         """
         return self.get_root_dir().joinpath("test")
 
-    def get_unit_test_dir(self) -> Path:
-        """Gets the unit test folder in a subproject.
+    def get_test_suite_dir(self, test_suite: TestSuite) -> Path:
+        """Gets the appropriate test suite folder in a subproject.
+
+        Args:
+            test_suite (TestSuite): The test suite enum corresponding to the test suite
+                dir.
 
         Returns:
             Path: Path to the unit test folder in the subproject.
         """
-        return self.get_test_dir().joinpath("unit_tests")
+        return self.get_test_dir().joinpath(test_suite.value)
 
-    def get_integration_test_dir(self) -> Path:
-        """Gets the integration test folder in a subproject.
-
-        Returns:
-            Path: Path to the integration test folder in the subproject.
-        """
-        return self.get_test_dir().joinpath("integration_tests")
-
-    def get_src_and_test_dir(self) -> list[Path]:
-        """Gets the src and test dirs for the subproject.
-
-        Returns:
-            list[path]: Path to the build_support src and test dirs for the project.
-        """
-        return [self.get_src_dir(), self.get_test_dir()]
-
-    def _get_test_report_name(self, report_extension: str) -> str:
+    def _get_test_report_name(
+        self, test_suite: TestSuite | None, report_extension: str
+    ) -> str:
         """Enforces a consistent python report naming convention.
 
         Args:
+            test_suite (TestSuite | None): The suite of tests we are running.
             report_extension (str): The end of the requested report's filename including
                 the extension.
 
@@ -139,12 +139,15 @@ class PythonSubproject:
             str: The name of a pytest report in a standardized format.
         """
         return "_".join(
-            [
+            x
+            for x in (
                 get_project_name(project_root=self.project_root),
                 get_project_version(project_root=self.project_root),
                 self.get_subproject_name(),
+                test_suite.value if test_suite else None,
                 report_extension,
-            ],
+            )
+            if x
         )
 
     def get_bandit_report_name(self) -> str:
@@ -153,7 +156,9 @@ class PythonSubproject:
         Returns:
             str: The name of a bandit report in a standardized format.
         """
-        return self._get_test_report_name(report_extension="bandit_report.txt")
+        return self._get_test_report_name(
+            test_suite=None, report_extension="bandit_report.txt"
+        )
 
     def get_bandit_report_path(self) -> Path:
         """Get the path of the infra bandit security report for this project.
@@ -163,95 +168,93 @@ class PythonSubproject:
         """
         return self.get_reports_dir().joinpath(self.get_bandit_report_name())
 
-    def get_pytest_html_report_name(self) -> str:
-        """Get the name of the pytest html report for this subproject.
+    def get_pytest_report_name(self, test_suite: TestSuite) -> str:
+        """Get the name of the pytest report for this subproject.
+
+        Args:
+            test_suite (TestSuite): The test suite enum corresponding to the test suite
+                we are getting the pytest report name for.
 
         Returns:
-            str: The name of a pytest html report in a standardized format.
+            str: The name of a pytest report in a standardized format.
         """
-        return self._get_test_report_name(report_extension="pytest_report.html")
-
-    def get_pytest_html_report_path(self) -> Path:
-        """Get the path of the pytest html report for this subproject.
-
-        Returns:
-            Path: Path to the pytest html report for this subproject.
-        """
-        return self.get_reports_dir().joinpath(self.get_pytest_html_report_name())
-
-    def get_pytest_xml_report_name(self) -> str:
-        """Get the name of the pytest xml report for this subproject.
-
-        Returns:
-            str: The name of a pytest xml report in a standardized format.
-        """
-        return self._get_test_report_name(report_extension="pytest_report.xml")
-
-    def get_pytest_xml_report_path(self) -> Path:
-        """Get the path of the pytest xml report for this subproject.
-
-        Returns:
-            Path: Path to the pytest xml report for this subproject.
-        """
-        return self.get_reports_dir().joinpath(self.get_pytest_xml_report_name())
-
-    def get_pytest_xml_coverage_report_name(self) -> str:
-        """Get the name of the pytest xml coverage report for this subproject.
-
-        Returns:
-            str: The name of a pytest xml coverage report in a standardized format.
-        """
-        return self._get_test_report_name(report_extension="pytest_coverage_report.xml")
-
-    def get_pytest_xml_coverage_report_path(self) -> Path:
-        """Get the path of the pytest xml coverage report for this subproject.
-
-        Returns:
-            Path: Path to the pytest xml coverage report for this subproject.
-        """
-        return self.get_reports_dir().joinpath(
-            self.get_pytest_xml_coverage_report_name()
+        return self._get_test_report_name(
+            test_suite=test_suite, report_extension="pytest_report.xml"
         )
 
-    def get_pytest_html_coverage_report_name(self) -> str:
-        """Get the name of the pytest html coverage report for this subproject.
+    def get_pytest_report_path(self, test_suite: TestSuite) -> Path:
+        """Get the path of the pytest report for this subproject.
+
+        Args:
+            test_suite (TestSuite): The test suite enum corresponding to the test suite
+                we are getting the pytest report path for.
 
         Returns:
-            str: The name of a pytest html coverage report in a standardized format.
-        """
-        return self._get_test_report_name(report_extension="pytest_coverage_report")
-
-    def get_pytest_html_coverage_report_path(self) -> Path:
-        """Get the path of the pytest html coverage report for this subproject.
-
-        Returns:
-            Path: Path to the pytest html coverage report for this subproject.
+            Path: Path to the pytest report for this subproject.
         """
         return self.get_reports_dir().joinpath(
-            self.get_pytest_html_coverage_report_name()
+            self.get_pytest_report_name(test_suite=test_suite)
         )
 
-    def get_pytest_report_args(self) -> list[str]:
+    def get_pytest_coverage_report_name(self, test_suite: TestSuite) -> str:
+        """Get the name of the pytest coverage report for this subproject.
+
+        Args:
+            test_suite (TestSuite): The test suite enum corresponding to the test suite
+                we are getting the pytest coverage report name for.
+
+        Returns:
+            str: The name of a pytest coverage report in a standardized format.
+        """
+        return self._get_test_report_name(
+            test_suite=test_suite, report_extension="pytest_coverage_report.xml"
+        )
+
+    def get_pytest_coverage_report_path(self, test_suite: TestSuite) -> Path:
+        """Get the path of the pytest coverage report for this subproject.
+
+        Args:
+            test_suite (TestSuite): The test suite enum corresponding to the test suite
+                we are getting the pytest coverage report path for.
+
+        Returns:
+            Path: Path to the pytest coverage report for this subproject.
+        """
+        return self.get_reports_dir().joinpath(
+            self.get_pytest_coverage_report_name(test_suite=test_suite)
+        )
+
+    def get_pytest_report_args(self, test_suite: TestSuite) -> list[str]:
         """Get the args used by pytest for this subproject.
+
+        Args:
+            test_suite (TestSuite): The test suite enum corresponding to the test suite
+                we are getting report args for.
 
         Returns:
             list[str]: A list of arguments that will be used with pytest for this
                 subproject.
         """
-        return concatenate_args(
-            args=[
-                "--cov-report",
-                "term-missing",
-                "--cov-report",
-                f"xml:{self.get_pytest_xml_coverage_report_path()}",
-                "--cov-report",
-                f"html:{self.get_pytest_html_coverage_report_path()}",
-                f"--cov={self.get_root_dir()}",
-                f"--junitxml={self.get_pytest_xml_report_path()}",
-                f"--html={self.get_pytest_html_report_path()}",
-                "--self-contained-html",
-            ],
-        )
+        report_args: list[Any] = [
+            # Always check to make sure all test code is covered
+            # It's a good check to make sure we're doing what we expect with our tests
+            "--cov-report",
+            "term-missing",
+            f"--cov={self.get_test_suite_dir(test_suite=test_suite)}",
+            f"--junitxml={self.get_pytest_report_path(test_suite=test_suite)}",
+        ]
+        if test_suite == self.TestSuite.UNIT_TESTS:
+            coverage_report = self.get_pytest_coverage_report_path(
+                test_suite=test_suite
+            )
+            report_args.extend(
+                (
+                    f"--cov={self.get_src_dir()}",
+                    "--cov-report",
+                    f"xml:{coverage_report}",
+                )
+            )
+        return concatenate_args(args=report_args)
 
     def get_file_cache_dir(self) -> Path:
         """Gets the directory that will be used for storing file cache information.

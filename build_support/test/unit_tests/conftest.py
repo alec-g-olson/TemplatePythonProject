@@ -1,14 +1,12 @@
+from os import environ
 from pathlib import Path
+from pwd import getpwuid
 from typing import Any
 
 import pytest
 from _pytest.fixtures import SubRequest
 
-from build_support.ci_cd_tasks.env_setup_tasks import GitInfo
 from build_support.ci_cd_tasks.task_node import BasicTaskInfo
-from build_support.ci_cd_vars.file_and_dir_path_vars import (
-    get_git_info_yaml,
-)
 from build_support.ci_cd_vars.project_structure import (
     get_poetry_lock_file,
     get_pyproject_toml,
@@ -16,7 +14,7 @@ from build_support.ci_cd_vars.project_structure import (
 
 mock_project_versions = ["0.0.0", "0.0.1", "0.1.0", "1.0.0", "1.0.0-dev.1"]
 mock_project_names = ["project_one", "project_two"]
-mock_local_user_ids = [(1, 20), (1337, 42)]
+mock_local_user_ids = [(0, 0), (2, 1)]
 
 
 @pytest.fixture(params=mock_project_versions)
@@ -32,15 +30,30 @@ def project_name(request: SubRequest) -> str:
 
 
 @pytest.fixture(params=mock_local_user_ids)
-def local_uid(request: SubRequest) -> str:
-    """The name of the local user."""
-    return request.param[0]
+def local_id_pairs(request: SubRequest) -> tuple[int, int]:
+    """The local user uid and gid as a pair."""
+    return request.param
 
 
-@pytest.fixture(params=mock_local_user_ids)
-def local_gid(request: SubRequest) -> str:
-    """The name of the local user."""
-    return request.param[1]
+@pytest.fixture()
+def local_uid(local_id_pairs: tuple[int, int]) -> int:
+    """The uid of the local user."""
+    return local_id_pairs[0]
+
+
+@pytest.fixture()
+def local_gid(local_id_pairs: tuple[int, int]) -> int:
+    """The gid of the local user."""
+    return local_id_pairs[1]
+
+
+@pytest.fixture()
+def local_user_env(local_uid: int, local_gid: int) -> dict[str, str] | None:
+    if local_uid or local_gid:
+        env = environ.copy()
+        env["HOME"] = f"/home/{getpwuid(local_uid).pw_name}/"
+        return env
+    return None
 
 
 @pytest.fixture()
@@ -49,13 +62,15 @@ def basic_task_info(
     docker_project_root: Path,
     local_uid: int,
     local_gid: int,
+    local_user_env: dict[str, str],
 ) -> BasicTaskInfo:
     """Provides basic task info for setting up and testing tasks."""
     return BasicTaskInfo(
         non_docker_project_root=mock_project_root,
         docker_project_root=docker_project_root,
-        local_user_uid=local_uid,
-        local_user_gid=local_gid,
+        local_uid=local_uid,
+        local_gid=local_gid,
+        local_user_env=local_user_env,
     )
 
 
@@ -132,17 +147,3 @@ def mock_docker_poetry_lock_file(
     mock_poetry_lock_file = get_poetry_lock_file(project_root=docker_project_root)
     mock_poetry_lock_file.write_text(poetry_lock_contents)
     return mock_poetry_lock_file
-
-
-@pytest.fixture(scope="session")
-def real_git_info(real_project_root_dir: Path) -> GitInfo:
-    """Return the git information at the time of this test."""
-    return GitInfo.from_yaml(
-        get_git_info_yaml(project_root=real_project_root_dir).read_text(),
-    )
-
-
-@pytest.fixture(scope="session")
-def is_on_main(real_git_info: GitInfo) -> bool:
-    """Determine if the main branch is currently checked out."""
-    return real_git_info.branch == "main"

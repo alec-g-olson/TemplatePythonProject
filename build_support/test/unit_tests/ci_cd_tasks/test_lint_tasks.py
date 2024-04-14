@@ -176,9 +176,11 @@ def test_apply_run_ruff_fix_unsafe(basic_task_info: BasicTaskInfo) -> None:
         assert run_process_mock.call_count == len(expected_run_process_calls)
         run_process_mock.assert_has_calls(calls=expected_run_process_calls)
         commit_changes_mock.assert_called_once_with(
-            commit_message_no_quotes=(
+            commit_message=(
                 "Committing staged changes for before applying unsafe ruff fixes."
             ),
-            local_user_uid=basic_task_info.local_user_uid,
-            local_user_gid=basic_task_info.local_user_gid,
+            project_root=basic_task_info.docker_project_root,
+            local_uid=basic_task_info.local_uid,
+            local_gid=basic_task_info.local_gid,
+            local_user_env=basic_task_info.local_user_env,
         )

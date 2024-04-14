@@ -45,6 +45,7 @@ class ClassInfo:
     docstring: str
     element_path: str
     methods: dict[str, FunctionType | classmethod | staticmethod]
+    inner_classes: dict[str, Type]
 
 
 @dataclass(frozen=True)
@@ -57,7 +58,7 @@ class FunctionInfo:
 
 DocumentationElement: TypeAlias = PackageInfo | ModuleInfo | ClassInfo | FunctionInfo
 
-PROJECT_ROOT = Path(__file__).parent.parent.parent
+PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 
 subprojects_with_src = get_all_python_subprojects_with_src(project_root=PROJECT_ROOT)
 
@@ -157,6 +158,7 @@ def parse_module_info(imported_module: ModuleType) -> ModuleInfo:
 
 def parse_class_info(imported_class: Type, element_prefix: str) -> ClassInfo:
     methods = {}
+    inner_classes = {}
     class_elements = dict(vars(imported_class))
     dataclass_params = class_elements.get("__dataclass_params__")
     methods_to_ignore = ["__new__"]
@@ -170,15 +172,18 @@ def parse_class_info(imported_class: Type, element_prefix: str) -> ClassInfo:
         if dataclass_params.frozen:
             methods_to_ignore.extend(["__setattr__", "__delattr__"])
     for name, member in vars(imported_class).items():
-        if (
-            (isfunction(member) or isinstance(member, (staticmethod, classmethod)))
-            and (
-                not name.startswith("_")
-                or (name.startswith("__") and name.endswith("__"))
-            )
-            and name not in methods_to_ignore
-        ):
-            methods[name] = member
+        if not name.startswith("_") or (name.startswith("__") and name.endswith("__")):
+            if isclass(member):
+                inner_classes[name] = member
+            if (
+                (isfunction(member) or isinstance(member, (staticmethod, classmethod)))
+                and (
+                    not name.startswith("_")
+                    or (name.startswith("__") and name.endswith("__"))
+                )
+                and name not in methods_to_ignore
+            ):
+                methods[name] = member
     if imported_class.__doc__ is None:  # pragma: no cover
         imported_class.__doc__ = ""
     return ClassInfo(
@@ -188,6 +193,7 @@ def parse_class_info(imported_class: Type, element_prefix: str) -> ClassInfo:
         else imported_class.__name__,
         docstring=imported_class.__doc__,
         methods=methods,
+        inner_classes=inner_classes,
     )
 
 
@@ -211,6 +217,60 @@ def parse_function_info(
     )
 
 
+def parse_package_sub_elements(
+    parsed_package: PackageInfo,
+    all_element_info: list[DocumentationElement],
+) -> None:
+    all_element_info.append(parsed_package)
+    for sub_package in parsed_package.sub_packages:
+        sub_package_path = f"{parsed_package.module_path}.{sub_package}"
+        parse_sub_elements(
+            imported_element=import_element(full_module_path=sub_package_path),
+            all_element_info=all_element_info,
+        )
+    for imported_module in parsed_package.modules.values():
+        parse_sub_elements(
+            imported_element=imported_module,
+            all_element_info=all_element_info,
+        )
+
+
+def parse_module_sub_elements(
+    parsed_module: ModuleInfo, all_element_info: list[DocumentationElement]
+) -> None:
+    all_element_info.append(parsed_module)
+    for imported_class in parsed_module.classes.values():
+        parse_sub_elements(
+            imported_element=imported_class,
+            all_element_info=all_element_info,
+        )
+    for imported_function in parsed_module.functions.values():
+        parse_sub_elements(
+            imported_element=imported_function,
+            all_element_info=all_element_info,
+        )
+
+
+def parse_class_sub_elements(
+    parsed_class: ClassInfo,
+    all_element_info: list[DocumentationElement],
+    element_prefix: str = "",
+) -> None:
+    all_element_info.append(parsed_class)
+    for imported_method in parsed_class.methods.values():
+        parse_sub_elements(
+            imported_element=imported_method,
+            all_element_info=all_element_info,
+            element_prefix=element_prefix + imported_method.__name__,
+        )
+    for imported_class in parsed_class.inner_classes.values():
+        parse_sub_elements(
+            imported_element=imported_class,
+            all_element_info=all_element_info,
+            element_prefix=element_prefix + imported_class.__name__,
+        )
+
+
 def parse_sub_elements(
     imported_element: ImportedElement,
     all_element_info: list[DocumentationElement],
@@ -222,31 +282,15 @@ def parse_sub_elements(
             raise ValueError(msg)
         if imported_element.__file__.endswith("__init__.py"):
             parsed_package = parse_package_info(imported_package=imported_element)
-            all_element_info.append(parsed_package)
-            for sub_package in parsed_package.sub_packages:
-                sub_package_path = f"{imported_element.__package__}.{sub_package}"
-                parse_sub_elements(
-                    imported_element=import_element(full_module_path=sub_package_path),
-                    all_element_info=all_element_info,
-                )
-            for imported_module in parsed_package.modules.values():
-                parse_sub_elements(
-                    imported_element=imported_module,
-                    all_element_info=all_element_info,
-                )
+            parse_package_sub_elements(
+                parsed_package=parsed_package,
+                all_element_info=all_element_info,
+            )
         else:
             parsed_module = parse_module_info(imported_module=imported_element)
-            all_element_info.append(parsed_module)
-            for imported_class in parsed_module.classes.values():
-                parse_sub_elements(
-                    imported_element=imported_class,
-                    all_element_info=all_element_info,
-                )
-            for imported_function in parsed_module.functions.values():
-                parse_sub_elements(
-                    imported_element=imported_function,
-                    all_element_info=all_element_info,
-                )
+            parse_module_sub_elements(
+                parsed_module=parsed_module, all_element_info=all_element_info
+            )
     elif isfunction(imported_element) or isinstance(
         imported_element, (staticmethod, classmethod)
     ):
@@ -258,13 +302,11 @@ def parse_sub_elements(
         parsed_class = parse_class_info(
             imported_class=imported_element, element_prefix=element_prefix
         )
-        all_element_info.append(parsed_class)
-        for imported_method in parsed_class.methods.values():
-            parse_sub_elements(
-                imported_element=imported_method,
-                all_element_info=all_element_info,
-                element_prefix=element_prefix + imported_method.__name__,
-            )
+        parse_class_sub_elements(
+            parsed_class=parsed_class,
+            all_element_info=all_element_info,
+            element_prefix=element_prefix,
+        )
     else:  # pragma: no cover not hit if everything is working
         msg = f"{imported_element.__name__} is not a supported type."
         raise ValueError(msg)
