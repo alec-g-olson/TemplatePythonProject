@@ -9,12 +9,16 @@ from build_support.ci_cd_tasks.env_setup_tasks import GetGitInfo, SetupDevEnviro
 from build_support.ci_cd_tasks.task_node import BasicTaskInfo
 from build_support.ci_cd_tasks.validation_tasks import (
     AllSubprojectIntegrationTests,
+    AllSubprojectSecurityChecks,
+    AllSubprojectStaticTypeChecking,
     AllSubprojectUnitTests,
     EnforceProcess,
     SubprojectIntegrationTests,
     SubprojectUnitTests,
     ValidateAll,
     ValidatePythonStyle,
+    ValidateSecurityChecks,
+    ValidateStaticTypeChecking,
 )
 from build_support.ci_cd_vars.docker_vars import (
     DockerTarget,
@@ -45,9 +49,11 @@ from build_support.process_runner import concatenate_args
 def test_validate_all_requires(basic_task_info: BasicTaskInfo) -> None:
     assert ValidateAll(basic_task_info=basic_task_info).required_tasks() == [
         AllSubprojectUnitTests(basic_task_info=basic_task_info),
-        AllSubprojectIntegrationTests(basic_task_info=basic_task_info),
         ValidatePythonStyle(basic_task_info=basic_task_info),
+        AllSubprojectStaticTypeChecking(basic_task_info=basic_task_info),
+        AllSubprojectSecurityChecks(basic_task_info=basic_task_info),
         EnforceProcess(basic_task_info=basic_task_info),
+        AllSubprojectIntegrationTests(basic_task_info=basic_task_info),
     ]
 
 
@@ -91,6 +97,143 @@ def test_run_enforce_process(basic_task_info: BasicTaskInfo) -> None:
                     ),
                 ],
             )
+        )
+
+
+def test_all_subproject_static_type_checking_requires(
+    basic_task_info: BasicTaskInfo,
+) -> None:
+    assert AllSubprojectStaticTypeChecking(
+        basic_task_info=basic_task_info
+    ).required_tasks() == [
+        ValidateStaticTypeChecking(
+            basic_task_info=basic_task_info,
+            subproject_context=subproject_context,
+        )
+        for subproject_context in get_sorted_subproject_contexts()
+    ]
+
+
+def test_run_all_subproject_static_type_checking(
+    basic_task_info: BasicTaskInfo,
+) -> None:
+    assert is_an_empty_function(
+        func=AllSubprojectStaticTypeChecking(basic_task_info=basic_task_info).run
+    )
+
+
+def test_validate_static_type_checking_requires(
+    basic_task_info: BasicTaskInfo, subproject_context: SubprojectContext
+) -> None:
+    assert ValidateStaticTypeChecking(
+        basic_task_info=basic_task_info, subproject_context=subproject_context
+    ).required_tasks() == [
+        GetGitInfo(basic_task_info=basic_task_info),
+        SetupDevEnvironment(basic_task_info=basic_task_info),
+    ]
+
+
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
+def test_run_validate_static_type_checking(
+    basic_task_info: BasicTaskInfo, subproject_context: SubprojectContext
+) -> None:
+    subproject = get_python_subproject(
+        subproject_context=subproject_context,
+        project_root=basic_task_info.docker_project_root,
+    )
+    with patch(
+        "build_support.ci_cd_tasks.validation_tasks.run_process"
+    ) as run_process_mock:
+        ValidateStaticTypeChecking(
+            basic_task_info=basic_task_info, subproject_context=subproject_context
+        ).run()
+        run_process_mock.assert_called_once_with(
+            args=concatenate_args(
+                args=[
+                    get_base_docker_command_for_image(
+                        non_docker_project_root=basic_task_info.non_docker_project_root,
+                        docker_project_root=basic_task_info.docker_project_root,
+                        target_image=DockerTarget.DEV,
+                    ),
+                    "-e",
+                    get_mypy_path_env(
+                        docker_project_root=basic_task_info.docker_project_root,
+                        target_image=DockerTarget.DEV,
+                    ),
+                    get_docker_image_name(
+                        project_root=basic_task_info.docker_project_root,
+                        target_image=DockerTarget.DEV,
+                    ),
+                    "mypy",
+                    "--explicit-package-bases",
+                    subproject.get_root_dir(),
+                ],
+            ),
+        )
+
+
+def test_all_subproject_security_checks_requires(
+    basic_task_info: BasicTaskInfo,
+) -> None:
+    assert AllSubprojectSecurityChecks(
+        basic_task_info=basic_task_info
+    ).required_tasks() == [
+        ValidateSecurityChecks(
+            basic_task_info=basic_task_info,
+            subproject_context=subproject_context,
+        )
+        for subproject_context in get_sorted_subproject_contexts()
+    ]
+
+
+def test_run_all_subproject_security_checks(
+    basic_task_info: BasicTaskInfo,
+) -> None:
+    assert is_an_empty_function(
+        func=AllSubprojectSecurityChecks(basic_task_info=basic_task_info).run
+    )
+
+
+def test_validate_security_checks_requires(
+    basic_task_info: BasicTaskInfo, subproject_context: SubprojectContext
+) -> None:
+    assert ValidateSecurityChecks(
+        basic_task_info=basic_task_info, subproject_context=subproject_context
+    ).required_tasks() == [
+        GetGitInfo(basic_task_info=basic_task_info),
+        SetupDevEnvironment(basic_task_info=basic_task_info),
+    ]
+
+
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
+def test_run_validate_security_checks(
+    basic_task_info: BasicTaskInfo, subproject_context: SubprojectContext
+) -> None:
+    subproject = get_python_subproject(
+        subproject_context=subproject_context,
+        project_root=basic_task_info.docker_project_root,
+    )
+    with patch(
+        "build_support.ci_cd_tasks.validation_tasks.run_process"
+    ) as run_process_mock:
+        ValidateSecurityChecks(
+            basic_task_info=basic_task_info, subproject_context=subproject_context
+        ).run()
+        run_process_mock.assert_called_once_with(
+            args=concatenate_args(
+                args=[
+                    get_docker_command_for_image(
+                        non_docker_project_root=basic_task_info.non_docker_project_root,
+                        docker_project_root=basic_task_info.docker_project_root,
+                        target_image=DockerTarget.DEV,
+                    ),
+                    "bandit",
+                    "-o",
+                    subproject.get_bandit_report_path(),
+                    "-r",
+                    subproject.get_src_dir(),
+                ],
+            ),
         )
 
 
@@ -156,103 +299,10 @@ def test_run_validate_python_style(basic_task_info: BasicTaskInfo) -> None:
                 ),
             ],
         )
-        mypy_command = concatenate_args(
-            args=[
-                get_base_docker_command_for_image(
-                    non_docker_project_root=basic_task_info.non_docker_project_root,
-                    docker_project_root=basic_task_info.docker_project_root,
-                    target_image=DockerTarget.DEV,
-                ),
-                "-e",
-                get_mypy_path_env(
-                    docker_project_root=basic_task_info.docker_project_root,
-                    target_image=DockerTarget.DEV,
-                ),
-                get_docker_image_name(
-                    project_root=basic_task_info.docker_project_root,
-                    target_image=DockerTarget.DEV,
-                ),
-                "mypy",
-                "--explicit-package-bases",
-            ],
-        )
-        mypy_pypi_args = concatenate_args(
-            args=[
-                mypy_command,
-                subprojects[SubprojectContext.PYPI].get_root_dir(),
-            ],
-        )
-        mypy_build_support_src_args = concatenate_args(
-            args=[
-                mypy_command,
-                subprojects[SubprojectContext.BUILD_SUPPORT].get_src_dir(),
-            ],
-        )
-        mypy_build_support_test_args = concatenate_args(
-            args=[
-                mypy_command,
-                subprojects[SubprojectContext.BUILD_SUPPORT].get_test_dir(),
-            ],
-        )
-        mypy_infra_args = concatenate_args(
-            args=[
-                mypy_command,
-                subprojects[SubprojectContext.INFRA].get_root_dir(),
-            ],
-        )
-        bandit_pypi_args = concatenate_args(
-            args=[
-                get_docker_command_for_image(
-                    non_docker_project_root=basic_task_info.non_docker_project_root,
-                    docker_project_root=basic_task_info.docker_project_root,
-                    target_image=DockerTarget.DEV,
-                ),
-                "bandit",
-                "-o",
-                subprojects[SubprojectContext.PYPI].get_bandit_report_path(),
-                "-r",
-                subprojects[SubprojectContext.PYPI].get_src_dir(),
-            ],
-        )
-        bandit_infra_args = concatenate_args(
-            args=[
-                get_docker_command_for_image(
-                    non_docker_project_root=basic_task_info.non_docker_project_root,
-                    docker_project_root=basic_task_info.docker_project_root,
-                    target_image=DockerTarget.DEV,
-                ),
-                "bandit",
-                "-o",
-                subprojects[SubprojectContext.INFRA].get_bandit_report_path(),
-                "-r",
-                subprojects[SubprojectContext.INFRA].get_src_dir(),
-            ],
-        )
-        bandit_build_support_args = concatenate_args(
-            args=[
-                get_docker_command_for_image(
-                    non_docker_project_root=basic_task_info.non_docker_project_root,
-                    docker_project_root=basic_task_info.docker_project_root,
-                    target_image=DockerTarget.DEV,
-                ),
-                "bandit",
-                "-o",
-                subprojects[SubprojectContext.BUILD_SUPPORT].get_bandit_report_path(),
-                "-r",
-                subprojects[SubprojectContext.BUILD_SUPPORT].get_src_dir(),
-            ],
-        )
         all_call_args = [
             ruff_check_src_args,
             ruff_check_test_args,
             test_style_enforcement_args,
-            mypy_pypi_args,
-            mypy_build_support_src_args,
-            mypy_build_support_test_args,
-            mypy_infra_args,
-            bandit_pypi_args,
-            bandit_infra_args,
-            bandit_build_support_args,
         ]
         run_process_mock.assert_has_calls(
             calls=[call(args=args) for args in all_call_args],
@@ -583,13 +633,24 @@ def test_run_all_subproject_integration_tests(basic_task_info: BasicTaskInfo) ->
 def test_subproject_integration_tests_requires(
     basic_task_info: BasicTaskInfo, subproject_context: SubprojectContext
 ) -> None:
-    assert SubprojectIntegrationTests(
-        basic_task_info=basic_task_info, subproject_context=subproject_context
-    ).required_tasks() == [
-        SubprojectUnitTests(
+    if subproject_context == SubprojectContext.BUILD_SUPPORT:
+        assert SubprojectIntegrationTests(
             basic_task_info=basic_task_info, subproject_context=subproject_context
-        )
-    ]
+        ).required_tasks() == [
+            SubprojectUnitTests(
+                basic_task_info=basic_task_info, subproject_context=subproject_context
+            ),
+            ValidatePythonStyle(basic_task_info=basic_task_info),
+            EnforceProcess(basic_task_info=basic_task_info),
+        ]
+    else:
+        assert SubprojectIntegrationTests(
+            basic_task_info=basic_task_info, subproject_context=subproject_context
+        ).required_tasks() == [
+            SubprojectUnitTests(
+                basic_task_info=basic_task_info, subproject_context=subproject_context
+            )
+        ]
 
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")

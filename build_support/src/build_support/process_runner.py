@@ -6,7 +6,7 @@ from enum import Enum
 
 # The purpose of this module is to make subprocess calls
 from subprocess import PIPE, Popen  # nosec: B404
-from typing import IO, Any
+from typing import IO, Any, AnyStr
 
 
 class ProcessVerbosity(Enum):
@@ -111,8 +111,8 @@ def run_process(
 
 def build_popen(
     args: list[str],
-    stdin: IO | int | None = None,
-) -> Popen:
+    stdin: IO[AnyStr] | int | None = None,
+) -> Popen[bytes]:
     """Creates a Popes instance based on the arguments.
 
     Args:

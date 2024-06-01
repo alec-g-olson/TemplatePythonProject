@@ -1,5 +1,7 @@
 """Should hold all tasks that perform automated formatting of code."""
 
+from typing import override
+
 from build_support.ci_cd_tasks.env_setup_tasks import SetupDevEnvironment
 from build_support.ci_cd_tasks.task_node import TaskNode
 from build_support.ci_cd_tasks.validation_tasks import AllSubprojectUnitTests
@@ -16,9 +18,10 @@ from build_support.ci_cd_vars.git_status_vars import commit_changes_if_diff
 from build_support.process_runner import concatenate_args, run_process
 
 
-class Lint(TaskNode):
+class Format(TaskNode):
     """Linting task."""
 
+    @override
     def required_tasks(self) -> list[TaskNode]:
         """Gets the tasks that have to be run before linting the project.
 
@@ -29,6 +32,7 @@ class Lint(TaskNode):
             SetupDevEnvironment(basic_task_info=self.get_basic_task_info()),
         ]
 
+    @override
     def run(self) -> None:
         """Lints all python files in project.
 
@@ -68,9 +72,10 @@ class Lint(TaskNode):
         )
 
 
-class RuffFixSafe(TaskNode):
+class Lint(TaskNode):
     """Task for running ruff check --fix on all python files in project."""
 
+    @override
     def required_tasks(self) -> list[TaskNode]:
         """Gets the tasks to run before running ruff check --fix on the project.
 
@@ -81,10 +86,11 @@ class RuffFixSafe(TaskNode):
             list[TaskNode]: A list of tasks required to safely fix code issues.
         """
         return [
-            Lint(basic_task_info=self.get_basic_task_info()),
+            Format(basic_task_info=self.get_basic_task_info()),
             AllSubprojectUnitTests(basic_task_info=self.get_basic_task_info()),
         ]
 
+    @override
     def run(self) -> None:
         """Runs ruff check --fix on all python files.
 
@@ -125,7 +131,7 @@ class RuffFixSafe(TaskNode):
         )
 
 
-class ApplyRuffFixUnsafe(TaskNode):
+class LintApplyUnsafeFixes(TaskNode):
     """Task for running ruff check --fix --unsafe-fixes on all python files.
 
     This task requires safe fixes to be applied first, and the first thing done by this
@@ -133,6 +139,7 @@ class ApplyRuffFixUnsafe(TaskNode):
     Then unsafe fixes are attempted.
     """
 
+    @override
     def required_tasks(self) -> list[TaskNode]:
         """Gets the tasks to run before running ruff check --fix --unsafe-fixes.
 
@@ -140,9 +147,10 @@ class ApplyRuffFixUnsafe(TaskNode):
             list[TaskNode]: A list of tasks required to lint project.
         """
         return [
-            RuffFixSafe(basic_task_info=self.get_basic_task_info()),
+            Lint(basic_task_info=self.get_basic_task_info()),
         ]
 
+    @override
     def run(self) -> None:
         """Runs ruff check --fix on all python files.
 

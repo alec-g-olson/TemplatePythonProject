@@ -4,6 +4,8 @@ This module exists to have a single task and code location where all
 the logic for making a new project is executed from.
 """
 
+from typing import override
+
 from build_support.ci_cd_tasks.env_setup_tasks import Clean
 from build_support.ci_cd_tasks.task_node import TaskNode
 from build_support.ci_cd_vars.file_and_dir_path_vars import (
@@ -25,6 +27,7 @@ from build_support.new_project_setup.update_readme_md import update_readme
 class MakeProjectFromTemplate(TaskNode):
     """Updates project based on the project settings yaml."""
 
+    @override
     def required_tasks(self) -> list[TaskNode]:
         """Gets the list of tasks to run before setting up a new project.
 
@@ -33,6 +36,7 @@ class MakeProjectFromTemplate(TaskNode):
         """
         return [Clean(basic_task_info=self.get_basic_task_info())]
 
+    @override
     def run(self) -> None:
         """Modifies the appropriate files to start a new project.
 

@@ -20,9 +20,9 @@ from build_support.ci_cd_tasks.env_setup_tasks import (
     SetupProdEnvironment,
 )
 from build_support.ci_cd_tasks.lint_tasks import (
-    ApplyRuffFixUnsafe,
+    LintApplyUnsafeFixes,
+    Format,
     Lint,
-    RuffFixSafe,
 )
 from build_support.ci_cd_tasks.push_tasks import PushAll, PushPypi
 from build_support.ci_cd_tasks.task_node import (
@@ -31,6 +31,8 @@ from build_support.ci_cd_tasks.task_node import (
     TaskNode,
 )
 from build_support.ci_cd_tasks.validation_tasks import (
+    AllSubprojectSecurityChecks,
+    AllSubprojectStaticTypeChecking,
     EnforceProcess,
     SubprojectUnitTests,
     ValidateAll,
@@ -100,6 +102,8 @@ CLI_ARG_TO_TASK: dict[str, CliTaskInfo] = {
     "setup_prod_env": CliTaskInfo(task_node=SetupProdEnvironment),
     "setup_infra_env": CliTaskInfo(task_node=SetupInfraEnvironment),
     "test_style": CliTaskInfo(task_node=ValidatePythonStyle),
+    "type_checks": CliTaskInfo(task_node=AllSubprojectStaticTypeChecking),
+    "security_checks": CliTaskInfo(task_node=AllSubprojectSecurityChecks),
     "check_process": CliTaskInfo(task_node=EnforceProcess),
     "test_build_support": CliTaskInfo(
         task_node=SubprojectUnitTests,
@@ -109,9 +113,9 @@ CLI_ARG_TO_TASK: dict[str, CliTaskInfo] = {
         task_node=SubprojectUnitTests, subproject_context=SubprojectContext.PYPI
     ),
     "test": CliTaskInfo(task_node=ValidateAll),
+    "format": CliTaskInfo(task_node=Format),
     "lint": CliTaskInfo(task_node=Lint),
-    "ruff_fix_safe": CliTaskInfo(task_node=RuffFixSafe),
-    "apply_unsafe_ruff_fixes": CliTaskInfo(task_node=ApplyRuffFixUnsafe),
+    "lint_apply_unsafe_fixes": CliTaskInfo(task_node=LintApplyUnsafeFixes),
     "build_docs": CliTaskInfo(task_node=BuildDocs),
     "build_pypi": CliTaskInfo(task_node=BuildPypi),
     "build": CliTaskInfo(task_node=BuildAll),

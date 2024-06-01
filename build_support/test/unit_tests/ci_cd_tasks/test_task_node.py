@@ -1,5 +1,6 @@
 from copy import deepcopy
 from pathlib import Path
+from typing import Any, cast
 from unittest.mock import Mock
 
 import pytest
@@ -52,12 +53,12 @@ from build_support.ci_cd_vars.subproject_structure import (
         },
     ]
 )
-def basic_task_info_data_dict(request: SubRequest) -> dict:
-    return request.param
+def basic_task_info_data_dict(request: SubRequest) -> dict[str, Any]:
+    return cast(dict[str, Any], request.param)
 
 
 @pytest.fixture()
-def basic_task_info_yaml_str(basic_task_info_data_dict: dict) -> str:
+def basic_task_info_yaml_str(basic_task_info_data_dict: dict[str, Any]) -> str:
     data_copy = deepcopy(basic_task_info_data_dict)
     if "ci_cd_integration_test_mode" not in data_copy:
         data_copy["ci_cd_integration_test_mode"] = False
@@ -66,12 +67,16 @@ def basic_task_info_yaml_str(basic_task_info_data_dict: dict) -> str:
     return yaml.dump(data_copy)
 
 
-def test_load(basic_task_info_yaml_str: str, basic_task_info_data_dict: dict) -> None:
+def test_load(
+    basic_task_info_yaml_str: str, basic_task_info_data_dict: dict[str, Any]
+) -> None:
     basic_task_info = BasicTaskInfo.from_yaml(yaml_str=basic_task_info_yaml_str)
     assert basic_task_info == BasicTaskInfo.model_validate(basic_task_info_data_dict)
 
 
-def test_load_bad_non_docker_project_root(basic_task_info_data_dict: dict) -> None:
+def test_load_bad_non_docker_project_root(
+    basic_task_info_data_dict: dict[str, Any],
+) -> None:
     data_copy = deepcopy(basic_task_info_data_dict)
     data_copy["non_docker_project_root"] = 4
     basic_task_info_yaml_str = yaml.dump(data_copy)
@@ -79,7 +84,9 @@ def test_load_bad_non_docker_project_root(basic_task_info_data_dict: dict) -> No
         BasicTaskInfo.from_yaml(yaml_str=basic_task_info_yaml_str)
 
 
-def test_load_bad_docker_project_root(basic_task_info_data_dict: dict) -> None:
+def test_load_bad_docker_project_root(
+    basic_task_info_data_dict: dict[str, Any],
+) -> None:
     data_copy = deepcopy(basic_task_info_data_dict)
     data_copy["docker_project_root"] = 4
     basic_task_info_yaml_str = yaml.dump(data_copy)
@@ -87,7 +94,7 @@ def test_load_bad_docker_project_root(basic_task_info_data_dict: dict) -> None:
         BasicTaskInfo.from_yaml(yaml_str=basic_task_info_yaml_str)
 
 
-def test_load_bad_local_uid_str(basic_task_info_data_dict: dict) -> None:
+def test_load_bad_local_uid_str(basic_task_info_data_dict: dict[str, Any]) -> None:
     data_copy = deepcopy(basic_task_info_data_dict)
     data_copy["local_uid"] = "twenty"
     basic_task_info_yaml_str = yaml.dump(data_copy)
@@ -95,7 +102,7 @@ def test_load_bad_local_uid_str(basic_task_info_data_dict: dict) -> None:
         BasicTaskInfo.from_yaml(yaml_str=basic_task_info_yaml_str)
 
 
-def test_load_bad_local_uid_bad_int(basic_task_info_data_dict: dict) -> None:
+def test_load_bad_local_uid_bad_int(basic_task_info_data_dict: dict[str, Any]) -> None:
     data_copy = deepcopy(basic_task_info_data_dict)
     data_copy["local_uid"] = -5
     basic_task_info_yaml_str = yaml.dump(data_copy)
@@ -103,7 +110,7 @@ def test_load_bad_local_uid_bad_int(basic_task_info_data_dict: dict) -> None:
         BasicTaskInfo.from_yaml(yaml_str=basic_task_info_yaml_str)
 
 
-def test_load_bad_local_gid_str(basic_task_info_data_dict: dict) -> None:
+def test_load_bad_local_gid_str(basic_task_info_data_dict: dict[str, Any]) -> None:
     data_copy = deepcopy(basic_task_info_data_dict)
     data_copy["local_gid"] = "twenty"
     basic_task_info_yaml_str = yaml.dump(data_copy)
@@ -111,7 +118,7 @@ def test_load_bad_local_gid_str(basic_task_info_data_dict: dict) -> None:
         BasicTaskInfo.from_yaml(yaml_str=basic_task_info_yaml_str)
 
 
-def test_load_bad_local_gid_bad_int(basic_task_info_data_dict: dict) -> None:
+def test_load_bad_local_gid_bad_int(basic_task_info_data_dict: dict[str, Any]) -> None:
     data_copy = deepcopy(basic_task_info_data_dict)
     data_copy["local_gid"] = -5
     basic_task_info_yaml_str = yaml.dump(data_copy)
@@ -119,7 +126,7 @@ def test_load_bad_local_gid_bad_int(basic_task_info_data_dict: dict) -> None:
         BasicTaskInfo.from_yaml(yaml_str=basic_task_info_yaml_str)
 
 
-def test_load_bad_local_user_env(basic_task_info_data_dict: dict) -> None:
+def test_load_bad_local_user_env(basic_task_info_data_dict: dict[str, Any]) -> None:
     data_copy = deepcopy(basic_task_info_data_dict)
     data_copy["local_user_env"] = 8
     basic_task_info_yaml_str = yaml.dump(data_copy)
@@ -127,7 +134,9 @@ def test_load_bad_local_user_env(basic_task_info_data_dict: dict) -> None:
         BasicTaskInfo.from_yaml(yaml_str=basic_task_info_yaml_str)
 
 
-def test_load_bad_ci_cd_integration_test_mode(basic_task_info_data_dict: dict) -> None:
+def test_load_bad_ci_cd_integration_test_mode(
+    basic_task_info_data_dict: dict[str, Any],
+) -> None:
     data_copy = deepcopy(basic_task_info_data_dict)
     data_copy["ci_cd_integration_test_mode"] = "Probably"
     basic_task_info_yaml_str = yaml.dump(data_copy)
@@ -177,7 +186,9 @@ def test_load_bad_local_user_env_for_non_root() -> None:
         BasicTaskInfo.from_yaml(yaml_str=basic_task_info_yaml_str)
 
 
-def test_dump(basic_task_info_yaml_str: str, basic_task_info_data_dict: dict) -> None:
+def test_dump(
+    basic_task_info_yaml_str: str, basic_task_info_data_dict: dict[str, Any]
+) -> None:
     basic_task_info = BasicTaskInfo.model_validate(basic_task_info_data_dict)
     assert basic_task_info.to_yaml() == basic_task_info_yaml_str
 
@@ -199,7 +210,7 @@ def build_mock_basic_task(
 ) -> TaskNode:
     """Builds a mock task for testing task interactions."""
 
-    return type(
+    return type(  # type: ignore[no-any-return]
         task_name,
         (TaskNode,),
         {
@@ -216,7 +227,7 @@ def build_mock_per_subproject_task(
 ) -> PerSubprojectTask:
     """Builds a mock task for testing task interactions."""
 
-    return type(
+    return type(  # type: ignore[no-any-return]
         task_name,
         (PerSubprojectTask,),
         {

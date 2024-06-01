@@ -1,7 +1,7 @@
 from os import environ
 from pathlib import Path
 from pwd import getpwuid
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from _pytest.fixtures import SubRequest
@@ -20,19 +20,19 @@ mock_local_user_ids = [(0, 0), (2, 1)]
 @pytest.fixture(params=mock_project_versions)
 def project_version(request: SubRequest) -> str:
     """The version contained in the pyproject toml."""
-    return request.param
+    return cast(str, request.param)
 
 
 @pytest.fixture(params=mock_project_names)
 def project_name(request: SubRequest) -> str:
     """The project name contained in the pyproject toml."""
-    return request.param
+    return cast(str, request.param)
 
 
 @pytest.fixture(params=mock_local_user_ids)
 def local_id_pairs(request: SubRequest) -> tuple[int, int]:
     """The local user uid and gid as a pair."""
-    return request.param
+    return cast(tuple[int, int], request.param)
 
 
 @pytest.fixture()
@@ -115,7 +115,7 @@ other_package_info = '[[package]]\nname = "other_package"\nversion = "1.0.0"\n\n
 @pytest.fixture(params=mock_pulumi_versions)
 def pulumi_version(request: SubRequest) -> str:
     """The version contained in the pyproject toml."""
-    return request.param
+    return cast(str, request.param)
 
 
 @pytest.fixture()

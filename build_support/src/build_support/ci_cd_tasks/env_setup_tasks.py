@@ -6,6 +6,7 @@ Attributes:
 """
 
 import re
+from typing import override
 
 from pydantic import BaseModel, Field
 from yaml import safe_dump, safe_load
@@ -31,6 +32,7 @@ from build_support.process_runner import run_process
 class SetupDevEnvironment(TaskNode):
     """Builds a docker image with a stable environment for running dev commands."""
 
+    @override
     def required_tasks(self) -> list[TaskNode]:
         """Get the list of tasks to run before we can build a dev environment.
 
@@ -39,29 +41,32 @@ class SetupDevEnvironment(TaskNode):
         """
         return []
 
+    @override
     def run(self) -> None:
         """Builds a stable environment for running dev commands.
 
         Returns:
             None
         """
-        run_process(
-            args=get_docker_build_command(
-                docker_project_root=self.docker_project_root,
-                target_image=DockerTarget.DEV,
-                extra_args={
-                    "--build-arg": [
-                        "DOCKER_REMOTE_PROJECT_ROOT="
-                        + str(self.docker_project_root.absolute()),
-                    ],
-                },
-            ),
-        )
+        if not self.ci_cd_integration_test_mode:
+            run_process(
+                args=get_docker_build_command(
+                    docker_project_root=self.docker_project_root,
+                    target_image=DockerTarget.DEV,
+                    extra_args={
+                        "--build-arg": [
+                            "DOCKER_REMOTE_PROJECT_ROOT="
+                            + str(self.docker_project_root.absolute()),
+                        ],
+                    },
+                ),
+            )
 
 
 class SetupProdEnvironment(TaskNode):
     """Builds a docker image with a stable environment for running prod commands."""
 
+    @override
     def required_tasks(self) -> list[TaskNode]:
         """Get the list of tasks to run before we can build a prod environment.
 
@@ -70,23 +75,26 @@ class SetupProdEnvironment(TaskNode):
         """
         return []
 
+    @override
     def run(self) -> None:
         """Builds a stable environment for running prod commands.
 
         Returns:
             None
         """
-        run_process(
-            args=get_docker_build_command(
-                docker_project_root=self.docker_project_root,
-                target_image=DockerTarget.PROD,
-            ),
-        )
+        if not self.ci_cd_integration_test_mode:
+            run_process(
+                args=get_docker_build_command(
+                    docker_project_root=self.docker_project_root,
+                    target_image=DockerTarget.PROD,
+                ),
+            )
 
 
 class SetupInfraEnvironment(TaskNode):
     """Builds a docker image with a stable environment for running infra commands."""
 
+    @override
     def required_tasks(self) -> list[TaskNode]:
         """Get the list of tasks to run before we can build an infra environment.
 
@@ -95,27 +103,30 @@ class SetupInfraEnvironment(TaskNode):
         """
         return []
 
+    @override
     def run(self) -> None:
         """Builds a stable environment for running infra commands.
 
         Returns:
             None
         """
-        run_process(
-            args=get_docker_build_command(
-                docker_project_root=self.docker_project_root,
-                target_image=DockerTarget.INFRA,
-                extra_args={
-                    "--build-arg": "PULUMI_VERSION="
-                    + get_pulumi_version(project_root=self.docker_project_root),
-                },
-            ),
-        )
+        if not self.ci_cd_integration_test_mode:
+            run_process(
+                args=get_docker_build_command(
+                    docker_project_root=self.docker_project_root,
+                    target_image=DockerTarget.INFRA,
+                    extra_args={
+                        "--build-arg": "PULUMI_VERSION="
+                        + get_pulumi_version(project_root=self.docker_project_root),
+                    },
+                ),
+            )
 
 
 class Clean(TaskNode):
     """Removes all temporary files for a clean build environment."""
 
+    @override
     def required_tasks(self) -> list[TaskNode]:
         """Gets the list of tasks to run before cleaning.
 
@@ -124,6 +135,7 @@ class Clean(TaskNode):
         """
         return []
 
+    @override
     def run(self) -> None:
         """Deletes all the temporary build files.
 
@@ -209,6 +221,7 @@ class GitInfo(BaseModel):
 class GetGitInfo(TaskNode):
     """Gets all git info we could need for checks during building."""
 
+    @override
     def required_tasks(self) -> list[TaskNode]:
         """Gets the list of tasks to run before getting git info.
 
@@ -217,6 +230,7 @@ class GetGitInfo(TaskNode):
         """
         return []
 
+    @override
     def run(self) -> None:
         """Builds a yaml with required git info.
 

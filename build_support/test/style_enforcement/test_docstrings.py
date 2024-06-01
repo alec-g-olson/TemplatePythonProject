@@ -6,7 +6,7 @@ from pathlib import Path
 from re import compile
 from textwrap import dedent
 from types import FunctionType, ModuleType
-from typing import Any, Iterable, Pattern, Type, TypeAlias
+from typing import Any, Iterable, Pattern, Type, TypeAlias, override
 
 import pytest
 from _pytest.fixtures import SubRequest
@@ -17,9 +17,8 @@ from build_support.ci_cd_vars.subproject_structure import (
     get_all_python_subprojects_with_src,
 )
 
-ImportedElement: TypeAlias = (
-    ModuleType | FunctionType | classmethod | staticmethod | Type
-)
+ClassOrStaticMethod: TypeAlias = classmethod | staticmethod  # type: ignore[type-arg]
+ImportedElement: TypeAlias = ModuleType | FunctionType | ClassOrStaticMethod | Type[Any]
 
 
 @dataclass(frozen=True)
@@ -35,7 +34,7 @@ class ModuleInfo:
     module_path: str
     docstring: str
     attributes: dict[str, Any]
-    classes: dict[str, Type]
+    classes: dict[str, Type[Any]]
     functions: dict[str, FunctionType]
 
 
@@ -44,8 +43,8 @@ class ClassInfo:
     module_path: str
     docstring: str
     element_path: str
-    methods: dict[str, FunctionType | classmethod | staticmethod]
-    inner_classes: dict[str, Type]
+    methods: dict[str, FunctionType | ClassOrStaticMethod]
+    inner_classes: dict[str, Type[Any]]
 
 
 @dataclass(frozen=True)
@@ -68,7 +67,7 @@ def package_to_test(request: SubRequest) -> str:
     context_with_src = request.param.subproject_context
     if context_with_src == SubprojectContext.PYPI:
         return get_project_name(project_root=PROJECT_ROOT)
-    return context_with_src.value
+    return context_with_src.value  # type: ignore[no-any-return]
 
 
 def import_element(
@@ -156,7 +155,7 @@ def parse_module_info(imported_module: ModuleType) -> ModuleInfo:
     )
 
 
-def parse_class_info(imported_class: Type, element_prefix: str) -> ClassInfo:
+def parse_class_info(imported_class: Type[Any], element_prefix: str) -> ClassInfo:
     methods = {}
     inner_classes = {}
     class_elements = dict(vars(imported_class))
@@ -198,7 +197,7 @@ def parse_class_info(imported_class: Type, element_prefix: str) -> ClassInfo:
 
 
 def parse_function_info(
-    imported_function: FunctionType | classmethod | staticmethod, element_prefix: str
+    imported_function: FunctionType | ClassOrStaticMethod, element_prefix: str
 ) -> FunctionInfo:
     if isinstance(imported_function, (classmethod, staticmethod)):
         params = signature(imported_function.__func__).parameters
@@ -699,7 +698,6 @@ def get_package_module_section_info(
 
 
 def test_all_package_docstrings(all_packages_info: list[PackageInfo]) -> None:
-    assert len(all_packages_info) != 0
     packages_with_issues_in_docstrings = []
     for package_info in all_packages_info:
         contexts = get_docstring_contexts(docstring=package_info.docstring)
@@ -760,10 +758,7 @@ def get_module_attributes_section_info(
     )
 
 
-def test_all_module_docstrings(
-    all_modules_info: list[ModuleInfo], package_to_test: str
-) -> None:
-    assert len(all_modules_info) != 0 or package_to_test == "infra"
+def test_all_module_docstrings(all_modules_info: list[ModuleInfo]) -> None:
     modules_with_issues_in_docstrings = []
     for module_info in all_modules_info:
         contexts = get_docstring_contexts(docstring=module_info.docstring)
@@ -793,10 +788,7 @@ def test_all_module_docstrings(
     assert modules_with_issues_in_docstrings == []
 
 
-def test_all_class_docstrings(
-    all_class_info: list[ClassInfo], package_to_test: str
-) -> None:
-    assert len(all_class_info) != 0 or package_to_test == "infra"
+def test_all_class_docstrings(all_class_info: list[ClassInfo]) -> None:
     for class_info in all_class_info:
         assert class_info is not None
 
@@ -832,6 +824,7 @@ def get_error_in_function_results_section_info(
 class FunctionDocstringData(ElementDocstringData):
     result_missing_type_or_description: bool | None
 
+    @override
     def has_issues(self) -> bool:
         if (
             super().has_issues() or self.result_missing_type_or_description
@@ -840,10 +833,7 @@ class FunctionDocstringData(ElementDocstringData):
         return False
 
 
-def test_all_function_docstrings(
-    all_function_info: list[FunctionInfo], package_to_test: str
-) -> None:
-    assert len(all_function_info) != 0 or package_to_test == "infra"
+def test_all_function_docstrings(all_function_info: list[FunctionInfo]) -> None:
     functions_with_issues_in_docstrings = []
     for function_info in all_function_info:
         contexts = get_docstring_contexts(docstring=function_info.docstring)

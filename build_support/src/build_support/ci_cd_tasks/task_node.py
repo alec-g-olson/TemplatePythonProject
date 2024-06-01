@@ -2,6 +2,7 @@
 
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import override
 
 from pydantic import BaseModel, Field, field_serializer, model_validator
 from yaml import safe_dump, safe_load
@@ -138,6 +139,7 @@ class TaskNode(ABC):
         """
         return self.__class__.__name__
 
+    @override
     def __eq__(self, other: object) -> bool:
         """Checks if this is equal to the other item.
 
@@ -149,6 +151,7 @@ class TaskNode(ABC):
         """
         return isinstance(other, TaskNode) and self.task_label() == other.task_label()
 
+    @override
     def __hash__(self) -> int:
         """Calculates a hash value for use in dictionaries.
 
@@ -203,6 +206,7 @@ class PerSubprojectTask(TaskNode, ABC):
             project_root=self.docker_project_root,
         )
 
+    @override
     def task_label(self) -> str:
         """A unique label for each task, used when building the DAG.
 

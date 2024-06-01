@@ -9,6 +9,7 @@ from typing import Iterable
 
 from git import DiffIndex, FetchInfo, Head, Repo
 from git.cmd import execute_kwargs
+from git.diff import Diff
 
 
 def get_git_repo(project_root: Path) -> Repo:
@@ -128,7 +129,7 @@ def git_add_all(project_root: Path) -> Head:
     return repo.active_branch
 
 
-def get_git_diff(project_root: Path) -> DiffIndex:
+def get_git_diff(project_root: Path) -> DiffIndex[Diff]:
     """Gets the result of `git diff`.  If not empty, there are unstaged changes.
 
     Args:
@@ -137,7 +138,7 @@ def get_git_diff(project_root: Path) -> DiffIndex:
     Returns:
         str: The results of running `git diff`.
     """
-    return git_add_all(project_root=project_root).commit.diff()
+    return git_add_all(project_root=project_root).commit.diff()  # type: ignore[no-any-return]
 
 
 def commit_changes_if_diff(

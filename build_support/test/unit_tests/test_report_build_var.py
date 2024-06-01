@@ -1,5 +1,6 @@
 from argparse import Namespace
 from pathlib import Path
+from typing import cast
 from unittest.mock import patch
 
 import pytest
@@ -33,7 +34,7 @@ def non_docker_project_root_arg(request: SubRequest, tmp_path: Path) -> Path:
 
 @pytest.fixture(params=[arg.value for arg in AllowedCliArgs])
 def build_variable_to_report(request: SubRequest) -> str:
-    return request.param
+    return cast(str, request.param)
 
 
 @pytest.fixture()
