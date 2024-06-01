@@ -3,10 +3,15 @@ from typing import cast
 from unittest.mock import Mock
 
 import pytest
+import yaml
 from _pytest.fixtures import SubRequest
 
 from build_support.ci_cd_tasks.task_node import BasicTaskInfo, TaskNode
+from build_support.ci_cd_vars.file_and_dir_path_vars import (
+    get_build_runtime_report_path,
+)
 from build_support.dag_engine import (
+    BuildRunReport,
     get_task_execution_order,
     run_tasks,
 )
@@ -144,8 +149,9 @@ def test_run_tasks(
     tasks_requested: list[TaskNode],
     task_execution_order: list[TaskNode],
     all_tasks: set[TaskNode],
+    mock_project_root: Path,
 ) -> None:
-    run_tasks(tasks=tasks_requested)
+    run_tasks(tasks=tasks_requested, project_root=mock_project_root)
     for task in all_tasks:
         task_run = task.run
         if isinstance(task_run, Mock):
@@ -155,3 +161,50 @@ def test_run_tasks(
                 assert task_run.run.call_count == 0
         else:  # pragma: no cover - will only hit if setup incorrectly
             pytest.fail("This test was setup incorrectly, task.run should be a mock.")
+    parsed_report = BuildRunReport.from_yaml(
+        get_build_runtime_report_path(project_root=mock_project_root).read_text()
+    )
+    assert len(parsed_report.report) == len(task_execution_order)
+
+
+@pytest.fixture()
+def build_runtime_report_data() -> dict[str, list[dict[str, str]]]:
+    return {
+        "report": [
+            {
+                "duration": "0:00:00.000036",
+                "task_name": "TASK_5",
+            },
+            {
+                "duration": "0:00:00.000024",
+                "task_name": "TASK_6",
+            },
+        ]
+    }
+
+
+@pytest.fixture()
+def build_runtime_report_yaml_str(
+    build_runtime_report_data: dict[str, list[dict[str, str]]],
+) -> str:
+    return yaml.dump(build_runtime_report_data)
+
+
+def test_load_build_runtime_report(
+    build_runtime_report_yaml_str: str,
+    build_runtime_report_data: dict[str, list[dict[str, str]]],
+) -> None:
+    build_runtime_report = BuildRunReport.from_yaml(
+        yaml_str=build_runtime_report_yaml_str
+    )
+    assert build_runtime_report == BuildRunReport.model_validate(
+        build_runtime_report_data
+    )
+
+
+def test_dump_build_runtime_report(
+    build_runtime_report_yaml_str: str,
+    build_runtime_report_data: dict[str, list[dict[str, str]]],
+) -> None:
+    build_runtime_report = BuildRunReport.model_validate(build_runtime_report_data)
+    assert build_runtime_report.to_yaml() == build_runtime_report_yaml_str

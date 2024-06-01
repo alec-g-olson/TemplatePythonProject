@@ -199,7 +199,7 @@ class GitInfo(BaseModel):
 
     @staticmethod
     def from_yaml(yaml_str: str) -> "GitInfo":
-        """Builds an object from a json str.
+        """Builds an object from a yaml str.
 
         Args:
             yaml_str (str): String of the YAML representation of a GitInfo instance.
