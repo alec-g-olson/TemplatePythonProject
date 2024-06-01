@@ -20,5 +20,5 @@ ALL_EMPTY_FUNCTION_BYTECODES = [
 ]
 
 
-def is_an_empty_function(func: Callable) -> bool:
+def is_an_empty_function(func: Callable) -> bool:  # type: ignore[type-arg]
     return func.__code__.co_code in ALL_EMPTY_FUNCTION_BYTECODES

@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import cast
 from unittest.mock import Mock
 
 import pytest
@@ -16,7 +17,7 @@ def build_mock_basic_task(
 ) -> TaskNode:
     """Builds a mock task for testing task interactions."""
 
-    return type(
+    return type(  # type: ignore[no-any-return]
         task_name,
         (TaskNode,),
         {
@@ -114,7 +115,7 @@ tasks_names_to_execution_order_names = [
 
 @pytest.fixture(params=tasks_names_to_execution_order_names)
 def run_info(request: SubRequest) -> list[list[str]]:
-    return request.param
+    return cast(list[list[str]], request.param)
 
 
 @pytest.fixture()

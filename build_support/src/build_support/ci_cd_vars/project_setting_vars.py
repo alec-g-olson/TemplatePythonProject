@@ -43,6 +43,7 @@ def get_project_version(project_root: Path) -> str:
     Returns:
         str: The current version of the project.
     """
+    version_str: str
     version_str = get_pyproject_toml_data(project_root=project_root)["tool"]["poetry"][
         "version"
     ]
@@ -88,7 +89,7 @@ def get_project_name(project_root: Path) -> str:
     Returns:
         str: The name of the project.
     """
-    return get_pyproject_toml_data(project_root=project_root)["tool"]["poetry"]["name"]
+    return get_pyproject_toml_data(project_root=project_root)["tool"]["poetry"]["name"]  # type: ignore[no-any-return]
 
 
 ########################################
@@ -109,7 +110,7 @@ def get_pulumi_version(project_root: Path) -> str:
     lock_data = tomllib.loads(lock_file.read_text())
     for package in lock_data["package"]:
         if package["name"] == "pulumi":
-            return package["version"]
+            return package["version"]  # type: ignore[no-any-return]
     msg = (
         "poetry.lock does not have a pulumi package installed, "
         "or is no longer a toml format."

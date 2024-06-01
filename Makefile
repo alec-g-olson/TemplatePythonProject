@@ -56,7 +56,8 @@ DUMP_RUN_INFO_COMMAND = $(DOCKER_BUILD_ENV_COMMAND) \
 python build_support/src/build_support/dump_ci_cd_run_info.py \
 --user-id $(USER_ID) --group-id $(GROUP_ID) \
 --non-docker-project-root $(NON_DOCKER_ROOT) \
-$(SHARED_BUILD_VARS) $(CI_CD_INTEGRATION_TEST_MODE_FLAG)
+$(SHARED_BUILD_VARS) \
+$(CI_CD_INTEGRATION_TEST_MODE_FLAG)
 
 .PHONY: push
 push: setup_build_env
@@ -82,17 +83,13 @@ build_pypi: setup_build_env
 test: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) test
 
-.PHONY: apply_unsafe_ruff_fixes
-apply_unsafe_ruff_fixes: setup_build_env
-	$(EXECUTE_BUILD_STEPS_COMMAND) apply_unsafe_ruff_fixes
+.PHONY: lint_apply_unsafe_fixes
+lint_apply_unsafe_fixes: setup_build_env
+	$(EXECUTE_BUILD_STEPS_COMMAND) lint_apply_unsafe_fixes
 
-.PHONY: list_unsafe_ruff_fixes
-list_unsafe_ruff_fixes: setup_build_env
-	$(EXECUTE_BUILD_STEPS_COMMAND) list_unsafe_ruff_fixes
-
-.PHONY: ruff_fix_safe
-ruff_fix_safe: setup_build_env
-	$(EXECUTE_BUILD_STEPS_COMMAND) ruff_fix_safe
+.PHONY: format
+format: setup_build_env
+	$(EXECUTE_BUILD_STEPS_COMMAND) format
 
 .PHONY: lint
 lint: setup_build_env
@@ -109,6 +106,14 @@ test_pypi: setup_build_env
 .PHONY: test_style
 test_style: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) test_style
+
+.PHONY: type_checks
+type_checks: setup_build_env
+	$(EXECUTE_BUILD_STEPS_COMMAND) type_checks
+
+.PHONY: security_checks
+security_checks: setup_build_env
+	$(EXECUTE_BUILD_STEPS_COMMAND) security_checks
 
 .PHONY: check_process
 check_process: setup_build_env
@@ -158,6 +163,7 @@ setup_pulumi_env: setup_build_env
 
 .PHONY: setup_build_env
 setup_build_env:
+ifeq ($(CI_CD_INTEGRATION_TEST_MODE_FLAG), )
 	docker build \
 --build-arg DOCKER_REMOTE_PROJECT_ROOT=$(DOCKER_REMOTE_PROJECT_ROOT) \
 --build-arg CURRENT_USER_ID=$(USER_ID) \
@@ -168,6 +174,9 @@ setup_build_env:
 --target build \
 --build-arg BUILDKIT_INLINE_CACHE=1 \
 -t $(DOCKER_BUILD_IMAGE) $(MAKEFILE_DIR)
+else
+	echo "Skipping building build docker image in CI/CD mode."
+endif
 	$(DUMP_RUN_INFO_COMMAND)
 
 .PHONY: docker_prune_all

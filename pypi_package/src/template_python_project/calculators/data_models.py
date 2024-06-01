@@ -1,6 +1,7 @@
 """Data models used for calculations."""
 
 from enum import Enum
+from typing import override
 
 from pydantic import BaseModel
 
@@ -13,6 +14,7 @@ class CalculationType(Enum):
     MULTIPLY = "MULTIPLY"
     DIVIDE = "DIVIDE"
 
+    @override
     def __str__(self) -> str:
         """Return the name of this enum to represent it as a string.
 

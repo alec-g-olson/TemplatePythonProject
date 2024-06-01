@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from _pytest.fixtures import SubRequest
@@ -12,7 +12,7 @@ from template_python_project.calculators.data_models import (
 
 @pytest.fixture(params=list(CalculationType))
 def calculation_type(request: SubRequest) -> CalculationType:
-    return request.param
+    return cast(CalculationType, request.param)
 
 
 def test_calculation_type_to_str(calculation_type: CalculationType) -> None:

@@ -1,5 +1,7 @@
 """Should hold all tasks that run tests, both on artifacts and style tests."""
 
+from typing import override
+
 from build_support.ci_cd_tasks.env_setup_tasks import GetGitInfo, SetupDevEnvironment
 from build_support.ci_cd_tasks.task_node import PerSubprojectTask, TaskNode
 from build_support.ci_cd_vars.docker_vars import (
@@ -31,6 +33,7 @@ from build_support.process_runner import concatenate_args, run_process
 class ValidateAll(TaskNode):
     """A collective test task used to test all elements of the project."""
 
+    @override
     def required_tasks(self) -> list[TaskNode]:
         """Lists all "subtests" to add to the DAG.
 
@@ -40,11 +43,14 @@ class ValidateAll(TaskNode):
         basic_task_info = self.get_basic_task_info()
         return [
             AllSubprojectUnitTests(basic_task_info=basic_task_info),
-            AllSubprojectIntegrationTests(basic_task_info=basic_task_info),
             ValidatePythonStyle(basic_task_info=basic_task_info),
+            AllSubprojectStaticTypeChecking(basic_task_info=basic_task_info),
+            AllSubprojectSecurityChecks(basic_task_info=basic_task_info),
             EnforceProcess(basic_task_info=basic_task_info),
+            AllSubprojectIntegrationTests(basic_task_info=basic_task_info),
         ]
 
+    @override
     def run(self) -> None:
         """Does nothing.
 
@@ -56,6 +62,7 @@ class ValidateAll(TaskNode):
 class EnforceProcess(TaskNode):
     """Task enforces the team's agreed build process for this project."""
 
+    @override
     def required_tasks(self) -> list[TaskNode]:
         """Get the list of tasks that need to be run before enforcing the build process.
 
@@ -67,6 +74,7 @@ class EnforceProcess(TaskNode):
             SetupDevEnvironment(basic_task_info=self.get_basic_task_info()),
         ]
 
+    @override
     def run(self) -> None:
         """Runs tests that enforce the build process.
 
@@ -99,9 +107,151 @@ class EnforceProcess(TaskNode):
         )
 
 
+class AllSubprojectStaticTypeChecking(TaskNode):
+    """Task for running static type checking in all subprojects."""
+
+    @override
+    def required_tasks(self) -> list[TaskNode]:
+        """Gets the subproject specific static type checking tasks.
+
+        Returns:
+            list[TaskNode]: All the subproject specific static type checking tasks.
+        """
+        return [
+            ValidateStaticTypeChecking(
+                basic_task_info=self.get_basic_task_info(),
+                subproject_context=subproject_context,
+            )
+            for subproject_context in get_sorted_subproject_contexts()
+        ]
+
+    @override
+    def run(self) -> None:
+        """Does nothing.
+
+        Returns:
+            None
+        """
+
+
+class ValidateStaticTypeChecking(PerSubprojectTask):
+    """Task for enforcing static type checking."""
+
+    @override
+    def required_tasks(self) -> list[TaskNode]:
+        """Get the list of tasks that need to be run before we can test type checks.
+
+        Returns:
+            list[TaskNode]: A list of tasks required to do static type checking.
+        """
+        return [
+            GetGitInfo(basic_task_info=self.get_basic_task_info()),
+            SetupDevEnvironment(basic_task_info=self.get_basic_task_info()),
+        ]
+
+    @override
+    def run(self) -> None:
+        """Runs all static type checks on subproject.
+
+        Returns:
+            None
+        """
+        run_process(
+            args=concatenate_args(
+                args=[
+                    get_base_docker_command_for_image(
+                        non_docker_project_root=self.non_docker_project_root,
+                        docker_project_root=self.docker_project_root,
+                        target_image=DockerTarget.DEV,
+                    ),
+                    "-e",
+                    get_mypy_path_env(
+                        docker_project_root=self.docker_project_root,
+                        target_image=DockerTarget.DEV,
+                    ),
+                    get_docker_image_name(
+                        project_root=self.docker_project_root,
+                        target_image=DockerTarget.DEV,
+                    ),
+                    "mypy",
+                    "--explicit-package-bases",
+                    self.subproject.get_root_dir(),
+                ],
+            ),
+        )
+
+
+class AllSubprojectSecurityChecks(TaskNode):
+    """Task for running static security checking in all subprojects."""
+
+    @override
+    def required_tasks(self) -> list[TaskNode]:
+        """Gets the subproject specific security type checking tasks.
+
+        Returns:
+            list[TaskNode]: All the subproject specific security type checking tasks.
+        """
+        return [
+            ValidateSecurityChecks(
+                basic_task_info=self.get_basic_task_info(),
+                subproject_context=subproject_context,
+            )
+            for subproject_context in get_sorted_subproject_contexts()
+        ]
+
+    @override
+    def run(self) -> None:
+        """Does nothing.
+
+        Returns:
+            None
+        """
+
+
+class ValidateSecurityChecks(PerSubprojectTask):
+    """Task for enforcing static security checking."""
+
+    @override
+    def required_tasks(self) -> list[TaskNode]:
+        """Get the list of tasks that need to be run before we can test security checks.
+
+        Returns:
+            list[TaskNode]: A list of tasks required to do static security checking.
+        """
+        return [
+            GetGitInfo(basic_task_info=self.get_basic_task_info()),
+            SetupDevEnvironment(basic_task_info=self.get_basic_task_info()),
+        ]
+
+    @override
+    def run(self) -> None:
+        """Runs security checks on subproject.
+
+        Returns:
+            None
+        """
+        run_process(
+            args=concatenate_args(
+                args=[
+                    get_docker_command_for_image(
+                        non_docker_project_root=self.non_docker_project_root,
+                        docker_project_root=self.docker_project_root,
+                        target_image=DockerTarget.DEV,
+                    ),
+                    "bandit",
+                    "-o",
+                    self.subproject.get_bandit_report_path(),
+                    "-r",
+                    self.subproject.get_src_dir(),
+                ],
+            ),
+        )
+
+
 class ValidatePythonStyle(TaskNode):
     """Task enforcing stylistic checks of python code and project version."""
 
+    @override
     def required_tasks(self) -> list[TaskNode]:
         """Get the list of tasks that need to be run before we can test python style.
 
@@ -113,6 +263,7 @@ class ValidatePythonStyle(TaskNode):
             SetupDevEnvironment(basic_task_info=self.get_basic_task_info()),
         ]
 
+    @override
     def run(self) -> None:
         """Runs all stylistic checks on code.
 
@@ -172,113 +323,12 @@ class ValidatePythonStyle(TaskNode):
                 ],
             ),
         )
-        mypy_command = concatenate_args(
-            args=[
-                get_base_docker_command_for_image(
-                    non_docker_project_root=self.non_docker_project_root,
-                    docker_project_root=self.docker_project_root,
-                    target_image=DockerTarget.DEV,
-                ),
-                "-e",
-                get_mypy_path_env(
-                    docker_project_root=self.docker_project_root,
-                    target_image=DockerTarget.DEV,
-                ),
-                get_docker_image_name(
-                    project_root=self.docker_project_root,
-                    target_image=DockerTarget.DEV,
-                ),
-                "mypy",
-                "--explicit-package-bases",
-            ],
-        )
-        run_process(
-            args=concatenate_args(
-                args=[
-                    mypy_command,
-                    subproject[SubprojectContext.PYPI].get_root_dir(),
-                ],
-            ),
-        )
-        run_process(
-            args=concatenate_args(
-                args=[
-                    mypy_command,
-                    subproject[SubprojectContext.BUILD_SUPPORT].get_src_dir(),
-                ],
-            ),
-        )
-        run_process(
-            args=concatenate_args(
-                args=[
-                    mypy_command,
-                    subproject[SubprojectContext.BUILD_SUPPORT].get_test_dir(),
-                ],
-            ),
-        )
-        run_process(
-            args=concatenate_args(
-                args=[
-                    mypy_command,
-                    subproject[SubprojectContext.INFRA].get_root_dir(),
-                ],
-            ),
-        )
-        run_process(
-            args=concatenate_args(
-                args=[
-                    get_docker_command_for_image(
-                        non_docker_project_root=self.non_docker_project_root,
-                        docker_project_root=self.docker_project_root,
-                        target_image=DockerTarget.DEV,
-                    ),
-                    "bandit",
-                    "-o",
-                    subproject[SubprojectContext.PYPI].get_bandit_report_path(),
-                    "-r",
-                    subproject[SubprojectContext.PYPI].get_src_dir(),
-                ],
-            ),
-        )
-        run_process(
-            args=concatenate_args(
-                args=[
-                    get_docker_command_for_image(
-                        non_docker_project_root=self.non_docker_project_root,
-                        docker_project_root=self.docker_project_root,
-                        target_image=DockerTarget.DEV,
-                    ),
-                    "bandit",
-                    "-o",
-                    subproject[SubprojectContext.INFRA].get_bandit_report_path(),
-                    "-r",
-                    subproject[SubprojectContext.INFRA].get_src_dir(),
-                ],
-            ),
-        )
-        run_process(
-            args=concatenate_args(
-                args=[
-                    get_docker_command_for_image(
-                        non_docker_project_root=self.non_docker_project_root,
-                        docker_project_root=self.docker_project_root,
-                        target_image=DockerTarget.DEV,
-                    ),
-                    "bandit",
-                    "-o",
-                    subproject[
-                        SubprojectContext.BUILD_SUPPORT
-                    ].get_bandit_report_path(),
-                    "-r",
-                    subproject[SubprojectContext.BUILD_SUPPORT].get_src_dir(),
-                ],
-            ),
-        )
 
 
 class AllSubprojectUnitTests(TaskNode):
     """Task for running unit tests in all subprojects."""
 
+    @override
     def required_tasks(self) -> list[TaskNode]:
         """Gets the subproject specific unit test tasks.
 
@@ -293,6 +343,7 @@ class AllSubprojectUnitTests(TaskNode):
             for subproject_context in get_sorted_subproject_contexts()
         ]
 
+    @override
     def run(self) -> None:
         """Does nothing.
 
@@ -304,6 +355,7 @@ class AllSubprojectUnitTests(TaskNode):
 class SubprojectUnitTests(PerSubprojectTask):
     """Task for running unit tests in a single subproject."""
 
+    @override
     def required_tasks(self) -> list[TaskNode]:
         """Get the list of tasks to run before we can unit test the subproject.
 
@@ -319,6 +371,7 @@ class SubprojectUnitTests(PerSubprojectTask):
             )
         return required_tasks
 
+    @override
     def run(self) -> None:
         """Runs unit tests for the subproject.
 
@@ -415,6 +468,7 @@ class SubprojectUnitTests(PerSubprojectTask):
 class AllSubprojectIntegrationTests(TaskNode):
     """Task for running integration tests in all subprojects."""
 
+    @override
     def required_tasks(self) -> list[TaskNode]:
         """Gets the subproject specific integration test tasks.
 
@@ -429,6 +483,7 @@ class AllSubprojectIntegrationTests(TaskNode):
             for subproject_context in get_sorted_subproject_contexts()
         ]
 
+    @override
     def run(self) -> None:
         """Does nothing.
 
@@ -440,19 +495,33 @@ class AllSubprojectIntegrationTests(TaskNode):
 class SubprojectIntegrationTests(PerSubprojectTask):
     """Task for running integration tests in a single subproject."""
 
+    @override
     def required_tasks(self) -> list[TaskNode]:
         """Get the list of tasks to run before we can integration test the subproject.
+
+        Most of our build process integration tests will break if style and process
+        checks fail.  So we want to make sure that our style and process tests are
+        passing before running build support integration tests.
 
         Returns:
             list[TaskNode]: A list of tasks required to integration test the subproject.
         """
-        return [
+        required_tasks: list[TaskNode] = [
             SubprojectUnitTests(
                 basic_task_info=self.get_basic_task_info(),
                 subproject_context=self.subproject_context,
-            )
+            ),
         ]
+        if self.subproject_context == SubprojectContext.BUILD_SUPPORT:
+            required_tasks.extend(
+                [
+                    ValidatePythonStyle(basic_task_info=self.get_basic_task_info()),
+                    EnforceProcess(basic_task_info=self.get_basic_task_info()),
+                ]
+            )
+        return required_tasks
 
+    @override
     def run(self) -> None:
         """Runs integration tests for the subproject.
 
@@ -463,6 +532,7 @@ class SubprojectIntegrationTests(PerSubprojectTask):
             self.ci_cd_integration_test_mode
             and self.subproject_context == SubprojectContext.BUILD_SUPPORT
         ):
+            # prevents recursive calls to integration testing
             return
         dev_docker_command = get_docker_command_for_image(
             non_docker_project_root=self.non_docker_project_root,

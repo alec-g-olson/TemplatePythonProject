@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import cast
 
 import pytest
 from _pytest.fixtures import SubRequest
@@ -21,7 +22,7 @@ from build_support.ci_cd_vars.subproject_structure import (
 
 @pytest.fixture(params=list(PythonSubproject.TestSuite))
 def test_suite(request: SubRequest) -> PythonSubproject.TestSuite:
-    return request.param
+    return cast(PythonSubproject.TestSuite, request.param)
 
 
 def test_get_subproject_name(

@@ -1,5 +1,7 @@
 """Should hold all tasks that push artifacts after testing."""
 
+from typing import override
+
 from build_support.ci_cd_tasks.build_tasks import BuildPypi
 from build_support.ci_cd_tasks.task_node import TaskNode
 from build_support.ci_cd_tasks.validation_tasks import ValidateAll
@@ -18,6 +20,7 @@ from build_support.ci_cd_vars.project_setting_vars import (
 class PushAll(TaskNode):
     """A collective push task used to push all elements of the project at once."""
 
+    @override
     def required_tasks(self) -> list[TaskNode]:
         """Lists all "sub-pushes" to add to the DAG.
 
@@ -29,6 +32,7 @@ class PushAll(TaskNode):
             PushPypi(basic_task_info=self.get_basic_task_info()),
         ]
 
+    @override
     def run(self) -> None:
         """Does nothing.
 
@@ -42,6 +46,7 @@ class PushAll(TaskNode):
 class PushTags(TaskNode):
     """Pushes tags to git, reserving the commit for a specific artifact push."""
 
+    @override
     def required_tasks(self) -> list[TaskNode]:
         """Get the list of task that need to be run before we can push version tags.
 
@@ -52,6 +57,7 @@ class PushTags(TaskNode):
             ValidateAll(basic_task_info=self.get_basic_task_info()),
         ]
 
+    @override
     def run(self) -> None:
         """Tags commit with version and pushes tag to origin.
 
@@ -97,6 +103,7 @@ class PushTags(TaskNode):
 class PushPypi(TaskNode):
     """Pushes the PyPi package."""
 
+    @override
     def required_tasks(self) -> list[TaskNode]:
         """Get the list of task that need to be run before we can push a pypi package.
 
@@ -108,6 +115,7 @@ class PushPypi(TaskNode):
             BuildPypi(basic_task_info=self.get_basic_task_info()),
         ]
 
+    @override
     def run(self) -> None:
         """Push PyPi.
 

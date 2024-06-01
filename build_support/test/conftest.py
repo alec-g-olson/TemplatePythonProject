@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import cast
 
 import pytest
 from _pytest.fixtures import SubRequest
@@ -39,7 +40,7 @@ subproject_contexts = get_sorted_subproject_contexts()
 
 @pytest.fixture(params=subproject_contexts)
 def subproject_context(request: SubRequest) -> SubprojectContext:
-    return request.param
+    return cast(SubprojectContext, request.param)
 
 
 @pytest.fixture()

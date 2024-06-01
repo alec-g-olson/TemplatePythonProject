@@ -1,6 +1,7 @@
 from argparse import Namespace
 from copy import deepcopy
 from pathlib import Path
+from typing import cast
 
 import pytest
 from _pytest.fixtures import SubRequest
@@ -23,7 +24,7 @@ def non_docker_project_root_arg(request: SubRequest, tmp_path: Path) -> Path:
 
 @pytest.fixture(params=[True, False])
 def ci_cd_integration_test_mode(request: SubRequest) -> bool:
-    return request.param
+    return cast(bool, request.param)
 
 
 @pytest.fixture()

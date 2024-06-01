@@ -1,5 +1,6 @@
 from pathlib import Path
 from time import sleep
+from typing import Any
 
 import pytest
 import yaml
@@ -9,7 +10,7 @@ from build_support.file_caching import FileCacheInfo
 
 
 @pytest.fixture()
-def file_checksum_data_dict() -> dict:
+def file_checksum_data_dict() -> dict[str, Any]:
     return {
         "group_root_dir": "/usr/dev/tmp_path",
         "cache_info": {
@@ -20,44 +21,48 @@ def file_checksum_data_dict() -> dict:
 
 
 @pytest.fixture()
-def checksum_cache_yaml_str(file_checksum_data_dict: dict) -> str:
+def checksum_cache_yaml_str(file_checksum_data_dict: dict[str, Any]) -> str:
     return yaml.dump(file_checksum_data_dict)
 
 
-def test_load(checksum_cache_yaml_str: str, file_checksum_data_dict: dict) -> None:
+def test_load(
+    checksum_cache_yaml_str: str, file_checksum_data_dict: dict[str, Any]
+) -> None:
     file_cache_info = FileCacheInfo.from_yaml(yaml_str=checksum_cache_yaml_str)
     assert file_cache_info == FileCacheInfo.model_validate(file_checksum_data_dict)
 
 
-def test_load_bad_group_root_dir(file_checksum_data_dict: dict) -> None:
+def test_load_bad_group_root_dir(file_checksum_data_dict: dict[str, Any]) -> None:
     file_checksum_data_dict["group_root_dir"] = 4
     checksum_cache_yaml_str = yaml.dump(file_checksum_data_dict)
     with pytest.raises(ValidationError):
         FileCacheInfo.from_yaml(yaml_str=checksum_cache_yaml_str)
 
 
-def test_load_bad_cache_info(file_checksum_data_dict: dict) -> None:
+def test_load_bad_cache_info(file_checksum_data_dict: dict[str, Any]) -> None:
     file_checksum_data_dict["cache_info"] = 4
     checksum_cache_yaml_str = yaml.dump(file_checksum_data_dict)
     with pytest.raises(ValidationError):
         FileCacheInfo.from_yaml(yaml_str=checksum_cache_yaml_str)
 
 
-def test_load_bad_cache_info_key(file_checksum_data_dict: dict) -> None:
+def test_load_bad_cache_info_key(file_checksum_data_dict: dict[str, Any]) -> None:
     file_checksum_data_dict["cache_info"][4] = "2024-03-30T17:17:20.985351+00:00"
     checksum_cache_yaml_str = yaml.dump(file_checksum_data_dict)
     with pytest.raises(ValidationError):
         FileCacheInfo.from_yaml(yaml_str=checksum_cache_yaml_str)
 
 
-def test_load_bad_cache_info_value(file_checksum_data_dict: dict) -> None:
+def test_load_bad_cache_info_value(file_checksum_data_dict: dict[str, Any]) -> None:
     file_checksum_data_dict["cache_info"]["some/third/file"] = 4
     checksum_cache_yaml_str = yaml.dump(file_checksum_data_dict)
     with pytest.raises(ValidationError):
         FileCacheInfo.from_yaml(yaml_str=checksum_cache_yaml_str)
 
 
-def test_dump(checksum_cache_yaml_str: str, file_checksum_data_dict: dict) -> None:
+def test_dump(
+    checksum_cache_yaml_str: str, file_checksum_data_dict: dict[str, Any]
+) -> None:
     file_cache_info = FileCacheInfo.model_validate(file_checksum_data_dict)
     assert file_cache_info.to_yaml() == checksum_cache_yaml_str
 

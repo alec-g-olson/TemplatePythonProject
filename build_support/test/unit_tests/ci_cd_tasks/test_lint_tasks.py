@@ -4,9 +4,9 @@ import pytest
 
 from build_support.ci_cd_tasks.env_setup_tasks import SetupDevEnvironment
 from build_support.ci_cd_tasks.lint_tasks import (
-    ApplyRuffFixUnsafe,
+    Format,
     Lint,
-    RuffFixSafe,
+    LintApplyUnsafeFixes,
 )
 from build_support.ci_cd_tasks.task_node import BasicTaskInfo
 from build_support.ci_cd_tasks.validation_tasks import (
@@ -25,7 +25,7 @@ from build_support.process_runner import concatenate_args
 
 
 def test_lint_requires(basic_task_info: BasicTaskInfo) -> None:
-    assert Lint(basic_task_info=basic_task_info).required_tasks() == [
+    assert Format(basic_task_info=basic_task_info).required_tasks() == [
         SetupDevEnvironment(basic_task_info=basic_task_info)
     ]
 
@@ -64,7 +64,7 @@ def test_run_lint(basic_task_info: BasicTaskInfo) -> None:
                 ),
             ],
         )
-        Lint(basic_task_info=basic_task_info).run()
+        Format(basic_task_info=basic_task_info).run()
         expected_run_process_calls = [
             call(args=sort_imports_args),
             call(args=format_args),
@@ -74,8 +74,8 @@ def test_run_lint(basic_task_info: BasicTaskInfo) -> None:
 
 
 def test_ruff_fix_safe_requires(basic_task_info: BasicTaskInfo) -> None:
-    assert RuffFixSafe(basic_task_info=basic_task_info).required_tasks() == [
-        Lint(basic_task_info=basic_task_info),
+    assert Lint(basic_task_info=basic_task_info).required_tasks() == [
+        Format(basic_task_info=basic_task_info),
         AllSubprojectUnitTests(basic_task_info=basic_task_info),
     ]
 
@@ -113,7 +113,7 @@ def test_run_ruff_fix_safe(basic_task_info: BasicTaskInfo) -> None:
                 get_all_test_folders(project_root=basic_task_info.docker_project_root),
             ],
         )
-        RuffFixSafe(basic_task_info=basic_task_info).run()
+        Lint(basic_task_info=basic_task_info).run()
         expected_run_process_calls = [
             call(args=fix_src_args),
             call(args=fix_test_args),
@@ -123,8 +123,8 @@ def test_run_ruff_fix_safe(basic_task_info: BasicTaskInfo) -> None:
 
 
 def test_apply_ruff_fix_unsafe_requires(basic_task_info: BasicTaskInfo) -> None:
-    assert ApplyRuffFixUnsafe(basic_task_info=basic_task_info).required_tasks() == [
-        RuffFixSafe(basic_task_info=basic_task_info),
+    assert LintApplyUnsafeFixes(basic_task_info=basic_task_info).required_tasks() == [
+        Lint(basic_task_info=basic_task_info),
     ]
 
 
@@ -168,7 +168,7 @@ def test_apply_run_ruff_fix_unsafe(basic_task_info: BasicTaskInfo) -> None:
                 get_all_test_folders(project_root=basic_task_info.docker_project_root),
             ],
         )
-        ApplyRuffFixUnsafe(basic_task_info=basic_task_info).run()
+        LintApplyUnsafeFixes(basic_task_info=basic_task_info).run()
         expected_run_process_calls = [
             call(args=fix_src_args),
             call(args=fix_test_args),

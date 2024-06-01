@@ -56,6 +56,7 @@ def get_github_license_template_info_blobs() -> list[dict[str, str]]:
     license_template_info_blobs = REAL_LICENSE_TEMPLATE_DIR.joinpath(
         "license_template_info_blobs.json",
     )
+    template_info_blobs: list[dict[str, str]]
     if license_template_info_blobs.exists():
         template_info_blobs = json.loads(license_template_info_blobs.read_text())
     else:

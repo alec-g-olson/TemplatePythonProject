@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import cast
 
 import pytest
 from _pytest.fixtures import SubRequest
@@ -117,7 +118,7 @@ def test_get_git_diff_no_diff(mock_project_root: Path) -> None:
     params=["Valid message!", "Has a single quote(').", 'Has a double quote(")']
 )
 def valid_commit_message(request: SubRequest) -> str:
-    return request.param
+    return cast(str, request.param)
 
 
 def test_commit_changes_no_diff(

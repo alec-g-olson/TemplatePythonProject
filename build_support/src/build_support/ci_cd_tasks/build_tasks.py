@@ -1,6 +1,7 @@
 """ci_cd_tasks should house all tasks that build artifacts that will be pushed."""
 
 from shutil import copytree
+from typing import override
 
 from build_support.ci_cd_tasks.env_setup_tasks import SetupProdEnvironment
 from build_support.ci_cd_tasks.task_node import TaskNode
@@ -33,6 +34,7 @@ from build_support.process_runner import concatenate_args, run_process
 class BuildAll(TaskNode):
     """Task for building all artifacts."""
 
+    @override
     def required_tasks(self) -> list[TaskNode]:
         """Lists all "sub-builds" to add to the DAG.
 
@@ -44,6 +46,7 @@ class BuildAll(TaskNode):
             BuildDocs(basic_task_info=self.get_basic_task_info()),
         ]
 
+    @override
     def run(self) -> None:
         """Does nothing.
 
@@ -57,6 +60,7 @@ class BuildAll(TaskNode):
 class BuildPypi(TaskNode):
     """Task for building PyPi package."""
 
+    @override
     def required_tasks(self) -> list[TaskNode]:
         """Get the list of task that need to be run before we can build a pypi package.
 
@@ -72,6 +76,7 @@ class BuildPypi(TaskNode):
             SetupProdEnvironment(basic_task_info=self.get_basic_task_info()),
         ]
 
+    @override
     def run(self) -> None:
         """Builds PyPi package.
 
@@ -112,6 +117,7 @@ class BuildPypi(TaskNode):
 class BuildDocs(TaskNode):
     """Task for building the sphinx docs for this project."""
 
+    @override
     def required_tasks(self) -> list[TaskNode]:
         """Get the list of task that need to be run before we can build docs.
 
@@ -122,6 +128,7 @@ class BuildDocs(TaskNode):
             ValidatePythonStyle(basic_task_info=self.get_basic_task_info()),
         ]
 
+    @override
     def run(self) -> None:
         """Builds sphinx docs.
 

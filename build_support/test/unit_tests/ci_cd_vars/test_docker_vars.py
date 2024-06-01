@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import cast
 
 import pytest
 from _pytest.fixtures import SubRequest
@@ -30,7 +31,7 @@ test_project_names = ["test_project_one", "some_other_project"]
 
 @pytest.fixture(params=docker_targets)
 def docker_target(request: SubRequest) -> DockerTarget:
-    return request.param
+    return cast(DockerTarget, request.param)
 
 
 @pytest.mark.usefixtures("mock_local_pyproject_toml_file")

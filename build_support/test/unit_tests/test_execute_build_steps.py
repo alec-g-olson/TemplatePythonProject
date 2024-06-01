@@ -1,5 +1,6 @@
 from argparse import Namespace
 from pathlib import Path
+from typing import cast, override
 from unittest.mock import patch
 
 import pytest
@@ -17,9 +18,9 @@ from build_support.ci_cd_tasks.env_setup_tasks import (
     SetupProdEnvironment,
 )
 from build_support.ci_cd_tasks.lint_tasks import (
-    ApplyRuffFixUnsafe,
+    Format,
     Lint,
-    RuffFixSafe,
+    LintApplyUnsafeFixes,
 )
 from build_support.ci_cd_tasks.push_tasks import PushAll, PushPypi
 from build_support.ci_cd_tasks.task_node import (
@@ -28,6 +29,8 @@ from build_support.ci_cd_tasks.task_node import (
     TaskNode,
 )
 from build_support.ci_cd_tasks.validation_tasks import (
+    AllSubprojectSecurityChecks,
+    AllSubprojectStaticTypeChecking,
     EnforceProcess,
     SubprojectUnitTests,
     ValidateAll,
@@ -55,6 +58,8 @@ def test_constants_not_changed_by_accident() -> None:
         "setup_prod_env": CliTaskInfo(task_node=SetupProdEnvironment),
         "setup_infra_env": CliTaskInfo(task_node=SetupInfraEnvironment),
         "test_style": CliTaskInfo(task_node=ValidatePythonStyle),
+        "type_checks": CliTaskInfo(task_node=AllSubprojectStaticTypeChecking),
+        "security_checks": CliTaskInfo(task_node=AllSubprojectSecurityChecks),
         "check_process": CliTaskInfo(task_node=EnforceProcess),
         "test_build_support": CliTaskInfo(
             task_node=SubprojectUnitTests,
@@ -64,9 +69,9 @@ def test_constants_not_changed_by_accident() -> None:
             task_node=SubprojectUnitTests, subproject_context=SubprojectContext.PYPI
         ),
         "test": CliTaskInfo(task_node=ValidateAll),
+        "format": CliTaskInfo(task_node=Format),
         "lint": CliTaskInfo(task_node=Lint),
-        "ruff_fix_safe": CliTaskInfo(task_node=RuffFixSafe),
-        "apply_unsafe_ruff_fixes": CliTaskInfo(task_node=ApplyRuffFixUnsafe),
+        "lint_apply_unsafe_fixes": CliTaskInfo(task_node=LintApplyUnsafeFixes),
         "build_pypi": CliTaskInfo(task_node=BuildPypi),
         "build_docs": CliTaskInfo(task_node=BuildDocs),
         "build": CliTaskInfo(task_node=BuildAll),
@@ -108,12 +113,12 @@ def non_docker_project_root_arg(request: SubRequest, tmp_path: Path) -> Path:
 
 @pytest.fixture(params=[True, False])
 def ci_cd_integration_test_mode(request: SubRequest) -> bool:
-    return request.param
+    return cast(bool, request.param)
 
 
 @pytest.fixture(params=CLI_ARG_TO_TASK.keys())
 def build_task(request: SubRequest) -> str:
-    return request.param
+    return cast(str, request.param)
 
 
 @pytest.fixture()
@@ -299,9 +304,11 @@ def test_run_main_exception(cli_arg_combo: BasicTaskInfo) -> None:
 
 def test_get_standard_task_node(basic_task_info: BasicTaskInfo) -> None:
     class TestTaskNode(TaskNode):
+        @override
         def required_tasks(self) -> list[TaskNode]:
             return []  # pragma: no cover - never called, just a test class
 
+        @override
         def run(self) -> None:
             """Does nothing.  Pycharm doesn't like 'pass' for some reason."""
 
@@ -313,9 +320,11 @@ def test_get_standard_task_node(basic_task_info: BasicTaskInfo) -> None:
 
 def test_get_subproject_specific_task_node(basic_task_info: BasicTaskInfo) -> None:
     class TestSubprojectSpecificTaskNode(PerSubprojectTask):
+        @override
         def required_tasks(self) -> list[TaskNode]:
             return []  # pragma: no cover - never called, just a test class
 
+        @override
         def run(self) -> None:
             """Does nothing.  Pycharm doesn't like 'pass' for some reason."""
 

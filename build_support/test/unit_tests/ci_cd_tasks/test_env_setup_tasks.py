@@ -52,6 +52,16 @@ def test_run_build_dev_env(basic_task_info: BasicTaskInfo) -> None:
 
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
+def test_run_build_dev_env_in_ci_cd_mode(basic_task_info: BasicTaskInfo) -> None:
+    basic_task_info.ci_cd_integration_test_mode = True
+    with patch(
+        "build_support.ci_cd_tasks.env_setup_tasks.run_process",
+    ) as run_process_mock:
+        SetupDevEnvironment(basic_task_info=basic_task_info).run()
+        run_process_mock.assert_not_called()
+
+
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
 def test_build_prod_env_requires(basic_task_info: BasicTaskInfo) -> None:
     assert SetupProdEnvironment(basic_task_info=basic_task_info).required_tasks() == []
 
@@ -67,6 +77,16 @@ def test_run_build_prod_env(basic_task_info: BasicTaskInfo) -> None:
         )
         SetupProdEnvironment(basic_task_info=basic_task_info).run()
         run_process_mock.assert_called_once_with(args=build_prod_env_args)
+
+
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
+def test_run_build_prod_env_in_ci_cd_mode(basic_task_info: BasicTaskInfo) -> None:
+    basic_task_info.ci_cd_integration_test_mode = True
+    with patch(
+        "build_support.ci_cd_tasks.env_setup_tasks.run_process",
+    ) as run_process_mock:
+        SetupProdEnvironment(basic_task_info=basic_task_info).run()
+        run_process_mock.assert_not_called()
 
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
@@ -91,6 +111,16 @@ def test_run_build_infra_env(basic_task_info: BasicTaskInfo) -> None:
         )
         SetupInfraEnvironment(basic_task_info=basic_task_info).run()
         run_process_mock.assert_called_once_with(args=build_infra_env_args)
+
+
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
+def test_run_build_infra_env_in_ci_cd_mode(basic_task_info: BasicTaskInfo) -> None:
+    basic_task_info.ci_cd_integration_test_mode = True
+    with patch(
+        "build_support.ci_cd_tasks.env_setup_tasks.run_process",
+    ) as run_process_mock:
+        SetupInfraEnvironment(basic_task_info=basic_task_info).run()
+        run_process_mock.assert_not_called()
 
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
