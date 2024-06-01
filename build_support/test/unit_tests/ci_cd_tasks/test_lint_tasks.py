@@ -4,9 +4,9 @@ import pytest
 
 from build_support.ci_cd_tasks.env_setup_tasks import SetupDevEnvironment
 from build_support.ci_cd_tasks.lint_tasks import (
-    LintApplyUnsafeFixes,
     Format,
     Lint,
+    LintApplyUnsafeFixes,
 )
 from build_support.ci_cd_tasks.task_node import BasicTaskInfo
 from build_support.ci_cd_tasks.validation_tasks import (

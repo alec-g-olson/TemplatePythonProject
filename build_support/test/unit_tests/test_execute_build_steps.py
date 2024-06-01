@@ -18,9 +18,9 @@ from build_support.ci_cd_tasks.env_setup_tasks import (
     SetupProdEnvironment,
 )
 from build_support.ci_cd_tasks.lint_tasks import (
-    LintApplyUnsafeFixes,
     Format,
     Lint,
+    LintApplyUnsafeFixes,
 )
 from build_support.ci_cd_tasks.push_tasks import PushAll, PushPypi
 from build_support.ci_cd_tasks.task_node import (
