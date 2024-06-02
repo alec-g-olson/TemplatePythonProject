@@ -10,6 +10,7 @@ from build_support.ci_cd_vars.git_status_vars import (
     monkeypatch_git_python_execute_kwargs,
 )
 from build_support.ci_cd_vars.project_structure import (
+    get_build_dir,
     get_integration_test_scratch_folder,
     maybe_build_dir,
 )
@@ -73,6 +74,19 @@ def mock_lightweight_project(
                 shutil.copytree(src=file_or_folder, dst=dest)
             else:
                 shutil.copy(src=file_or_folder, dst=dest)
+    build_folder_name = get_build_dir(project_root=mock_project_root).name
+    local_info_name = get_local_info_yaml(project_root=mock_project_root).name
+    for file_or_folder in mock_project_root.joinpath(build_folder_name).glob("*"):
+        name = file_or_folder.name
+        print(file_or_folder)  # noqa: T201
+        if name != local_info_name:
+            if file_or_folder.is_dir():
+                shutil.rmtree(path=file_or_folder)
+            else:
+                file_or_folder.unlink()
+        else:
+            print(file_or_folder)  # noqa: T201
+
     # turn non-build_subprojects into lightweight minimal projects
     init_name = "__init__.py"
     for subproject_context, subproject in get_all_python_subprojects_dict(
