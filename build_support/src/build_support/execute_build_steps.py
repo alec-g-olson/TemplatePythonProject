@@ -200,7 +200,9 @@ def run_main(args: Namespace) -> None:
         for arg in args.build_tasks
     ]
     try:
-        run_tasks(tasks=requested_tasks)
+        run_tasks(
+            tasks=requested_tasks, project_root=basic_task_info.docker_project_root
+        )
     except Exception as e:
         print(e)  # noqa: T201
     finally:

@@ -239,6 +239,7 @@ def test_run_main_success(cli_arg_combo: BasicTaskInfo) -> None:
         run_main(args)
         mock_run_tasks.assert_called_once_with(
             tasks=[Clean(basic_task_info=cli_arg_combo)],
+            project_root=cli_arg_combo.docker_project_root,
         )
         mock_fix_permissions.assert_called_once_with(
             local_user_uid=cli_arg_combo.local_uid,
@@ -294,7 +295,9 @@ def test_run_main_exception(cli_arg_combo: BasicTaskInfo) -> None:
             CLI_ARG_TO_TASK[arg].get_task_node(basic_task_info=cli_arg_combo)
             for arg in args.build_tasks
         ]
-        mock_run_tasks.assert_called_once_with(tasks=requested_tasks)
+        mock_run_tasks.assert_called_once_with(
+            tasks=requested_tasks, project_root=cli_arg_combo.docker_project_root
+        )
         mock_print.assert_called_once_with(error_to_raise)
         mock_fix_permissions.assert_called_once_with(
             local_user_uid=cli_arg_combo.local_uid,

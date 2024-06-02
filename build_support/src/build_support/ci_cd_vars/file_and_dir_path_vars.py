@@ -174,6 +174,18 @@ def get_build_docs_build_dir(project_root: Path) -> Path:
     )
 
 
+def get_build_runtime_report_path(project_root: Path) -> Path:
+    """Gets the path to the build runtime report file.
+
+    Args:
+        project_root (Path): Path to this project's root.
+
+    Returns:
+        Path: Path to the file that will have the build runtime report.
+    """
+    return get_build_dir(project_root=project_root).joinpath("build_runtime.yaml")
+
+
 ########################################
 # Files and folder collections that span domains
 ########################################
