@@ -78,14 +78,11 @@ def mock_lightweight_project(
     local_info_name = get_local_info_yaml(project_root=mock_project_root).name
     for file_or_folder in mock_project_root.joinpath(build_folder_name).glob("*"):
         name = file_or_folder.name
-        print(file_or_folder)  # noqa: T201
         if name != local_info_name:
             if file_or_folder.is_dir():
                 shutil.rmtree(path=file_or_folder)
             else:
                 file_or_folder.unlink()
-        else:
-            print(file_or_folder)  # noqa: T201
 
     # turn non-build_subprojects into lightweight minimal projects
     init_name = "__init__.py"
