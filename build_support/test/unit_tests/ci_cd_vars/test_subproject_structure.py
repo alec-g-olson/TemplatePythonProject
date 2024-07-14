@@ -238,19 +238,11 @@ def test_get_pytest_report_args_for_non_unit_tests(
 
 
 @pytest.mark.usefixtures("mock_local_pyproject_toml_file")
-def test_get_file_cache_dir(mock_subproject: PythonSubproject) -> None:
-    expected_file_cache_dir = mock_subproject.get_build_dir().joinpath("file_caches")
-    assert not expected_file_cache_dir.exists()
-    assert mock_subproject.get_file_cache_dir() == expected_file_cache_dir
-    assert expected_file_cache_dir.exists()
-
-
-@pytest.mark.usefixtures("mock_local_pyproject_toml_file")
-def test_get_unit_test_cache_yaml(mock_subproject: PythonSubproject) -> None:
-    assert (
-        mock_subproject.get_unit_test_cache_yaml()
-        == mock_subproject.get_file_cache_dir().joinpath("unit_test_cache.yaml")
+def test_get_file_cache_yaml(mock_subproject: PythonSubproject) -> None:
+    expected_file_cache_yaml = mock_subproject.get_build_dir().joinpath(
+        "file_cache.yaml"
     )
+    assert mock_subproject.get_file_cache_yaml() == expected_file_cache_yaml
 
 
 def test_get_python_subproject(mock_project_root: Path) -> None:

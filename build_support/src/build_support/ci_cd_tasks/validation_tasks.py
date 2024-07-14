@@ -26,7 +26,7 @@ from build_support.ci_cd_vars.subproject_structure import (
     get_python_subproject,
     get_sorted_subproject_contexts,
 )
-from build_support.file_caching import FileCacheInfo
+from build_support.file_caching import FileCacheEngine
 from build_support.process_runner import concatenate_args, run_process
 
 
@@ -383,86 +383,64 @@ class SubprojectUnitTests(PerSubprojectTask):
             docker_project_root=self.docker_project_root,
             target_image=DockerTarget.DEV,
         )
-        src_root = self.subproject.get_python_package_dir()
-        if src_root.exists():
-            subproject_root = self.subproject.get_root_dir()
-            unit_test_cache_file = self.subproject.get_unit_test_cache_yaml()
-            if unit_test_cache_file.exists():
-                unit_test_cache = FileCacheInfo.from_yaml(
-                    unit_test_cache_file.read_text()
-                )
-            else:
-                unit_test_cache = FileCacheInfo(
-                    group_root_dir=subproject_root, cache_info={}
-                )
-            unit_test_root = self.subproject.get_test_suite_dir(
-                test_suite=PythonSubproject.TestSuite.UNIT_TESTS
-            )
-            src_files = sorted(src_root.rglob("*"))
-            src_files_checked = 0
-            for src_file in src_files:
+        file_cache = FileCacheEngine(
+            subproject_context=self.subproject_context,
+            project_root=self.docker_project_root,
+        )
+        src_files_checked = 0
+        for unit_test_info in file_cache.get_unit_test_info():
+            for src_file, test_file in unit_test_info.src_test_file_pairs:
+                src_changed = file_cache.file_has_been_changed(file_path=src_file)
+                test_changed = file_cache.file_has_been_changed(file_path=test_file)
                 if (
-                    src_file.is_file()
-                    and src_file.name.endswith(".py")
-                    and src_file.name != "__init__.py"
+                    src_changed
+                    or test_changed
+                    or unit_test_info.conftest_or_parent_conftest_was_updated
                 ):
-                    relative_path = src_file.relative_to(src_root)
-                    test_folder = unit_test_root.joinpath(relative_path).parent
-                    test_file = test_folder.joinpath(f"test_{src_file.name}")
-                    src_changed = unit_test_cache.file_has_been_changed(
-                        file_path=src_file
+                    src_files_checked += 1
+                    run_process(
+                        args=concatenate_args(
+                            args=[
+                                dev_docker_command,
+                                "coverage",
+                                "run",
+                                "--include",
+                                src_file,
+                                "-m",
+                                "pytest",
+                                test_file,
+                            ],
+                        ),
                     )
-                    test_changed = unit_test_cache.file_has_been_changed(
-                        file_path=test_file
+                    run_process(
+                        args=concatenate_args(
+                            args=[
+                                dev_docker_command,
+                                "coverage",
+                                "report",
+                                "-m",
+                            ],
+                        ),
                     )
-                    # evaluate file change before if to ensure they are updated in the
-                    # file cache data.  Otherwise, if src is different then test is not
-                    # checked and will stay stale until this code is run again.
-                    if src_changed or test_changed:
-                        src_files_checked += 1
-                        run_process(
-                            args=concatenate_args(
-                                args=[
-                                    dev_docker_command,
-                                    "coverage",
-                                    "run",
-                                    "--include",
-                                    src_file,
-                                    "-m",
-                                    "pytest",
-                                    test_file,
-                                ],
-                            ),
-                        )
-                        run_process(
-                            args=concatenate_args(
-                                args=[
-                                    dev_docker_command,
-                                    "coverage",
-                                    "report",
-                                    "-m",
-                                ],
-                            ),
-                        )
-                    unit_test_cache_file.write_text(unit_test_cache.to_yaml())
-            if src_files_checked:
-                run_process(
-                    args=concatenate_args(
-                        args=[
-                            dev_docker_command,
-                            "pytest",
-                            "-n",
-                            THREADS_AVAILABLE,
-                            self.subproject.get_pytest_report_args(
-                                test_suite=PythonSubproject.TestSuite.UNIT_TESTS
-                            ),
-                            self.subproject.get_src_dir(),
-                            self.subproject.get_test_suite_dir(
-                                test_suite=PythonSubproject.TestSuite.UNIT_TESTS
-                            ),
-                        ],
-                    ),
-                )
+                file_cache.write_text()
+        if src_files_checked:
+            run_process(
+                args=concatenate_args(
+                    args=[
+                        dev_docker_command,
+                        "pytest",
+                        "-n",
+                        THREADS_AVAILABLE,
+                        self.subproject.get_pytest_report_args(
+                            test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+                        ),
+                        self.subproject.get_src_dir(),
+                        self.subproject.get_test_suite_dir(
+                            test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+                        ),
+                    ],
+                ),
+            )
 
 
 class AllSubprojectIntegrationTests(TaskNode):
