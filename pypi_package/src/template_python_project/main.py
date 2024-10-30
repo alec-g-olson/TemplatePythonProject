@@ -69,5 +69,5 @@ def run_main(args: Namespace) -> None:
         out_writer.write(output.model_dump_json())
 
 
-if __name__ == "__main__":  # pragma: no cover
+if __name__ == "__main__":  # pragma: no cov
     run_main(args=parse_args())

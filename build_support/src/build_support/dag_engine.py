@@ -70,7 +70,7 @@ class BuildRunReport(BaseModel):
             yaml_str (str): String of the YAML representation of a BuildRunReport.
 
         Returns:
-            GitInfo: A BuildRunReport object parsed from the YAML.
+            BuildRunReport: A BuildRunReport object parsed from the YAML.
         """
         return BuildRunReport.model_validate(safe_load(yaml_str))
 

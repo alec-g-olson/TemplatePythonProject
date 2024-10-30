@@ -4,7 +4,7 @@ from build_support.ci_cd_vars.project_structure import (
     get_build_dir,
     get_dockerfile,
     get_docs_dir,
-    get_integration_test_scratch_folder,
+    get_feature_test_scratch_folder,
     get_license_file,
     get_poetry_lock_file,
     get_pyproject_toml,
@@ -51,16 +51,16 @@ def test_get_build_dir(mock_project_root: Path) -> None:
     assert expected_build_dir.exists()
 
 
-def test_get_integration_test_scratch_folder(mock_project_root: Path) -> None:
-    expected_integration_test_scratch_folder = mock_project_root.joinpath(
+def test_get_feature_test_scratch_folder(mock_project_root: Path) -> None:
+    expected_feature_test_scratch_folder = mock_project_root.joinpath(
         "test_scratch_folder"
     )
-    assert not expected_integration_test_scratch_folder.exists()
+    assert not expected_feature_test_scratch_folder.exists()
     assert (
-        get_integration_test_scratch_folder(project_root=mock_project_root)
-        == expected_integration_test_scratch_folder
+        get_feature_test_scratch_folder(project_root=mock_project_root)
+        == expected_feature_test_scratch_folder
     )
-    assert expected_integration_test_scratch_folder.exists()
+    assert expected_feature_test_scratch_folder.exists()
 
 
 def test_get_docs_dir(mock_project_root: Path) -> None:

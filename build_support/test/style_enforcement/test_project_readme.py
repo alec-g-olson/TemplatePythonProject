@@ -47,7 +47,7 @@ def _get_missing_headers(
     header_regexes: List[str], readme_path: Path
 ) -> List[
     ReadmeHeaderInfo
-]:  # pragma: no cover - has branches not reached if all tests pass
+]:  # pragma: no cov - has branches not reached if all tests pass
     headers_found = {regex: False for regex in header_regexes}
     if readme_path.exists():
         for line in readme_path.open():
@@ -69,7 +69,7 @@ def _get_headers_missing_details(
     header_regexes: List[str], readme_path: Path
 ) -> List[
     ReadmeHeaderInfo
-]:  # pragma: no cover - has branches not reached if all tests pass
+]:  # pragma: no cov - has branches not reached if all tests pass
     headers_with_details_found = {regex: False for regex in header_regexes}
     current_header = None
     if readme_path.exists():
@@ -104,7 +104,7 @@ def _get_extra_headers(
     header_regexes: List[str], readme_path: Path
 ) -> List[
     ReadmeHeaderInfo
-]:  # pragma: no cover - has branches not reached if all tests pass
+]:  # pragma: no cov - has branches not reached if all tests pass
     extra_headers = []
     if readme_path.exists():
         for line in readme_path.open():
@@ -131,11 +131,9 @@ def _is_broken_hyperlink(
     all_headers: List[str],
 ) -> bool:
     if hyperlink[1].startswith("http"):
-        if (
-            check_weblinks
-        ):  # pragma: no cover - might not hit if check_weblinks is false
+        if check_weblinks:  # pragma: no cov - might not hit if check_weblinks is false
             return requests.get(hyperlink[1]).status_code != HTTPStatus.OK
-        return False  # pragma: no cover - might not hit if check_weblinks is true
+        return False  # pragma: no cov - might not hit if check_weblinks is true
     if hyperlink[1].startswith("#"):
         return hyperlink[1] not in all_headers
     return not current_dir.joinpath(hyperlink[1]).exists()
@@ -145,7 +143,7 @@ def _get_all_bad_hyperlinks(
     readme_path: Path, check_weblinks: bool
 ) -> List[
     BadHyperlinkInfo
-]:  # pragma: no cover - has branches not reached if all tests pass
+]:  # pragma: no cov - has branches not reached if all tests pass
     bad_hyperlinks = []
     if readme_path.exists():
         all_headers = [line for line in readme_path.open() if line.startswith("#")]

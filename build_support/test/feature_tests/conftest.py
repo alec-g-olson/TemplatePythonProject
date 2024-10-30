@@ -11,7 +11,7 @@ from build_support.ci_cd_vars.git_status_vars import (
 )
 from build_support.ci_cd_vars.project_structure import (
     get_build_dir,
-    get_integration_test_scratch_folder,
+    get_feature_test_scratch_folder,
     maybe_build_dir,
 )
 from build_support.ci_cd_vars.subproject_structure import (
@@ -50,7 +50,7 @@ def make_command_prefix(
         "make",
         f"NON_DOCKER_ROOT={test_non_docker_root}",
         f"GIT_MOUNT=-v {remote_repo_non_docker_root}:{mock_remote_git_folder}",
-        "CI_CD_INTEGRATION_TEST_MODE_FLAG=--ci-cd-integration-test-mode",
+        "CI_CD_FEATURE_TEST_MODE_FLAG=--ci-cd-feature-test-mode",
     ]
 
 
@@ -62,13 +62,13 @@ def mock_lightweight_project(
     remote_repo_url = str(mock_remote_git_repo.working_dir)
     repo = Repo.clone_from(url=remote_repo_url, to_path=mock_project_root)
     repo.remote().push()
-    integration_scratch_name = get_integration_test_scratch_folder(
+    feature_scratch_name = get_feature_test_scratch_folder(
         project_root=mock_project_root
     ).name
     # copy everything from real project
     for file_or_folder in real_project_root_dir.glob("*"):
         name = file_or_folder.name
-        if name not in [".git", integration_scratch_name]:
+        if name not in [".git", feature_scratch_name]:
             dest = mock_project_root.joinpath(name)
             if file_or_folder.is_dir():
                 shutil.copytree(src=file_or_folder, dst=dest)
@@ -99,12 +99,12 @@ def mock_lightweight_project(
                     test_suite=PythonSubproject.TestSuite.UNIT_TESTS
                 )
             )
-            integration_test_dir = maybe_build_dir(
+            feature_test_dir = maybe_build_dir(
                 dir_to_build=subproject.get_test_suite_dir(
                     test_suite=PythonSubproject.TestSuite.UNIT_TESTS
                 )
             )
-            integration_test_dir.joinpath(init_name).touch()
+            feature_test_dir.joinpath(init_name).touch()
             pkg_dir.joinpath(init_name).write_text('"""Top level package."""')
             unit_test_dir.joinpath(init_name).touch()
     repo.git.add(update=True)

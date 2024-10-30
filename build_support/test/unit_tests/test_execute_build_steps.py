@@ -35,6 +35,7 @@ from build_support.ci_cd_tasks.validation_tasks import (
     SubprojectUnitTests,
     ValidateAll,
     ValidatePythonStyle,
+    ValidateStaticTypeChecking,
 )
 from build_support.ci_cd_vars.file_and_dir_path_vars import get_local_info_yaml
 from build_support.ci_cd_vars.project_structure import maybe_build_dir
@@ -58,6 +59,10 @@ def test_constants_not_changed_by_accident() -> None:
         "setup_prod_env": CliTaskInfo(task_node=SetupProdEnvironment),
         "setup_infra_env": CliTaskInfo(task_node=SetupInfraEnvironment),
         "test_style": CliTaskInfo(task_node=ValidatePythonStyle),
+        "type_check_build_support": CliTaskInfo(
+            task_node=ValidateStaticTypeChecking,
+            subproject_context=SubprojectContext.BUILD_SUPPORT,
+        ),
         "type_checks": CliTaskInfo(task_node=AllSubprojectStaticTypeChecking),
         "security_checks": CliTaskInfo(task_node=AllSubprojectSecurityChecks),
         "check_process": CliTaskInfo(task_node=EnforceProcess),
@@ -112,7 +117,7 @@ def non_docker_project_root_arg(request: SubRequest, tmp_path: Path) -> Path:
 
 
 @pytest.fixture(params=[True, False])
-def ci_cd_integration_test_mode(request: SubRequest) -> bool:
+def ci_cd_feature_test_mode(request: SubRequest) -> bool:
     return cast(bool, request.param)
 
 
@@ -126,14 +131,14 @@ def cli_arg_combo(
     non_docker_project_root_arg: Path,
     docker_project_root_arg: Path,
     basic_task_info: BasicTaskInfo,
-    ci_cd_integration_test_mode: bool,
+    ci_cd_feature_test_mode: bool,
 ) -> BasicTaskInfo:
     return BasicTaskInfo(
         non_docker_project_root=non_docker_project_root_arg,
         docker_project_root=docker_project_root_arg,
         local_uid=basic_task_info.local_uid,
         local_gid=basic_task_info.local_gid,
-        ci_cd_integration_test_mode=ci_cd_integration_test_mode,
+        ci_cd_feature_test_mode=ci_cd_feature_test_mode,
         local_user_env=basic_task_info.local_user_env,
     )
 
@@ -309,7 +314,7 @@ def test_get_standard_task_node(basic_task_info: BasicTaskInfo) -> None:
     class TestTaskNode(TaskNode):
         @override
         def required_tasks(self) -> list[TaskNode]:
-            return []  # pragma: no cover - never called, just a test class
+            return []  # pragma: no cov - never called, just a test class
 
         @override
         def run(self) -> None:
@@ -325,7 +330,7 @@ def test_get_subproject_specific_task_node(basic_task_info: BasicTaskInfo) -> No
     class TestSubprojectSpecificTaskNode(PerSubprojectTask):
         @override
         def required_tasks(self) -> list[TaskNode]:
-            return []  # pragma: no cover - never called, just a test class
+            return []  # pragma: no cov - never called, just a test class
 
         @override
         def run(self) -> None:

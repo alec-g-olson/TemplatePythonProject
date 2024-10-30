@@ -24,7 +24,7 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
 )
 from build_support.ci_cd_vars.project_setting_vars import get_pulumi_version
 from build_support.ci_cd_vars.project_structure import (
-    get_integration_test_scratch_folder,
+    get_feature_test_scratch_folder,
 )
 
 
@@ -53,7 +53,7 @@ def test_run_build_dev_env(basic_task_info: BasicTaskInfo) -> None:
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
 def test_run_build_dev_env_in_ci_cd_mode(basic_task_info: BasicTaskInfo) -> None:
-    basic_task_info.ci_cd_integration_test_mode = True
+    basic_task_info.ci_cd_feature_test_mode = True
     with patch(
         "build_support.ci_cd_tasks.env_setup_tasks.run_process",
     ) as run_process_mock:
@@ -81,7 +81,7 @@ def test_run_build_prod_env(basic_task_info: BasicTaskInfo) -> None:
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
 def test_run_build_prod_env_in_ci_cd_mode(basic_task_info: BasicTaskInfo) -> None:
-    basic_task_info.ci_cd_integration_test_mode = True
+    basic_task_info.ci_cd_feature_test_mode = True
     with patch(
         "build_support.ci_cd_tasks.env_setup_tasks.run_process",
     ) as run_process_mock:
@@ -115,7 +115,7 @@ def test_run_build_infra_env(basic_task_info: BasicTaskInfo) -> None:
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
 def test_run_build_infra_env_in_ci_cd_mode(basic_task_info: BasicTaskInfo) -> None:
-    basic_task_info.ci_cd_integration_test_mode = True
+    basic_task_info.ci_cd_feature_test_mode = True
     with patch(
         "build_support.ci_cd_tasks.env_setup_tasks.run_process",
     ) as run_process_mock:
@@ -136,7 +136,7 @@ def test_run_clean(basic_task_info: BasicTaskInfo) -> None:
         current_folder.mkdir(parents=True, exist_ok=True)
         file_names_to_add = ["some.txt", "file.txt", "names.txt", "to.txt", "add.txt"]
         folder_names_to_add = ["some", "folder", "names", "to", "add"]
-        if required_file_names:  # pragma: no cover - might be None
+        if required_file_names:  # pragma: no cov - might be None
             file_names_to_add += required_file_names
         for file_name in file_names_to_add:
             current_folder.joinpath(file_name).touch()
@@ -157,7 +157,7 @@ def test_run_clean(basic_task_info: BasicTaskInfo) -> None:
     build_dir = get_build_dir(project_root=basic_task_info.docker_project_root)
     _add_some_folders_and_files_to_folder(current_folder=build_dir)
 
-    test_scratch_folder = get_integration_test_scratch_folder(
+    test_scratch_folder = get_feature_test_scratch_folder(
         project_root=basic_task_info.docker_project_root
     )
     _add_some_folders_and_files_to_folder(current_folder=test_scratch_folder)

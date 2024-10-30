@@ -159,7 +159,7 @@ def test_run_tasks(
                 task_run.assert_called_once_with()
             else:
                 assert task_run.run.call_count == 0
-        else:  # pragma: no cover - will only hit if setup incorrectly
+        else:  # pragma: no cov - will only hit if setup incorrectly
             pytest.fail("This test was setup incorrectly, task.run should be a mock.")
     parsed_report = BuildRunReport.from_yaml(
         get_build_runtime_report_path(project_root=mock_project_root).read_text()

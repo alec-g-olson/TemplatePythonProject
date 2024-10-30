@@ -15,7 +15,7 @@ USER = $(USER_ID):$(GROUP_ID)
 
 NON_DOCKER_ROOT = $(MAKEFILE_DIR)
 
-CI_CD_INTEGRATION_TEST_MODE_FLAG =
+CI_CD_FEATURE_TEST_MODE_FLAG =
 
 USER_HOME_DIR = ${HOME}
 GIT_CONFIG_PATH = $(USER_HOME_DIR)/.gitconfig
@@ -57,7 +57,7 @@ python build_support/src/build_support/dump_ci_cd_run_info.py \
 --user-id $(USER_ID) --group-id $(GROUP_ID) \
 --non-docker-project-root $(NON_DOCKER_ROOT) \
 $(SHARED_BUILD_VARS) \
-$(CI_CD_INTEGRATION_TEST_MODE_FLAG)
+$(CI_CD_FEATURE_TEST_MODE_FLAG)
 
 .PHONY: push
 push: setup_build_env
@@ -111,6 +111,10 @@ test_style: setup_build_env
 type_checks: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) type_checks
 
+.PHONY: type_check_build_support
+type_check_build_support: setup_build_env
+	$(EXECUTE_BUILD_STEPS_COMMAND) type_check_build_support
+
 .PHONY: security_checks
 security_checks: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) security_checks
@@ -163,7 +167,7 @@ setup_pulumi_env: setup_build_env
 
 .PHONY: setup_build_env
 setup_build_env:
-ifeq ($(CI_CD_INTEGRATION_TEST_MODE_FLAG), )
+ifeq ($(CI_CD_FEATURE_TEST_MODE_FLAG), )
 	docker build \
 --build-arg DOCKER_REMOTE_PROJECT_ROOT=$(DOCKER_REMOTE_PROJECT_ROOT) \
 --build-arg CURRENT_USER_ID=$(USER_ID) \

@@ -1,17 +1,17 @@
-FROM python:3.12.2 AS base
+FROM python:3.13.0 AS base
 # If python version changed here change in pyproject.toml
 # [tool.poetry.dependencies]
 
 # make sure to update build.system.requries poetry version in pyproject.toml
-ENV POETRY_VERSION="1.8.1"
+ENV POETRY_VERSION="1.8.3"
 ENV POETRY_HOME="/opt/poetry"
 
 ENV PATH="$POETRY_HOME/bin:$PATH"
 
-RUN pip install --upgrade pip==24.0
+RUN pip install --upgrade pip==24.2
 RUN pip install poetry==$POETRY_VERSION
 
-COPY poetry.lock poetry.lock
+#COPY poetry.lock poetry.lock
 COPY pyproject.toml pyproject.toml
 RUN poetry config virtualenvs.create false
 
@@ -19,7 +19,7 @@ FROM base AS docker_enabled
 
 # Add Docker's official GPG key:
 RUN apt-get update
-RUN apt-get install ca-certificates curl gnupg
+RUN apt-get install -y ca-certificates curl gnupg
 RUN install -m 0755 -d /etc/apt/keyrings
 RUN curl -fsSL https://download.docker.com/linux/debian/gpg | \
     gpg --dearmor -o /etc/apt/keyrings/docker.gpg
@@ -35,7 +35,7 @@ RUN apt-get update
 RUN apt-get install -y docker-ce docker-ce-cli containerd.io \
       docker-buildx-plugin docker-compose-plugin
 
-FROM docker_enabled as git_enabled
+FROM docker_enabled AS git_enabled
 
 # create local user so local permissions can be mounted into the container
 # Should be safe, but avoid pushing images or containers that are based on `git_enabled`
@@ -70,11 +70,11 @@ FROM docker_enabled AS dev
 
 RUN poetry install --with dev --with build --with pulumi
 
-FROM base as prod
+FROM base AS prod
 
 RUN poetry install
 
-FROM base as pulumi
+FROM base AS pulumi
 
 RUN poetry install --with pulumi
 

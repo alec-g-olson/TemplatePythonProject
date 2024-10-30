@@ -78,7 +78,7 @@ def get_python_path_for_target_image(
                     project_root=docker_project_root,
                 ).get_src_dir()
             ]
-        case _:  # pragma: no cover - can't hit if all enums are implemented
+        case _:  # pragma: no cov - can't hit if all enums are implemented
             msg = f"{target_image!r} is not a valid enum of DockerType."
             raise ValueError(msg)
     return ":".join(concatenate_args(args=[python_folders]))

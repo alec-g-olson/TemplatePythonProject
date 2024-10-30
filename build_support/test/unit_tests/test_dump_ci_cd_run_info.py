@@ -23,7 +23,7 @@ def non_docker_project_root_arg(request: SubRequest, tmp_path: Path) -> Path:
 
 
 @pytest.fixture(params=[True, False])
-def ci_cd_integration_test_mode(request: SubRequest) -> bool:
+def ci_cd_feature_test_mode(request: SubRequest) -> bool:
     return cast(bool, request.param)
 
 
@@ -32,14 +32,14 @@ def cli_arg_combo(
     non_docker_project_root_arg: Path,
     docker_project_root_arg: Path,
     basic_task_info: BasicTaskInfo,
-    ci_cd_integration_test_mode: bool,
+    ci_cd_feature_test_mode: bool,
 ) -> BasicTaskInfo:
     return BasicTaskInfo(
         non_docker_project_root=non_docker_project_root_arg,
         docker_project_root=docker_project_root_arg,
         local_uid=basic_task_info.local_uid,
         local_gid=basic_task_info.local_gid,
-        ci_cd_integration_test_mode=ci_cd_integration_test_mode,
+        ci_cd_feature_test_mode=ci_cd_feature_test_mode,
         local_user_env=basic_task_info.local_user_env,
     )
 
@@ -61,8 +61,8 @@ def args_to_test_single_task(
             cli_arg_combo.local_gid,
         ]
         + (
-            ["--ci-cd-integration-test-mode"]
-            if cli_arg_combo.ci_cd_integration_test_mode
+            ["--ci-cd-feature-test-mode"]
+            if cli_arg_combo.ci_cd_feature_test_mode
             else []
         )
     ]
@@ -77,7 +77,7 @@ def expected_namespace_single_task(
         docker_project_root=cli_arg_combo.docker_project_root,
         user_id=cli_arg_combo.local_uid,
         group_id=cli_arg_combo.local_gid,
-        ci_cd_integration_test_mode=cli_arg_combo.ci_cd_integration_test_mode,
+        ci_cd_feature_test_mode=cli_arg_combo.ci_cd_feature_test_mode,
     )
 
 
@@ -154,7 +154,7 @@ def test_run_main_success(cli_arg_combo: BasicTaskInfo) -> None:
         docker_project_root=cli_arg_combo.docker_project_root,
         user_id=cli_arg_combo.local_uid,
         group_id=cli_arg_combo.local_gid,
-        ci_cd_integration_test_mode=cli_arg_combo.ci_cd_integration_test_mode,
+        ci_cd_feature_test_mode=cli_arg_combo.ci_cd_feature_test_mode,
     )
     run_main(args)
     local_info_yaml = get_local_info_yaml(

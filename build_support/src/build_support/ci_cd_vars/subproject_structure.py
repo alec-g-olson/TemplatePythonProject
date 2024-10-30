@@ -44,10 +44,17 @@ class PythonSubproject:
         """An Enum to track the possible test contexts."""
 
         UNIT_TESTS = "unit_tests"
-        INTEGRATION_TESTS = "integration_tests"
+        FEATURE_TESTS = "feature_tests"
         # The Enums below should only be used in the BUILD_SUPPORT subproject
         PROCESS_ENFORCEMENT = "process_enforcement"
         STYLE_ENFORCEMENT = "style_enforcement"
+
+    class TestScope(Enum):
+        """An Enum to track if the scope of a pytest call is complete for the suite."""
+
+        COMPLETE = "complete"
+        INCOMPLETE = "incomplete"
+        SINGLE_FILE = "single_file"
 
     def get_subproject_name(self) -> str:
         """Gets the name of the subproject.
@@ -168,32 +175,45 @@ class PythonSubproject:
         """
         return self.get_reports_dir().joinpath(self.get_bandit_report_name())
 
-    def get_pytest_report_name(self, test_suite: TestSuite) -> str:
+    def get_pytest_report_name(
+        self, test_suite: TestSuite, test_scope: TestScope
+    ) -> str:
         """Get the name of the pytest report for this subproject.
 
         Args:
             test_suite (TestSuite): The test suite enum corresponding to the test suite
                 we are getting the pytest report name for.
+            test_scope (TestScope): The test scope enum indicating how complete the test
+                call will be for the test suite.
 
         Returns:
             str: The name of a pytest report in a standardized format.
         """
+        if test_scope == PythonSubproject.TestScope.COMPLETE:
+            return self._get_test_report_name(
+                test_suite=test_suite, report_extension="pytest_report.xml"
+            )
         return self._get_test_report_name(
-            test_suite=test_suite, report_extension="pytest_report.xml"
+            test_suite=test_suite,
+            report_extension=f"pytest_report_{test_scope.value}.xml",
         )
 
-    def get_pytest_report_path(self, test_suite: TestSuite) -> Path:
+    def get_pytest_report_path(
+        self, test_suite: TestSuite, test_scope: TestScope
+    ) -> Path:
         """Get the path of the pytest report for this subproject.
 
         Args:
             test_suite (TestSuite): The test suite enum corresponding to the test suite
                 we are getting the pytest report path for.
+            test_scope (TestScope): The test scope enum indicating how complete the test
+                call will be for the test suite.
 
         Returns:
             Path: Path to the pytest report for this subproject.
         """
         return self.get_reports_dir().joinpath(
-            self.get_pytest_report_name(test_suite=test_suite)
+            self.get_pytest_report_name(test_suite=test_suite, test_scope=test_scope)
         )
 
     def get_pytest_coverage_report_name(self, test_suite: TestSuite) -> str:
@@ -224,24 +244,29 @@ class PythonSubproject:
             self.get_pytest_coverage_report_name(test_suite=test_suite)
         )
 
-    def get_pytest_report_args(self, test_suite: TestSuite) -> list[str]:
-        """Get the args used by pytest for this subproject.
+    def get_pytest_whole_test_suite_report_args(
+        self, test_suite: TestSuite
+    ) -> list[str]:
+        """Get the args used by pytest when running test suites for this subproject.
 
         Args:
             test_suite (TestSuite): The test suite enum corresponding to the test suite
                 we are getting report args for.
 
         Returns:
-            list[str]: A list of arguments that will be used with pytest for this
-                subproject.
+            list[str]: A list of arguments that will be used with pytest when running
+                unit tests for this subproject.
         """
+        report_path = self.get_pytest_report_path(
+            test_suite=test_suite, test_scope=PythonSubproject.TestScope.COMPLETE
+        )
         report_args: list[Any] = [
             # Always check to make sure all test code is covered
             # It's a good check to make sure we're doing what we expect with our tests
             "--cov-report",
             "term-missing",
             f"--cov={self.get_test_suite_dir(test_suite=test_suite)}",
-            f"--junitxml={self.get_pytest_report_path(test_suite=test_suite)}",
+            f"--junitxml={report_path}",
         ]
         if test_suite == self.TestSuite.UNIT_TESTS:
             coverage_report = self.get_pytest_coverage_report_path(
@@ -250,11 +275,23 @@ class PythonSubproject:
             report_args.extend(
                 (
                     f"--cov={self.get_src_dir()}",
-                    "--cov-report",
-                    f"xml:{coverage_report}",
+                    f"--cov-report=xml:{coverage_report}",
                 )
             )
         return concatenate_args(args=report_args)
+
+    def get_pytest_feature_test_report_args(self) -> list[str]:
+        """Get the args used by pytest when running features tests for this subproject.
+
+        Returns:
+            list[str]: A list of arguments that will be used with pytest when running
+                feature tests for this subproject.
+        """
+        report_path = self.get_pytest_report_path(
+            test_suite=PythonSubproject.TestSuite.FEATURE_TESTS,
+            test_scope=PythonSubproject.TestScope.SINGLE_FILE,
+        )
+        return [f"--junitxml={report_path}"]
 
     def get_file_cache_yaml(self) -> Path:
         """Gets the file that holds this subproject's file cache information.

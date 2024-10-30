@@ -14,7 +14,9 @@ def test_mypy_passes_no_issues(
     mock_project_root: Path, make_command_prefix: list[str]
 ) -> None:
     # Default state - should pass as long as style checks are passing for the repo
-    cmd = Popen(args=(*make_command_prefix, "type_checks"), cwd=mock_project_root)
+    cmd = Popen(
+        args=(*make_command_prefix, "type_check_build_support"), cwd=mock_project_root
+    )
     cmd.communicate()
     assert cmd.returncode == 0
 
@@ -33,7 +35,9 @@ def test_mypy_fails_type_arg(
     return items
 '''
     )
-    cmd = Popen(args=(*make_command_prefix, "type_checks"), cwd=mock_project_root)
+    cmd = Popen(
+        args=(*make_command_prefix, "type_check_build_support"), cwd=mock_project_root
+    )
     cmd.communicate()
     assert cmd.returncode != 0
 
@@ -52,7 +56,9 @@ def test_mypy_fails_no_untyped_def(
     return items
 '''
     )
-    cmd = Popen(args=(*make_command_prefix, "type_checks"), cwd=mock_project_root)
+    cmd = Popen(
+        args=(*make_command_prefix, "type_check_build_support"), cwd=mock_project_root
+    )
     cmd.communicate()
     assert cmd.returncode != 0
 
@@ -71,7 +77,9 @@ def test_mypy_fails_redundant_cast(
     return cast(int, x)
 '''
     )
-    cmd = Popen(args=(*make_command_prefix, "type_checks"), cwd=mock_project_root)
+    cmd = Popen(
+        args=(*make_command_prefix, "type_check_build_support"), cwd=mock_project_root
+    )
     cmd.communicate()
     assert cmd.returncode != 0
 
@@ -90,7 +98,9 @@ def test_mypy_fails_redundant_self(
     return type(self)()
 '''
     )
-    cmd = Popen(args=(*make_command_prefix, "type_checks"), cwd=mock_project_root)
+    cmd = Popen(
+        args=(*make_command_prefix, "type_check_build_support"), cwd=mock_project_root
+    )
     cmd.communicate()
     assert cmd.returncode != 0
 
@@ -109,7 +119,9 @@ def test_mypy_fails_comparison_overlap(
     return x == 'magic'
 '''
     )
-    cmd = Popen(args=(*make_command_prefix, "type_checks"), cwd=mock_project_root)
+    cmd = Popen(
+        args=(*make_command_prefix, "type_check_build_support"), cwd=mock_project_root
+    )
     cmd.communicate()
     assert cmd.returncode != 0
 
@@ -132,7 +144,9 @@ def bad():
     return
 '''
     )
-    cmd = Popen(args=(*make_command_prefix, "type_checks"), cwd=mock_project_root)
+    cmd = Popen(
+        args=(*make_command_prefix, "type_check_build_support"), cwd=mock_project_root
+    )
     cmd.communicate()
     assert cmd.returncode != 0
 
@@ -151,7 +165,9 @@ def test_mypy_fails_no_any_return(
     return x['str']
 '''
     )
-    cmd = Popen(args=(*make_command_prefix, "type_checks"), cwd=mock_project_root)
+    cmd = Popen(
+        args=(*make_command_prefix, "type_check_build_support"), cwd=mock_project_root
+    )
     cmd.communicate()
     assert cmd.returncode != 0
 
@@ -173,7 +189,9 @@ def feed(cat: Cat) -> None:
     return
 '''
     )
-    cmd = Popen(args=(*make_command_prefix, "type_checks"), cwd=mock_project_root)
+    cmd = Popen(
+        args=(*make_command_prefix, "type_check_build_support"), cwd=mock_project_root
+    )
     cmd.communicate()
     assert cmd.returncode != 0
 
@@ -195,7 +213,9 @@ def test_mypy_fails_redundant_expr(
         return 0
 '''
     )
-    cmd = Popen(args=(*make_command_prefix, "type_checks"), cwd=mock_project_root)
+    cmd = Popen(
+        args=(*make_command_prefix, "type_check_build_support"), cwd=mock_project_root
+    )
     cmd.communicate()
     assert cmd.returncode != 0
 
@@ -216,7 +236,9 @@ def test_mypy_fails_possibly_undefined(
     return val + a
 '''
     )
-    cmd = Popen(args=(*make_command_prefix, "type_checks"), cwd=mock_project_root)
+    cmd = Popen(
+        args=(*make_command_prefix, "type_check_build_support"), cwd=mock_project_root
+    )
     cmd.communicate()
     assert cmd.returncode != 0
 
@@ -238,7 +260,9 @@ if foo:
     a = 0
 """
     )
-    cmd = Popen(args=(*make_command_prefix, "type_checks"), cwd=mock_project_root)
+    cmd = Popen(
+        args=(*make_command_prefix, "type_check_build_support"), cwd=mock_project_root
+    )
     cmd.communicate()
     assert cmd.returncode != 0
 
@@ -261,7 +285,9 @@ def transform(items: Iterable[int]) -> list[int]:
     return [x + 1 for x in items]
 '''
     )
-    cmd = Popen(args=(*make_command_prefix, "type_checks"), cwd=mock_project_root)
+    cmd = Popen(
+        args=(*make_command_prefix, "type_check_build_support"), cwd=mock_project_root
+    )
     cmd.communicate()
     assert cmd.returncode != 0
 
@@ -280,7 +306,9 @@ def test_mypy_fails_ignore_without_code(
     return items
 '''
     )
-    cmd = Popen(args=(*make_command_prefix, "type_checks"), cwd=mock_project_root)
+    cmd = Popen(
+        args=(*make_command_prefix, "type_check_build_support"), cwd=mock_project_root
+    )
     cmd.communicate()
     assert cmd.returncode != 0
 
@@ -303,7 +331,9 @@ async def g() -> None:
     asyncio.create_task(f())
 """
     )
-    cmd = Popen(args=(*make_command_prefix, "type_checks"), cwd=mock_project_root)
+    cmd = Popen(
+        args=(*make_command_prefix, "type_check_build_support"), cwd=mock_project_root
+    )
     cmd.communicate()
     assert cmd.returncode != 0
 
@@ -322,7 +352,9 @@ def test_mypy_fails_unused_ignore(
     return a + b  # type: ignore[unused-awaitable]
 '''
     )
-    cmd = Popen(args=(*make_command_prefix, "type_checks"), cwd=mock_project_root)
+    cmd = Popen(
+        args=(*make_command_prefix, "type_check_build_support"), cwd=mock_project_root
+    )
     cmd.communicate()
     assert cmd.returncode != 0
 
@@ -359,7 +391,9 @@ class Child(Parent):
         pass
 '''
     )
-    cmd = Popen(args=(*make_command_prefix, "type_checks"), cwd=mock_project_root)
+    cmd = Popen(
+        args=(*make_command_prefix, "type_check_build_support"), cwd=mock_project_root
+    )
     cmd.communicate()
     assert cmd.returncode != 0
 
@@ -388,7 +422,9 @@ class D(C):
     z: Any  # OK
 """
     )
-    cmd = Popen(args=(*make_command_prefix, "type_checks"), cwd=mock_project_root)
+    cmd = Popen(
+        args=(*make_command_prefix, "type_check_build_support"), cwd=mock_project_root
+    )
     cmd.communicate()
     assert cmd.returncode != 0
 
@@ -406,6 +442,8 @@ def test_mypy_fails_unimported_reveal(
 reveal_type(x)
 """
     )
-    cmd = Popen(args=(*make_command_prefix, "type_checks"), cwd=mock_project_root)
+    cmd = Popen(
+        args=(*make_command_prefix, "type_check_build_support"), cwd=mock_project_root
+    )
     cmd.communicate()
     assert cmd.returncode != 0

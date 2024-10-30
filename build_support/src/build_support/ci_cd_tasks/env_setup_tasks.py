@@ -24,7 +24,7 @@ from build_support.ci_cd_vars.git_status_vars import (
 )
 from build_support.ci_cd_vars.project_setting_vars import get_pulumi_version
 from build_support.ci_cd_vars.project_structure import (
-    get_integration_test_scratch_folder,
+    get_feature_test_scratch_folder,
 )
 from build_support.process_runner import run_process
 
@@ -48,7 +48,7 @@ class SetupDevEnvironment(TaskNode):
         Returns:
             None
         """
-        if not self.ci_cd_integration_test_mode:
+        if not self.ci_cd_feature_test_mode:
             run_process(
                 args=get_docker_build_command(
                     docker_project_root=self.docker_project_root,
@@ -82,7 +82,7 @@ class SetupProdEnvironment(TaskNode):
         Returns:
             None
         """
-        if not self.ci_cd_integration_test_mode:
+        if not self.ci_cd_feature_test_mode:
             run_process(
                 args=get_docker_build_command(
                     docker_project_root=self.docker_project_root,
@@ -110,7 +110,7 @@ class SetupInfraEnvironment(TaskNode):
         Returns:
             None
         """
-        if not self.ci_cd_integration_test_mode:
+        if not self.ci_cd_feature_test_mode:
             run_process(
                 args=get_docker_build_command(
                     docker_project_root=self.docker_project_root,
@@ -149,9 +149,7 @@ class Clean(TaskNode):
             args=[
                 "rm",
                 "-rf",
-                get_integration_test_scratch_folder(
-                    project_root=self.docker_project_root
-                ),
+                get_feature_test_scratch_folder(project_root=self.docker_project_root),
             ],
         )
         run_process(

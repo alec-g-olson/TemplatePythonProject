@@ -51,9 +51,9 @@ def parse_args(args: list[str] | None = None) -> Namespace:
         help="User's Group ID, used to return files made by docker to owner.",
     )
     parser.add_argument(
-        "--ci-cd-integration-test-mode",
+        "--ci-cd-feature-test-mode",
         action="store_true",
-        help="Set to true when running CI/CD integration tests to avoid recursive "
+        help="Set to true when running CI/CD feature tests to avoid recursive "
         "testing.",
     )
     return parser.parse_args(args=args)
@@ -82,11 +82,11 @@ def run_main(args: Namespace) -> None:
         local_uid=local_uid,
         local_gid=local_gid,
         local_user_env=local_user_env,
-        ci_cd_integration_test_mode=args.ci_cd_integration_test_mode,
+        ci_cd_feature_test_mode=args.ci_cd_feature_test_mode,
     )
     local_info_yaml = get_local_info_yaml(project_root=docker_project_root)
     local_info_yaml.write_text(basic_task_info.to_yaml())
 
 
-if __name__ == "__main__":  # pragma: no cover - main
+if __name__ == "__main__":  # pragma: no cov - main
     run_main(args=parse_args())

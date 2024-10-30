@@ -86,7 +86,7 @@ def test_get_python_path_for_target_image(
                 ]
             ),
         )
-    else:  # assume infra if not add the new case
+    elif docker_target == DockerTarget.INFRA:
         assert observed_python_path == ":".join(
             concatenate_args(
                 args=[
@@ -97,6 +97,9 @@ def test_get_python_path_for_target_image(
                 ]
             ),
         )
+    else:  # pragma: no cov - will only hit if enum not covered
+        msg = f"{docker_target.__name__} is not a supported type."
+        raise ValueError(msg)
 
 
 def test_get_python_path_env(

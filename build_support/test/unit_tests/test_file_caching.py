@@ -9,11 +9,12 @@ from pydantic import ValidationError
 from build_support.ci_cd_vars.subproject_structure import (
     PythonSubproject,
     SubprojectContext,
-    get_python_subproject,
 )
 from build_support.file_caching import (
+    FeatureTestInfo,
     FileCacheEngine,
     FileCacheInfo,
+    ParentConftestStatus,
     UnitTestInfo,
     get_corresponding_unit_test_folder_for_src_folder,
 )
@@ -23,9 +24,14 @@ from build_support.file_caching import (
 def file_checksum_data_dict() -> dict[str, Any]:
     return {
         "subproject_context": "build_support",
-        "cache_info": {
+        "unit_test_cache_info": {
             "some/file": "2024-03-30T17:16:23.163489+00:00",
             "some/other/file": "2024-03-30T17:17:01.368095+00:00",
+        },
+        "feature_test_cache_info": {
+            "conftest": "2024-10-18T15:59:08.485987+00:00",
+            "some/other/conftest": "2024-10-18T15:59:33.811010+00:00",
+            "some/third/file": "2024-10-18T15:59:43.952650+00:00",
         },
     }
 
@@ -49,22 +55,57 @@ def test_load_bad_subproject_context(file_checksum_data_dict: dict[str, Any]) ->
         FileCacheInfo.from_yaml(yaml_str=checksum_cache_yaml_str)
 
 
-def test_load_bad_cache_info(file_checksum_data_dict: dict[str, Any]) -> None:
-    file_checksum_data_dict["cache_info"] = 4
+def test_load_bad_unit_test_cache_info(file_checksum_data_dict: dict[str, Any]) -> None:
+    file_checksum_data_dict["unit_test_cache_info"] = 4
     checksum_cache_yaml_str = yaml.dump(file_checksum_data_dict)
     with pytest.raises(ValidationError):
         FileCacheInfo.from_yaml(yaml_str=checksum_cache_yaml_str)
 
 
-def test_load_bad_cache_info_key(file_checksum_data_dict: dict[str, Any]) -> None:
-    file_checksum_data_dict["cache_info"][4] = "2024-03-30T17:17:20.985351+00:00"
+def test_load_bad_feature_test_cache_info(
+    file_checksum_data_dict: dict[str, Any],
+) -> None:
+    file_checksum_data_dict["feature_test_cache_info"] = 4
     checksum_cache_yaml_str = yaml.dump(file_checksum_data_dict)
     with pytest.raises(ValidationError):
         FileCacheInfo.from_yaml(yaml_str=checksum_cache_yaml_str)
 
 
-def test_load_bad_cache_info_value(file_checksum_data_dict: dict[str, Any]) -> None:
-    file_checksum_data_dict["cache_info"]["some/third/file"] = 4
+def test_load_bad_unit_test_cache_info_key(
+    file_checksum_data_dict: dict[str, Any],
+) -> None:
+    file_checksum_data_dict["unit_test_cache_info"][4] = (
+        "2024-03-30T17:17:20.985351+00:00"
+    )
+    checksum_cache_yaml_str = yaml.dump(file_checksum_data_dict)
+    with pytest.raises(ValidationError):
+        FileCacheInfo.from_yaml(yaml_str=checksum_cache_yaml_str)
+
+
+def test_load_bad_feature_test_cache_info_key(
+    file_checksum_data_dict: dict[str, Any],
+) -> None:
+    file_checksum_data_dict["feature_test_cache_info"][4] = (
+        "2024-03-30T17:17:20.985351+00:00"
+    )
+    checksum_cache_yaml_str = yaml.dump(file_checksum_data_dict)
+    with pytest.raises(ValidationError):
+        FileCacheInfo.from_yaml(yaml_str=checksum_cache_yaml_str)
+
+
+def test_load_bad_unit_test_cache_info_value(
+    file_checksum_data_dict: dict[str, Any],
+) -> None:
+    file_checksum_data_dict["unit_test_cache_info"]["some/third/file"] = 4
+    checksum_cache_yaml_str = yaml.dump(file_checksum_data_dict)
+    with pytest.raises(ValidationError):
+        FileCacheInfo.from_yaml(yaml_str=checksum_cache_yaml_str)
+
+
+def test_load_bad_feature_test_cache_info_value(
+    file_checksum_data_dict: dict[str, Any],
+) -> None:
+    file_checksum_data_dict["feature_test_cache_info"]["some/fourth/file"] = 4
     checksum_cache_yaml_str = yaml.dump(file_checksum_data_dict)
     with pytest.raises(ValidationError):
         FileCacheInfo.from_yaml(yaml_str=checksum_cache_yaml_str)
@@ -97,15 +138,24 @@ def test_engine_check_on_new_file(
     file_cache_engine: FileCacheEngine, file_in_subproject: Path
 ) -> None:
     file_in_subproject.write_text("some contents")
-    assert file_cache_engine.file_has_been_changed(file_path=file_in_subproject)
+    assert file_cache_engine.file_has_been_changed(
+        file_path=file_in_subproject,
+        cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
+    )
 
 
 def test_check_on_file_same(
     file_cache_engine: FileCacheEngine, file_in_subproject: Path
 ) -> None:
     file_in_subproject.write_text("The contents of a file!")
-    assert file_cache_engine.file_has_been_changed(file_path=file_in_subproject)
-    assert not file_cache_engine.file_has_been_changed(file_path=file_in_subproject)
+    assert file_cache_engine.file_has_been_changed(
+        file_path=file_in_subproject,
+        cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
+    )
+    assert not file_cache_engine.file_has_been_changed(
+        file_path=file_in_subproject,
+        cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
+    )
 
 
 def test_check_on_file_same_dump_and_read_cache(
@@ -115,22 +165,34 @@ def test_check_on_file_same_dump_and_read_cache(
     subproject_context: SubprojectContext,
 ) -> None:
     file_in_subproject.write_text("The contents of a file!")
-    assert file_cache_engine.file_has_been_changed(file_path=file_in_subproject)
+    assert file_cache_engine.file_has_been_changed(
+        file_path=file_in_subproject,
+        cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
+    )
     file_cache_engine.write_text()
     new_file_cache_engine = FileCacheEngine(
         subproject_context=subproject_context, project_root=mock_project_root
     )
-    assert not new_file_cache_engine.file_has_been_changed(file_path=file_in_subproject)
+    assert not new_file_cache_engine.file_has_been_changed(
+        file_path=file_in_subproject,
+        cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
+    )
 
 
 def test_check_on_file_different(
     file_cache_engine: FileCacheEngine, file_in_subproject: Path
 ) -> None:
     file_in_subproject.write_text("The contents of a file!")
-    assert file_cache_engine.file_has_been_changed(file_path=file_in_subproject)
+    assert file_cache_engine.file_has_been_changed(
+        file_path=file_in_subproject,
+        cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
+    )
     sleep(0.01)
     file_in_subproject.write_text("A file now has new contents!!!! Very shocking.")
-    assert file_cache_engine.file_has_been_changed(file_path=file_in_subproject)
+    assert file_cache_engine.file_has_been_changed(
+        file_path=file_in_subproject,
+        cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
+    )
 
 
 def test_check_on_file_different_dump_and_read_cache(
@@ -140,14 +202,20 @@ def test_check_on_file_different_dump_and_read_cache(
     subproject_context: SubprojectContext,
 ) -> None:
     file_in_subproject.write_text("The contents of a file!")
-    assert file_cache_engine.file_has_been_changed(file_path=file_in_subproject)
+    assert file_cache_engine.file_has_been_changed(
+        file_path=file_in_subproject,
+        cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
+    )
     file_cache_engine.write_text()
     sleep(0.01)
     file_in_subproject.write_text("A file now has new contents!!!! Very shocking.")
     new_file_cache_engine = FileCacheEngine(
         subproject_context=subproject_context, project_root=mock_project_root
     )
-    assert new_file_cache_engine.file_has_been_changed(file_path=file_in_subproject)
+    assert new_file_cache_engine.file_has_been_changed(
+        file_path=file_in_subproject,
+        cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
+    )
 
 
 @pytest.mark.usefixtures("mock_local_pyproject_toml_file")
@@ -175,6 +243,14 @@ def test_get_unit_test_info(
         ["a", "f", "__init__.py"],
     ]
     python_pkg_root_dir = mock_subproject.get_python_package_dir()
+    test_root_dir = mock_subproject.get_test_dir()
+    top_test_conftest = test_root_dir.joinpath("conftest.py")
+    top_test_conftest.parent.mkdir(parents=True)
+    top_test_conftest.touch()
+    file_cache_engine.file_has_been_changed(
+        file_path=top_test_conftest,
+        cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
+    )
     unit_test_root_dir = mock_subproject.get_test_suite_dir(
         test_suite=PythonSubproject.TestSuite.UNIT_TESTS
     )
@@ -193,13 +269,18 @@ def test_get_unit_test_info(
             if test_folder not in test_folder_added:
                 test_folder.mkdir(parents=True, exist_ok=True)
                 if test_folder.name in ("a", "b", "e"):
-                    test_folder.joinpath("conftest.py").touch()
+                    conftest = test_folder.joinpath("conftest.py")
+                    conftest.touch()
+                    if test_folder.name == "a":
+                        file_cache_engine.file_has_been_changed(
+                            file_path=conftest,
+                            cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
+                        )
                 test_folder_added.add(test_folder)
             test_folder.joinpath(f"test_{src_file.name}").touch()
     expected_unit_test_info = [
         UnitTestInfo(
-            conftest_or_parent_conftest_was_updated=False,
-            maybe_conftest_path=None,
+            conftest_or_parent_conftest_was_updated=ParentConftestStatus.NOT_UPDATED,
             src_test_file_pairs=[
                 (
                     python_pkg_root_dir.joinpath("file1.py"),
@@ -212,8 +293,7 @@ def test_get_unit_test_info(
             ],
         ),
         UnitTestInfo(
-            conftest_or_parent_conftest_was_updated=True,
-            maybe_conftest_path=unit_test_root_dir.joinpath("a", "conftest.py"),
+            conftest_or_parent_conftest_was_updated=ParentConftestStatus.NOT_UPDATED,
             src_test_file_pairs=[
                 (
                     python_pkg_root_dir.joinpath("a", "file3.py"),
@@ -230,8 +310,7 @@ def test_get_unit_test_info(
             ],
         ),
         UnitTestInfo(
-            conftest_or_parent_conftest_was_updated=True,
-            maybe_conftest_path=unit_test_root_dir.joinpath("a", "b", "conftest.py"),
+            conftest_or_parent_conftest_was_updated=ParentConftestStatus.UPDATED,
             src_test_file_pairs=[
                 (
                     python_pkg_root_dir.joinpath("a", "b", "file1.py"),
@@ -244,8 +323,7 @@ def test_get_unit_test_info(
             ],
         ),
         UnitTestInfo(
-            conftest_or_parent_conftest_was_updated=True,
-            maybe_conftest_path=None,
+            conftest_or_parent_conftest_was_updated=ParentConftestStatus.NOT_UPDATED,
             src_test_file_pairs=[
                 (
                     python_pkg_root_dir.joinpath("a", "c", "file1.py"),
@@ -258,10 +336,7 @@ def test_get_unit_test_info(
             ],
         ),
         UnitTestInfo(
-            conftest_or_parent_conftest_was_updated=True,
-            maybe_conftest_path=unit_test_root_dir.joinpath(
-                "a", "d", "e", "conftest.py"
-            ),
+            conftest_or_parent_conftest_was_updated=ParentConftestStatus.UPDATED,
             src_test_file_pairs=[
                 (
                     python_pkg_root_dir.joinpath("a", "d", "e", "some_file.py"),
@@ -291,3 +366,67 @@ def test_get_corresponding_unit_test_folder_for_src_folder(
         )
         == expected_test_folder
     )
+
+
+@pytest.mark.usefixtures("mock_local_pyproject_toml_file")
+def test_get_feature_test_info(
+    file_cache_engine: FileCacheEngine, mock_subproject: PythonSubproject
+) -> None:
+    relative_src_files_to_create = [
+        ["file1.py"],
+        ["file2.py"],
+        ["some_misplaced_src_file.txt"],
+        ["__init__.py"],
+        ["a", "file3.py"],
+        ["a", "file4.py"],
+        ["a", "file5.py"],
+        ["a", "__init__.py"],
+        ["a", "b", "file1.py"],
+        ["a", "b", "file2.py"],
+        ["a", "b", "__init__.py"],
+        ["a", "c", "file1.py"],
+        ["a", "c", "file2.py"],
+        ["a", "c", "__init__.py"],
+        ["a", "d", "__init__.py"],
+        ["a", "d", "e", "some_file.py"],
+        ["a", "d", "e", "__init__.py"],
+        ["a", "f", "__init__.py"],
+    ]
+    python_pkg_root_dir = mock_subproject.get_python_package_dir()
+    test_root_dir = mock_subproject.get_test_dir()
+    top_test_conftest = test_root_dir.joinpath("conftest.py")
+    top_test_conftest.parent.mkdir(parents=True)
+    top_test_conftest.touch()
+    file_cache_engine.file_has_been_changed(
+        file_path=top_test_conftest,
+        cache_info_suite=FileCacheEngine.CacheInfoSuite.FEATURE_TEST,
+    )
+    feature_test_root_dir = mock_subproject.get_test_suite_dir(
+        test_suite=PythonSubproject.TestSuite.FEATURE_TESTS
+    )
+    feature_test_conftest = feature_test_root_dir.joinpath("conftest.py")
+    feature_test_conftest.parent.mkdir(parents=True)
+    feature_test_conftest.touch()
+    feature_test_root_dir.joinpath("__init__.py").touch()
+    feature_test_1 = feature_test_root_dir.joinpath("test_TICKET001_project_name.py")
+    feature_test_1.touch()
+    feature_test_2 = feature_test_root_dir.joinpath("test_TICKET002_project_name.py")
+    feature_test_2.touch()
+    py_file_in_test_folder = feature_test_root_dir.joinpath("other.py")
+    py_file_in_test_folder.touch()
+    other_file_in_test_folder = feature_test_root_dir.joinpath("other.txt")
+    other_file_in_test_folder.touch()
+    src_files_to_record = []
+    for relative_src_file_to_create in sorted(relative_src_files_to_create):
+        src_file = python_pkg_root_dir.joinpath(*relative_src_file_to_create)
+        src_folder = src_file.parent
+        src_folder.mkdir(parents=True, exist_ok=True)
+        src_file.touch()
+        if src_file.name.endswith(".py") and src_file.name not in "__init__.py":
+            src_files_to_record.append(src_file)
+    expected_feature_test_info = FeatureTestInfo(
+        conftest_or_parent_conftest_was_updated=ParentConftestStatus.UPDATED,
+        src_files=sorted(src_files_to_record),
+        test_files=[feature_test_1, feature_test_2],
+    )
+    assert file_cache_engine.get_feature_test_info() == expected_feature_test_info

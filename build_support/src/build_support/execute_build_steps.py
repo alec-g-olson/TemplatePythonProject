@@ -37,6 +37,7 @@ from build_support.ci_cd_tasks.validation_tasks import (
     SubprojectUnitTests,
     ValidateAll,
     ValidatePythonStyle,
+    ValidateStaticTypeChecking,
 )
 from build_support.ci_cd_vars.file_and_dir_path_vars import get_local_info_yaml
 from build_support.ci_cd_vars.subproject_structure import SubprojectContext
@@ -102,6 +103,10 @@ CLI_ARG_TO_TASK: dict[str, CliTaskInfo] = {
     "setup_prod_env": CliTaskInfo(task_node=SetupProdEnvironment),
     "setup_infra_env": CliTaskInfo(task_node=SetupInfraEnvironment),
     "test_style": CliTaskInfo(task_node=ValidatePythonStyle),
+    "type_check_build_support": CliTaskInfo(
+        task_node=ValidateStaticTypeChecking,
+        subproject_context=SubprojectContext.BUILD_SUPPORT,
+    ),
     "type_checks": CliTaskInfo(task_node=AllSubprojectStaticTypeChecking),
     "security_checks": CliTaskInfo(task_node=AllSubprojectSecurityChecks),
     "check_process": CliTaskInfo(task_node=EnforceProcess),
@@ -212,5 +217,5 @@ def run_main(args: Namespace) -> None:
         )
 
 
-if __name__ == "__main__":  # pragma: no cover - main
+if __name__ == "__main__":  # pragma: no cov - main
     run_main(args=parse_args())

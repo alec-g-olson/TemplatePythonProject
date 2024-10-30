@@ -67,7 +67,7 @@ def check_template_compatability(is_on_main: bool) -> bool:
 
 def test_all_templates_supported(check_template_compatability: bool) -> None:
     # won't hit if check_template_compatability is false
-    if check_template_compatability:  # pragma: no cover
+    if check_template_compatability:  # pragma: no cov
         known_fields_to_skip = [
             "[This is the first released version of the Lesser GPL.  It also counts\n"
             " as the successor of the GNU Library Public License, version 2, hence\n"

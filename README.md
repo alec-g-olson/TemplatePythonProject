@@ -288,7 +288,7 @@ shell when you are done.
 ### PyTest and PyTest-Cov
 We enforce 100% coverage of files in the src and test folders in this repo.  If there is
 a line, branch, or function that is going to be too difficult to test you can add a 
-`#pragma: no cover` comment on that line, and it will be ignored.
+`#pragma: no cov` comment on that line, and it will be ignored.
 
 ### Ruff
 
