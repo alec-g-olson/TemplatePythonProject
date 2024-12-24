@@ -54,6 +54,16 @@ def make_command_prefix(
     ]
 
 
+@pytest.fixture(scope="session")
+def mock_lightweight_project_copy_dir(real_build_dir: Path) -> Path:
+    return maybe_build_dir(dir_to_build=real_build_dir.joinpath("lightweight_project"))
+
+
+@pytest.fixture(scope="session")
+def mock_lightweight_project_copy(mock_lightweight_project_copy_dir: Path) -> Path:
+
+
+
 @pytest.fixture()
 def mock_lightweight_project(
     mock_project_root: Path, mock_remote_git_repo: Repo, real_project_root_dir: Path

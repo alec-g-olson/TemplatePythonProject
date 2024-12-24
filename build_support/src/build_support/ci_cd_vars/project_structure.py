@@ -70,6 +70,38 @@ def get_build_dir(project_root: Path) -> Path:
     return maybe_build_dir(dir_to_build=project_root.joinpath("build"))
 
 
+def get_lightweight_project_dir(project_root: Path) -> Path:
+    """Gets the directory we will use for a lightweight mock project.
+
+    Args:
+        project_root (Path): Path to this project's root.
+
+    Returns:
+        Path: Path to the directory we will use for a lightweight mock project.
+    """
+    return maybe_build_dir(
+        dir_to_build=get_build_dir(project_root=project_root).joinpath(
+            "lightweight_project"
+        )
+    )
+
+
+def get_lightweight_project_(project_root: Path) -> Path:
+    """Gets the directory we will use for a lightweight mock project.
+
+    Args:
+        project_root (Path): Path to this project's root.
+
+    Returns:
+        Path: Path to the directory we will use for a lightweight mock project.
+    """
+    return maybe_build_dir(
+        dir_to_build=get_build_dir(project_root=project_root).joinpath(
+            "lightweight_project"
+        )
+    )
+
+
 def get_feature_test_scratch_folder(project_root: Path) -> Path:
     """Gets the directory that will be used as a scratch folder for feature tests.
 

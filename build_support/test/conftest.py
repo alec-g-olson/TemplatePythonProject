@@ -8,7 +8,7 @@ from git import Repo
 from build_support.ci_cd_tasks.env_setup_tasks import GitInfo
 from build_support.ci_cd_vars.file_and_dir_path_vars import get_git_info_yaml
 from build_support.ci_cd_vars.git_status_vars import MAIN_BRANCH_NAME
-from build_support.ci_cd_vars.project_structure import maybe_build_dir
+from build_support.ci_cd_vars.project_structure import maybe_build_dir, get_build_dir
 from build_support.ci_cd_vars.subproject_structure import (
     PythonSubproject,
     SubprojectContext,
@@ -21,6 +21,11 @@ from build_support.ci_cd_vars.subproject_structure import (
 def real_project_root_dir() -> Path:
     """Return the root directory of this project."""
     return Path(__file__).parent.parent.parent
+
+@pytest.fixture(scope="session")
+def real_build_dir(real_project_root_dir: Path) -> Path:
+    """Return the build directory of this project."""
+    return get_build_dir(project_root=real_project_root_dir)
 
 
 @pytest.fixture()
@@ -78,6 +83,16 @@ def is_on_main(real_git_info: GitInfo) -> bool:
 @pytest.fixture()
 def check_weblinks(is_on_main: bool) -> bool:
     return not is_on_main
+
+
+@pytest.fixture(scope="session")
+def lightweight_project_copy_dir(real_build_dir: Path) -> Path:
+    return maybe_build_dir(dir_to_build=real_build_dir.joinpath("lightweight_project"))
+
+
+@pytest.fixture(scope="session")
+def mock_remote__copy(mock_lightweight_project_copy_dir: Path) -> Path:
+
 
 
 @pytest.fixture()
