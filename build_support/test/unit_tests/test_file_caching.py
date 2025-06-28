@@ -20,7 +20,7 @@ from build_support.file_caching import (
 )
 
 
-@pytest.fixture()
+@pytest.fixture
 def file_checksum_data_dict() -> dict[str, Any]:
     return {
         "subproject_context": "build_support",
@@ -36,7 +36,7 @@ def file_checksum_data_dict() -> dict[str, Any]:
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def checksum_cache_yaml_str(file_checksum_data_dict: dict[str, Any]) -> str:
     return yaml.dump(file_checksum_data_dict)
 
@@ -118,14 +118,14 @@ def test_dump(
     assert file_cache_info.to_yaml() == checksum_cache_yaml_str
 
 
-@pytest.fixture()
+@pytest.fixture
 def file_in_subproject(mock_subproject: PythonSubproject) -> Path:
     new_file = mock_subproject.get_src_dir().joinpath("path", "to", "a_file")
     new_file.parent.mkdir(parents=True)
     return new_file
 
 
-@pytest.fixture()
+@pytest.fixture
 def file_cache_engine(
     mock_project_root: Path, subproject_context: SubprojectContext
 ) -> FileCacheEngine:
@@ -341,7 +341,7 @@ def test_get_unit_test_info(
                 (
                     python_pkg_root_dir.joinpath("a", "d", "e", "some_file.py"),
                     unit_test_root_dir.joinpath("a", "d", "e", "test_some_file.py"),
-                ),
+                )
             ],
         ),
     ]

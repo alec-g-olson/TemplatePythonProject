@@ -18,9 +18,7 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_all_test_folders,
 )
 from build_support.ci_cd_vars.machine_introspection_vars import THREADS_AVAILABLE
-from build_support.ci_cd_vars.project_structure import (
-    get_feature_test_scratch_folder,
-)
+from build_support.ci_cd_vars.project_structure import get_feature_test_scratch_folder
 from build_support.ci_cd_vars.subproject_structure import (
     PythonSubproject,
     SubprojectContext,
@@ -104,8 +102,8 @@ class EnforceProcess(TaskNode):
                     build_support_subproject.get_test_suite_dir(
                         test_suite=PythonSubproject.TestSuite.PROCESS_ENFORCEMENT
                     ),
-                ],
-            ),
+                ]
+            )
         )
 
 
@@ -178,8 +176,8 @@ class ValidateStaticTypeChecking(PerSubprojectTask):
                     "mypy",
                     "--explicit-package-bases",
                     self.subproject.get_root_dir(),
-                ],
-            ),
+                ]
+            )
         )
 
 
@@ -245,8 +243,8 @@ class ValidateSecurityChecks(PerSubprojectTask):
                     self.subproject.get_bandit_report_path(),
                     "-r",
                     self.subproject.get_src_dir(),
-                ],
-            ),
+                ]
+            )
         )
 
 
@@ -286,8 +284,8 @@ class ValidatePythonStyle(TaskNode):
                     "ruff",
                     "check",
                     get_all_non_test_folders(project_root=self.docker_project_root),
-                ],
-            ),
+                ]
+            )
         )
         run_process(
             args=concatenate_args(
@@ -302,8 +300,8 @@ class ValidatePythonStyle(TaskNode):
                     "--ignore",
                     "D,FBT",  # These are too onerous to enforce on test code
                     get_all_test_folders(project_root=self.docker_project_root),
-                ],
-            ),
+                ]
+            )
         )
         run_process(
             args=concatenate_args(
@@ -324,8 +322,8 @@ class ValidatePythonStyle(TaskNode):
                     subproject[SubprojectContext.BUILD_SUPPORT].get_test_suite_dir(
                         test_suite=PythonSubproject.TestSuite.STYLE_ENFORCEMENT
                     ),
-                ],
-            ),
+                ]
+            )
         )
 
 
@@ -367,7 +365,7 @@ class SubprojectUnitTests(PerSubprojectTask):
             list[TaskNode]: A list of tasks required to unit test the subproject.
         """
         required_tasks: list[TaskNode] = [
-            SetupDevEnvironment(basic_task_info=self.get_basic_task_info()),
+            SetupDevEnvironment(basic_task_info=self.get_basic_task_info())
         ]
         if self.subproject_context == SubprojectContext.BUILD_SUPPORT:
             required_tasks.append(
@@ -420,18 +418,13 @@ class SubprojectUnitTests(PerSubprojectTask):
                                 "-m",
                                 "pytest",
                                 test_file,
-                            ],
-                        ),
+                            ]
+                        )
                     )
                     run_process(
                         args=concatenate_args(
-                            args=[
-                                dev_docker_command,
-                                "coverage",
-                                "report",
-                                "-m",
-                            ],
-                        ),
+                            args=[dev_docker_command, "coverage", "report", "-m"]
+                        )
                     )
                 file_cache.write_text()
         if src_files_checked:
@@ -449,8 +442,8 @@ class SubprojectUnitTests(PerSubprojectTask):
                         self.subproject.get_test_suite_dir(
                             test_suite=PythonSubproject.TestSuite.UNIT_TESTS
                         ),
-                    ],
-                ),
+                    ]
+                )
             )
 
 
@@ -499,7 +492,7 @@ class SubprojectFeatureTests(PerSubprojectTask):
             SubprojectUnitTests(
                 basic_task_info=self.get_basic_task_info(),
                 subproject_context=self.subproject_context,
-            ),
+            )
         ]
         if self.subproject_context == SubprojectContext.BUILD_SUPPORT:
             required_tasks.extend(
@@ -576,8 +569,8 @@ class SubprojectFeatureTests(PerSubprojectTask):
                             ),
                             self.subproject.get_pytest_feature_test_report_args(),
                             test_file_to_run,
-                        ],
-                    ),
+                        ]
+                    )
                 )
                 single_file_xml_path = self.subproject.get_pytest_report_path(
                     test_suite=test_suite,

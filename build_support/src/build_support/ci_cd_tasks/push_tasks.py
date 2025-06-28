@@ -53,9 +53,7 @@ class PushTags(TaskNode):
         Returns:
             list[TaskNode]: A list of tasks required to push version tags.
         """
-        return [
-            ValidateAll(basic_task_info=self.get_basic_task_info()),
-        ]
+        return [ValidateAll(basic_task_info=self.get_basic_task_info())]
 
     @override
     def run(self) -> None:

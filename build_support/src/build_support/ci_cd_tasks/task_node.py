@@ -185,9 +185,7 @@ class PerSubprojectTask(TaskNode, ABC):
     subproject: PythonSubproject
 
     def __init__(
-        self,
-        basic_task_info: BasicTaskInfo,
-        subproject_context: SubprojectContext,
+        self, basic_task_info: BasicTaskInfo, subproject_context: SubprojectContext
     ) -> None:
         """Init method for TaskNode.
 

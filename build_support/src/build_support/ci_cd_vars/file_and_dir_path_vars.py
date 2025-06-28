@@ -29,9 +29,7 @@ def get_sphinx_conf_dir(project_root: Path) -> Path:
     Returns:
         Path: Path to the sphinx config directory in this project.
     """
-    return get_docs_dir(project_root=project_root).joinpath(
-        "sphinx_conf",
-    )
+    return get_docs_dir(project_root=project_root).joinpath("sphinx_conf")
 
 
 ########################################
@@ -51,9 +49,7 @@ def get_new_project_settings(project_root: Path) -> Path:
     build_support_subproject = get_python_subproject(
         subproject_context=SubprojectContext.BUILD_SUPPORT, project_root=project_root
     )
-    return build_support_subproject.get_root_dir().joinpath(
-        "new_project_settings.yaml",
-    )
+    return build_support_subproject.get_root_dir().joinpath("new_project_settings.yaml")
 
 
 ########################################
@@ -81,7 +77,7 @@ def get_dist_dir(project_root: Path) -> Path:
         Path: Path to the PyPi dist directory for this project.
     """
     return maybe_build_dir(
-        dir_to_build=get_build_dir(project_root=project_root).joinpath("dist"),
+        dir_to_build=get_build_dir(project_root=project_root).joinpath("dist")
     )
 
 
@@ -97,8 +93,8 @@ def get_license_templates_dir(project_root: Path) -> Path:
     """
     return maybe_build_dir(
         dir_to_build=get_build_dir(project_root=project_root).joinpath(
-            "license_templates",
-        ),
+            "license_templates"
+        )
     )
 
 
@@ -136,9 +132,7 @@ def get_build_docs_dir(project_root: Path) -> Path:
         Path: Path to the directory that this project's documentation will be built in.
     """
     return maybe_build_dir(
-        dir_to_build=get_build_dir(project_root=project_root).joinpath(
-            "docs",
-        ),
+        dir_to_build=get_build_dir(project_root=project_root).joinpath("docs")
     )
 
 
@@ -152,9 +146,7 @@ def get_build_docs_source_dir(project_root: Path) -> Path:
         Path: Path to the directory for this project's documentation sphinx sources.
     """
     return maybe_build_dir(
-        dir_to_build=get_build_docs_dir(project_root=project_root).joinpath(
-            "source",
-        ),
+        dir_to_build=get_build_docs_dir(project_root=project_root).joinpath("source")
     )
 
 
@@ -168,9 +160,7 @@ def get_build_docs_build_dir(project_root: Path) -> Path:
         Path: Path to the directory for this project's final sphinx documentation.
     """
     return maybe_build_dir(
-        dir_to_build=get_build_docs_dir(project_root=project_root).joinpath(
-            "build",
-        ),
+        dir_to_build=get_build_docs_dir(project_root=project_root).joinpath("build")
     )
 
 

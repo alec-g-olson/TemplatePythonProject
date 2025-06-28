@@ -21,7 +21,7 @@ def parse_args(args: list[str] | None = None) -> Namespace:
         Namespace: An object with fields parsed from the command line.
     """
     parser = ArgumentParser(
-        description="Takes 2 numbers and a calculation type to report the result.",
+        description="Takes 2 numbers and a calculation type to report the result."
     )
     parser.add_argument(
         "--type",
@@ -30,19 +30,13 @@ def parse_args(args: list[str] | None = None) -> Namespace:
         help="The type of calculation to do.",
     )
     parser.add_argument(
-        "--val1",
-        type=float,
-        help="The first value to use in calculation.",
+        "--val1", type=float, help="The first value to use in calculation."
     )
     parser.add_argument(
-        "--val2",
-        type=float,
-        help="The second value to use in calculation.",
+        "--val2", type=float, help="The second value to use in calculation."
     )
     parser.add_argument(
-        "--out-file",
-        type=Path,
-        help="The location of the output file.",
+        "--out-file", type=Path, help="The location of the output file."
     )
     return parser.parse_args(args=args)
 
@@ -60,9 +54,7 @@ def run_main(args: Namespace) -> None:
 
     """
     input_vals = CalculatorInput(
-        type_of_calc=CalculationType[args.type],
-        value1=args.val1,
-        value2=args.val2,
+        type_of_calc=CalculationType[args.type], value1=args.val1, value2=args.val2
     )
     output = calculate_result(input_vals)
     with args.out_file.open("w") as out_writer:

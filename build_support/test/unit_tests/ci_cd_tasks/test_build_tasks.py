@@ -3,11 +3,7 @@ from unittest.mock import call, patch
 import pytest
 from unit_tests.empty_function_check import is_an_empty_function
 
-from build_support.ci_cd_tasks.build_tasks import (
-    BuildAll,
-    BuildDocs,
-    BuildPypi,
-)
+from build_support.ci_cd_tasks.build_tasks import BuildAll, BuildDocs, BuildPypi
 from build_support.ci_cd_tasks.env_setup_tasks import SetupProdEnvironment
 from build_support.ci_cd_tasks.task_node import BasicTaskInfo
 from build_support.ci_cd_tasks.validation_tasks import (
@@ -70,7 +66,7 @@ def test_run_build_pypi(basic_task_info: BasicTaskInfo) -> None:
                 "rm",
                 "-rf",
                 get_dist_dir(project_root=basic_task_info.docker_project_root),
-            ],
+            ]
         )
         poetry_build_args = concatenate_args(
             args=[
@@ -83,7 +79,7 @@ def test_run_build_pypi(basic_task_info: BasicTaskInfo) -> None:
                 "build",
                 "--output",
                 get_dist_dir(project_root=basic_task_info.docker_project_root),
-            ],
+            ]
         )
         BuildPypi(basic_task_info=basic_task_info).run()
         expected_run_process_calls = [
@@ -144,7 +140,7 @@ def test_run_build_docs(basic_task_info: BasicTaskInfo) -> None:
                         project_root=basic_task_info.docker_project_root
                     ),
                     current_subproject.get_src_dir(),
-                ],
+                ]
             )
             for current_subproject in mock_subprojects_with_docs
         ]
@@ -164,11 +160,9 @@ def test_run_build_docs(basic_task_info: BasicTaskInfo) -> None:
                 ),
                 "-c",
                 get_sphinx_conf_dir(project_root=basic_task_info.docker_project_root),
-            ],
+            ]
         )
-        BuildDocs(
-            basic_task_info=basic_task_info,
-        ).run()
+        BuildDocs(basic_task_info=basic_task_info).run()
         expected_run_process_calls = [
             call(args=sphinx_api_doc_args)
             for sphinx_api_doc_args in sphinx_api_doc_args_list

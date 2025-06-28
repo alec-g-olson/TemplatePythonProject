@@ -19,18 +19,14 @@ def test_calculation_type_to_str(calculation_type: CalculationType) -> None:
     assert str(calculation_type) == calculation_type.name
 
 
-@pytest.fixture()
+@pytest.fixture
 def calculator_input_dict() -> dict[Any, Any]:
     return {"type_of_calc": CalculationType.ADD, "value1": 5.1, "value2": 10}
 
 
-@pytest.fixture()
+@pytest.fixture
 def calculator_input_obj() -> CalculatorInput:
-    return CalculatorInput(
-        type_of_calc=CalculationType.ADD,
-        value1=5.1,
-        value2=10.0,
-    )
+    return CalculatorInput(type_of_calc=CalculationType.ADD, value1=5.1, value2=10.0)
 
 
 def test_load_calculator_input(
@@ -67,12 +63,12 @@ def test_dump_calculator_input(
     assert calculator_input_obj.model_dump() == calculator_input_dict
 
 
-@pytest.fixture()
+@pytest.fixture
 def calculator_output_dict() -> dict[Any, Any]:
     return {"result": 5.1}
 
 
-@pytest.fixture()
+@pytest.fixture
 def calculator_output_obj() -> CalculatorOutput:
     return CalculatorOutput(result=5.1)
 

@@ -15,9 +15,7 @@ from build_support.ci_cd_vars.docker_vars import (
     get_python_path_env,
     get_python_path_for_target_image,
 )
-from build_support.ci_cd_vars.file_and_dir_path_vars import (
-    get_all_python_folders,
-)
+from build_support.ci_cd_vars.file_and_dir_path_vars import get_all_python_folders
 from build_support.ci_cd_vars.project_structure import get_dockerfile
 from build_support.ci_cd_vars.subproject_structure import (
     SubprojectContext,
@@ -36,26 +34,21 @@ def docker_target(request: SubRequest) -> DockerTarget:
 
 @pytest.mark.usefixtures("mock_local_pyproject_toml_file")
 def test_get_docker_image_name(
-    mock_project_root: Path,
-    project_name: str,
-    docker_target: DockerTarget,
+    mock_project_root: Path, project_name: str, docker_target: DockerTarget
 ) -> None:
     assert (
         get_docker_image_name(
-            project_root=mock_project_root,
-            target_image=docker_target,
+            project_root=mock_project_root, target_image=docker_target
         )
         == f"{project_name}:{docker_target.value}"
     )
 
 
 def test_get_python_path_for_target_image(
-    docker_project_root: Path,
-    docker_target: DockerTarget,
+    docker_project_root: Path, docker_target: DockerTarget
 ) -> None:
     observed_python_path = get_python_path_for_target_image(
-        docker_project_root=docker_project_root,
-        target_image=docker_target,
+        docker_project_root=docker_project_root, target_image=docker_target
     )
 
     if docker_target == DockerTarget.BUILD:
@@ -66,14 +59,14 @@ def test_get_python_path_for_target_image(
                         subproject_context=SubprojectContext.BUILD_SUPPORT,
                         project_root=docker_project_root,
                     ).get_src_dir()
-                ],
-            ),
+                ]
+            )
         )
     elif docker_target == DockerTarget.DEV:
         assert observed_python_path == ":".join(
             concatenate_args(
-                args=[get_all_python_folders(project_root=docker_project_root)],
-            ),
+                args=[get_all_python_folders(project_root=docker_project_root)]
+            )
         )
     elif docker_target == DockerTarget.PROD:
         assert observed_python_path == ":".join(
@@ -84,7 +77,7 @@ def test_get_python_path_for_target_image(
                         project_root=docker_project_root,
                     ).get_src_dir()
                 ]
-            ),
+            )
         )
     elif docker_target == DockerTarget.INFRA:
         assert observed_python_path == ":".join(
@@ -95,7 +88,7 @@ def test_get_python_path_for_target_image(
                         project_root=docker_project_root,
                     ).get_src_dir()
                 ]
-            ),
+            )
         )
     else:  # pragma: no cov - will only hit if enum not covered
         msg = f"{docker_target.__name__} is not a supported type."
@@ -106,11 +99,9 @@ def test_get_python_path_env(
     docker_project_root: Path, docker_target: DockerTarget
 ) -> None:
     assert get_python_path_env(
-        docker_project_root=docker_project_root,
-        target_image=docker_target,
+        docker_project_root=docker_project_root, target_image=docker_target
     ) == "PYTHONPATH=" + get_python_path_for_target_image(
-        docker_project_root=docker_project_root,
-        target_image=docker_target,
+        docker_project_root=docker_project_root, target_image=docker_target
     )
 
 
@@ -118,18 +109,14 @@ def test_get_mypy_path_env(
     docker_project_root: Path, docker_target: DockerTarget
 ) -> None:
     assert get_mypy_path_env(
-        docker_project_root=docker_project_root,
-        target_image=docker_target,
+        docker_project_root=docker_project_root, target_image=docker_target
     ) == "MYPYPATH=" + get_python_path_for_target_image(
-        docker_project_root=docker_project_root,
-        target_image=docker_target,
+        docker_project_root=docker_project_root, target_image=docker_target
     )
 
 
 def test_get_base_docker_command_for_image(
-    mock_project_root: Path,
-    docker_project_root: Path,
-    docker_target: DockerTarget,
+    mock_project_root: Path, docker_project_root: Path, docker_target: DockerTarget
 ) -> None:
     assert get_base_docker_command_for_image(
         non_docker_project_root=mock_project_root,
@@ -143,29 +130,23 @@ def test_get_base_docker_command_for_image(
             f"--workdir={docker_project_root.absolute()}",
             "-e",
             get_python_path_env(
-                docker_project_root=docker_project_root,
-                target_image=docker_target,
+                docker_project_root=docker_project_root, target_image=docker_target
             ),
             "-v",
             "/var/run/docker.sock:/var/run/docker.sock",
             "-v",
             ":".join(
                 concatenate_args(
-                    args=[
-                        mock_project_root.absolute(),
-                        docker_project_root.absolute(),
-                    ],
-                ),
+                    args=[mock_project_root.absolute(), docker_project_root.absolute()]
+                )
             ),
-        ],
+        ]
     )
 
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
 def test_get_docker_command_for_image(
-    mock_project_root: Path,
-    docker_project_root: Path,
-    docker_target: DockerTarget,
+    mock_project_root: Path, docker_project_root: Path, docker_target: DockerTarget
 ) -> None:
     assert get_docker_command_for_image(
         non_docker_project_root=mock_project_root,
@@ -179,18 +160,15 @@ def test_get_docker_command_for_image(
                 target_image=docker_target,
             ),
             get_docker_image_name(
-                project_root=docker_project_root,
-                target_image=docker_target,
+                project_root=docker_project_root, target_image=docker_target
             ),
-        ],
+        ]
     )
 
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
 def test_get_interactive_docker_command_for_image(
-    mock_project_root: Path,
-    docker_project_root: Path,
-    docker_target: DockerTarget,
+    mock_project_root: Path, docker_project_root: Path, docker_target: DockerTarget
 ) -> None:
     assert get_interactive_docker_command_for_image(
         non_docker_project_root=mock_project_root,
@@ -205,21 +183,18 @@ def test_get_interactive_docker_command_for_image(
             ),
             "-it",
             get_docker_image_name(
-                project_root=docker_project_root,
-                target_image=docker_target,
+                project_root=docker_project_root, target_image=docker_target
             ),
-        ],
+        ]
     )
 
 
 @pytest.mark.usefixtures("mock_local_pyproject_toml_file")
 def test_get_docker_build_command_no_extras(
-    mock_project_root: Path,
-    docker_target: DockerTarget,
+    mock_project_root: Path, docker_target: DockerTarget
 ) -> None:
     standard = get_docker_build_command(
-        docker_project_root=mock_project_root,
-        target_image=docker_target,
+        docker_project_root=mock_project_root, target_image=docker_target
     )
     no_extra_explicit = get_docker_build_command(
         docker_project_root=mock_project_root,
@@ -227,9 +202,7 @@ def test_get_docker_build_command_no_extras(
         extra_args=None,
     )
     empty_extra_args = get_docker_build_command(
-        docker_project_root=mock_project_root,
-        target_image=docker_target,
-        extra_args={},
+        docker_project_root=mock_project_root, target_image=docker_target, extra_args={}
     )
     assert standard == no_extra_explicit
     assert standard == empty_extra_args
@@ -246,18 +219,16 @@ def test_get_docker_build_command_no_extras(
             [],
             "-t",
             get_docker_image_name(
-                project_root=mock_project_root,
-                target_image=docker_target,
+                project_root=mock_project_root, target_image=docker_target
             ),
             mock_project_root.absolute(),
-        ],
+        ]
     )
 
 
 @pytest.mark.usefixtures("mock_local_pyproject_toml_file")
 def test_get_docker_build_command_with_flat_extras(
-    mock_project_root: Path,
-    docker_target: DockerTarget,
+    mock_project_root: Path, docker_target: DockerTarget
 ) -> None:
     assert get_docker_build_command(
         docker_project_root=mock_project_root,
@@ -276,18 +247,16 @@ def test_get_docker_build_command_with_flat_extras(
             ["--some-key", "8", "--no-val-with-key", "--other", "whee"],
             "-t",
             get_docker_image_name(
-                project_root=mock_project_root,
-                target_image=docker_target,
+                project_root=mock_project_root, target_image=docker_target
             ),
             mock_project_root.absolute(),
-        ],
+        ]
     )
 
 
 @pytest.mark.usefixtures("mock_local_pyproject_toml_file")
 def test_get_docker_build_command_with_list_extras(
-    mock_project_root: Path,
-    docker_target: DockerTarget,
+    mock_project_root: Path, docker_target: DockerTarget
 ) -> None:
     assert get_docker_build_command(
         docker_project_root=mock_project_root,
@@ -318,9 +287,8 @@ def test_get_docker_build_command_with_list_extras(
             ],
             "-t",
             get_docker_image_name(
-                project_root=mock_project_root,
-                target_image=docker_target,
+                project_root=mock_project_root, target_image=docker_target
             ),
             mock_project_root.absolute(),
-        ],
+        ]
     )

@@ -4,9 +4,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from build_support.ci_cd_vars.file_and_dir_path_vars import (
-    get_all_python_folders,
-)
+from build_support.ci_cd_vars.file_and_dir_path_vars import get_all_python_folders
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
 from build_support.ci_cd_vars.project_structure import get_dockerfile
 from build_support.ci_cd_vars.subproject_structure import (
@@ -40,8 +38,7 @@ def get_docker_image_name(project_root: Path, target_image: DockerTarget) -> str
 
 
 def get_python_path_for_target_image(
-    docker_project_root: Path,
-    target_image: DockerTarget,
+    docker_project_root: Path, target_image: DockerTarget
 ) -> str:
     """Gets the python path to use with this project.
 
@@ -98,8 +95,7 @@ def get_python_path_env(docker_project_root: Path, target_image: DockerTarget) -
             variable that can be used on the command line.
     """
     return "PYTHONPATH=" + get_python_path_for_target_image(
-        docker_project_root=docker_project_root,
-        target_image=target_image,
+        docker_project_root=docker_project_root, target_image=target_image
     )
 
 
@@ -117,15 +113,12 @@ def get_mypy_path_env(docker_project_root: Path, target_image: DockerTarget) -> 
             that can be used on the command line.
     """
     return "MYPYPATH=" + get_python_path_for_target_image(
-        docker_project_root=docker_project_root,
-        target_image=target_image,
+        docker_project_root=docker_project_root, target_image=target_image
     )
 
 
 def get_base_docker_command_for_image(
-    non_docker_project_root: Path,
-    docker_project_root: Path,
-    target_image: DockerTarget,
+    non_docker_project_root: Path, docker_project_root: Path, target_image: DockerTarget
 ) -> list[str]:
     """Builds a list of arguments for running commands in a docker container.
 
@@ -159,8 +152,7 @@ def get_base_docker_command_for_image(
             f"--workdir={docker_project_root.absolute()}",
             "-e",
             get_python_path_env(
-                docker_project_root=docker_project_root,
-                target_image=target_image,
+                docker_project_root=docker_project_root, target_image=target_image
             ),
             "-v",
             "/var/run/docker.sock:/var/run/docker.sock",
@@ -170,17 +162,15 @@ def get_base_docker_command_for_image(
                     args=[
                         non_docker_project_root.absolute(),
                         docker_project_root.absolute(),
-                    ],
-                ),
+                    ]
+                )
             ),
-        ],
+        ]
     )
 
 
 def get_docker_command_for_image(
-    non_docker_project_root: Path,
-    docker_project_root: Path,
-    target_image: DockerTarget,
+    non_docker_project_root: Path, docker_project_root: Path, target_image: DockerTarget
 ) -> list[str]:
     """Builds a list of arguments for running commands in a docker container.
 
@@ -205,17 +195,14 @@ def get_docker_command_for_image(
                 target_image=target_image,
             ),
             get_docker_image_name(
-                project_root=docker_project_root,
-                target_image=target_image,
+                project_root=docker_project_root, target_image=target_image
             ),
-        ],
+        ]
     )
 
 
 def get_interactive_docker_command_for_image(
-    non_docker_project_root: Path,
-    docker_project_root: Path,
-    target_image: DockerTarget,
+    non_docker_project_root: Path, docker_project_root: Path, target_image: DockerTarget
 ) -> list[str]:
     """Arguments to start an interactive docker shell in the specified image.
 
@@ -241,10 +228,9 @@ def get_interactive_docker_command_for_image(
             ),
             "-it",
             get_docker_image_name(
-                project_root=docker_project_root,
-                target_image=target_image,
+                project_root=docker_project_root, target_image=target_image
             ),
-        ],
+        ]
     )
 
 
@@ -295,5 +281,5 @@ def get_docker_build_command(
                 project_root=docker_project_root, target_image=target_image
             ),
             docker_project_root.absolute(),
-        ],
+        ]
     )

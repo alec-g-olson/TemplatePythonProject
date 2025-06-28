@@ -273,10 +273,7 @@ class PythonSubproject:
                 test_suite=test_suite
             )
             report_args.extend(
-                (
-                    f"--cov={self.get_src_dir()}",
-                    f"--cov-report=xml:{coverage_report}",
-                )
+                (f"--cov={self.get_src_dir()}", f"--cov-report=xml:{coverage_report}")
             )
         return concatenate_args(args=report_args)
 

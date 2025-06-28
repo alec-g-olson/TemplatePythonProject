@@ -35,9 +35,7 @@ class TestPyprojectToml:
 
     @pytest.mark.usefixtures("mock_local_pyproject_toml_file")
     def test_get_pyproject_toml_data(
-        self,
-        mock_project_root: Path,
-        pyproject_toml_data: dict[Any, Any],
+        self, mock_project_root: Path, pyproject_toml_data: dict[Any, Any]
     ) -> None:
         assert (
             get_pyproject_toml_data(project_root=mock_project_root)
@@ -46,24 +44,17 @@ class TestPyprojectToml:
 
     @pytest.mark.usefixtures("mock_local_pyproject_toml_file")
     def test_get_project_version(
-        self,
-        mock_project_root: Path,
-        project_version: str,
+        self, mock_project_root: Path, project_version: str
     ) -> None:
         assert (
             get_project_version(project_root=mock_project_root) == "v" + project_version
         )
 
-    def test_get_bad_project_version(
-        self,
-        mock_project_root: Path,
-    ) -> None:
+    def test_get_bad_project_version(self, mock_project_root: Path) -> None:
         mock_pyproject_toml_file = get_pyproject_toml(project_root=mock_project_root)
         invalid_version = "AN_INVALID_PROJECT_VERSION"
         mock_pyproject_toml_file.write_text(
-            "[tool.poetry]\n"
-            'name = "some_project_name"\n'
-            f'version = "{invalid_version}"',
+            f'[tool.poetry]\nname = "some_project_name"\nversion = "{invalid_version}"'
         )
         expected_message = (
             "Project version in pyproject.toml must match the regex "
@@ -72,28 +63,18 @@ class TestPyprojectToml:
         with pytest.raises(ValueError, match=re.escape(expected_message)):
             get_project_version(project_root=mock_project_root)
 
-    def test_is_dev_project_version(
-        self,
-        project_version: str,
-    ) -> None:
+    def test_is_dev_project_version(self, project_version: str) -> None:
         assert is_dev_project_version(project_version=project_version) == (
             "dev" in project_version
         )
 
-    def test_is_prod_project_version(
-        self,
-        project_version: str,
-    ) -> None:
+    def test_is_prod_project_version(self, project_version: str) -> None:
         assert is_prod_project_version(project_version=project_version) == (
             "dev" not in project_version
         )
 
     @pytest.mark.usefixtures("mock_local_pyproject_toml_file")
-    def test_get_project_name(
-        self,
-        mock_project_root: Path,
-        project_name: str,
-    ) -> None:
+    def test_get_project_name(self, mock_project_root: Path, project_name: str) -> None:
         assert get_project_name(project_root=mock_project_root) == project_name
 
 
@@ -102,9 +83,7 @@ class TestPoetryLock:
 
     @pytest.mark.usefixtures("mock_local_poetry_lock_file")
     def test_get_pulumi_version(
-        self,
-        mock_project_root: Path,
-        pulumi_version: str,
+        self, mock_project_root: Path, pulumi_version: str
     ) -> None:
         assert get_pulumi_version(project_root=mock_project_root) == pulumi_version
 

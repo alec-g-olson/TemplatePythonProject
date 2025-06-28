@@ -137,7 +137,7 @@ def test_run_process() -> None:
     with (
         patch("build_support.process_runner.Popen") as mock_popen,
         patch(
-            "build_support.process_runner.resolve_process_results",
+            "build_support.process_runner.resolve_process_results"
         ) as mock_resolve_process_results,
     ):
         process_mock = Mock()
@@ -165,7 +165,7 @@ def test_run_process_silent() -> None:
     with (
         patch("build_support.process_runner.Popen") as mock_popen,
         patch(
-            "build_support.process_runner.resolve_process_results",
+            "build_support.process_runner.resolve_process_results"
         ) as mock_resolve_process_results,
     ):
         process_mock = Mock()
@@ -207,11 +207,9 @@ def test_get_output_of_process() -> None:
 def test_run_piped_processes() -> None:
     with (
         patch("build_support.process_runner.Popen") as mock_popen,
+        patch("builtins.print") as mock_print,
         patch(
-            "builtins.print",
-        ) as mock_print,
-        patch(
-            "build_support.process_runner.resolve_process_results",
+            "build_support.process_runner.resolve_process_results"
         ) as mock_resolve_process_results,
     ):
         process_mock = Mock()
@@ -220,7 +218,7 @@ def test_run_piped_processes() -> None:
         process_mock.returncode = 0
         mock_popen.return_value = process_mock
         run_piped_processes(
-            processes=[["command", 0, 1.5, Path("/usr/dev")], ["second_command", 1337]],
+            processes=[["command", 0, 1.5, Path("/usr/dev")], ["second_command", 1337]]
         )
         command_as_str = "command 0 1.5 /usr/dev | second_command 1337"
         expected_popen_calls = [
@@ -252,11 +250,9 @@ def test_run_piped_processes() -> None:
 def test_run_piped_processes_silent() -> None:
     with (
         patch("build_support.process_runner.Popen") as mock_popen,
+        patch("builtins.print") as mock_print,
         patch(
-            "builtins.print",
-        ) as mock_print,
-        patch(
-            "build_support.process_runner.resolve_process_results",
+            "build_support.process_runner.resolve_process_results"
         ) as mock_resolve_process_results,
     ):
         process_mock = Mock()
@@ -298,11 +294,9 @@ def test_run_piped_processes_silent() -> None:
 def test_run_piped_processes_one_process() -> None:
     with (
         patch("build_support.process_runner.Popen") as mock_popen,
+        patch("builtins.print") as mock_print,
         patch(
-            "builtins.print",
-        ) as mock_print,
-        patch(
-            "build_support.process_runner.resolve_process_results",
+            "build_support.process_runner.resolve_process_results"
         ) as mock_resolve_process_results,
     ):
         process_mock = Mock()
@@ -331,11 +325,9 @@ def test_run_piped_processes_one_process() -> None:
 def test_run_piped_processes_one_process_silent() -> None:
     with (
         patch("build_support.process_runner.Popen") as mock_popen,
+        patch("builtins.print") as mock_print,
         patch(
-            "builtins.print",
-        ) as mock_print,
-        patch(
-            "build_support.process_runner.resolve_process_results",
+            "build_support.process_runner.resolve_process_results"
         ) as mock_resolve_process_results,
     ):
         process_mock = Mock()

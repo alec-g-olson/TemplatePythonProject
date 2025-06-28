@@ -8,22 +8,14 @@ from argparse import ArgumentParser, Namespace
 from dataclasses import dataclass
 from pathlib import Path
 
-from build_support.ci_cd_tasks.build_tasks import (
-    BuildAll,
-    BuildDocs,
-    BuildPypi,
-)
+from build_support.ci_cd_tasks.build_tasks import BuildAll, BuildDocs, BuildPypi
 from build_support.ci_cd_tasks.env_setup_tasks import (
     Clean,
     SetupDevEnvironment,
     SetupInfraEnvironment,
     SetupProdEnvironment,
 )
-from build_support.ci_cd_tasks.lint_tasks import (
-    Format,
-    Lint,
-    LintApplyUnsafeFixes,
-)
+from build_support.ci_cd_tasks.lint_tasks import Format, Lint, LintApplyUnsafeFixes
 from build_support.ci_cd_tasks.push_tasks import PushAll, PushPypi
 from build_support.ci_cd_tasks.task_node import (
     BasicTaskInfo,
@@ -53,10 +45,7 @@ class CliTaskInfo:
     task_node: type[TaskNode]
     subproject_context: SubprojectContext | None = None
 
-    def get_task_node(
-        self,
-        basic_task_info: BasicTaskInfo,
-    ) -> TaskNode:
+    def get_task_node(self, basic_task_info: BasicTaskInfo) -> TaskNode:
         """Builds a task node based on the contents of this dataclass.
 
         Args:
@@ -151,7 +140,7 @@ def fix_permissions(local_user_uid: int, local_user_gid: int) -> None:
                     for path in Path(__file__).parent.parent.parent.parent.glob("*")
                     if path.name not in [".git", "test_scratch_folder"]
                 ],
-            ],
+            ]
         ),
         verbosity=ProcessVerbosity.SILENT,
     )
@@ -208,7 +197,7 @@ def run_main(args: Namespace) -> None:
         run_tasks(
             tasks=requested_tasks, project_root=basic_task_info.docker_project_root
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(e)  # noqa: T201
     finally:
         fix_permissions(

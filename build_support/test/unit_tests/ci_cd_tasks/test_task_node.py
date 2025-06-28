@@ -57,7 +57,7 @@ def basic_task_info_data_dict(request: SubRequest) -> dict[str, Any]:
     return cast(dict[str, Any], request.param)
 
 
-@pytest.fixture()
+@pytest.fixture
 def basic_task_info_yaml_str(basic_task_info_data_dict: dict[str, Any]) -> str:
     data_copy = deepcopy(basic_task_info_data_dict)
     if "ci_cd_feature_test_mode" not in data_copy:
@@ -213,10 +213,7 @@ def build_mock_basic_task(
     return type(  # type: ignore[no-any-return]
         task_name,
         (TaskNode,),
-        {
-            "required_tasks": Mock(return_value=required_mock_tasks),
-            "run": Mock(),
-        },
+        {"required_tasks": Mock(return_value=required_mock_tasks), "run": Mock()},
     )(basic_task_info=expected_basic_task_info)
 
 
@@ -230,14 +227,8 @@ def build_mock_per_subproject_task(
     return type(  # type: ignore[no-any-return]
         task_name,
         (PerSubprojectTask,),
-        {
-            "required_tasks": Mock(return_value=required_mock_tasks),
-            "run": Mock(),
-        },
-    )(
-        basic_task_info=expected_basic_task_info,
-        subproject_context=subproject_context,
-    )
+        {"required_tasks": Mock(return_value=required_mock_tasks), "run": Mock()},
+    )(basic_task_info=expected_basic_task_info, subproject_context=subproject_context)
 
 
 def test_task_init() -> None:
@@ -337,8 +328,7 @@ def test_subproject_task_init(subproject_context: SubprojectContext) -> None:
     assert mock_task.docker_project_root == expected_docker_project_root
     assert mock_task.subproject_context == subproject_context
     assert mock_task.subproject == get_python_subproject(
-        subproject_context=subproject_context,
-        project_root=expected_docker_project_root,
+        subproject_context=subproject_context, project_root=expected_docker_project_root
     )
 
 

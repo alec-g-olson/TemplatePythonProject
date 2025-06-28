@@ -1,7 +1,6 @@
 import re
 from http import HTTPStatus
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 import pytest
 import requests
@@ -12,12 +11,10 @@ hyperlink_display_name = "[^]]+"
 # Anything that isn't a closing paren
 hyperlink_dest = "[^)]+"
 
-HYPERLINK_PATTERN = r"\[({0})]\(\s*({1})\s*\)".format(
-    hyperlink_display_name, hyperlink_dest
-)
+HYPERLINK_PATTERN = rf"\[({hyperlink_display_name})]\(\s*({hyperlink_dest})\s*\)"
 
 
-@pytest.fixture()
+@pytest.fixture
 def project_readme(real_project_root_dir: Path) -> Path:
     return real_project_root_dir.joinpath("README.md")
 
@@ -26,7 +23,7 @@ def _build_header_regex(header_level: int, header_title: str) -> str:
     return "^" + "#" * header_level + " " + header_title + "$"
 
 
-def _build_header_regexes(header_level_dict: Dict[str, int]) -> List[str]:
+def _build_header_regexes(header_level_dict: dict[str, int]) -> list[str]:
     return [
         _build_header_regex(level, title) for title, level in header_level_dict.items()
     ]
@@ -44,11 +41,11 @@ class BadHyperlinkInfo(BaseModel):
 
 
 def _get_missing_headers(
-    header_regexes: List[str], readme_path: Path
-) -> List[
+    header_regexes: list[str], readme_path: Path
+) -> list[
     ReadmeHeaderInfo
 ]:  # pragma: no cov - has branches not reached if all tests pass
-    headers_found = {regex: False for regex in header_regexes}
+    headers_found = dict.fromkeys(header_regexes, False)
     if readme_path.exists():
         for line in readme_path.open():
             for regex_str in header_regexes:
@@ -66,11 +63,11 @@ def _get_missing_headers(
 
 
 def _get_headers_missing_details(
-    header_regexes: List[str], readme_path: Path
-) -> List[
+    header_regexes: list[str], readme_path: Path
+) -> list[
     ReadmeHeaderInfo
 ]:  # pragma: no cov - has branches not reached if all tests pass
-    headers_with_details_found = {regex: False for regex in header_regexes}
+    headers_with_details_found = dict.fromkeys(header_regexes, False)
     current_header = None
     if readme_path.exists():
         for line in readme_path.open():
@@ -101,8 +98,8 @@ def _get_headers_missing_details(
 
 
 def _get_extra_headers(
-    header_regexes: List[str], readme_path: Path
-) -> List[
+    header_regexes: list[str], readme_path: Path
+) -> list[
     ReadmeHeaderInfo
 ]:  # pragma: no cov - has branches not reached if all tests pass
     extra_headers = []
@@ -126,9 +123,9 @@ def _get_extra_headers(
 
 def _is_broken_hyperlink(
     current_dir: Path,
-    hyperlink: Tuple[str, str],
+    hyperlink: tuple[str, str],
     check_weblinks: bool,
-    all_headers: List[str],
+    all_headers: list[str],
 ) -> bool:
     if hyperlink[1].startswith("http"):
         if check_weblinks:  # pragma: no cov - might not hit if check_weblinks is false
@@ -141,7 +138,7 @@ def _is_broken_hyperlink(
 
 def _get_all_bad_hyperlinks(
     readme_path: Path, check_weblinks: bool
-) -> List[
+) -> list[
     BadHyperlinkInfo
 ]:  # pragma: no cov - has branches not reached if all tests pass
     bad_hyperlinks = []
@@ -223,24 +220,21 @@ TOP_LEVEL_README_HEADER_REGEXES = _build_header_regexes(
 
 def test_top_level_readme_has_required_headers(project_readme: Path) -> None:
     missing_headers = _get_missing_headers(
-        header_regexes=TOP_LEVEL_README_HEADER_REGEXES,
-        readme_path=project_readme,
+        header_regexes=TOP_LEVEL_README_HEADER_REGEXES, readme_path=project_readme
     )
     assert missing_headers == []
 
 
 def test_top_level_header_have_details(project_readme: Path) -> None:
     headers_missing_details = _get_headers_missing_details(
-        header_regexes=TOP_LEVEL_README_HEADER_REGEXES,
-        readme_path=project_readme,
+        header_regexes=TOP_LEVEL_README_HEADER_REGEXES, readme_path=project_readme
     )
     assert headers_missing_details == []
 
 
 def test_top_level_readme_has_no_extra_headers(project_readme: Path) -> None:
     extra_headers = _get_extra_headers(
-        header_regexes=TOP_LEVEL_README_HEADER_REGEXES,
-        readme_path=project_readme,
+        header_regexes=TOP_LEVEL_README_HEADER_REGEXES, readme_path=project_readme
     )
     assert extra_headers == []
 

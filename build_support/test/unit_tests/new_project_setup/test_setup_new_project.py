@@ -18,9 +18,7 @@ from build_support.new_project_setup.setup_new_project import MakeProjectFromTem
 
 
 def _check_pyproject_toml(
-    pyproject_toml_path: Path,
-    settings: ProjectSettings,
-    version_reset: bool,
+    pyproject_toml_path: Path, settings: ProjectSettings, version_reset: bool
 ) -> None:
     pyproject_toml_data = tomllib.loads(pyproject_toml_path.read_text())
     assert pyproject_toml_data["tool"]["poetry"]["name"] == settings.name
@@ -29,7 +27,7 @@ def _check_pyproject_toml(
     ) == version_reset
     assert pyproject_toml_data["tool"]["poetry"]["license"] == settings.license
     assert pyproject_toml_data["tool"]["poetry"]["authors"] == [
-        settings.organization.formatted_name_and_email(),
+        settings.organization.formatted_name_and_email()
     ]
     assert len(pyproject_toml_data["tool"]["poetry"]["packages"]) == 1
     assert (
@@ -48,8 +46,7 @@ def _check_readme(
 
 def _check_license_file(license_path: Path, settings: ProjectSettings) -> None:
     expected_license_content = get_new_license_content(
-        template_key=settings.license,
-        organization=settings.organization,
+        template_key=settings.license, organization=settings.organization
     )
     observed_license_content = license_path.read_text()
     assert observed_license_content == expected_license_content
@@ -74,8 +71,7 @@ def _ensure_project_folder_matches_settings(
         version_reset=version_reset,
     )
     _check_license_file(
-        license_path=project_folder.joinpath("LICENSE"),
-        settings=new_settings,
+        license_path=project_folder.joinpath("LICENSE"), settings=new_settings
     )
     _check_folder_names(project_folder=project_folder, settings=new_settings)
     _check_readme(
@@ -89,11 +85,10 @@ def test_make_new_project(tmp_path: Path, real_project_root_dir: Path) -> None:
     tmp_project_path = tmp_path.joinpath("template_python_project")
     shutil.copytree(real_project_root_dir, tmp_project_path)
     project_settings_path = tmp_project_path.joinpath(
-        "build_support",
-        "new_project_settings.yaml",
+        "build_support", "new_project_settings.yaml"
     )
     original_project_settings = ProjectSettings.from_yaml(
-        project_settings_path.read_text(),
+        project_settings_path.read_text()
     )
     _ensure_project_folder_matches_settings(
         project_folder=tmp_project_path,
@@ -129,8 +124,7 @@ def test_make_new_project(tmp_path: Path, real_project_root_dir: Path) -> None:
         name="closed_source_project",
         license=ALL_RIGHTS_RESERVED_KEY,
         organization=Organization(
-            name="Soulless Corp. 3000",
-            contact_email="our.lawyers.are.mean@soulless.io",
+            name="Soulless Corp. 3000", contact_email="our.lawyers.are.mean@soulless.io"
         ),
     )
     project_settings_path.write_text(modified_project_settings_2.to_yaml())

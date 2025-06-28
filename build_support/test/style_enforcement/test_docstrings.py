@@ -1,12 +1,13 @@
 import ast
-import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 from inspect import getmembers, isclass, isfunction, ismodule, signature, unwrap
 from pathlib import Path
-from re import compile
+from re import Pattern
+from re import compile as re_compile
 from textwrap import dedent
 from types import FunctionType, ModuleType
-from typing import Any, Iterable, Pattern, Type, TypeAlias, override
+from typing import Any, override
 
 import pytest
 from _pytest.fixtures import SubRequest
@@ -17,8 +18,8 @@ from build_support.ci_cd_vars.subproject_structure import (
     get_all_python_subprojects_with_src,
 )
 
-ClassOrStaticMethod: TypeAlias = classmethod | staticmethod  # type: ignore[type-arg]
-ImportedElement: TypeAlias = ModuleType | FunctionType | ClassOrStaticMethod | Type[Any]
+type ClassOrStaticMethod = classmethod | staticmethod  # type: ignore[type-arg]
+type ImportedElement = ModuleType | FunctionType | ClassOrStaticMethod | type[Any]
 
 
 @dataclass(frozen=True)
@@ -34,7 +35,7 @@ class ModuleInfo:
     module_path: str
     docstring: str
     attributes: dict[str, Any]
-    classes: dict[str, Type[Any]]
+    classes: dict[str, type[Any]]
     functions: dict[str, FunctionType]
 
 
@@ -44,7 +45,7 @@ class ClassInfo:
     docstring: str
     element_path: str
     methods: dict[str, FunctionType | ClassOrStaticMethod]
-    inner_classes: dict[str, Type[Any]]
+    inner_classes: dict[str, type[Any]]
 
 
 @dataclass(frozen=True)
@@ -55,7 +56,7 @@ class FunctionInfo:
     args: list[str]
 
 
-DocumentationElement: TypeAlias = PackageInfo | ModuleInfo | ClassInfo | FunctionInfo
+type DocumentationElement = PackageInfo | ModuleInfo | ClassInfo | FunctionInfo
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 
@@ -155,7 +156,7 @@ def parse_module_info(imported_module: ModuleType) -> ModuleInfo:
     )
 
 
-def parse_class_info(imported_class: Type[Any], element_prefix: str) -> ClassInfo:
+def parse_class_info(imported_class: type[Any], element_prefix: str) -> ClassInfo:  # noqa: C901
     methods = {}
     inner_classes = {}
     class_elements = dict(vars(imported_class))
@@ -218,8 +219,7 @@ def parse_function_info(
 
 
 def parse_package_sub_elements(
-    parsed_package: PackageInfo,
-    all_element_info: list[DocumentationElement],
+    parsed_package: PackageInfo, all_element_info: list[DocumentationElement]
 ) -> None:
     all_element_info.append(parsed_package)
     for sub_package in parsed_package.sub_packages:
@@ -230,8 +230,7 @@ def parse_package_sub_elements(
         )
     for imported_module in parsed_package.modules.values():
         parse_sub_elements(
-            imported_element=imported_module,
-            all_element_info=all_element_info,
+            imported_element=imported_module, all_element_info=all_element_info
         )
 
 
@@ -241,13 +240,11 @@ def parse_module_sub_elements(
     all_element_info.append(parsed_module)
     for imported_class in parsed_module.classes.values():
         parse_sub_elements(
-            imported_element=imported_class,
-            all_element_info=all_element_info,
+            imported_element=imported_class, all_element_info=all_element_info
         )
     for imported_function in parsed_module.functions.values():
         parse_sub_elements(
-            imported_element=imported_function,
-            all_element_info=all_element_info,
+            imported_element=imported_function, all_element_info=all_element_info
         )
 
 
@@ -283,8 +280,7 @@ def parse_sub_elements(
         if imported_element.__file__.endswith("__init__.py"):
             parsed_package = parse_package_info(imported_package=imported_element)
             parse_package_sub_elements(
-                parsed_package=parsed_package,
-                all_element_info=all_element_info,
+                parsed_package=parsed_package, all_element_info=all_element_info
             )
         else:
             parsed_module = parse_module_info(imported_module=imported_element)
@@ -363,7 +359,7 @@ def get_leading_words(line: str) -> str:
 
     For example, if `line` is "  Hello world!!!", returns "Hello world".
     """
-    result = re.compile(r"[\w ]+").match(line.strip())
+    result = re_compile(r"[\w ]+").match(line.strip())
     if result is not None:
         return result.group()
     return ""
@@ -470,8 +466,7 @@ def get_docstring_contexts(docstring: str) -> dict[str, SectionContext]:
     return {
         context.section_name: normalize_context(context=context)
         for context in get_section_context(
-            lines,
-            sorted(set(GOOGLE_SECTION_NAMES + PROJECT_SPECIFIC_SECTIONS)),
+            lines, sorted(set(GOOGLE_SECTION_NAMES + PROJECT_SPECIFIC_SECTIONS))
         )
     }
 
@@ -528,13 +523,13 @@ PROJECT_SPECIFIC_SECTIONS = sorted(
     }
 )
 
-LOOSE_REGEX = compile(r"^\s*(\|\s)?([^\s:]+)\s*.*")
+LOOSE_REGEX = re_compile(r"^\s*(\|\s)?([^\s:]+)\s*.*")
 
-ENFORCED_SUB_PACKAGE_REGEX = compile(r"^\s*\|\s([^\s:]+)\s*:\n?\s*(.+)")
-ENFORCED_MODULE_REGEX = compile(r"^\s*\|\s([^\s:]+)\s*:\n?\s*(.+)")
-ENFORCED_ATTRIBUTE_REGEX = compile(r"^\s*\|\s([^\s:]+)\s*:\n?\s*(.+)")
-ENFORCED_GOOGLE_ARGS_REGEX = compile(r"^\s*(\w+)\s*(\(.*\))\s*:\n?\s*(.+)")
-GOOGLE_RESULT_REGEX = compile(r"^\s*(([\w\[\],\s]+)\s*:\s*(.+)|None)")
+ENFORCED_SUB_PACKAGE_REGEX = re_compile(r"^\s*\|\s([^\s:]+)\s*:\n?\s*(.+)")
+ENFORCED_MODULE_REGEX = re_compile(r"^\s*\|\s([^\s:]+)\s*:\n?\s*(.+)")
+ENFORCED_ATTRIBUTE_REGEX = re_compile(r"^\s*\|\s([^\s:]+)\s*:\n?\s*(.+)")
+ENFORCED_GOOGLE_ARGS_REGEX = re_compile(r"^\s*(\w+)\s*(\(.*\))\s*:\n?\s*(.+)")
+GOOGLE_RESULT_REGEX = re_compile(r"^\s*(([\w\[\],\s]+)\s*:\s*(.+)|None)")
 
 
 @dataclass
@@ -548,11 +543,11 @@ class SectionElementData:
     malformed_element_docs: list[str]
 
     def has_issues(self) -> bool:
-        if (
-            self.extra_elements or self.missing_elements or self.malformed_element_docs
-        ):  # pragma: no cov if all tests pass
-            return True
-        return False
+        return (
+            len(self.extra_elements) > 0
+            or len(self.missing_elements) > 0
+            or len(self.malformed_element_docs) > 0
+        )
 
 
 @dataclass
@@ -563,13 +558,11 @@ class GenericDocstringData:
     sections: dict[str, SectionElementData]
 
     def has_issues(self) -> bool:
-        if (
-            self.missing_sections
-            or self.clashing_sections
+        return (
+            len(self.missing_sections) > 0
+            or len(self.clashing_sections) > 0
             or any(section.has_issues() for section in self.sections.values())
-        ):  # pragma: no cov if all tests pass
-            return True
-        return False
+        )
 
 
 @dataclass
@@ -632,8 +625,7 @@ def check_for_section_with_elements_in_contexts(
 
 
 def check_section_context_has_single_element_with_pattern(
-    context: SectionContext,
-    enforced_element_regex: Pattern[str],
+    context: SectionContext, enforced_element_regex: Pattern[str]
 ) -> bool:
     element_docs = []
     for line in context.following_lines:
@@ -677,9 +669,7 @@ def get_package_sub_package_section_info(
     section_element_data = docstring_data.sections[section_name]
     section_element_data.required_context_elements = parsed_package.sub_packages
     check_for_section_with_elements_in_contexts(
-        contexts=contexts,
-        docstring_data=docstring_data,
-        section_name=section_name,
+        contexts=contexts, docstring_data=docstring_data, section_name=section_name
     )
 
 
@@ -692,9 +682,7 @@ def get_package_module_section_info(
     section_element_data = docstring_data.sections[section_name]
     section_element_data.required_context_elements = list(parsed_package.modules.keys())
     check_for_section_with_elements_in_contexts(
-        contexts=contexts,
-        docstring_data=docstring_data,
-        section_name=section_name,
+        contexts=contexts, docstring_data=docstring_data, section_name=section_name
     )
 
 
@@ -753,9 +741,7 @@ def get_module_attributes_section_info(
         parsed_module.attributes.keys()
     )
     check_for_section_with_elements_in_contexts(
-        contexts=contexts,
-        docstring_data=docstring_data,
-        section_name=section_name,
+        contexts=contexts, docstring_data=docstring_data, section_name=section_name
     )
 
 
@@ -775,7 +761,7 @@ def test_all_module_docstrings(all_modules_info: list[ModuleInfo]) -> None:
                     extra_elements=[],
                     missing_elements=[],
                     malformed_element_docs=[],
-                ),
+                )
             },
         )
         get_module_attributes_section_info(
@@ -803,9 +789,7 @@ def get_function_args_section_info(
     section_element_data = docstring_data.sections[section_name]
     section_element_data.required_context_elements = parsed_function.args
     check_for_section_with_elements_in_contexts(
-        contexts=contexts,
-        docstring_data=docstring_data,
-        section_name=section_name,
+        contexts=contexts, docstring_data=docstring_data, section_name=section_name
     )
 
 
@@ -815,9 +799,7 @@ def get_error_in_function_results_section_info(
     section_name: str,
 ) -> bool:
     return not check_for_section_with_single_element_in_contexts(
-        contexts=contexts,
-        docstring_data=docstring_data,
-        section_name=section_name,
+        contexts=contexts, docstring_data=docstring_data, section_name=section_name
     )
 
 
@@ -827,11 +809,10 @@ class FunctionDocstringData(ElementDocstringData):
 
     @override
     def has_issues(self) -> bool:
-        if (
-            super().has_issues() or self.result_missing_type_or_description
-        ):  # pragma: no cov if all tests pass
-            return True
-        return False
+        return super().has_issues() or (
+            self.result_missing_type_or_description is not None
+            and self.result_missing_type_or_description
+        )
 
 
 def test_all_function_docstrings(all_function_info: list[FunctionInfo]) -> None:

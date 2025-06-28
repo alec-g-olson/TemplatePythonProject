@@ -2,7 +2,6 @@ import re
 from dataclasses import dataclass
 from http import HTTPStatus
 from pathlib import Path
-from typing import Tuple
 
 import pytest
 import requests
@@ -75,7 +74,7 @@ def test_subproject_code_docs_exists_for_subprojects_with_code(
 
 
 def _is_broken_hyperlink(
-    hyperlink: Tuple[str, str],
+    hyperlink: tuple[str, str],
 ) -> bool:  # pragma: no cov - might not hit if check_weblinks is false
     return (
         hyperlink[1].startswith("http")

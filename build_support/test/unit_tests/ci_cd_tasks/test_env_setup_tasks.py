@@ -23,9 +23,7 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_git_info_yaml,
 )
 from build_support.ci_cd_vars.project_setting_vars import get_pulumi_version
-from build_support.ci_cd_vars.project_structure import (
-    get_feature_test_scratch_folder,
-)
+from build_support.ci_cd_vars.project_structure import get_feature_test_scratch_folder
 
 
 def test_build_dev_env_requires(basic_task_info: BasicTaskInfo) -> None:
@@ -35,7 +33,7 @@ def test_build_dev_env_requires(basic_task_info: BasicTaskInfo) -> None:
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
 def test_run_build_dev_env(basic_task_info: BasicTaskInfo) -> None:
     with patch(
-        "build_support.ci_cd_tasks.env_setup_tasks.run_process",
+        "build_support.ci_cd_tasks.env_setup_tasks.run_process"
     ) as run_process_mock:
         build_dev_env_args = get_docker_build_command(
             docker_project_root=basic_task_info.docker_project_root,
@@ -43,8 +41,8 @@ def test_run_build_dev_env(basic_task_info: BasicTaskInfo) -> None:
             extra_args={
                 "--build-arg": [
                     "DOCKER_REMOTE_PROJECT_ROOT="
-                    + str(basic_task_info.docker_project_root.absolute()),
-                ],
+                    + str(basic_task_info.docker_project_root.absolute())
+                ]
             },
         )
         SetupDevEnvironment(basic_task_info=basic_task_info).run()
@@ -55,7 +53,7 @@ def test_run_build_dev_env(basic_task_info: BasicTaskInfo) -> None:
 def test_run_build_dev_env_in_ci_cd_mode(basic_task_info: BasicTaskInfo) -> None:
     basic_task_info.ci_cd_feature_test_mode = True
     with patch(
-        "build_support.ci_cd_tasks.env_setup_tasks.run_process",
+        "build_support.ci_cd_tasks.env_setup_tasks.run_process"
     ) as run_process_mock:
         SetupDevEnvironment(basic_task_info=basic_task_info).run()
         run_process_mock.assert_not_called()
@@ -69,7 +67,7 @@ def test_build_prod_env_requires(basic_task_info: BasicTaskInfo) -> None:
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
 def test_run_build_prod_env(basic_task_info: BasicTaskInfo) -> None:
     with patch(
-        "build_support.ci_cd_tasks.env_setup_tasks.run_process",
+        "build_support.ci_cd_tasks.env_setup_tasks.run_process"
     ) as run_process_mock:
         build_prod_env_args = get_docker_build_command(
             docker_project_root=basic_task_info.docker_project_root,
@@ -83,7 +81,7 @@ def test_run_build_prod_env(basic_task_info: BasicTaskInfo) -> None:
 def test_run_build_prod_env_in_ci_cd_mode(basic_task_info: BasicTaskInfo) -> None:
     basic_task_info.ci_cd_feature_test_mode = True
     with patch(
-        "build_support.ci_cd_tasks.env_setup_tasks.run_process",
+        "build_support.ci_cd_tasks.env_setup_tasks.run_process"
     ) as run_process_mock:
         SetupProdEnvironment(basic_task_info=basic_task_info).run()
         run_process_mock.assert_not_called()
@@ -99,14 +97,14 @@ def test_build_infra_env_requires(basic_task_info: BasicTaskInfo) -> None:
 )
 def test_run_build_infra_env(basic_task_info: BasicTaskInfo) -> None:
     with patch(
-        "build_support.ci_cd_tasks.env_setup_tasks.run_process",
+        "build_support.ci_cd_tasks.env_setup_tasks.run_process"
     ) as run_process_mock:
         build_infra_env_args = get_docker_build_command(
             docker_project_root=basic_task_info.docker_project_root,
             target_image=DockerTarget.INFRA,
             extra_args={
                 "--build-arg": "PULUMI_VERSION="
-                + get_pulumi_version(project_root=basic_task_info.docker_project_root),
+                + get_pulumi_version(project_root=basic_task_info.docker_project_root)
             },
         )
         SetupInfraEnvironment(basic_task_info=basic_task_info).run()
@@ -117,7 +115,7 @@ def test_run_build_infra_env(basic_task_info: BasicTaskInfo) -> None:
 def test_run_build_infra_env_in_ci_cd_mode(basic_task_info: BasicTaskInfo) -> None:
     basic_task_info.ci_cd_feature_test_mode = True
     with patch(
-        "build_support.ci_cd_tasks.env_setup_tasks.run_process",
+        "build_support.ci_cd_tasks.env_setup_tasks.run_process"
     ) as run_process_mock:
         SetupInfraEnvironment(basic_task_info=basic_task_info).run()
         run_process_mock.assert_not_called()
@@ -130,8 +128,7 @@ def test_clean_requires(basic_task_info: BasicTaskInfo) -> None:
 
 def test_run_clean(basic_task_info: BasicTaskInfo) -> None:
     def _add_some_folders_and_files_to_folder(
-        current_folder: Path,
-        required_file_names: list[str] | None = None,
+        current_folder: Path, required_file_names: list[str] | None = None
     ) -> None:
         current_folder.mkdir(parents=True, exist_ok=True)
         file_names_to_add = ["some.txt", "file.txt", "names.txt", "to.txt", "add.txt"]
@@ -195,7 +192,7 @@ git_info_data_dict: dict[Any, Any] = {
 }
 
 
-@pytest.fixture()
+@pytest.fixture
 def git_info_yaml_str() -> str:
     return yaml.dump(git_info_data_dict)
 
@@ -264,14 +261,12 @@ def test_get_git_info_requires(basic_task_info: BasicTaskInfo) -> None:
 def test_run_get_git_info(basic_task_info: BasicTaskInfo) -> None:
     with (
         patch(
-            "build_support.ci_cd_tasks.env_setup_tasks.get_current_branch_name",
+            "build_support.ci_cd_tasks.env_setup_tasks.get_current_branch_name"
         ) as get_branch_mock,
         patch(
-            "build_support.ci_cd_tasks.env_setup_tasks.get_local_tags",
+            "build_support.ci_cd_tasks.env_setup_tasks.get_local_tags"
         ) as get_tags_mock,
-        patch(
-            "build_support.ci_cd_tasks.env_setup_tasks.git_fetch",
-        ) as git_fetch_mock,
+        patch("build_support.ci_cd_tasks.env_setup_tasks.git_fetch") as git_fetch_mock,
     ):
         branch_name = "some_branch"
         # Some tags added to the repo might be for convenience and not strictly version

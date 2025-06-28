@@ -29,28 +29,23 @@ def test_push_tags_requires(basic_task_info: BasicTaskInfo) -> None:
 
 @pytest.mark.parametrize(
     ("branch_name", "current_version"),
-    [
-        (MAIN_BRANCH_NAME, "0.0.1-dev.1"),
-        ("not_" + MAIN_BRANCH_NAME, "0.0.1"),
-    ],
+    [(MAIN_BRANCH_NAME, "0.0.1-dev.1"), ("not_" + MAIN_BRANCH_NAME, "0.0.1")],
 )
 def test_run_push_tags_not_allowed(
-    basic_task_info: BasicTaskInfo,
-    branch_name: str,
-    current_version: str,
+    basic_task_info: BasicTaskInfo, branch_name: str, current_version: str
 ) -> None:
     with (
         patch(
-            "build_support.ci_cd_tasks.push_tasks.get_current_branch_name",
+            "build_support.ci_cd_tasks.push_tasks.get_current_branch_name"
         ) as get_branch_mock,
         patch(
-            "build_support.ci_cd_tasks.push_tasks.current_branch_is_main",
+            "build_support.ci_cd_tasks.push_tasks.current_branch_is_main"
         ) as is_on_main_mock,
         patch(
-            "build_support.ci_cd_tasks.push_tasks.get_project_version",
+            "build_support.ci_cd_tasks.push_tasks.get_project_version"
         ) as get_version_mock,
         patch(
-            "build_support.ci_cd_tasks.push_tasks.commit_changes_if_diff",
+            "build_support.ci_cd_tasks.push_tasks.commit_changes_if_diff"
         ) as commit_changes_mock,
     ):
         is_on_main_mock.return_value = branch_name == MAIN_BRANCH_NAME
@@ -66,28 +61,23 @@ def test_run_push_tags_not_allowed(
 
 @pytest.mark.parametrize(
     ("branch_name", "current_version"),
-    [
-        (MAIN_BRANCH_NAME, "0.0.1"),
-        ("not_" + MAIN_BRANCH_NAME, "0.0.1-dev.1"),
-    ],
+    [(MAIN_BRANCH_NAME, "0.0.1"), ("not_" + MAIN_BRANCH_NAME, "0.0.1-dev.1")],
 )
 def test_run_push_tags_allowed(
-    basic_task_info: BasicTaskInfo,
-    branch_name: str,
-    current_version: str,
+    basic_task_info: BasicTaskInfo, branch_name: str, current_version: str
 ) -> None:
     with (
         patch(
-            "build_support.ci_cd_tasks.push_tasks.tag_current_commit_and_push",
+            "build_support.ci_cd_tasks.push_tasks.tag_current_commit_and_push"
         ) as tag_and_push_mock,
         patch(
-            "build_support.ci_cd_tasks.push_tasks.commit_changes_if_diff",
+            "build_support.ci_cd_tasks.push_tasks.commit_changes_if_diff"
         ) as commit_changes_mock,
         patch(
-            "build_support.ci_cd_tasks.push_tasks.current_branch_is_main",
+            "build_support.ci_cd_tasks.push_tasks.current_branch_is_main"
         ) as is_on_main_mock,
         patch(
-            "build_support.ci_cd_tasks.push_tasks.get_project_version",
+            "build_support.ci_cd_tasks.push_tasks.get_project_version"
         ) as get_version_mock,
     ):
         is_on_main_mock.return_value = branch_name == MAIN_BRANCH_NAME

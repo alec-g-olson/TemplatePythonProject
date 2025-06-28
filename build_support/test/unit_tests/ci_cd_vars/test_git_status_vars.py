@@ -18,7 +18,7 @@ from build_support.ci_cd_vars.git_status_vars import (
 )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_git_repo(mock_project_root: Path, mock_remote_git_repo: Repo) -> Repo:
     remote_repo_url = str(mock_remote_git_repo.working_dir)
     repo = Repo.clone_from(url=remote_repo_url, to_path=mock_project_root)
@@ -31,7 +31,7 @@ def mock_git_repo(mock_project_root: Path, mock_remote_git_repo: Repo) -> Repo:
     return repo
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_git_branch(mock_remote_git_repo: Repo, mock_git_repo: Repo) -> Head:
     branch_name = "some_branch_name"
     mock_remote_git_repo.create_head(branch_name)
@@ -40,7 +40,7 @@ def mock_git_branch(mock_remote_git_repo: Repo, mock_git_repo: Repo) -> Head:
     return mock_git_repo.active_branch
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_git_tags(mock_git_repo: Repo, mock_git_branch: Head) -> list[TagReference]:
     tag_1_name = "inital_local_commit"
     mock_git_repo.create_tag(tag_1_name)

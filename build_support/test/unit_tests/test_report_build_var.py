@@ -37,7 +37,7 @@ def build_variable_to_report(request: SubRequest) -> str:
     return cast(str, request.param)
 
 
-@pytest.fixture()
+@pytest.fixture
 def args_to_test_single_var(
     docker_project_root_arg: Path,
     non_docker_project_root_arg: Path,
@@ -56,7 +56,7 @@ def args_to_test_single_var(
     ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def expected_namespace_single_var(
     docker_project_root_arg: Path,
     non_docker_project_root_arg: Path,
@@ -83,7 +83,7 @@ def test_parse_args_no_task() -> None:
                 "non_docker_project_root",
                 "--docker-project-root",
                 "docker_project_root",
-            ],
+            ]
         )
 
 
@@ -97,7 +97,7 @@ def test_parse_args_bad_var() -> None:
                 "docker_project_root",
                 "--build-variable-to-report",
                 "INVALID_VARIABLE_NAME",
-            ],
+            ]
         )
 
 
@@ -109,7 +109,7 @@ def test_parse_args_no_docker_project_root() -> None:
                 "non_docker_project_root",
                 "--build-variable-to-report",
                 "get-interactive-dev-docker-command",
-            ],
+            ]
         )
 
 
@@ -121,14 +121,13 @@ def test_parse_args_no_non_docker_project_root() -> None:
                 "docker_project_root",
                 "--build-variable-to-report",
                 "get-interactive-dev-docker-command",
-            ],
+            ]
         )
 
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
 def test_run_main_for_each_var_in_enum(
-    mock_project_root: Path,
-    docker_project_root: Path,
+    mock_project_root: Path, docker_project_root: Path
 ) -> None:
     for var_to_report in AllowedCliArgs:
         args = Namespace(
@@ -141,8 +140,7 @@ def test_run_main_for_each_var_in_enum(
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
 def test_run_main_for_get_interactive_dev(
-    mock_project_root: Path,
-    docker_project_root: Path,
+    mock_project_root: Path, docker_project_root: Path
 ) -> None:
     args = Namespace(
         non_docker_project_root=mock_project_root,
@@ -157,15 +155,14 @@ def test_run_main_for_get_interactive_dev(
                     non_docker_project_root=mock_project_root,
                     docker_project_root=docker_project_root,
                     target_image=DockerTarget.DEV,
-                ),
-            ),
+                )
+            )
         )
 
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
 def test_run_main_for_get_interactive_prod(
-    mock_project_root: Path,
-    docker_project_root: Path,
+    mock_project_root: Path, docker_project_root: Path
 ) -> None:
     args = Namespace(
         non_docker_project_root=mock_project_root,
@@ -180,15 +177,14 @@ def test_run_main_for_get_interactive_prod(
                     non_docker_project_root=mock_project_root,
                     docker_project_root=docker_project_root,
                     target_image=DockerTarget.PROD,
-                ),
-            ),
+                )
+            )
         )
 
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
 def test_run_main_for_get_interactive_infra(
-    mock_project_root: Path,
-    docker_project_root: Path,
+    mock_project_root: Path, docker_project_root: Path
 ) -> None:
     args = Namespace(
         non_docker_project_root=mock_project_root,
@@ -203,6 +199,6 @@ def test_run_main_for_get_interactive_infra(
                     non_docker_project_root=mock_project_root,
                     docker_project_root=docker_project_root,
                     target_image=DockerTarget.INFRA,
-                ),
-            ),
+                )
+            )
         )

@@ -94,8 +94,8 @@ class BuildPypi(TaskNode):
                     "rm",
                     "-rf",
                     get_dist_dir(project_root=self.docker_project_root),
-                ],
-            ),
+                ]
+            )
         )
         run_process(
             args=concatenate_args(
@@ -109,8 +109,8 @@ class BuildPypi(TaskNode):
                     "build",
                     "--output",
                     get_dist_dir(project_root=self.docker_project_root),
-                ],
-            ),
+                ]
+            )
         )
 
 
@@ -124,9 +124,7 @@ class BuildDocs(TaskNode):
         Returns:
             list[TaskNode]: A list of tasks required to build documentation.
         """
-        return [
-            ValidatePythonStyle(basic_task_info=self.get_basic_task_info()),
-        ]
+        return [ValidatePythonStyle(basic_task_info=self.get_basic_task_info())]
 
     @override
     def run(self) -> None:
@@ -166,8 +164,8 @@ class BuildDocs(TaskNode):
                             project_root=self.docker_project_root
                         ),
                         subproject.get_src_dir(),
-                    ],
-                ),
+                    ]
+                )
             )
         run_process(
             args=concatenate_args(
@@ -182,6 +180,6 @@ class BuildDocs(TaskNode):
                     get_build_docs_build_dir(project_root=self.docker_project_root),
                     "-c",
                     get_sphinx_conf_dir(project_root=self.docker_project_root),
-                ],
-            ),
+                ]
+            )
         )

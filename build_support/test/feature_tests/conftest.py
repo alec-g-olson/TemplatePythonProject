@@ -10,7 +10,6 @@ from build_support.ci_cd_vars.git_status_vars import (
     monkeypatch_git_python_execute_kwargs,
 )
 from build_support.ci_cd_vars.project_structure import (
-    get_build_dir,
     get_feature_test_scratch_folder,
     maybe_build_dir,
 )
@@ -30,7 +29,7 @@ def remove_dir_and_all_contents(path: Path) -> None:
     path.rmdir()
 
 
-@pytest.fixture()
+@pytest.fixture
 def make_command_prefix(
     mock_project_root: Path, real_project_root_dir: Path, mock_remote_git_folder: Path
 ) -> list[str]:
@@ -60,44 +59,32 @@ def mock_lightweight_project_copy_dir(real_build_dir: Path) -> Path:
 
 
 @pytest.fixture(scope="session")
-def mock_lightweight_project_copy(mock_lightweight_project_copy_dir: Path) -> Path:
+def mock_lightweight_project_copy(
+    mock_lightweight_project_copy_dir: Path, real_project_root_dir: Path
+) -> Path:
+    if mock_lightweight_project_copy_dir.exists():
+        # If the lightweight copy already exists, return it
+        remove_dir_and_all_contents(path=mock_lightweight_project_copy_dir)
 
-
-
-@pytest.fixture()
-def mock_lightweight_project(
-    mock_project_root: Path, mock_remote_git_repo: Repo, real_project_root_dir: Path
-) -> Repo:
-    monkeypatch_git_python_execute_kwargs()
-    remote_repo_url = str(mock_remote_git_repo.working_dir)
-    repo = Repo.clone_from(url=remote_repo_url, to_path=mock_project_root)
-    repo.remote().push()
+    # Create the lightweight project copy
     feature_scratch_name = get_feature_test_scratch_folder(
-        project_root=mock_project_root
+        project_root=real_project_root_dir
     ).name
-    # copy everything from real project
+
+    # Copy everything from real project except .git, build, and scratch folders
     for file_or_folder in real_project_root_dir.glob("*"):
         name = file_or_folder.name
-        if name not in [".git", feature_scratch_name]:
-            dest = mock_project_root.joinpath(name)
+        if name not in [".git", ".idea", "build", feature_scratch_name]:
+            dest = mock_lightweight_project_copy_dir.joinpath(name)
             if file_or_folder.is_dir():
                 shutil.copytree(src=file_or_folder, dst=dest)
             else:
                 shutil.copy(src=file_or_folder, dst=dest)
-    build_folder_name = get_build_dir(project_root=mock_project_root).name
-    local_info_name = get_local_info_yaml(project_root=mock_project_root).name
-    for file_or_folder in mock_project_root.joinpath(build_folder_name).glob("*"):
-        name = file_or_folder.name
-        if name != local_info_name:
-            if file_or_folder.is_dir():
-                shutil.rmtree(path=file_or_folder)
-            else:
-                file_or_folder.unlink()
 
-    # turn non-build_subprojects into lightweight minimal projects
+    # Turn non-build_support subprojects into lightweight minimal projects
     init_name = "__init__.py"
     for subproject_context, subproject in get_all_python_subprojects_dict(
-        project_root=mock_project_root
+        project_root=mock_lightweight_project_copy_dir
     ).items():
         if subproject_context != SubprojectContext.BUILD_SUPPORT:
             remove_dir_and_all_contents(path=subproject.get_root_dir())
@@ -111,12 +98,33 @@ def mock_lightweight_project(
             )
             feature_test_dir = maybe_build_dir(
                 dir_to_build=subproject.get_test_suite_dir(
-                    test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+                    test_suite=PythonSubproject.TestSuite.FEATURE_TESTS
                 )
             )
             feature_test_dir.joinpath(init_name).touch()
             pkg_dir.joinpath(init_name).write_text('"""Top level package."""')
             unit_test_dir.joinpath(init_name).touch()
+
+    return mock_lightweight_project_copy_dir
+
+
+@pytest.fixture
+def mock_lightweight_project(
+    mock_project_root: Path,
+    mock_remote_git_repo: Repo,
+    mock_lightweight_project_copy: Path,
+) -> Repo:
+    monkeypatch_git_python_execute_kwargs()
+    remote_repo_url = str(mock_remote_git_repo.working_dir)
+    repo = Repo.clone_from(url=remote_repo_url, to_path=mock_project_root)
+    repo.remote().push()
+
+    # Copy everything from the cached lightweight project copy
+    if mock_project_root.exists():
+        remove_dir_and_all_contents(path=mock_project_root)
+    shutil.copytree(src=mock_lightweight_project_copy, dst=mock_project_root)
+
+    # Commit the lightweight project to git
     repo.git.add(update=True)
     repo.index.commit("initial lightweight project commit")
     repo.remote().push()
@@ -126,12 +134,12 @@ def mock_lightweight_project(
     return repo
 
 
-@pytest.fixture()
+@pytest.fixture
 def current_ticket_name() -> str:
     return "TEST001"
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_new_branch(
     mock_remote_git_repo: Repo, mock_lightweight_project: Repo, current_ticket_name: str
 ) -> Head:

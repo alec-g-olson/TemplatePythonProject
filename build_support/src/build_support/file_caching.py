@@ -7,11 +7,11 @@ This is so we can determine if we need to rerun parts of our validation pipeline
 """
 
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
-from typing import Iterator, Tuple
 
 from pydantic import BaseModel, Field, field_serializer
 from yaml import safe_dump, safe_load
@@ -46,8 +46,7 @@ class FileCacheInfo(BaseModel):
                 updated.
         """
         path_to_file_cache = get_python_subproject(
-            subproject_context=subproject_context,
-            project_root=project_root,
+            subproject_context=subproject_context, project_root=project_root
         ).get_file_cache_yaml()
         if path_to_file_cache.exists():
             return FileCacheInfo.from_yaml(path_to_file_cache.read_text())
@@ -115,7 +114,7 @@ class UnitTestInfo:
     """A dataclass for organizing unit test information."""
 
     conftest_or_parent_conftest_was_updated: ParentConftestStatus
-    src_test_file_pairs: list[Tuple[Path, Path]]
+    src_test_file_pairs: list[tuple[Path, Path]]
 
 
 FEATURE_TEST_FILE_NAME_REGEX = re.compile(r"test_.+_.+\.py")
@@ -158,12 +157,10 @@ class FileCacheEngine:
             None
         """
         self.cache_data = FileCacheInfo.get_file_cache_for(
-            subproject_context=subproject_context,
-            project_root=project_root,
+            subproject_context=subproject_context, project_root=project_root
         )
         self.subproject = get_python_subproject(
-            subproject_context=subproject_context,
-            project_root=project_root,
+            subproject_context=subproject_context, project_root=project_root
         )
 
     def write_text(self) -> None:
@@ -206,8 +203,7 @@ class FileCacheEngine:
             ParentConftestStatus.UPDATED
             if top_level_conftest.exists()
             and self.file_has_been_changed(
-                top_level_conftest,
-                cache_info_suite=cache_info_suite,
+                top_level_conftest, cache_info_suite=cache_info_suite
             )
             else ParentConftestStatus.NOT_UPDATED
         )
@@ -328,7 +324,7 @@ class FileCacheEngine:
         abs_file_path = file_path.absolute()
         relative_file_path = abs_file_path.relative_to(self.subproject.get_root_dir())
         last_modified = datetime.fromtimestamp(
-            timestamp=abs_file_path.stat().st_mtime, tz=timezone.utc
+            timestamp=abs_file_path.stat().st_mtime, tz=UTC
         ).isoformat()
         has_been_changed = True
         cache_info = self._get_cache_info_for_suite(cache_info_suite=cache_info_suite)

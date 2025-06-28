@@ -4,8 +4,9 @@ This module exists to conceptually isolate the serialization and
 deserialization of new_project_settings.yaml.
 """
 
+from typing import Annotated
+
 from pydantic import AfterValidator, BaseModel
-from typing_extensions import Annotated
 from yaml import safe_dump, safe_load
 
 from build_support.new_project_setup.license_templates import (
@@ -32,7 +33,7 @@ def validate_license(template_key: str) -> str:
             'Once cast to a lower case string, "license" must be '
             "one of:\n  "
             + "  \n".join(sorted(get_licenses_with_templates()))
-            + f"found {template_key} instead.",
+            + f"found {template_key} instead."
         )
     return template_key
 

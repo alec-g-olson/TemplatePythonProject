@@ -1,8 +1,9 @@
 import re
 import shutil
+from collections.abc import Iterator
 from pathlib import Path
 from time import sleep
-from typing import Any, Iterator
+from typing import Any
 from unittest.mock import call, patch
 
 import pytest
@@ -37,9 +38,7 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_all_test_folders,
 )
 from build_support.ci_cd_vars.machine_introspection_vars import THREADS_AVAILABLE
-from build_support.ci_cd_vars.project_structure import (
-    get_feature_test_scratch_folder,
-)
+from build_support.ci_cd_vars.project_structure import get_feature_test_scratch_folder
 from build_support.ci_cd_vars.subproject_structure import (
     PythonSubproject,
     get_all_python_subprojects_dict,
@@ -99,7 +98,7 @@ def test_run_enforce_process(basic_task_info: BasicTaskInfo) -> None:
                     build_support_subproject.get_test_suite_dir(
                         test_suite=PythonSubproject.TestSuite.PROCESS_ENFORCEMENT
                     ),
-                ],
+                ]
             )
         )
 
@@ -111,8 +110,7 @@ def test_all_subproject_static_type_checking_requires(
         basic_task_info=basic_task_info
     ).required_tasks() == [
         ValidateStaticTypeChecking(
-            basic_task_info=basic_task_info,
-            subproject_context=subproject_context,
+            basic_task_info=basic_task_info, subproject_context=subproject_context
         )
         for subproject_context in get_sorted_subproject_contexts()
     ]
@@ -169,8 +167,8 @@ def test_run_validate_static_type_checking(
                     "mypy",
                     "--explicit-package-bases",
                     mock_docker_subproject.get_root_dir(),
-                ],
-            ),
+                ]
+            )
         )
 
 
@@ -181,16 +179,13 @@ def test_all_subproject_security_checks_requires(
         basic_task_info=basic_task_info
     ).required_tasks() == [
         ValidateSecurityChecks(
-            basic_task_info=basic_task_info,
-            subproject_context=subproject_context,
+            basic_task_info=basic_task_info, subproject_context=subproject_context
         )
         for subproject_context in get_sorted_subproject_contexts()
     ]
 
 
-def test_run_all_subproject_security_checks(
-    basic_task_info: BasicTaskInfo,
-) -> None:
+def test_run_all_subproject_security_checks(basic_task_info: BasicTaskInfo) -> None:
     assert is_an_empty_function(
         func=AllSubprojectSecurityChecks(basic_task_info=basic_task_info).run
     )
@@ -232,8 +227,8 @@ def test_run_validate_security_checks(
                     mock_docker_subproject.get_bandit_report_path(),
                     "-r",
                     mock_docker_subproject.get_src_dir(),
-                ],
-            ),
+                ]
+            )
         )
 
 
@@ -265,7 +260,7 @@ def test_run_validate_python_style(basic_task_info: BasicTaskInfo) -> None:
                 get_all_non_test_folders(
                     project_root=basic_task_info.docker_project_root
                 ),
-            ],
+            ]
         )
         ruff_check_test_args = concatenate_args(
             args=[
@@ -279,7 +274,7 @@ def test_run_validate_python_style(basic_task_info: BasicTaskInfo) -> None:
                 "--ignore",
                 "D,FBT",
                 get_all_test_folders(project_root=basic_task_info.docker_project_root),
-            ],
+            ]
         )
         test_style_enforcement_args = concatenate_args(
             args=[
@@ -299,7 +294,7 @@ def test_run_validate_python_style(basic_task_info: BasicTaskInfo) -> None:
                 subprojects[SubprojectContext.BUILD_SUPPORT].get_test_suite_dir(
                     test_suite=PythonSubproject.TestSuite.STYLE_ENFORCEMENT
                 ),
-            ],
+            ]
         )
         all_call_args = [
             ruff_check_src_args,
@@ -307,7 +302,7 @@ def test_run_validate_python_style(basic_task_info: BasicTaskInfo) -> None:
             test_style_enforcement_args,
         ]
         run_process_mock.assert_has_calls(
-            calls=[call(args=args) for args in all_call_args],
+            calls=[call(args=args) for args in all_call_args]
         )
         assert run_process_mock.call_count == len(all_call_args)
 
@@ -315,8 +310,7 @@ def test_run_validate_python_style(basic_task_info: BasicTaskInfo) -> None:
 def test_all_subproject_unit_tests_requires(basic_task_info: BasicTaskInfo) -> None:
     assert AllSubprojectUnitTests(basic_task_info=basic_task_info).required_tasks() == [
         SubprojectUnitTests(
-            basic_task_info=basic_task_info,
-            subproject_context=subproject_context,
+            basic_task_info=basic_task_info, subproject_context=subproject_context
         )
         for subproject_context in get_sorted_subproject_contexts()
     ]
@@ -344,7 +338,7 @@ def test_subproject_unit_tests_requires(
         ).required_tasks() == [SetupDevEnvironment(basic_task_info=basic_task_info)]
 
 
-@pytest.fixture()
+@pytest.fixture
 def _mock_entire_subproject(
     real_project_root_dir: Path,
     subproject_context: SubprojectContext,
@@ -376,8 +370,7 @@ def _recursive_get_conftest_files(current_test_folder: Path) -> Iterator[Path]:
 
 
 def get_all_conftest_files(
-    subproject: PythonSubproject,
-    cache_info_suite: FileCacheEngine.CacheInfoSuite,
+    subproject: PythonSubproject, cache_info_suite: FileCacheEngine.CacheInfoSuite
 ) -> list[Path]:
     """Gets a list of all the conftest files for the relevant suite of cache info.
 
@@ -454,20 +447,15 @@ def test_run_subproject_unit_tests_test_all(
                                 "-m",
                                 "pytest",
                                 test_file,
-                            ],
-                        ),
+                            ]
+                        )
                     )
                 )
                 expected_run_process_calls.append(
                     call(
                         args=concatenate_args(
-                            args=[
-                                docker_command,
-                                "coverage",
-                                "report",
-                                "-m",
-                            ],
-                        ),
+                            args=[docker_command, "coverage", "report", "-m"]
+                        )
                     )
                 )
         if expected_run_process_calls:
@@ -486,7 +474,7 @@ def test_run_subproject_unit_tests_test_all(
                             mock_docker_subproject.get_test_suite_dir(
                                 test_suite=PythonSubproject.TestSuite.UNIT_TESTS
                             ),
-                        ],
+                        ]
                     )
                 )
             )
@@ -497,8 +485,7 @@ def test_run_subproject_unit_tests_test_all(
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "_mock_entire_subproject")
 def test_run_subproject_unit_tests_all_cached(
-    basic_task_info: BasicTaskInfo,
-    subproject_context: SubprojectContext,
+    basic_task_info: BasicTaskInfo, subproject_context: SubprojectContext
 ) -> None:
     cache_engine = FileCacheEngine(
         subproject_context=subproject_context,
@@ -591,20 +578,15 @@ def test_run_subproject_unit_tests_all_cached_but_top_test_conftest_updated(
                                 "-m",
                                 "pytest",
                                 test_file,
-                            ],
-                        ),
+                            ]
+                        )
                     )
                 )
                 expected_run_process_calls.append(
                     call(
                         args=concatenate_args(
-                            args=[
-                                docker_command,
-                                "coverage",
-                                "report",
-                                "-m",
-                            ],
-                        ),
+                            args=[docker_command, "coverage", "report", "-m"]
+                        )
                     )
                 )
         if expected_run_process_calls:
@@ -623,7 +605,7 @@ def test_run_subproject_unit_tests_all_cached_but_top_test_conftest_updated(
                             mock_docker_subproject.get_test_suite_dir(
                                 test_suite=PythonSubproject.TestSuite.UNIT_TESTS
                             ),
-                        ],
+                        ]
                     )
                 )
             )
@@ -678,18 +660,13 @@ def test_run_subproject_unit_tests_some_cached(
                             "-m",
                             "pytest",
                             test_file,
-                        ],
-                    ),
+                        ]
+                    )
                 ),
                 call(
                     args=concatenate_args(
-                        args=[
-                            docker_command,
-                            "coverage",
-                            "report",
-                            "-m",
-                        ],
-                    ),
+                        args=[docker_command, "coverage", "report", "-m"]
+                    )
                 ),
             ]
             mod_ten = file_index % 10
@@ -735,7 +712,7 @@ def test_run_subproject_unit_tests_some_cached(
                         mock_docker_subproject.get_test_suite_dir(
                             test_suite=PythonSubproject.TestSuite.UNIT_TESTS
                         ),
-                    ],
+                    ]
                 )
             )
         )
@@ -754,15 +731,12 @@ def test_run_subproject_unit_tests_some_cached(
         )
 
 
-def test_all_subproject_feature_tests_requires(
-    basic_task_info: BasicTaskInfo,
-) -> None:
+def test_all_subproject_feature_tests_requires(basic_task_info: BasicTaskInfo) -> None:
     assert AllSubprojectFeatureTests(
         basic_task_info=basic_task_info
     ).required_tasks() == [
         SubprojectFeatureTests(
-            basic_task_info=basic_task_info,
-            subproject_context=subproject_context,
+            basic_task_info=basic_task_info, subproject_context=subproject_context
         )
         for subproject_context in get_sorted_subproject_contexts()
     ]
@@ -833,8 +807,7 @@ def test_run_subproject_feature_tests_test_all(
         docker_project_root = basic_task_info.docker_project_root
         non_docker_project_root = basic_task_info.non_docker_project_root
         file_cache = FileCacheEngine(
-            subproject_context=subproject_context,
-            project_root=docker_project_root,
+            subproject_context=subproject_context, project_root=docker_project_root
         )
         feature_test_info = file_cache.get_feature_test_info()
         expected_calls = [
@@ -853,7 +826,7 @@ def test_run_subproject_feature_tests_test_all(
                         ),
                         mock_docker_subproject.get_pytest_feature_test_report_args(),
                         test_file_to_run,
-                    ],
+                    ]
                 )
             )
             for test_file_to_run in feature_test_info.test_files
@@ -882,8 +855,7 @@ def test_run_subproject_feature_tests_in_ci_cd_int_test_mode(
         docker_project_root = basic_task_info.docker_project_root
         non_docker_project_root = basic_task_info.non_docker_project_root
         file_cache = FileCacheEngine(
-            subproject_context=subproject_context,
-            project_root=docker_project_root,
+            subproject_context=subproject_context, project_root=docker_project_root
         )
         feature_test_info = file_cache.get_feature_test_info()
         expected_calls = [
@@ -902,7 +874,7 @@ def test_run_subproject_feature_tests_in_ci_cd_int_test_mode(
                         ),
                         mock_docker_subproject.get_pytest_feature_test_report_args(),
                         test_file_to_run,
-                    ],
+                    ]
                 )
             )
             for test_file_to_run in feature_test_info.test_files
@@ -998,7 +970,7 @@ def test_run_subproject_feature_tests_all_cached_but_top_test_conftest_updated(
                         ),
                         mock_docker_subproject.get_pytest_feature_test_report_args(),
                         test_file_to_run,
-                    ],
+                    ]
                 )
             )
             for test_file_to_run in feature_test_info.test_files
@@ -1061,7 +1033,7 @@ def test_run_subproject_feature_tests_some_cached(
                         ),
                         mock_docker_subproject.get_pytest_feature_test_report_args(),
                         test_file_to_run,
-                    ],
+                    ]
                 )
             )
             for test_file_to_run in feature_test_info.test_files[1:]
@@ -1130,7 +1102,7 @@ def test_run_subproject_feature_tests_one_src_updated(
                         ),
                         mock_docker_subproject.get_pytest_feature_test_report_args(),
                         test_file_to_run,
-                    ],
+                    ]
                 )
             )
             for test_file_to_run in feature_test_info.test_files

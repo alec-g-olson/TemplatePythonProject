@@ -35,19 +35,19 @@ def local_id_pairs(request: SubRequest) -> tuple[int, int]:
     return cast(tuple[int, int], request.param)
 
 
-@pytest.fixture()
+@pytest.fixture
 def local_uid(local_id_pairs: tuple[int, int]) -> int:
     """The uid of the local user."""
     return local_id_pairs[0]
 
 
-@pytest.fixture()
+@pytest.fixture
 def local_gid(local_id_pairs: tuple[int, int]) -> int:
     """The gid of the local user."""
     return local_id_pairs[1]
 
 
-@pytest.fixture()
+@pytest.fixture
 def local_user_env(local_uid: int, local_gid: int) -> dict[str, str] | None:
     if local_uid or local_gid:
         env = environ.copy()
@@ -56,7 +56,7 @@ def local_user_env(local_uid: int, local_gid: int) -> dict[str, str] | None:
     return None
 
 
-@pytest.fixture()
+@pytest.fixture
 def basic_task_info(
     mock_project_root: Path,
     docker_project_root: Path,
@@ -74,22 +74,21 @@ def basic_task_info(
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def pyproject_toml_data(project_version: str, project_name: str) -> dict[Any, Any]:
     """The dictionary that would be read from the pyproject toml."""
     return {"tool": {"poetry": {"name": project_name, "version": project_version}}}
 
 
-@pytest.fixture()
+@pytest.fixture
 def pyproject_toml_contents(project_version: str, project_name: str) -> str:
     """The contents of a pyproject toml to be used in testing."""
     return f'[tool.poetry]\nname = "{project_name}"\nversion = "{project_version}"'
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_local_pyproject_toml_file(
-    pyproject_toml_contents: str,
-    mock_project_root: Path,
+    pyproject_toml_contents: str, mock_project_root: Path
 ) -> Path:
     """Creates a mock pyproject toml file for use in testing."""
     mock_pyproject_toml_file = get_pyproject_toml(project_root=mock_project_root)
@@ -97,10 +96,9 @@ def mock_local_pyproject_toml_file(
     return mock_pyproject_toml_file
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_docker_pyproject_toml_file(
-    pyproject_toml_contents: str,
-    docker_project_root: Path,
+    pyproject_toml_contents: str, docker_project_root: Path
 ) -> Path:
     """Creates a mock pyproject toml file for use in testing."""
     mock_pyproject_toml_file = get_pyproject_toml(project_root=docker_project_root)
@@ -118,7 +116,7 @@ def pulumi_version(request: SubRequest) -> str:
     return cast(str, request.param)
 
 
-@pytest.fixture()
+@pytest.fixture
 def poetry_lock_contents(pulumi_version: str) -> str:
     """The contents of a pyproject toml to be used in testing."""
     return (
@@ -127,10 +125,9 @@ def poetry_lock_contents(pulumi_version: str) -> str:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_local_poetry_lock_file(
-    poetry_lock_contents: str,
-    mock_project_root: Path,
+    poetry_lock_contents: str, mock_project_root: Path
 ) -> Path:
     """Creates a mock pyproject toml file for use in testing."""
     mock_poetry_lock_file = get_poetry_lock_file(project_root=mock_project_root)
@@ -138,10 +135,9 @@ def mock_local_poetry_lock_file(
     return mock_poetry_lock_file
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_docker_poetry_lock_file(
-    poetry_lock_contents: str,
-    docker_project_root: Path,
+    poetry_lock_contents: str, docker_project_root: Path
 ) -> Path:
     """Creates a mock pyproject toml file for use in testing."""
     mock_poetry_lock_file = get_poetry_lock_file(project_root=docker_project_root)

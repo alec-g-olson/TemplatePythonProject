@@ -1,4 +1,4 @@
-from typing import Callable
+from collections.abc import Callable
 
 
 def empty_function() -> None:  # pragma: no cov, exists only for return bytecode

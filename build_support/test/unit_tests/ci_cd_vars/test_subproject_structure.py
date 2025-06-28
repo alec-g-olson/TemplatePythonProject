@@ -272,7 +272,7 @@ def test_get_pytest_feature_test_report_args(mock_subproject: PythonSubproject) 
         test_scope=PythonSubproject.TestScope.SINGLE_FILE,
     )
     assert mock_subproject.get_pytest_feature_test_report_args() == [
-        f"--junitxml={report_path}",
+        f"--junitxml={report_path}"
     ]
 
 
@@ -322,10 +322,7 @@ def test_get_all_python_subprojects_with_src(mock_project_root: Path) -> None:
 
 
 def test_get_all_python_subprojects_with_test(mock_project_root: Path) -> None:
-    context_to_add_test_for = [
-        SubprojectContext.PYPI,
-        SubprojectContext.BUILD_SUPPORT,
-    ]
+    context_to_add_test_for = [SubprojectContext.PYPI, SubprojectContext.BUILD_SUPPORT]
     subproject_dict = get_all_python_subprojects_dict(project_root=mock_project_root)
     for subproject_context in context_to_add_test_for:
         test_dir = subproject_dict[subproject_context].get_test_dir()

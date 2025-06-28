@@ -53,8 +53,7 @@ def parse_args(args: list[str] | None = None) -> Namespace:
     parser.add_argument(
         "--ci-cd-feature-test-mode",
         action="store_true",
-        help="Set to true when running CI/CD feature tests to avoid recursive "
-        "testing.",
+        help="Set to true when running CI/CD feature tests to avoid recursive testing.",
     )
     return parser.parse_args(args=args)
 
