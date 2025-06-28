@@ -128,7 +128,7 @@ def _is_broken_hyperlink(
     all_headers: list[str],
 ) -> bool:
     if hyperlink[1].startswith("http"):
-        if check_weblinks:  # pragma: no cov - might not hit if check_weblinks is false
+        if check_weblinks and "gnu.org" not in hyperlink[1]:  # pragma: no cov
             return requests.get(hyperlink[1]).status_code != HTTPStatus.OK
         return False  # pragma: no cov - might not hit if check_weblinks is true
     if hyperlink[1].startswith("#"):

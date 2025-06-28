@@ -110,19 +110,31 @@ def mock_lightweight_project_copy(
 
 @pytest.fixture
 def mock_lightweight_project(
+    docker_project_root: Path,
     mock_project_root: Path,
     mock_remote_git_repo: Repo,
     mock_lightweight_project_copy: Path,
 ) -> Repo:
+    if mock_project_root.exists():
+        remove_dir_and_all_contents(path=mock_project_root)
+
     monkeypatch_git_python_execute_kwargs()
     remote_repo_url = str(mock_remote_git_repo.working_dir)
     repo = Repo.clone_from(url=remote_repo_url, to_path=mock_project_root)
     repo.remote().push()
 
+    # Configure Git to trust the repository directory
+    repo.git.config("--global", "--add", "safe.directory", str(mock_project_root))
+    repo.git.config("--global", "--add", "safe.directory", str(docker_project_root))
+
     # Copy everything from the cached lightweight project copy
-    if mock_project_root.exists():
-        remove_dir_and_all_contents(path=mock_project_root)
-    shutil.copytree(src=mock_lightweight_project_copy, dst=mock_project_root)
+    for file_or_folder in mock_lightweight_project_copy.iterdir():
+        if file_or_folder.name != ".git":  # Don't overwrite the .git directory
+            dest = mock_project_root.joinpath(file_or_folder.name)
+            if file_or_folder.is_dir():
+                shutil.copytree(src=file_or_folder, dst=dest)
+            else:
+                shutil.copy2(src=file_or_folder, dst=dest)
 
     # Commit the lightweight project to git
     repo.git.add(update=True)

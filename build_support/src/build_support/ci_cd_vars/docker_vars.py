@@ -149,6 +149,8 @@ def get_base_docker_command_for_image(
             "docker",
             "run",
             "--rm",
+            "--network",
+            "host",
             f"--workdir={docker_project_root.absolute()}",
             "-e",
             get_python_path_env(
