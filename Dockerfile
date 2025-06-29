@@ -70,7 +70,6 @@ RUN poetry install --no-root --with build
 
 FROM docker_enabled AS dev
 
-RUN apt install -y ca-certificates
 RUN poetry install --no-root --with dev --with build --with pulumi
 
 FROM base AS prod

@@ -1,5 +1,7 @@
 [tool.coverage.run]
 branch = true
+parallel = true
+concurrency = ["multiprocessing", "thread"]
 
 [tool.coverage.report]
 fail_under = 100

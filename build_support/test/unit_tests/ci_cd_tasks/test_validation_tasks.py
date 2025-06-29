@@ -435,26 +435,22 @@ def test_run_subproject_unit_tests_test_all(
         expected_run_process_calls = []
         for unit_test_info in cache_engine.get_unit_test_info():
             for src_file, test_file in unit_test_info.src_test_file_pairs:
+                src_module = SubprojectUnitTests.get_module_from_path(
+                    src_file_path=src_file, subproject=mock_docker_subproject
+                )
                 expected_run_process_calls.append(
                     call(
                         args=concatenate_args(
                             args=[
                                 docker_command,
-                                "coverage",
-                                "run",
-                                "--include",
-                                src_file,
-                                "-m",
                                 "pytest",
+                                "-n",
+                                THREADS_AVAILABLE,
+                                "--cov-report",
+                                "term-missing",
+                                f"--cov={src_module}",
                                 test_file,
                             ]
-                        )
-                    )
-                )
-                expected_run_process_calls.append(
-                    call(
-                        args=concatenate_args(
-                            args=[docker_command, "coverage", "report", "-m"]
                         )
                     )
                 )
@@ -478,9 +474,7 @@ def test_run_subproject_unit_tests_test_all(
                     )
                 )
             )
-        run_process_mock.assert_has_calls(
-            calls=expected_run_process_calls, any_order=True
-        )
+        assert run_process_mock.mock_calls == expected_run_process_calls
 
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "_mock_entire_subproject")
@@ -495,15 +489,15 @@ def test_run_subproject_unit_tests_all_cached(
     for conftest_file in get_all_conftest_files(
         subproject=cache_engine.subproject, cache_info_suite=cache_info_suite
     ):
-        cache_engine.file_has_been_changed(
+        cache_engine.update_file_timestamp(
             file_path=conftest_file, cache_info_suite=cache_info_suite
         )
     for unit_test_info in cache_engine.get_unit_test_info():
         for src_file, test_file in unit_test_info.src_test_file_pairs:
-            cache_engine.file_has_been_changed(
+            cache_engine.update_file_timestamp(
                 file_path=src_file, cache_info_suite=cache_info_suite
             )
-            cache_engine.file_has_been_changed(
+            cache_engine.update_file_timestamp(
                 file_path=test_file, cache_info_suite=cache_info_suite
             )
     cache_engine.write_text()
@@ -533,15 +527,15 @@ def test_run_subproject_unit_tests_all_cached_but_top_test_conftest_updated(
     for conftest_file in get_all_conftest_files(
         subproject=mock_docker_subproject, cache_info_suite=cache_info_suite
     ):
-        cache_engine.file_has_been_changed(
+        cache_engine.update_file_timestamp(
             file_path=conftest_file, cache_info_suite=cache_info_suite
         )
     for unit_test_info in cache_engine.get_unit_test_info():
         for src_file, test_file in unit_test_info.src_test_file_pairs:
-            cache_engine.file_has_been_changed(
+            cache_engine.update_file_timestamp(
                 file_path=src_file, cache_info_suite=cache_info_suite
             )
-            cache_engine.file_has_been_changed(
+            cache_engine.update_file_timestamp(
                 file_path=test_file, cache_info_suite=cache_info_suite
             )
     cache_engine.write_text()
@@ -566,26 +560,22 @@ def test_run_subproject_unit_tests_all_cached_but_top_test_conftest_updated(
         expected_run_process_calls = []
         for unit_test_info in cache_engine.get_unit_test_info():
             for src_file, test_file in unit_test_info.src_test_file_pairs:
+                src_module = SubprojectUnitTests.get_module_from_path(
+                    src_file_path=src_file, subproject=mock_docker_subproject
+                )
                 expected_run_process_calls.append(
                     call(
                         args=concatenate_args(
                             args=[
                                 docker_command,
-                                "coverage",
-                                "run",
-                                "--include",
-                                src_file,
-                                "-m",
                                 "pytest",
+                                "-n",
+                                THREADS_AVAILABLE,
+                                "--cov-report",
+                                "term-missing",
+                                f"--cov={src_module}",
                                 test_file,
                             ]
-                        )
-                    )
-                )
-                expected_run_process_calls.append(
-                    call(
-                        args=concatenate_args(
-                            args=[docker_command, "coverage", "report", "-m"]
                         )
                     )
                 )
@@ -609,9 +599,7 @@ def test_run_subproject_unit_tests_all_cached_but_top_test_conftest_updated(
                     )
                 )
             )
-        run_process_mock.assert_has_calls(
-            calls=expected_run_process_calls, any_order=True
-        )
+        assert run_process_mock.mock_calls == expected_run_process_calls
 
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "_mock_entire_subproject")
@@ -631,67 +619,59 @@ def test_run_subproject_unit_tests_some_cached(
         target_image=DockerTarget.DEV,
     )
     cache_both_src_and_test = 0
-    cache_both_src = 1
-    cache_both_test = 2
-    cache_engine = FileCacheEngine(
-        subproject_context=subproject_context,
-        project_root=basic_task_info.docker_project_root,
-    )
+    cache_src = 1
+    cache_test = 2
     file_index = 0
     cache_info_suite = FileCacheEngine.CacheInfoSuite.UNIT_TEST
     for conftest_file in get_all_conftest_files(
-        subproject=cache_engine.subproject, cache_info_suite=cache_info_suite
+        subproject=file_cache.subproject, cache_info_suite=cache_info_suite
     ):
         # testing a scenario where no conftest files have been updated
-        cache_engine.file_has_been_changed(
+        file_cache.update_file_timestamp(
             file_path=conftest_file, cache_info_suite=cache_info_suite
         )
-    for unit_test_info in cache_engine.get_unit_test_info():
+    for unit_test_info in file_cache.get_unit_test_info():
         for src_file, test_file in unit_test_info.src_test_file_pairs:
-            pair_run_process_calls = [
-                call(
-                    args=concatenate_args(
-                        args=[
-                            docker_command,
-                            "coverage",
-                            "run",
-                            "--include",
-                            src_file,
-                            "-m",
-                            "pytest",
-                            test_file,
-                        ]
-                    )
-                ),
-                call(
-                    args=concatenate_args(
-                        args=[docker_command, "coverage", "report", "-m"]
-                    )
-                ),
-            ]
+            src_module = SubprojectUnitTests.get_module_from_path(
+                src_file_path=src_file, subproject=mock_docker_subproject
+            )
+            run_process_call = call(
+                args=concatenate_args(
+                    args=[
+                        docker_command,
+                        "pytest",
+                        "-n",
+                        THREADS_AVAILABLE,
+                        "--cov-report",
+                        "term-missing",
+                        f"--cov={src_module}",
+                        test_file,
+                    ]
+                )
+            )
             mod_ten = file_index % 10
             if mod_ten == cache_both_src_and_test:
                 # both src and test are cached skip testing pair of files
-                file_cache.file_has_been_changed(
+                file_cache.update_file_timestamp(
                     file_path=src_file, cache_info_suite=cache_info_suite
                 )
-                file_cache.file_has_been_changed(
+                file_cache.update_file_timestamp(
                     file_path=test_file, cache_info_suite=cache_info_suite
                 )
-            elif mod_ten == cache_both_src:
+            elif mod_ten == cache_src:
                 # cache src but not test, testing needs to happen
-                file_cache.file_has_been_changed(
+                file_cache.update_file_timestamp(
                     file_path=src_file, cache_info_suite=cache_info_suite
                 )
-                expected_run_process_calls.extend(pair_run_process_calls)
-            elif mod_ten == cache_both_test:
+                expected_run_process_calls.append(run_process_call)
+            elif mod_ten == cache_test:
                 # cache test but not src, testing needs to happen
-                file_cache.file_has_been_changed(
+                file_cache.update_file_timestamp(
                     file_path=test_file, cache_info_suite=cache_info_suite
                 )
-                expected_run_process_calls.extend(pair_run_process_calls)
+                expected_run_process_calls.append(run_process_call)
             else:
-                expected_run_process_calls.extend(pair_run_process_calls)
+                expected_run_process_calls.append(run_process_call)
             file_index += 1
     file_cache.write_text()
     # This is needed for now because INFRA only has one file and therefore
@@ -726,9 +706,7 @@ def test_run_subproject_unit_tests_some_cached(
         SubprojectUnitTests(
             basic_task_info=basic_task_info, subproject_context=subproject_context
         ).run()
-        run_process_mock.assert_has_calls(
-            calls=expected_run_process_calls, any_order=True
-        )
+        assert run_process_mock.mock_calls == expected_run_process_calls
 
 
 def test_all_subproject_feature_tests_requires(basic_task_info: BasicTaskInfo) -> None:
@@ -904,7 +882,7 @@ def test_run_subproject_feature_tests_all_cached(
             cache_info_suite=FileCacheEngine.CacheInfoSuite.FEATURE_TEST,
         ),
     ):
-        file_cache.file_has_been_changed(
+        file_cache.update_file_timestamp(
             file_path=file, cache_info_suite=FileCacheEngine.CacheInfoSuite.FEATURE_TEST
         )
     file_cache.write_text()
@@ -936,7 +914,7 @@ def test_run_subproject_feature_tests_all_cached_but_top_test_conftest_updated(
             cache_info_suite=FileCacheEngine.CacheInfoSuite.FEATURE_TEST,
         ),
     ):
-        file_cache.file_has_been_changed(
+        file_cache.update_file_timestamp(
             file_path=file, cache_info_suite=FileCacheEngine.CacheInfoSuite.FEATURE_TEST
         )
     file_cache.write_text()
@@ -1003,7 +981,7 @@ def test_run_subproject_feature_tests_some_cached(
             cache_info_suite=FileCacheEngine.CacheInfoSuite.FEATURE_TEST,
         ),
     ):
-        file_cache.file_has_been_changed(
+        file_cache.update_file_timestamp(
             file_path=file, cache_info_suite=FileCacheEngine.CacheInfoSuite.FEATURE_TEST
         )
     file_cache.write_text()
@@ -1068,7 +1046,7 @@ def test_run_subproject_feature_tests_one_src_updated(
             cache_info_suite=FileCacheEngine.CacheInfoSuite.FEATURE_TEST,
         ),
     ):
-        file_cache.file_has_been_changed(
+        file_cache.update_file_timestamp(
             file_path=file, cache_info_suite=FileCacheEngine.CacheInfoSuite.FEATURE_TEST
         )
     file_cache.write_text()

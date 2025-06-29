@@ -1,5 +1,6 @@
 """Should hold all tasks that run tests, both on artifacts and style tests."""
 
+from pathlib import Path
 from typing import override
 
 from junitparser import JUnitXml
@@ -26,7 +27,11 @@ from build_support.ci_cd_vars.subproject_structure import (
     get_python_subproject,
     get_sorted_subproject_contexts,
 )
-from build_support.file_caching import FileCacheEngine, ParentConftestStatus
+from build_support.file_caching import (
+    FileCacheEngine,
+    ParentConftestStatus,
+    get_corresponding_unit_test_folder_for_src_folder,
+)
 from build_support.process_runner import concatenate_args, run_process
 
 
@@ -357,6 +362,22 @@ class AllSubprojectUnitTests(TaskNode):
 class SubprojectUnitTests(PerSubprojectTask):
     """Task for running unit tests in a single subproject."""
 
+    @staticmethod
+    def get_module_from_path(src_file_path: Path, subproject: PythonSubproject) -> str:
+        """Gets the module name from a path.
+
+        Args:
+            src_file_path (Path): The path to the source file.
+            subproject (PythonSubproject): The subproject the source file is in.
+
+        Returns:
+            str: The module name.
+        """
+        src_root = subproject.get_src_dir()
+        relative_path = src_file_path.relative_to(src_root)
+        relative_path_ext_stripped = relative_path.with_suffix("")
+        return ".".join(relative_path_ext_stripped.parts)
+
     @override
     def required_tasks(self) -> list[TaskNode]:
         """Get the list of tasks to run before we can unit test the subproject.
@@ -392,13 +413,17 @@ class SubprojectUnitTests(PerSubprojectTask):
         src_files_checked = 0
         for unit_test_info in file_cache.get_unit_test_info():
             for src_file, test_file in unit_test_info.src_test_file_pairs:
-                src_changed = file_cache.file_has_been_changed(
-                    file_path=src_file,
-                    cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
+                src_changed = (
+                    file_cache.file_has_been_changed_since_last_timestamp_update(
+                        file_path=src_file,
+                        cache_info_suite=FileCacheEngine.CacheInfoSuite.SRC_FILE,
+                    )
                 )
-                test_changed = file_cache.file_has_been_changed(
-                    file_path=test_file,
-                    cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
+                test_changed = (
+                    file_cache.file_has_been_changed_since_last_timestamp_update(
+                        file_path=test_file,
+                        cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
+                    )
                 )
                 if (
                     src_changed
@@ -407,24 +432,27 @@ class SubprojectUnitTests(PerSubprojectTask):
                     == ParentConftestStatus.UPDATED
                 ):
                     src_files_checked += 1
+                    src_module = SubprojectUnitTests.get_module_from_path(
+                        src_file_path=src_file, subproject=self.subproject
+                    )
                     run_process(
                         args=concatenate_args(
                             args=[
                                 dev_docker_command,
-                                "coverage",
-                                "run",
-                                "--include",
-                                src_file,
-                                "-m",
                                 "pytest",
+                                "-n",
+                                THREADS_AVAILABLE,
+                                "--cov-report",
+                                "term-missing",
+                                f"--cov={src_module}",
                                 test_file,
                             ]
                         )
                     )
-                    run_process(
-                        args=concatenate_args(
-                            args=[dev_docker_command, "coverage", "report", "-m"]
-                        )
+                    # Record that the test passed
+                    file_cache.update_test_pass_timestamp(
+                        file_path=test_file,
+                        cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST_PASS,
                     )
                 file_cache.write_text()
         if src_files_checked:
@@ -445,6 +473,9 @@ class SubprojectUnitTests(PerSubprojectTask):
                     ]
                 )
             )
+
+            # Conftest and file timestamps are already updated by get_unit_test_info()
+            file_cache.write_text()
 
 
 class AllSubprojectFeatureTests(TaskNode):
@@ -531,24 +562,49 @@ class SubprojectFeatureTests(PerSubprojectTask):
             feature_test_info.conftest_or_parent_conftest_was_updated
             == ParentConftestStatus.UPDATED
             or any(
-                file_cache.file_has_been_changed(
+                file_cache.file_has_been_changed_since_last_timestamp_update(
                     file_path=src_file,
-                    cache_info_suite=FileCacheEngine.CacheInfoSuite.FEATURE_TEST,
+                    cache_info_suite=FileCacheEngine.CacheInfoSuite.SRC_FILE,
                 )
                 for src_file in feature_test_info.src_files
             )
         )
+        print("----------------------------------")  # noqa: T201
+        print(feature_test_info.conftest_or_parent_conftest_was_updated)  # noqa: T201
+        print(  # noqa: T201
+            any(
+                file_cache.file_has_been_changed_since_last_timestamp_update(
+                    file_path=src_file,
+                    cache_info_suite=FileCacheEngine.CacheInfoSuite.SRC_FILE,
+                )
+                for src_file in feature_test_info.src_files
+            )
+        )
+        for src_file in feature_test_info.src_files:
+            updated = file_cache.file_has_been_changed_since_last_timestamp_update(
+                file_path=src_file,
+                cache_info_suite=FileCacheEngine.CacheInfoSuite.SRC_FILE,
+            )
+            print(f"{updated}: {src_file}")  # noqa: T201
+        print(run_all)  # noqa: T201
+        print("----------------------------------")  # noqa: T201
         if run_all:
             test_files_to_run = sorted(feature_test_info.test_files)
         else:
             test_files_to_run = sorted(
                 test_file
                 for test_file in feature_test_info.test_files
-                if file_cache.file_has_been_changed(
+                if file_cache.file_has_been_changed_since_last_timestamp_update(
                     file_path=test_file,
                     cache_info_suite=FileCacheEngine.CacheInfoSuite.FEATURE_TEST,
                 )
             )
+        print("----------------------------------")  # noqa: T201
+        print("Running:")  # noqa: T201
+        for test_file in test_files_to_run:
+            print(test_file)  # noqa: T201
+        print(test_files_to_run)  # noqa: T201
+        print("----------------------------------")  # noqa: T201
         test_suite = PythonSubproject.TestSuite.FEATURE_TESTS
         complete_xml_path = self.subproject.get_pytest_report_path(
             test_suite=test_suite, test_scope=PythonSubproject.TestScope.COMPLETE
@@ -585,8 +641,41 @@ class SubprojectFeatureTests(PerSubprojectTask):
                     incomplete_xml_results.write()
                 else:
                     single_file_xml_path.rename(incomplete_xml_path)
+                # Record that the feature test passed
+                file_cache.update_test_pass_timestamp(
+                    file_path=test_file_to_run,
+                    cache_info_suite=FileCacheEngine.CacheInfoSuite.FEATURE_TEST_PASS,
+                )
                 file_cache.write_text()
             incomplete_xml_path.rename(complete_xml_path)
+
+            # Update source file timestamps after successful feature test run
+            for src_file in feature_test_info.src_files:
+                file_cache.update_file_timestamp(
+                    file_path=src_file,
+                    cache_info_suite=FileCacheEngine.CacheInfoSuite.SRC_FILE,
+                )
+
+            # Update conftest files after successful feature test run
+            top_level_conftest = self.subproject.get_test_dir().joinpath("conftest.py")
+            if top_level_conftest.exists():
+                file_cache.update_file_timestamp(
+                    file_path=top_level_conftest,
+                    cache_info_suite=FileCacheEngine.CacheInfoSuite.CONFTEST,
+                )
+
+            feature_test_dir = self.subproject.get_test_suite_dir(
+                test_suite=PythonSubproject.TestSuite.FEATURE_TESTS
+            )
+            feature_test_conftest = feature_test_dir.joinpath("conftest.py")
+            if feature_test_conftest.exists():
+                file_cache.update_file_timestamp(
+                    file_path=feature_test_conftest,
+                    cache_info_suite=FileCacheEngine.CacheInfoSuite.CONFTEST,
+                )
+
+            file_cache.write_text()
+
         if (
             incomplete_xml_path.exists() and not complete_xml_path.exists()
         ):  # pragma: no cov
