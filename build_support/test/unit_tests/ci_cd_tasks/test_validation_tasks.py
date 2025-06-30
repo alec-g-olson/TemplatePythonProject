@@ -401,7 +401,7 @@ def get_all_conftest_files(
             )
         )
     else:  # pragma: no cov - will only hit if enum not covered
-        msg = f"{cache_info_suite.__name__} is not a supported type."
+        msg = f"{cache_info_suite.value} is not a supported type."
         raise ValueError(msg)
     return files
 
@@ -433,27 +433,27 @@ def test_run_subproject_unit_tests_test_all(
             target_image=DockerTarget.DEV,
         )
         expected_run_process_calls = []
-        for unit_test_info in cache_engine.get_unit_test_info():
-            for src_file, test_file in unit_test_info.src_test_file_pairs:
-                src_module = SubprojectUnitTests.get_module_from_path(
-                    src_file_path=src_file, subproject=mock_docker_subproject
-                )
-                expected_run_process_calls.append(
-                    call(
-                        args=concatenate_args(
-                            args=[
-                                docker_command,
-                                "pytest",
-                                "-n",
-                                THREADS_AVAILABLE,
-                                "--cov-report",
-                                "term-missing",
-                                f"--cov={src_module}",
-                                test_file,
-                            ]
-                        )
+        for unit_test_info in cache_engine.get_unit_tests_to_run():
+            src_module = SubprojectUnitTests.get_module_from_path(
+                src_file_path=unit_test_info.src_file_path,
+                subproject=mock_docker_subproject,
+            )
+            expected_run_process_calls.append(
+                call(
+                    args=concatenate_args(
+                        args=[
+                            docker_command,
+                            "pytest",
+                            "-n",
+                            THREADS_AVAILABLE,
+                            "--cov-report",
+                            "term-missing",
+                            f"--cov={src_module}",
+                            unit_test_info.test_file_path,
+                        ]
                     )
                 )
+            )
         if expected_run_process_calls:
             expected_run_process_calls.append(
                 call(
@@ -492,14 +492,13 @@ def test_run_subproject_unit_tests_all_cached(
         cache_engine.update_file_timestamp(
             file_path=conftest_file, cache_info_suite=cache_info_suite
         )
-    for unit_test_info in cache_engine.get_unit_test_info():
-        for src_file, test_file in unit_test_info.src_test_file_pairs:
-            cache_engine.update_file_timestamp(
-                file_path=src_file, cache_info_suite=cache_info_suite
-            )
-            cache_engine.update_file_timestamp(
-                file_path=test_file, cache_info_suite=cache_info_suite
-            )
+    for unit_test_info in cache_engine.get_unit_tests_to_run():
+        cache_engine.update_file_timestamp(
+            file_path=unit_test_info.src_file_path, cache_info_suite=cache_info_suite
+        )
+        cache_engine.update_file_timestamp(
+            file_path=unit_test_info.test_file_path, cache_info_suite=cache_info_suite
+        )
     cache_engine.write_text()
     # Everything above this line makes it so that there is unit test cache file
     # that has all files in it up to date.  This should make it so that no tests are
@@ -530,14 +529,13 @@ def test_run_subproject_unit_tests_all_cached_but_top_test_conftest_updated(
         cache_engine.update_file_timestamp(
             file_path=conftest_file, cache_info_suite=cache_info_suite
         )
-    for unit_test_info in cache_engine.get_unit_test_info():
-        for src_file, test_file in unit_test_info.src_test_file_pairs:
-            cache_engine.update_file_timestamp(
-                file_path=src_file, cache_info_suite=cache_info_suite
-            )
-            cache_engine.update_file_timestamp(
-                file_path=test_file, cache_info_suite=cache_info_suite
-            )
+    for unit_test_info in cache_engine.get_unit_tests_to_run():
+        cache_engine.update_file_timestamp(
+            file_path=unit_test_info.src_file_path, cache_info_suite=cache_info_suite
+        )
+        cache_engine.update_file_timestamp(
+            file_path=unit_test_info.test_file_path, cache_info_suite=cache_info_suite
+        )
     cache_engine.write_text()
     sleep(10 / 1000)  # sleep just long enough for a new timestamp when writing file
     mock_docker_subproject.get_test_dir().joinpath(
@@ -558,27 +556,27 @@ def test_run_subproject_unit_tests_all_cached_but_top_test_conftest_updated(
             target_image=DockerTarget.DEV,
         )
         expected_run_process_calls = []
-        for unit_test_info in cache_engine.get_unit_test_info():
-            for src_file, test_file in unit_test_info.src_test_file_pairs:
-                src_module = SubprojectUnitTests.get_module_from_path(
-                    src_file_path=src_file, subproject=mock_docker_subproject
-                )
-                expected_run_process_calls.append(
-                    call(
-                        args=concatenate_args(
-                            args=[
-                                docker_command,
-                                "pytest",
-                                "-n",
-                                THREADS_AVAILABLE,
-                                "--cov-report",
-                                "term-missing",
-                                f"--cov={src_module}",
-                                test_file,
-                            ]
-                        )
+        for unit_test_info in cache_engine.get_unit_tests_to_run():
+            src_module = SubprojectUnitTests.get_module_from_path(
+                src_file_path=unit_test_info.src_file_path,
+                subproject=mock_docker_subproject,
+            )
+            expected_run_process_calls.append(
+                call(
+                    args=concatenate_args(
+                        args=[
+                            docker_command,
+                            "pytest",
+                            "-n",
+                            THREADS_AVAILABLE,
+                            "--cov-report",
+                            "term-missing",
+                            f"--cov={src_module}",
+                            unit_test_info.test_file_path,
+                        ]
                     )
                 )
+            )
         if expected_run_process_calls:
             expected_run_process_calls.append(
                 call(
@@ -621,7 +619,6 @@ def test_run_subproject_unit_tests_some_cached(
     cache_both_src_and_test = 0
     cache_src = 1
     cache_test = 2
-    file_index = 0
     cache_info_suite = FileCacheEngine.CacheInfoSuite.UNIT_TEST
     for conftest_file in get_all_conftest_files(
         subproject=file_cache.subproject, cache_info_suite=cache_info_suite
@@ -630,49 +627,52 @@ def test_run_subproject_unit_tests_some_cached(
         file_cache.update_file_timestamp(
             file_path=conftest_file, cache_info_suite=cache_info_suite
         )
-    for unit_test_info in file_cache.get_unit_test_info():
-        for src_file, test_file in unit_test_info.src_test_file_pairs:
-            src_module = SubprojectUnitTests.get_module_from_path(
-                src_file_path=src_file, subproject=mock_docker_subproject
+    for file_index, unit_test_info in enumerate(file_cache.get_unit_tests_to_run()):
+        src_module = SubprojectUnitTests.get_module_from_path(
+            src_file_path=unit_test_info.src_file_path,
+            subproject=mock_docker_subproject,
+        )
+        run_process_call = call(
+            args=concatenate_args(
+                args=[
+                    docker_command,
+                    "pytest",
+                    "-n",
+                    THREADS_AVAILABLE,
+                    "--cov-report",
+                    "term-missing",
+                    f"--cov={src_module}",
+                    unit_test_info.test_file_path,
+                ]
             )
-            run_process_call = call(
-                args=concatenate_args(
-                    args=[
-                        docker_command,
-                        "pytest",
-                        "-n",
-                        THREADS_AVAILABLE,
-                        "--cov-report",
-                        "term-missing",
-                        f"--cov={src_module}",
-                        test_file,
-                    ]
-                )
+        )
+        mod_ten = file_index % 10
+        if mod_ten == cache_both_src_and_test:
+            # both src and test are cached skip testing pair of files
+            file_cache.update_file_timestamp(
+                file_path=unit_test_info.src_file_path,
+                cache_info_suite=cache_info_suite,
             )
-            mod_ten = file_index % 10
-            if mod_ten == cache_both_src_and_test:
-                # both src and test are cached skip testing pair of files
-                file_cache.update_file_timestamp(
-                    file_path=src_file, cache_info_suite=cache_info_suite
-                )
-                file_cache.update_file_timestamp(
-                    file_path=test_file, cache_info_suite=cache_info_suite
-                )
-            elif mod_ten == cache_src:
-                # cache src but not test, testing needs to happen
-                file_cache.update_file_timestamp(
-                    file_path=src_file, cache_info_suite=cache_info_suite
-                )
-                expected_run_process_calls.append(run_process_call)
-            elif mod_ten == cache_test:
-                # cache test but not src, testing needs to happen
-                file_cache.update_file_timestamp(
-                    file_path=test_file, cache_info_suite=cache_info_suite
-                )
-                expected_run_process_calls.append(run_process_call)
-            else:
-                expected_run_process_calls.append(run_process_call)
-            file_index += 1
+            file_cache.update_file_timestamp(
+                file_path=unit_test_info.test_file_path,
+                cache_info_suite=cache_info_suite,
+            )
+        elif mod_ten == cache_src:
+            # cache src but not test, testing needs to happen
+            file_cache.update_file_timestamp(
+                file_path=unit_test_info.src_file_path,
+                cache_info_suite=cache_info_suite,
+            )
+            expected_run_process_calls.append(run_process_call)
+        elif mod_ten == cache_test:
+            # cache test but not src, testing needs to happen
+            file_cache.update_file_timestamp(
+                file_path=unit_test_info.test_file_path,
+                cache_info_suite=cache_info_suite,
+            )
+            expected_run_process_calls.append(run_process_call)
+        else:
+            expected_run_process_calls.append(run_process_call)
     file_cache.write_text()
     # This is needed for now because INFRA only has one file and therefore
     # skipping it skips the report generating test as well

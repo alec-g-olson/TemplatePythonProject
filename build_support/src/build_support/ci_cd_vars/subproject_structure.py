@@ -1,7 +1,7 @@
 """Defines the structure of a python subproject."""
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import Enum, StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -13,7 +13,7 @@ from build_support.ci_cd_vars.project_structure import get_build_dir, maybe_buil
 from build_support.process_runner import concatenate_args
 
 
-class SubprojectContext(Enum):
+class SubprojectContext(StrEnum):
     """An Enum to track the python subprojects with similar structure."""
 
     PYPI = "pypi_package"

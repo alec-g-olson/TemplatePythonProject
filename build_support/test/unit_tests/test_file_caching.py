@@ -284,10 +284,12 @@ def test_update_test_pass_timestamp(
     assert file_in_subproject not in file_cache_engine.cache_data.unit_test_pass_info
     file_cache_engine.update_test_pass_timestamp(
         file_path=file_in_subproject,
-        cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST_PASS,
+        cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST_SUCCESS,
     )
     # Test pass timestamp should be recorded
-    relative_path = file_cache_engine._get_relative_path_to_subproject(file_in_subproject)
+    relative_path = file_cache_engine.get_relative_path_to_subproject(
+        file_in_subproject
+    )
     assert relative_path in file_cache_engine.cache_data.unit_test_pass_info
 
 
@@ -295,7 +297,9 @@ def test_update_test_pass_timestamp_invalid_suite(
     file_cache_engine: FileCacheEngine, file_in_subproject: Path
 ) -> None:
     file_in_subproject.write_text("The contents of a file!")
-    with pytest.raises(ValueError, match="update_test_pass_timestamp only supports pass cache suites"):
+    with pytest.raises(
+        ValueError, match="update_test_pass_timestamp only supports pass cache suites"
+    ):
         file_cache_engine.update_test_pass_timestamp(
             file_path=file_in_subproject,
             cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
@@ -373,78 +377,60 @@ def test_get_unit_test_info(
                     if test_folder.name == "a":
                         file_cache_engine.update_file_timestamp(
                             file_path=conftest,
-                            cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
+                            cache_info_suite=FileCacheEngine.CacheInfoSuite.CONFTEST,
                         )
                 test_folder_added.add(test_folder)
             test_folder.joinpath(f"test_{src_file.name}").touch()
     expected_unit_test_info = [
+        # Root level files
         UnitTestInfo(
-            conftest_or_parent_conftest_was_updated=ParentConftestStatus.NOT_UPDATED,
-            src_test_file_pairs=[
-                (
-                    python_pkg_root_dir.joinpath("file1.py"),
-                    unit_test_root_dir.joinpath("test_file1.py"),
-                ),
-                (
-                    python_pkg_root_dir.joinpath("file2.py"),
-                    unit_test_root_dir.joinpath("test_file2.py"),
-                ),
-            ],
+            src_file_path=python_pkg_root_dir.joinpath("file1.py"),
+            test_file_path=unit_test_root_dir.joinpath("test_file1.py"),
         ),
         UnitTestInfo(
-            conftest_or_parent_conftest_was_updated=ParentConftestStatus.NOT_UPDATED,
-            src_test_file_pairs=[
-                (
-                    python_pkg_root_dir.joinpath("a", "file3.py"),
-                    unit_test_root_dir.joinpath("a", "test_file3.py"),
-                ),
-                (
-                    python_pkg_root_dir.joinpath("a", "file4.py"),
-                    unit_test_root_dir.joinpath("a", "test_file4.py"),
-                ),
-                (
-                    python_pkg_root_dir.joinpath("a", "file5.py"),
-                    unit_test_root_dir.joinpath("a", "test_file5.py"),
-                ),
-            ],
+            src_file_path=python_pkg_root_dir.joinpath("file2.py"),
+            test_file_path=unit_test_root_dir.joinpath("test_file2.py"),
+        ),
+        # Files in 'a' directory
+        UnitTestInfo(
+            src_file_path=python_pkg_root_dir.joinpath("a", "file3.py"),
+            test_file_path=unit_test_root_dir.joinpath("a", "test_file3.py"),
         ),
         UnitTestInfo(
-            conftest_or_parent_conftest_was_updated=ParentConftestStatus.UPDATED,
-            src_test_file_pairs=[
-                (
-                    python_pkg_root_dir.joinpath("a", "b", "file1.py"),
-                    unit_test_root_dir.joinpath("a", "b", "test_file1.py"),
-                ),
-                (
-                    python_pkg_root_dir.joinpath("a", "b", "file2.py"),
-                    unit_test_root_dir.joinpath("a", "b", "test_file2.py"),
-                ),
-            ],
+            src_file_path=python_pkg_root_dir.joinpath("a", "file4.py"),
+            test_file_path=unit_test_root_dir.joinpath("a", "test_file4.py"),
         ),
         UnitTestInfo(
-            conftest_or_parent_conftest_was_updated=ParentConftestStatus.NOT_UPDATED,
-            src_test_file_pairs=[
-                (
-                    python_pkg_root_dir.joinpath("a", "c", "file1.py"),
-                    unit_test_root_dir.joinpath("a", "c", "test_file1.py"),
-                ),
-                (
-                    python_pkg_root_dir.joinpath("a", "c", "file2.py"),
-                    unit_test_root_dir.joinpath("a", "c", "test_file2.py"),
-                ),
-            ],
+            src_file_path=python_pkg_root_dir.joinpath("a", "file5.py"),
+            test_file_path=unit_test_root_dir.joinpath("a", "test_file5.py"),
+        ),
+        # Files in 'a/b' directory (conftest updated)
+        UnitTestInfo(
+            src_file_path=python_pkg_root_dir.joinpath("a", "b", "file1.py"),
+            test_file_path=unit_test_root_dir.joinpath("a", "b", "test_file1.py"),
         ),
         UnitTestInfo(
-            conftest_or_parent_conftest_was_updated=ParentConftestStatus.UPDATED,
-            src_test_file_pairs=[
-                (
-                    python_pkg_root_dir.joinpath("a", "d", "e", "some_file.py"),
-                    unit_test_root_dir.joinpath("a", "d", "e", "test_some_file.py"),
-                )
-            ],
+            src_file_path=python_pkg_root_dir.joinpath("a", "b", "file2.py"),
+            test_file_path=unit_test_root_dir.joinpath("a", "b", "test_file2.py"),
+        ),
+        # Files in 'a/c' directory
+        UnitTestInfo(
+            src_file_path=python_pkg_root_dir.joinpath("a", "c", "file1.py"),
+            test_file_path=unit_test_root_dir.joinpath("a", "c", "test_file1.py"),
+        ),
+        UnitTestInfo(
+            src_file_path=python_pkg_root_dir.joinpath("a", "c", "file2.py"),
+            test_file_path=unit_test_root_dir.joinpath("a", "c", "test_file2.py"),
+        ),
+        # File in 'a/d/e' directory (conftest updated)
+        UnitTestInfo(
+            src_file_path=python_pkg_root_dir.joinpath("a", "d", "e", "some_file.py"),
+            test_file_path=unit_test_root_dir.joinpath(
+                "a", "d", "e", "test_some_file.py"
+            ),
         ),
     ]
-    assert list(file_cache_engine.get_unit_test_info()) == expected_unit_test_info
+    assert list(file_cache_engine.get_unit_tests_to_run()) == expected_unit_test_info
 
 
 def test_get_corresponding_unit_test_folder_for_src_folder(

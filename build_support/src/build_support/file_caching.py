@@ -10,7 +10,7 @@ import re
 from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from enum import Enum
+from enum import Enum, StrEnum
 from pathlib import Path
 
 from pydantic import BaseModel, Field, field_serializer
@@ -22,17 +22,26 @@ from build_support.ci_cd_vars.subproject_structure import (
     get_python_subproject,
 )
 
+class BasicFileInfo(BaseModel):
+    """A dataclass for organizing source file information."""
+
+    file_path: Path
+    updated: datetime
+
+class TestFileInfo(BasicFileInfo):
+    """A dataclass for organizing test file information."""
+
+    tests_passed: datetime
+
 
 class FileCacheInfo(BaseModel):
     """An object containing the cache information for a file."""
 
     subproject_context: SubprojectContext
-    src_file_cache_info: dict[Path, str] = Field(default={})
-    conftest_cache_info: dict[Path, str] = Field(default={})
-    unit_test_cache_info: dict[Path, str] = Field(default={})
-    unit_test_pass_info: dict[Path, str] = Field(default={})
-    feature_test_cache_info: dict[Path, str] = Field(default={})
-    feature_test_pass_info: dict[Path, str] = Field(default={})
+    src_file_cache_info: list[BasicFileInfo] = Field(default=[])
+    conftest_cache_info: list[BasicFileInfo] = Field(default=[])
+    unit_test_cache_info: list[TestFileInfo] = Field(default=[])
+    feature_test_cache_info: list[TestFileInfo] = Field(default=[])
 
     @staticmethod
     def get_file_cache_for(
@@ -55,41 +64,6 @@ class FileCacheInfo(BaseModel):
         if path_to_file_cache.exists():
             return FileCacheInfo.from_yaml(path_to_file_cache.read_text())
         return FileCacheInfo(subproject_context=subproject_context)
-
-    @field_serializer("subproject_context")
-    def serialize_subproject_context_as_str(
-        self, subproject_context: SubprojectContext
-    ) -> str:
-        """A method for serializing subproject context.
-
-        Args:
-            subproject_context (SubprojectContext): The subproject to serialize.
-
-        Returns:
-            str: The string representation of the subproject.
-        """
-        return subproject_context.value
-
-    @field_serializer(
-        "src_file_cache_info",
-        "conftest_cache_info",
-        "unit_test_cache_info",
-        "unit_test_pass_info",
-        "feature_test_cache_info",
-        "feature_test_pass_info"
-    )
-    def serialize_cache_info_paths_as_str(
-        self, cache_info: dict[Path, str]
-    ) -> dict[str, str]:
-        """Serializes the keys of cache info as strings instead of paths.
-
-        Args:
-            cache_info (dict[Path, str]): The cache info.
-
-        Returns:
-            str: A version of the cache info using strings as keys instead of paths.
-        """
-        return {str(path): s for path, s in cache_info.items()}
 
     @classmethod
     def from_yaml(cls, yaml_str: str) -> "FileCacheInfo":
@@ -124,20 +98,11 @@ class ParentConftestStatus(Enum):
 class UnitTestInfo:
     """A dataclass for organizing unit test information."""
 
-    conftest_or_parent_conftest_was_updated: ParentConftestStatus
-    src_test_file_pairs: list[tuple[Path, Path]]
+    src_file_path: Path
+    test_file_path: Path
 
 
 FEATURE_TEST_FILE_NAME_REGEX = re.compile(r"test_.+_.+\.py")
-
-
-@dataclass
-class FeatureTestInfo:
-    """A dataclass for organizing feature test information."""
-
-    conftest_or_parent_conftest_was_updated: ParentConftestStatus
-    src_files: list[Path]
-    test_files: list[Path]
 
 
 class FileCacheEngine:
@@ -148,15 +113,13 @@ class FileCacheEngine:
 
     CONFTEST_NAME = "conftest.py"
 
-    class CacheInfoSuite(Enum):
+    class CacheInfoSuite(StrEnum):
         """An Enum to track the type of cache info being tracked."""
 
         SRC_FILE = "src_file"
         CONFTEST = "conftest"
         UNIT_TEST = "unit_test"
-        UNIT_TEST_PASS = "unit_test_pass"
         FEATURE_TEST = "feature_test"
-        FEATURE_TEST_PASS = "feature_test_pass"
 
     def __init__(
         self, subproject_context: SubprojectContext, project_root: Path
@@ -209,14 +172,49 @@ class FileCacheEngine:
         top_level_conftest = self.subproject.get_test_dir().joinpath(
             FileCacheEngine.CONFTEST_NAME
         )
+        if top_level_conftest.exists():
+            self.update_file_timestamp(
+                file_path=top_level_conftest,
+                cache_info_suite=FileCacheEngine.CacheInfoSuite.CONFTEST,
+            )
         return (
             ParentConftestStatus.UPDATED
             if top_level_conftest.exists()
             and self.file_has_been_changed_since_last_timestamp_update(
-                top_level_conftest, cache_info_suite=FileCacheEngine.CacheInfoSuite.CONFTEST
+                top_level_conftest,
+                cache_info_suite=FileCacheEngine.CacheInfoSuite.CONFTEST,
             )
             else ParentConftestStatus.NOT_UPDATED
         )
+
+    def _yield_unit_test_info_if_appropriate(
+        self,
+        parent_conftest_was_updated: ParentConftestStatus,
+        src_file: Path,
+        test_file: Path,
+    ) -> Iterator[UnitTestInfo]:
+        """A method to yield unit test info if appropriate.
+
+        Args:
+            parent_conftest_was_updated (ParentConftestStatus): Was the parent conftest
+                file updated?
+            src_file (Path): The source file to check.
+            test_file (Path): The test file to check.
+
+        Yields:
+            Iterator[UnitTestInfo]: Generator of unit test info for test caching.
+        """
+        src_relative_path = self.get_relative_path_to_subproject(file_path=src_file)
+        src_updated = self.cache_data.src_file_cache_info[src_relative_path]
+        test_relative_path = self.get_relative_path_to_subproject(file_path=test_file)
+        test_passed = self.cache_data.unit_test_pass_info[test_relative_path]
+        test_updated = self.cache_data.unit_test_cache_info[test_relative_path]
+        if (
+            test_passed < src_updated
+            or test_passed < test_updated
+            or parent_conftest_was_updated == ParentConftestStatus.UPDATED
+        ):
+            yield UnitTestInfo(src_file_path=src_file, test_file_path=test_file)
 
     def _recursive_get_unit_test_info(
         self,
@@ -265,7 +263,6 @@ class FileCacheEngine:
         ]
         dirs = [path for path in paths_in_dir if path.is_dir()]
         if src_files:
-            file_pairs = []
             for src_file in src_files:
                 test_file = get_corresponding_unit_test_folder_for_src_folder(
                     python_pkg_root_dir=self.subproject.get_python_package_dir(),
@@ -274,48 +271,36 @@ class FileCacheEngine:
                     ),
                     src_folder_path=src_file.parent,
                 ).joinpath(f"test_{src_file.name}")
-
-                # Update source file timestamp in cache
                 self.update_file_timestamp(
                     file_path=src_file,
                     cache_info_suite=FileCacheEngine.CacheInfoSuite.SRC_FILE,
                 )
-
-                # Update test file timestamp in cache if it exists
                 if test_file.exists():
                     self.update_file_timestamp(
                         file_path=test_file,
                         cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
                     )
+                    self._yield_unit_test_info_if_appropriate(
+                        parent_conftest_was_updated=parent_conftest_was_updated,
+                        src_file=src_file,
+                        test_file=test_file,
+                    )
+                else:
+                    msg = f"Expected {test_file} to exist!"
+                    raise ValueError(msg)
 
-                file_pairs.append((src_file, test_file))
-
-            yield UnitTestInfo(
-                conftest_or_parent_conftest_was_updated=conftest_or_parent_conftest_was_updated,
-                src_test_file_pairs=sorted(file_pairs),
-            )
         for directory in dirs:
             yield from self._recursive_get_unit_test_info(
                 current_src_folder=directory,
                 parent_conftest_was_updated=conftest_or_parent_conftest_was_updated,
             )
 
-    def get_unit_test_info(self) -> Iterator[UnitTestInfo]:
+    def get_unit_tests_to_run(self) -> Iterator[UnitTestInfo]:
         """Gets information required to run unit tests.
 
         Yields:
             Iterator[UnitTestInfo]: Generator of unit test info for test caching.
         """
-        # Update top-level conftest timestamp if it exists
-        top_level_conftest = self.subproject.get_test_dir().joinpath(
-            FileCacheEngine.CONFTEST_NAME
-        )
-        if top_level_conftest.exists():
-            self.update_file_timestamp(
-                file_path=top_level_conftest,
-                cache_info_suite=FileCacheEngine.CacheInfoSuite.CONFTEST,
-            )
-
         yield from self._recursive_get_unit_test_info(
             current_src_folder=self.subproject.get_python_package_dir(),
             parent_conftest_was_updated=self.top_level_conftest_updated(),
@@ -338,17 +323,17 @@ class FileCacheEngine:
             return self.cache_data.conftest_cache_info
         if cache_info_suite == FileCacheEngine.CacheInfoSuite.UNIT_TEST:
             return self.cache_data.unit_test_cache_info
-        if cache_info_suite == FileCacheEngine.CacheInfoSuite.UNIT_TEST_PASS:
+        if cache_info_suite == FileCacheEngine.CacheInfoSuite.UNIT_TEST_SUCCESS:
             return self.cache_data.unit_test_pass_info
         if cache_info_suite == FileCacheEngine.CacheInfoSuite.FEATURE_TEST:
             return self.cache_data.feature_test_cache_info
-        if cache_info_suite == FileCacheEngine.CacheInfoSuite.FEATURE_TEST_PASS:
+        if cache_info_suite == FileCacheEngine.CacheInfoSuite.FEATURE_TEST_SUCCESS:
             return self.cache_data.feature_test_pass_info
         # will only hit if enum not covered
         msg = f"{cache_info_suite.__name__} is not a supported type."  # pragma: no cov
         raise ValueError(msg)  # pragma: no cov
 
-    def _get_relative_path_to_subproject(self, file_path: Path) -> Path:
+    def get_relative_path_to_subproject(self, file_path: Path) -> Path:
         """Gets the relative path for a file to the subproject.
 
         Args:
@@ -391,7 +376,7 @@ class FileCacheEngine:
             ValueError: If the file provided is not in the `group_root_dir`.
         """
         cache_info = self._get_cache_info_for_suite(cache_info_suite=cache_info_suite)
-        relative_file_path = self._get_relative_path_to_subproject(file_path=file_path)
+        relative_file_path = self.get_relative_path_to_subproject(file_path=file_path)
         last_modified = FileCacheEngine._get_last_modified_time(file_path=file_path)
         return (
             relative_file_path not in cache_info
@@ -411,7 +396,7 @@ class FileCacheEngine:
             None
         """
         cache_info = self._get_cache_info_for_suite(cache_info_suite=cache_info_suite)
-        relative_file_path = self._get_relative_path_to_subproject(file_path=file_path)
+        relative_file_path = self.get_relative_path_to_subproject(file_path=file_path)
         last_modified = FileCacheEngine._get_last_modified_time(file_path=file_path)
         cache_info[relative_file_path] = last_modified
 
@@ -429,14 +414,17 @@ class FileCacheEngine:
             None
         """
         if cache_info_suite not in (
-            FileCacheEngine.CacheInfoSuite.UNIT_TEST_PASS,
-            FileCacheEngine.CacheInfoSuite.FEATURE_TEST_PASS,
+            FileCacheEngine.CacheInfoSuite.UNIT_TEST_SUCCESS,
+            FileCacheEngine.CacheInfoSuite.FEATURE_TEST_SUCCESS,
         ):
-            msg = f"update_test_pass_timestamp only supports pass cache suites, got {cache_info_suite}"
+            msg = (
+                "update_test_pass_timestamp only supports pass cache suites, "
+                f"got {cache_info_suite}"
+            )
             raise ValueError(msg)
 
         cache_info = self._get_cache_info_for_suite(cache_info_suite=cache_info_suite)
-        relative_file_path = self._get_relative_path_to_subproject(file_path=file_path)
+        relative_file_path = self.get_relative_path_to_subproject(file_path=file_path)
         current_time = datetime.now(tz=UTC).isoformat()
         cache_info[relative_file_path] = current_time
 
