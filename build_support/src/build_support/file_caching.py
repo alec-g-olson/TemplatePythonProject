@@ -1,9 +1,20 @@
 """The logic for caching the state of files.
 
-Attributes:
-    | FEATURE_TEST_FILE_NAME_REGEX:  The regex we use to find files with feature tests.
+This module provides functionality to track file changes and determine which tests need
+to be run.
+It implements the following requirements:
+1. Unit tests should be run if:
+   - The source file has been updated since the test last passed
+   - The test file has been updated since it last passed
+   - Any conftest files the test relies on have been updated
 
-This is so we can determine if we need to rerun parts of our validation pipeline.
+2. Feature tests should be run if:
+   - Any source files in the subproject have been updated
+   - Any conftest files the feature test relies on have been updated
+
+Attributes:
+    | FEATURE_TEST_FILE_NAME_REGEX: The regex we use to find files with feature tests.
+
 """
 
 import re
@@ -87,7 +98,7 @@ class FileCacheInfo(BaseModel):
         return safe_dump(self.model_dump())
 
 
-class ParentConftestStatus(Enum):
+class ParentConftestStatus(StrEnum):
     """An enum to track the state of a parent folder's conftest."""
 
     UPDATED = "updated"

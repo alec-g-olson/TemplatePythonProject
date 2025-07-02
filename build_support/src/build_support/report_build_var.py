@@ -1,7 +1,7 @@
 """The entry point into running build tools."""
 
 from argparse import ArgumentParser, Namespace
-from enum import Enum
+from enum import Enum, StrEnum
 from pathlib import Path
 
 from build_support.ci_cd_vars.docker_vars import (
@@ -10,7 +10,7 @@ from build_support.ci_cd_vars.docker_vars import (
 )
 
 
-class AllowedCliArgs(Enum):
+class AllowedCliArgs(StrEnum):
     """An Enum to track the retrievable variables."""
 
     DEV_DOCKER_INTERACTIVE = "interactive-dev-docker-command"

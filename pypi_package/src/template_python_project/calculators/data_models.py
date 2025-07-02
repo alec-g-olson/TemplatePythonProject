@@ -1,12 +1,12 @@
 """Data models used for calculations."""
 
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import override
 
 from pydantic import BaseModel
 
 
-class CalculationType(Enum):
+class CalculationType(StrEnum):
     """Enum representing types of calculations."""
 
     ADD = "ADD"

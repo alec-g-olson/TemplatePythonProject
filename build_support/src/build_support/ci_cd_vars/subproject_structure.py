@@ -40,7 +40,7 @@ class PythonSubproject:
     project_root: Path
     subproject_context: SubprojectContext
 
-    class TestSuite(Enum):
+    class TestSuite(StrEnum):
         """An Enum to track the possible test contexts."""
 
         UNIT_TESTS = "unit_tests"
@@ -49,7 +49,7 @@ class PythonSubproject:
         PROCESS_ENFORCEMENT = "process_enforcement"
         STYLE_ENFORCEMENT = "style_enforcement"
 
-    class TestScope(Enum):
+    class TestScope(StrEnum):
         """An Enum to track if the scope of a pytest call is complete for the suite."""
 
         COMPLETE = "complete"

@@ -1,6 +1,6 @@
 """A place to hold tasks and variable used for launching docker."""
 
-from enum import Enum
+from enum import Enum, StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -14,7 +14,7 @@ from build_support.ci_cd_vars.subproject_structure import (
 from build_support.process_runner import concatenate_args
 
 
-class DockerTarget(Enum):
+class DockerTarget(StrEnum):
     """An Enum to track the possible docker targets and images."""
 
     BUILD = "build"

@@ -2,14 +2,14 @@
 
 import itertools
 import sys
-from enum import Enum
+from enum import Enum, StrEnum
 
 # The purpose of this module is to make subprocess calls
 from subprocess import PIPE, Popen  # nosec: B404
 from typing import IO, Any, AnyStr
 
 
-class ProcessVerbosity(Enum):
+class ProcessVerbosity(StrEnum):
     """Enum for process verbosity to avoid boolean trap."""
 
     SILENT = 1
