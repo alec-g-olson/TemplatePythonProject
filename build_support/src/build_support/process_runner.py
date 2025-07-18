@@ -12,8 +12,8 @@ from typing import IO, Any, AnyStr
 class ProcessVerbosity(StrEnum):
     """Enum for process verbosity to avoid boolean trap."""
 
-    SILENT = 1
-    ALL = 2
+    SILENT = "silent"
+    ALL = "all"
 
 
 def run_piped_processes(
