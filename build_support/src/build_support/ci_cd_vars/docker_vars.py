@@ -1,6 +1,6 @@
 """A place to hold tasks and variable used for launching docker."""
 
-from enum import Enum, StrEnum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -17,10 +17,10 @@ from build_support.process_runner import concatenate_args
 class DockerTarget(StrEnum):
     """An Enum to track the possible docker targets and images."""
 
-    BUILD = "build"
-    DEV = "dev"
-    PROD = "prod"
-    INFRA = "infra"
+    BUILD = "BUILD"
+    DEV = "DEV"
+    PROD = "PROD"
+    INFRA = "INFRA"
 
 
 def get_docker_image_name(project_root: Path, target_image: DockerTarget) -> str:

@@ -1,7 +1,7 @@
 """Defines the structure of a python subproject."""
 
 from dataclasses import dataclass
-from enum import Enum, StrEnum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -16,9 +16,9 @@ from build_support.process_runner import concatenate_args
 class SubprojectContext(StrEnum):
     """An Enum to track the python subprojects with similar structure."""
 
-    PYPI = "pypi_package"
-    BUILD_SUPPORT = "build_support"
-    INFRA = "infra"
+    PYPI = "PYPI"
+    BUILD_SUPPORT = "BUILD_SUPPORT"
+    INFRA = "INFRA"
 
 
 def get_sorted_subproject_contexts() -> list[SubprojectContext]:
@@ -43,18 +43,18 @@ class PythonSubproject:
     class TestSuite(StrEnum):
         """An Enum to track the possible test contexts."""
 
-        UNIT_TESTS = "unit_tests"
-        FEATURE_TESTS = "feature_tests"
+        UNIT_TESTS = "UNIT_TESTS"
+        FEATURE_TESTS = "FEATURE_TESTS"
         # The Enums below should only be used in the BUILD_SUPPORT subproject
-        PROCESS_ENFORCEMENT = "process_enforcement"
-        STYLE_ENFORCEMENT = "style_enforcement"
+        PROCESS_ENFORCEMENT = "PROCESS_ENFORCEMENT"
+        STYLE_ENFORCEMENT = "STYLE_ENFORCEMENT"
 
     class TestScope(StrEnum):
         """An Enum to track if the scope of a pytest call is complete for the suite."""
 
-        COMPLETE = "complete"
-        INCOMPLETE = "incomplete"
-        SINGLE_FILE = "single_file"
+        COMPLETE = "COMPLETE"
+        INCOMPLETE = "INCOMPLETE"
+        SINGLE_FILE = "SINGLE_FILE"
 
     def get_subproject_name(self) -> str:
         """Gets the name of the subproject.

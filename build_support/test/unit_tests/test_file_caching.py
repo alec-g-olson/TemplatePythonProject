@@ -14,6 +14,7 @@ from build_support.file_caching import (
     FeatureTestInfo,
     FileCacheEngine,
     FileCacheInfo,
+    NotATestSuiteError,
     ParentConftestStatus,
     UnitTestInfo,
     get_corresponding_unit_test_folder_for_src_folder,
@@ -155,7 +156,7 @@ def test_engine_check_on_new_file(
     file_cache_engine: FileCacheEngine, file_in_subproject: Path
 ) -> None:
     file_in_subproject.write_text("some contents")
-    assert file_cache_engine.file_has_been_changed_since_last_timestamp_update(
+    assert file_cache_engine._file_has_been_changed_since_last_timestamp_update(
         file_path=file_in_subproject,
         cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
     )
@@ -165,7 +166,7 @@ def test_check_on_file_same(
     file_cache_engine: FileCacheEngine, file_in_subproject: Path
 ) -> None:
     file_in_subproject.write_text("The contents of a file!")
-    assert file_cache_engine.file_has_been_changed_since_last_timestamp_update(
+    assert file_cache_engine._file_has_been_changed_since_last_timestamp_update(
         file_path=file_in_subproject,
         cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
     )
@@ -173,7 +174,7 @@ def test_check_on_file_same(
         file_path=file_in_subproject,
         cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
     )
-    assert not file_cache_engine.file_has_been_changed_since_last_timestamp_update(
+    assert not file_cache_engine._file_has_been_changed_since_last_timestamp_update(
         file_path=file_in_subproject,
         cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
     )
@@ -186,7 +187,7 @@ def test_check_on_file_same_dump_and_read_cache(
     subproject_context: SubprojectContext,
 ) -> None:
     file_in_subproject.write_text("The contents of a file!")
-    assert file_cache_engine.file_has_been_changed_since_last_timestamp_update(
+    assert file_cache_engine._file_has_been_changed_since_last_timestamp_update(
         file_path=file_in_subproject,
         cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
     )
@@ -194,7 +195,7 @@ def test_check_on_file_same_dump_and_read_cache(
         file_path=file_in_subproject,
         cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
     )
-    assert not file_cache_engine.file_has_been_changed_since_last_timestamp_update(
+    assert not file_cache_engine._file_has_been_changed_since_last_timestamp_update(
         file_path=file_in_subproject,
         cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
     )
@@ -202,7 +203,7 @@ def test_check_on_file_same_dump_and_read_cache(
     new_file_cache_engine = FileCacheEngine(
         subproject_context=subproject_context, project_root=mock_project_root
     )
-    assert not new_file_cache_engine.file_has_been_changed_since_last_timestamp_update(
+    assert not new_file_cache_engine._file_has_been_changed_since_last_timestamp_update(
         file_path=file_in_subproject,
         cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
     )
@@ -212,13 +213,13 @@ def test_check_on_file_different(
     file_cache_engine: FileCacheEngine, file_in_subproject: Path
 ) -> None:
     file_in_subproject.write_text("The contents of a file!")
-    assert file_cache_engine.file_has_been_changed_since_last_timestamp_update(
+    assert file_cache_engine._file_has_been_changed_since_last_timestamp_update(
         file_path=file_in_subproject,
         cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
     )
     sleep(0.01)
     file_in_subproject.write_text("A file now has new contents!!!! Very shocking.")
-    assert file_cache_engine.file_has_been_changed_since_last_timestamp_update(
+    assert file_cache_engine._file_has_been_changed_since_last_timestamp_update(
         file_path=file_in_subproject,
         cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
     )
@@ -231,7 +232,7 @@ def test_check_on_file_different_dump_and_read_cache(
     subproject_context: SubprojectContext,
 ) -> None:
     file_in_subproject.write_text("The contents of a file!")
-    assert file_cache_engine.file_has_been_changed_since_last_timestamp_update(
+    assert file_cache_engine._file_has_been_changed_since_last_timestamp_update(
         file_path=file_in_subproject,
         cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
     )
@@ -241,7 +242,7 @@ def test_check_on_file_different_dump_and_read_cache(
     new_file_cache_engine = FileCacheEngine(
         subproject_context=subproject_context, project_root=mock_project_root
     )
-    assert new_file_cache_engine.file_has_been_changed_since_last_timestamp_update(
+    assert new_file_cache_engine._file_has_been_changed_since_last_timestamp_update(
         file_path=file_in_subproject,
         cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
     )
@@ -256,7 +257,7 @@ def test_update_file_timestamp(
         file_path=file_in_subproject,
         cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
     )
-    assert not file_cache_engine.file_has_been_changed_since_last_timestamp_update(
+    assert not file_cache_engine._file_has_been_changed_since_last_timestamp_update(
         file_path=file_in_subproject,
         cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST,
     )
@@ -271,7 +272,7 @@ def test_update_src_file_timestamp(
         file_path=file_in_subproject,
         cache_info_suite=FileCacheEngine.CacheInfoSuite.SRC_FILE,
     )
-    assert not file_cache_engine.file_has_been_changed_since_last_timestamp_update(
+    assert not file_cache_engine._file_has_been_changed_since_last_timestamp_update(
         file_path=file_in_subproject,
         cache_info_suite=FileCacheEngine.CacheInfoSuite.SRC_FILE,
     )
@@ -287,7 +288,7 @@ def test_update_test_pass_timestamp(
         cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST_SUCCESS,
     )
     # Test pass timestamp should be recorded
-    relative_path = file_cache_engine.get_relative_path_to_subproject(
+    relative_path = file_cache_engine._get_relative_path_to_subproject(
         file_in_subproject
     )
     assert relative_path in file_cache_engine.cache_data.unit_test_pass_info
@@ -315,7 +316,7 @@ def test_update_conftest_timestamp(
         file_path=file_in_subproject,
         cache_info_suite=FileCacheEngine.CacheInfoSuite.CONFTEST,
     )
-    assert not file_cache_engine.file_has_been_changed_since_last_timestamp_update(
+    assert not file_cache_engine._file_has_been_changed_since_last_timestamp_update(
         file_path=file_in_subproject,
         cache_info_suite=FileCacheEngine.CacheInfoSuite.CONFTEST,
     )
@@ -482,7 +483,7 @@ def test_get_feature_test_info(
     top_test_conftest = test_root_dir.joinpath("conftest.py")
     top_test_conftest.parent.mkdir(parents=True)
     top_test_conftest.touch()
-    file_cache_engine.file_has_been_changed_since_last_timestamp_update(
+    file_cache_engine._file_has_been_changed_since_last_timestamp_update(
         file_path=top_test_conftest,
         cache_info_suite=FileCacheEngine.CacheInfoSuite.FEATURE_TEST,
     )
@@ -514,4 +515,4 @@ def test_get_feature_test_info(
         src_files=sorted(src_files_to_record),
         test_files=[feature_test_1, feature_test_2],
     )
-    assert file_cache_engine.get_feature_test_info() == expected_feature_test_info
+    assert file_cache_engine.get_feature_tests_to_run() == expected_feature_test_info

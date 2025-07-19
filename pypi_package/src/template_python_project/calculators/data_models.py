@@ -1,6 +1,6 @@
 """Data models used for calculations."""
 
-from enum import Enum, StrEnum
+from enum import StrEnum
 from typing import override
 
 from pydantic import BaseModel

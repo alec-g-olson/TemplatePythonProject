@@ -2,7 +2,7 @@
 
 import itertools
 import sys
-from enum import Enum, StrEnum
+from enum import StrEnum
 
 # The purpose of this module is to make subprocess calls
 from subprocess import PIPE, Popen  # nosec: B404
@@ -12,8 +12,8 @@ from typing import IO, Any, AnyStr
 class ProcessVerbosity(StrEnum):
     """Enum for process verbosity to avoid boolean trap."""
 
-    SILENT = "silent"
-    ALL = "all"
+    SILENT = "SILENT"
+    ALL = "ALL"
 
 
 def run_piped_processes(

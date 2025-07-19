@@ -27,7 +27,7 @@ from build_support.ci_cd_vars.subproject_structure import (
     get_python_subproject,
     get_sorted_subproject_contexts,
 )
-from build_support.file_caching import FileCacheEngine, ParentConftestStatus
+from build_support.file_caching import CacheInfoSuite, FileCacheEngine
 from build_support.process_runner import concatenate_args, run_process
 
 
@@ -428,7 +428,7 @@ class SubprojectUnitTests(PerSubprojectTask):
             )
             file_cache.update_test_pass_timestamp(
                 file_path=unit_test_info.test_file_path,
-                cache_info_suite=FileCacheEngine.CacheInfoSuite.UNIT_TEST_SUCCESS,
+                cache_info_suite=CacheInfoSuite.UNIT_TEST,
             )
             file_cache.write_text()
         if src_files_tested:
@@ -533,97 +533,51 @@ class SubprojectFeatureTests(PerSubprojectTask):
             subproject_context=self.subproject_context,
             project_root=self.docker_project_root,
         )
-        feature_test_info = file_cache.get_feature_test_info()
-        run_all = (
-            feature_test_info.conftest_or_parent_conftest_was_updated
-            == ParentConftestStatus.UPDATED
-            or any(
-                file_cache.file_has_been_changed_since_last_timestamp_update(
-                    file_path=src_file,
-                    cache_info_suite=FileCacheEngine.CacheInfoSuite.SRC_FILE,
-                )
-                for src_file in feature_test_info.src_files
-            )
-        )
-        print("----------------------------------")  # noqa: T201
-        print(feature_test_info.conftest_or_parent_conftest_was_updated)  # noqa: T201
-        print(  # noqa: T201
-            any(
-                file_cache.file_has_been_changed_since_last_timestamp_update(
-                    file_path=src_file,
-                    cache_info_suite=FileCacheEngine.CacheInfoSuite.SRC_FILE,
-                )
-                for src_file in feature_test_info.src_files
-            )
-        )
-        for src_file in feature_test_info.src_files:
-            updated = file_cache.file_has_been_changed_since_last_timestamp_update(
-                file_path=src_file,
-                cache_info_suite=FileCacheEngine.CacheInfoSuite.SRC_FILE,
-            )
-            print(f"{updated}: {src_file}")  # noqa: T201
-        print(run_all)  # noqa: T201
-        print("----------------------------------")  # noqa: T201
-        if run_all:
-            test_files_to_run = sorted(feature_test_info.test_files)
-        else:
-            test_files_to_run = sorted(
-                test_file
-                for test_file in feature_test_info.test_files
-                if file_cache.file_has_been_changed_since_last_timestamp_update(
-                    file_path=test_file,
-                    cache_info_suite=FileCacheEngine.CacheInfoSuite.FEATURE_TEST,
-                )
-            )
-        print("----------------------------------")  # noqa: T201
-        print("Running:")  # noqa: T201
-        for test_file in test_files_to_run:
-            print(test_file)  # noqa: T201
-        print(test_files_to_run)  # noqa: T201
-        print("----------------------------------")  # noqa: T201
-        test_suite = PythonSubproject.TestSuite.FEATURE_TESTS
+
         complete_xml_path = self.subproject.get_pytest_report_path(
-            test_suite=test_suite, test_scope=PythonSubproject.TestScope.COMPLETE
+            test_suite=PythonSubproject.TestSuite.FEATURE_TESTS,
+            test_scope=PythonSubproject.TestScope.COMPLETE,
         )
         incomplete_xml_path = self.subproject.get_pytest_report_path(
-            test_suite=test_suite, test_scope=PythonSubproject.TestScope.INCOMPLETE
+            test_suite=PythonSubproject.TestSuite.FEATURE_TESTS,
+            test_scope=PythonSubproject.TestScope.INCOMPLETE,
         )
-        if test_files_to_run:
-            for test_file_to_run in test_files_to_run:
-                run_process(
-                    args=concatenate_args(
-                        args=[
-                            dev_docker_command,
-                            "pytest",
-                            "--basetemp",
-                            get_feature_test_scratch_folder(
-                                project_root=self.docker_project_root
-                            ),
-                            self.subproject.get_pytest_feature_test_report_args(),
-                            test_file_to_run,
-                        ]
-                    )
+
+        feature_tests_to_run = file_cache.get_feature_tests_to_run()
+        for feature_test_info in feature_tests_to_run:
+            run_process(
+                args=concatenate_args(
+                    args=[
+                        dev_docker_command,
+                        "pytest",
+                        "--basetemp",
+                        get_feature_test_scratch_folder(
+                            project_root=self.docker_project_root
+                        ),
+                        self.subproject.get_pytest_feature_test_report_args(),
+                        feature_test_info.test_file_path,
+                    ]
                 )
-                single_file_xml_path = self.subproject.get_pytest_report_path(
-                    test_suite=test_suite,
-                    test_scope=PythonSubproject.TestScope.SINGLE_FILE,
+            )
+            single_file_xml_path = self.subproject.get_pytest_report_path(
+                test_suite=PythonSubproject.TestSuite.FEATURE_TESTS,
+                test_scope=PythonSubproject.TestScope.SINGLE_FILE,
+            )
+            if incomplete_xml_path.exists():
+                incomplete_xml_results = JUnitXml.fromfile(str(incomplete_xml_path))
+                single_file_xml_results = JUnitXml.fromfile(
+                    str(single_file_xml_path)
                 )
-                if incomplete_xml_path.exists():
-                    incomplete_xml_results = JUnitXml.fromfile(str(incomplete_xml_path))
-                    single_file_xml_results = JUnitXml.fromfile(
-                        str(single_file_xml_path)
-                    )
-                    incomplete_xml_results += single_file_xml_results
-                    incomplete_xml_results.write()
-                else:
-                    single_file_xml_path.rename(incomplete_xml_path)
-                # Record that the feature test passed
-                file_cache.update_test_pass_timestamp(
-                    file_path=test_file_to_run,
-                    cache_info_suite=FileCacheEngine.CacheInfoSuite.FEATURE_TEST_SUCCESS,
-                )
-                file_cache.write_text()
-            incomplete_xml_path.rename(complete_xml_path)
+                incomplete_xml_results += single_file_xml_results
+                incomplete_xml_results.write()
+            else:
+                single_file_xml_path.rename(incomplete_xml_path)
+            # Record that the feature test passed
+            file_cache.update_test_pass_timestamp(
+                file_path=feature_test_info.test_file_path,
+                cache_info_suite=CacheInfoSuite.FEATURE_TEST,
+            )
+            file_cache.write_text()
 
         if (
             incomplete_xml_path.exists() and not complete_xml_path.exists()

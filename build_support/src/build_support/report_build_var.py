@@ -1,7 +1,7 @@
 """The entry point into running build tools."""
 
 from argparse import ArgumentParser, Namespace
-from enum import Enum, StrEnum
+from enum import StrEnum
 from pathlib import Path
 
 from build_support.ci_cd_vars.docker_vars import (

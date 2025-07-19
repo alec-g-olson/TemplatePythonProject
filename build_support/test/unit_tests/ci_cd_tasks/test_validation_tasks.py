@@ -787,7 +787,7 @@ def test_run_subproject_feature_tests_test_all(
         file_cache = FileCacheEngine(
             subproject_context=subproject_context, project_root=docker_project_root
         )
-        feature_test_info = file_cache.get_feature_test_info()
+        feature_test_info = file_cache.get_feature_tests_to_run()
         expected_calls = [
             call(
                 args=concatenate_args(
@@ -835,7 +835,7 @@ def test_run_subproject_feature_tests_in_ci_cd_int_test_mode(
         file_cache = FileCacheEngine(
             subproject_context=subproject_context, project_root=docker_project_root
         )
-        feature_test_info = file_cache.get_feature_test_info()
+        feature_test_info = file_cache.get_feature_tests_to_run()
         expected_calls = [
             call(
                 args=concatenate_args(
@@ -873,7 +873,7 @@ def test_run_subproject_feature_tests_all_cached(
         subproject_context=subproject_context,
         project_root=basic_task_info.docker_project_root,
     )
-    feature_test_info = file_cache.get_feature_test_info()
+    feature_test_info = file_cache.get_feature_tests_to_run()
     for file in (
         *feature_test_info.src_files,
         *feature_test_info.test_files,
@@ -905,7 +905,7 @@ def test_run_subproject_feature_tests_all_cached_but_top_test_conftest_updated(
         subproject_context=subproject_context,
         project_root=basic_task_info.docker_project_root,
     )
-    feature_test_info = file_cache.get_feature_test_info()
+    feature_test_info = file_cache.get_feature_tests_to_run()
     for file in (
         *feature_test_info.src_files,
         *feature_test_info.test_files,
@@ -969,7 +969,7 @@ def test_run_subproject_feature_tests_some_cached(
         subproject_context=subproject_context,
         project_root=basic_task_info.docker_project_root,
     )
-    feature_test_info = file_cache.get_feature_test_info()
+    feature_test_info = file_cache.get_feature_tests_to_run()
     if len(feature_test_info.test_files) <= 1:  # pragma: no cov - might not be true
         return
 
@@ -1029,7 +1029,7 @@ def test_run_subproject_feature_tests_one_src_updated(
         subproject_context=subproject_context,
         project_root=basic_task_info.docker_project_root,
     )
-    feature_test_info = file_cache.get_feature_test_info()
+    feature_test_info = file_cache.get_feature_tests_to_run()
     if len(feature_test_info.src_files) <= 1:  # pragma: no cov - might not be true
         return
 
@@ -1037,7 +1037,7 @@ def test_run_subproject_feature_tests_one_src_updated(
         subproject_context=subproject_context,
         project_root=basic_task_info.docker_project_root,
     )
-    feature_test_info = file_cache.get_feature_test_info()
+    feature_test_info = file_cache.get_feature_tests_to_run()
     for file in (
         *feature_test_info.src_files,
         *feature_test_info.test_files,
