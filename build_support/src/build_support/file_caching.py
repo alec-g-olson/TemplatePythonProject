@@ -320,9 +320,9 @@ class FileCacheEngine:
         if cache_info_suite == CacheInfoSuite.CONFTEST:
             return self.cache_data.conftest_cache_info
         if cache_info_suite == CacheInfoSuite.UNIT_TEST:
-            return self.cache_data.unit_test_cache_info
+            return cast(list[BasicFileInfo], self.cache_data.unit_test_cache_info)
         if cache_info_suite == CacheInfoSuite.FEATURE_TEST:
-            return self.cache_data.feature_test_cache_info
+            return cast(list[BasicFileInfo], self.cache_data.feature_test_cache_info)
         # will only hit if enum not covered
         msg = f"{cache_info_suite.__name__} is not a supported type."  # pragma: no cov
         raise ValueError(msg)  # pragma: no cov
