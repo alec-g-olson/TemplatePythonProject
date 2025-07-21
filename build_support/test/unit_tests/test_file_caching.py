@@ -11,13 +11,8 @@ from build_support.ci_cd_vars.subproject_structure import (
     SubprojectContext,
 )
 from build_support.file_caching import (
-    FeatureTestInfo,
     FileCacheEngine,
     FileCacheInfo,
-    NotATestSuiteError,
-    ParentConftestStatus,
-    UnitTestInfo,
-    get_corresponding_unit_test_folder_for_src_folder,
 )
 
 

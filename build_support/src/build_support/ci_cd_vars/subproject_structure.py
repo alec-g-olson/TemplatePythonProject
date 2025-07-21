@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable, Iterator, Tuple
 
 from build_support.ci_cd_vars.project_setting_vars import (
     get_project_name,
@@ -16,9 +16,9 @@ from build_support.process_runner import concatenate_args
 class SubprojectContext(StrEnum):
     """An Enum to track the python subprojects with similar structure."""
 
-    PYPI = "PYPI"
-    BUILD_SUPPORT = "BUILD_SUPPORT"
-    INFRA = "INFRA"
+    PYPI = "pypi_package"
+    BUILD_SUPPORT = "build_support"
+    INFRA = "infra"
 
 
 def get_sorted_subproject_contexts() -> list[SubprojectContext]:
@@ -43,11 +43,11 @@ class PythonSubproject:
     class TestSuite(StrEnum):
         """An Enum to track the possible test contexts."""
 
-        UNIT_TESTS = "UNIT_TESTS"
-        FEATURE_TESTS = "FEATURE_TESTS"
+        UNIT_TESTS = "unit_tests"
+        FEATURE_TESTS = "feature_tests"
         # The Enums below should only be used in the BUILD_SUPPORT subproject
-        PROCESS_ENFORCEMENT = "PROCESS_ENFORCEMENT"
-        STYLE_ENFORCEMENT = "STYLE_ENFORCEMENT"
+        PROCESS_ENFORCEMENT = "process_enforcement"
+        STYLE_ENFORCEMENT = "style_enforcement"
 
     class TestScope(StrEnum):
         """An Enum to track if the scope of a pytest call is complete for the suite."""
@@ -99,6 +99,39 @@ class PythonSubproject:
             Path: Path to the src folder in the subproject.
         """
         return self.get_root_dir().joinpath("src")
+
+    @staticmethod
+    def get_all_files_in(directory: Path) -> Iterator[Path]:
+        return (file for file in directory.rglob("*") if file.is_file())
+
+    @staticmethod
+    def get_all_python_files_in(directory: Path) -> Iterator[Path]:
+        return (
+            file
+            for file in PythonSubproject.get_all_files_in(directory=directory)
+            if file.name.endswith(".py")
+        )
+
+    def get_all_testable_src_files(self) -> Iterator[Path]:
+        return (
+            file
+            for file in self.get_all_python_files_in(
+                directory=self.get_python_package_dir()
+            )
+            if file.name != "__init__.py"
+        )
+
+    def get_src_unit_test_file_pairs(self) -> Iterator[Tuple[Path, Path]]:
+        python_pkg_root_dir = self.get_python_package_dir()
+        unit_test_root_dir = self.get_test_suite_dir(
+            test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+        )
+        for src_file in self.get_all_testable_src_files():
+            relative_path = src_file.parent.relative_to(python_pkg_root_dir)
+            test_file = unit_test_root_dir.joinpath(relative_path).joinpath(
+                f"test_{src_file.name}"
+            )
+            yield src_file, test_file
 
     def get_python_package_dir(self) -> Path:
         """Gets the python package folder in a subproject.

@@ -17,10 +17,10 @@ from build_support.process_runner import concatenate_args
 class DockerTarget(StrEnum):
     """An Enum to track the possible docker targets and images."""
 
-    BUILD = "BUILD"
-    DEV = "DEV"
-    PROD = "PROD"
-    INFRA = "INFRA"
+    BUILD = "build"
+    DEV = "dev"
+    PROD = "prod"
+    INFRA = "infra"
 
 
 def get_docker_image_name(project_root: Path, target_image: DockerTarget) -> str:

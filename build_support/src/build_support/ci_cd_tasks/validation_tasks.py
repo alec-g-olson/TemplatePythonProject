@@ -1,7 +1,9 @@
 """Should hold all tasks that run tests, both on artifacts and style tests."""
 
+import re
+from dataclasses import dataclass
 from pathlib import Path
-from typing import override
+from typing import Iterator, override
 
 from junitparser import JUnitXml
 
@@ -27,7 +29,7 @@ from build_support.ci_cd_vars.subproject_structure import (
     get_python_subproject,
     get_sorted_subproject_contexts,
 )
-from build_support.file_caching import CacheInfoSuite, FileCacheEngine
+from build_support.file_caching import FileCacheEngine
 from build_support.process_runner import concatenate_args, run_process
 
 
@@ -355,6 +357,14 @@ class AllSubprojectUnitTests(TaskNode):
         """
 
 
+@dataclass
+class UnitTestInfo:
+    """A dataclass for organizing unit test information."""
+
+    src_file_path: Path
+    test_file_path: Path
+
+
 class SubprojectUnitTests(PerSubprojectTask):
     """Task for running unit tests in a single subproject."""
 
@@ -373,6 +383,38 @@ class SubprojectUnitTests(PerSubprojectTask):
         relative_path = src_file_path.relative_to(src_root)
         relative_path_ext_stripped = relative_path.with_suffix("")
         return ".".join(relative_path_ext_stripped.parts)
+
+    def get_unit_tests_to_run(
+        self, file_cache: FileCacheEngine
+    ) -> Iterator[UnitTestInfo]:
+        """Gets information required to run unit tests.
+
+        Yields:
+            Iterator[UnitTestInfo]: Generator of unit test info for tests that need to
+                run.
+        """
+        for src_file, test_file in self.subproject.get_src_unit_test_file_pairs():
+            if test_file.exists():
+                most_recent_conftest_update = file_cache.most_recent_conftest_update(
+                    test_dir=test_file.parent
+                )
+                src_file_updated = FileCacheEngine.get_last_modified_time(
+                    file_path=src_file
+                )
+                test_file_updated = FileCacheEngine.get_last_modified_time(
+                    file_path=test_file
+                )
+                test_file_info = file_cache.get_test_info_for_file(file_path=test_file)
+                if (
+                    test_file_info.tests_passed is None
+                    or test_file_info.tests_passed < src_file_updated
+                    or test_file_info.tests_passed < test_file_updated
+                    or test_file_info.tests_passed < most_recent_conftest_update
+                ):
+                    yield UnitTestInfo(src_file_path=src_file, test_file_path=test_file)
+            else:
+                msg = f"Expected {test_file} to exist!"
+                raise ValueError(msg)
 
     @override
     def required_tasks(self) -> list[TaskNode]:
@@ -407,7 +449,7 @@ class SubprojectUnitTests(PerSubprojectTask):
             project_root=self.docker_project_root,
         )
         src_files_tested = 0
-        for unit_test_info in file_cache.get_unit_tests_to_run():
+        for unit_test_info in self.get_unit_tests_to_run(file_cache=file_cache):
             src_files_tested += 1
             src_module = SubprojectUnitTests.get_module_from_path(
                 src_file_path=unit_test_info.src_file_path, subproject=self.subproject
@@ -427,8 +469,7 @@ class SubprojectUnitTests(PerSubprojectTask):
                 )
             )
             file_cache.update_test_pass_timestamp(
-                file_path=unit_test_info.test_file_path,
-                cache_info_suite=CacheInfoSuite.UNIT_TEST,
+                file_path=unit_test_info.test_file_path
             )
             file_cache.write_text()
         if src_files_tested:
@@ -481,6 +522,9 @@ class AllSubprojectFeatureTests(TaskNode):
         """
 
 
+FEATURE_TEST_FILE_NAME_REGEX = re.compile(r"test_.+_.+\.py")
+
+
 class SubprojectFeatureTests(PerSubprojectTask):
     """Task for running feature tests in a single subproject."""
 
@@ -509,6 +553,36 @@ class SubprojectFeatureTests(PerSubprojectTask):
                 ]
             )
         return required_tasks
+
+    def get_feature_tests_to_run(self, file_cache: FileCacheEngine) -> Iterator[Path]:
+        """Gets information required to run feature tests.
+
+        Returns:
+            FeatureTestInfo: A dataclass with the cache information for feature tests.
+        """
+        feature_test_dir = self.subproject.get_test_suite_dir(
+            test_suite=PythonSubproject.TestSuite.FEATURE_TESTS
+        )
+        most_recent_conftest_update = file_cache.most_recent_conftest_update(
+            test_dir=feature_test_dir
+        )
+        most_recent_src_file_update = file_cache.most_recent_src_file_update()
+
+        test_files = [
+            file
+            for file in feature_test_dir.glob("*")
+            if FEATURE_TEST_FILE_NAME_REGEX.match(file.name)
+        ]
+
+        # Update feature test file timestamps
+        for test_file in test_files:
+            test_file_info = file_cache.get_test_info_for_file(file_path=test_file)
+            if (
+                test_file_info.tests_passed is None
+                or test_file_info.tests_passed < most_recent_conftest_update
+                or test_file_info.tests_passed < most_recent_src_file_update
+            ):
+                yield test_file
 
     @override
     def run(self) -> None:
@@ -543,8 +617,7 @@ class SubprojectFeatureTests(PerSubprojectTask):
             test_scope=PythonSubproject.TestScope.INCOMPLETE,
         )
 
-        feature_tests_to_run = file_cache.get_feature_tests_to_run()
-        for feature_test_info in feature_tests_to_run:
+        for feature_test_path in self.get_feature_tests_to_run(file_cache=file_cache):
             run_process(
                 args=concatenate_args(
                     args=[
@@ -555,7 +628,7 @@ class SubprojectFeatureTests(PerSubprojectTask):
                             project_root=self.docker_project_root
                         ),
                         self.subproject.get_pytest_feature_test_report_args(),
-                        feature_test_info.test_file_path,
+                        feature_test_path,
                     ]
                 )
             )
@@ -565,18 +638,13 @@ class SubprojectFeatureTests(PerSubprojectTask):
             )
             if incomplete_xml_path.exists():
                 incomplete_xml_results = JUnitXml.fromfile(str(incomplete_xml_path))
-                single_file_xml_results = JUnitXml.fromfile(
-                    str(single_file_xml_path)
-                )
+                single_file_xml_results = JUnitXml.fromfile(str(single_file_xml_path))
                 incomplete_xml_results += single_file_xml_results
                 incomplete_xml_results.write()
             else:
                 single_file_xml_path.rename(incomplete_xml_path)
             # Record that the feature test passed
-            file_cache.update_test_pass_timestamp(
-                file_path=feature_test_info.test_file_path,
-                cache_info_suite=CacheInfoSuite.FEATURE_TEST,
-            )
+            file_cache.update_test_pass_timestamp(file_path=feature_test_path)
             file_cache.write_text()
 
         if (

@@ -8,11 +8,13 @@ from unittest.mock import call, patch
 
 import pytest
 from junitparser import JUnitXml, TestCase, TestSuite
+from unit_tests.conftest import basic_task_info
 from unit_tests.empty_function_check import is_an_empty_function
 
 from build_support.ci_cd_tasks.env_setup_tasks import GetGitInfo, SetupDevEnvironment
 from build_support.ci_cd_tasks.task_node import BasicTaskInfo
 from build_support.ci_cd_tasks.validation_tasks import (
+    FEATURE_TEST_FILE_NAME_REGEX,
     AllSubprojectFeatureTests,
     AllSubprojectSecurityChecks,
     AllSubprojectStaticTypeChecking,
@@ -45,7 +47,7 @@ from build_support.ci_cd_vars.subproject_structure import (
     get_python_subproject,
     get_sorted_subproject_contexts,
 )
-from build_support.file_caching import FileCacheEngine
+from build_support.file_caching import CONFTEST_NAME, FileCacheEngine
 from build_support.process_runner import concatenate_args
 
 
@@ -339,16 +341,21 @@ def test_subproject_unit_tests_requires(
 
 
 @pytest.fixture
-def _mock_entire_subproject(
+def mock_entire_subproject(
     real_project_root_dir: Path,
     subproject_context: SubprojectContext,
     mock_docker_subproject: PythonSubproject,
 ) -> None:
     real_subproject = get_python_subproject(
         project_root=real_project_root_dir, subproject_context=subproject_context
-    ).get_root_dir()
-    test_subproject = mock_docker_subproject.get_root_dir()
-    shutil.copytree(src=real_subproject, dst=test_subproject)
+    )
+    real_root_dir = real_subproject.get_root_dir()
+    test_root_dir = mock_docker_subproject.get_root_dir()
+    shutil.copytree(src=real_root_dir, dst=test_root_dir)
+    # rename python package dir
+    read_package_name = real_subproject.get_python_package_dir().name
+    copied_dir = mock_docker_subproject.get_src_dir().joinpath(read_package_name)
+    shutil.move(src=copied_dir, dst=mock_docker_subproject.get_python_package_dir())
 
 
 def _recursive_get_conftest_files(current_test_folder: Path) -> Iterator[Path]:
@@ -361,7 +368,7 @@ def _recursive_get_conftest_files(current_test_folder: Path) -> Iterator[Path]:
         Iterator[UnitTestInfo]: Generator of unit test info for test caching.
     """
     paths_in_dir = sorted(current_test_folder.glob("*"))
-    maybe_conftest = current_test_folder.joinpath(FileCacheEngine.CONFTEST_NAME)
+    maybe_conftest = current_test_folder.joinpath(CONFTEST_NAME)
     if maybe_conftest.exists():
         yield maybe_conftest
     dirs = [path for path in paths_in_dir if path.is_dir()]
@@ -369,44 +376,7 @@ def _recursive_get_conftest_files(current_test_folder: Path) -> Iterator[Path]:
         yield from _recursive_get_conftest_files(current_test_folder=directory)
 
 
-def get_all_conftest_files(
-    subproject: PythonSubproject, cache_info_suite: FileCacheEngine.CacheInfoSuite
-) -> list[Path]:
-    """Gets a list of all the conftest files for the relevant suite of cache info.
-
-    Args:
-        subproject (PythonSubproject): Th
-        cache_info_suite (CacheInfoSuite): The suite of relevant cache info.
-
-    Returns:
-        list[Path]: All the relevant conftests for the suite of relevant cache info.
-    """
-    files = [subproject.get_test_dir().joinpath(FileCacheEngine.CONFTEST_NAME)]
-    files[0].parent.mkdir(parents=True, exist_ok=True)
-    files[0].touch()
-    if cache_info_suite == FileCacheEngine.CacheInfoSuite.UNIT_TEST:
-        files.extend(
-            _recursive_get_conftest_files(
-                subproject.get_test_suite_dir(
-                    test_suite=PythonSubproject.TestSuite.UNIT_TESTS
-                )
-            )
-        )
-    elif cache_info_suite == FileCacheEngine.CacheInfoSuite.FEATURE_TEST:
-        files.extend(
-            _recursive_get_conftest_files(
-                subproject.get_test_suite_dir(
-                    test_suite=PythonSubproject.TestSuite.FEATURE_TESTS
-                )
-            )
-        )
-    else:  # pragma: no cov - will only hit if enum not covered
-        msg = f"{cache_info_suite.value} is not a supported type."
-        raise ValueError(msg)
-    return files
-
-
-@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "_mock_entire_subproject")
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
 def test_run_subproject_unit_tests_test_all(
     basic_task_info: BasicTaskInfo,
     subproject_context: SubprojectContext,
@@ -415,12 +385,8 @@ def test_run_subproject_unit_tests_test_all(
     with patch(
         "build_support.ci_cd_tasks.validation_tasks.run_process"
     ) as run_process_mock:
-        cache_engine = FileCacheEngine(
-            subproject_context=subproject_context,
-            project_root=basic_task_info.docker_project_root,
-        )
-        top_level_conftest = cache_engine.subproject.get_test_dir().joinpath(
-            FileCacheEngine.CONFTEST_NAME
+        top_level_conftest = mock_docker_subproject.get_test_dir().joinpath(
+            CONFTEST_NAME
         )
         top_level_conftest.parent.mkdir(parents=True, exist_ok=True)
         top_level_conftest.touch()
@@ -433,10 +399,12 @@ def test_run_subproject_unit_tests_test_all(
             target_image=DockerTarget.DEV,
         )
         expected_run_process_calls = []
-        for unit_test_info in cache_engine.get_unit_tests_to_run():
+        for (
+            src_file,
+            test_file,
+        ) in mock_docker_subproject.get_src_unit_test_file_pairs():
             src_module = SubprojectUnitTests.get_module_from_path(
-                src_file_path=unit_test_info.src_file_path,
-                subproject=mock_docker_subproject,
+                src_file_path=src_file, subproject=mock_docker_subproject
             )
             expected_run_process_calls.append(
                 call(
@@ -449,7 +417,7 @@ def test_run_subproject_unit_tests_test_all(
                             "--cov-report",
                             "term-missing",
                             f"--cov={src_module}",
-                            unit_test_info.test_file_path,
+                            test_file,
                         ]
                     )
                 )
@@ -477,7 +445,7 @@ def test_run_subproject_unit_tests_test_all(
         assert run_process_mock.mock_calls == expected_run_process_calls
 
 
-@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "_mock_entire_subproject")
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
 def test_run_subproject_unit_tests_all_cached(
     basic_task_info: BasicTaskInfo, subproject_context: SubprojectContext
 ) -> None:
@@ -485,20 +453,11 @@ def test_run_subproject_unit_tests_all_cached(
         subproject_context=subproject_context,
         project_root=basic_task_info.docker_project_root,
     )
-    cache_info_suite = FileCacheEngine.CacheInfoSuite.UNIT_TEST
-    for conftest_file in get_all_conftest_files(
-        subproject=cache_engine.subproject, cache_info_suite=cache_info_suite
-    ):
-        cache_engine.update_file_timestamp(
-            file_path=conftest_file, cache_info_suite=cache_info_suite
-        )
-    for unit_test_info in cache_engine.get_unit_tests_to_run():
-        cache_engine.update_file_timestamp(
-            file_path=unit_test_info.src_file_path, cache_info_suite=cache_info_suite
-        )
-        cache_engine.update_file_timestamp(
-            file_path=unit_test_info.test_file_path, cache_info_suite=cache_info_suite
-        )
+    for _, test_file in get_python_subproject(
+        subproject_context=subproject_context,
+        project_root=basic_task_info.docker_project_root,
+    ).get_src_unit_test_file_pairs():
+        cache_engine.update_test_pass_timestamp(file_path=test_file)
     cache_engine.write_text()
     # Everything above this line makes it so that there is unit test cache file
     # that has all files in it up to date.  This should make it so that no tests are
@@ -512,7 +471,7 @@ def test_run_subproject_unit_tests_all_cached(
         assert run_process_mock.call_count == 0
 
 
-@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "_mock_entire_subproject")
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
 def test_run_subproject_unit_tests_all_cached_but_top_test_conftest_updated(
     basic_task_info: BasicTaskInfo,
     subproject_context: SubprojectContext,
@@ -522,25 +481,13 @@ def test_run_subproject_unit_tests_all_cached_but_top_test_conftest_updated(
         subproject_context=subproject_context,
         project_root=basic_task_info.docker_project_root,
     )
-    cache_info_suite = FileCacheEngine.CacheInfoSuite.UNIT_TEST
-    for conftest_file in get_all_conftest_files(
-        subproject=mock_docker_subproject, cache_info_suite=cache_info_suite
-    ):
-        cache_engine.update_file_timestamp(
-            file_path=conftest_file, cache_info_suite=cache_info_suite
-        )
-    for unit_test_info in cache_engine.get_unit_tests_to_run():
-        cache_engine.update_file_timestamp(
-            file_path=unit_test_info.src_file_path, cache_info_suite=cache_info_suite
-        )
-        cache_engine.update_file_timestamp(
-            file_path=unit_test_info.test_file_path, cache_info_suite=cache_info_suite
-        )
+    for _, test_file in mock_docker_subproject.get_src_unit_test_file_pairs():
+        cache_engine.update_test_pass_timestamp(file_path=test_file)
     cache_engine.write_text()
     sleep(10 / 1000)  # sleep just long enough for a new timestamp when writing file
-    mock_docker_subproject.get_test_dir().joinpath(
-        FileCacheEngine.CONFTEST_NAME
-    ).write_text("Updated Top Level Conftest")
+    mock_docker_subproject.get_test_dir().joinpath(CONFTEST_NAME).write_text(
+        "Updated Top Level Conftest"
+    )
     # Everything above this line makes it so that there is unit test cache file
     # that has all files in it up to date, but then update the top level conftest in the
     # test folder.  This should make it so that all tests are run
@@ -556,10 +503,13 @@ def test_run_subproject_unit_tests_all_cached_but_top_test_conftest_updated(
             target_image=DockerTarget.DEV,
         )
         expected_run_process_calls = []
-        for unit_test_info in cache_engine.get_unit_tests_to_run():
+
+        for (
+            src_file,
+            test_file,
+        ) in mock_docker_subproject.get_src_unit_test_file_pairs():
             src_module = SubprojectUnitTests.get_module_from_path(
-                src_file_path=unit_test_info.src_file_path,
-                subproject=mock_docker_subproject,
+                src_file_path=src_file, subproject=mock_docker_subproject
             )
             expected_run_process_calls.append(
                 call(
@@ -572,7 +522,7 @@ def test_run_subproject_unit_tests_all_cached_but_top_test_conftest_updated(
                             "--cov-report",
                             "term-missing",
                             f"--cov={src_module}",
-                            unit_test_info.test_file_path,
+                            test_file,
                         ]
                     )
                 )
@@ -600,7 +550,38 @@ def test_run_subproject_unit_tests_all_cached_but_top_test_conftest_updated(
         assert run_process_mock.mock_calls == expected_run_process_calls
 
 
-@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "_mock_entire_subproject")
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
+def test_missing_test_file_for_src(
+    mock_project_root: Path, docker_project_root: Path
+) -> None:
+    subproject_context = SubprojectContext.PYPI
+    subproject = PythonSubproject(
+        project_root=docker_project_root, subproject_context=subproject_context
+    )
+    file_name = "file.py"
+    pypi_package_dir = subproject.get_python_package_dir()
+    pypi_package_dir.mkdir(parents=True)
+    pypi_package_dir.joinpath(file_name).touch()
+    unit_test_folder = subproject.get_test_suite_dir(
+        test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+    )
+    unit_test_folder.mkdir(parents=True)
+    missing_test_file = unit_test_folder.joinpath(f"test_{file_name}")
+    expected_msg = f"Expected {missing_test_file} to exist!"
+    basic_task_info = BasicTaskInfo(
+        non_docker_project_root=mock_project_root,
+        docker_project_root=docker_project_root,
+        local_uid=0,
+        local_gid=0,
+        local_user_env=None,
+    )
+    with pytest.raises(ValueError, match=expected_msg):
+        SubprojectUnitTests(
+            basic_task_info=basic_task_info, subproject_context=subproject_context
+        ).run()
+
+
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
 def test_run_subproject_unit_tests_some_cached(
     basic_task_info: BasicTaskInfo,
     subproject_context: SubprojectContext,
@@ -619,18 +600,12 @@ def test_run_subproject_unit_tests_some_cached(
     cache_both_src_and_test = 0
     cache_src = 1
     cache_test = 2
-    cache_info_suite = FileCacheEngine.CacheInfoSuite.UNIT_TEST
-    for conftest_file in get_all_conftest_files(
-        subproject=file_cache.subproject, cache_info_suite=cache_info_suite
+    files_to_update = []
+    for file_index, (src_file, test_file) in enumerate(
+        mock_docker_subproject.get_src_unit_test_file_pairs()
     ):
-        # testing a scenario where no conftest files have been updated
-        file_cache.update_file_timestamp(
-            file_path=conftest_file, cache_info_suite=cache_info_suite
-        )
-    for file_index, unit_test_info in enumerate(file_cache.get_unit_tests_to_run()):
         src_module = SubprojectUnitTests.get_module_from_path(
-            src_file_path=unit_test_info.src_file_path,
-            subproject=mock_docker_subproject,
+            src_file_path=src_file, subproject=mock_docker_subproject
         )
         run_process_call = call(
             args=concatenate_args(
@@ -642,38 +617,30 @@ def test_run_subproject_unit_tests_some_cached(
                     "--cov-report",
                     "term-missing",
                     f"--cov={src_module}",
-                    unit_test_info.test_file_path,
+                    test_file,
                 ]
             )
         )
         mod_ten = file_index % 10
         if mod_ten == cache_both_src_and_test:
-            # both src and test are cached skip testing pair of files
-            file_cache.update_file_timestamp(
-                file_path=unit_test_info.src_file_path,
-                cache_info_suite=cache_info_suite,
-            )
-            file_cache.update_file_timestamp(
-                file_path=unit_test_info.test_file_path,
-                cache_info_suite=cache_info_suite,
-            )
+            # Tests ran and neither src nor test are updated
+            file_cache.update_test_pass_timestamp(file_path=test_file)
         elif mod_ten == cache_src:
-            # cache src but not test, testing needs to happen
-            file_cache.update_file_timestamp(
-                file_path=unit_test_info.src_file_path,
-                cache_info_suite=cache_info_suite,
-            )
+            # Tests ran, but src was updated
+            file_cache.update_test_pass_timestamp(file_path=test_file)
+            files_to_update.append(src_file)
             expected_run_process_calls.append(run_process_call)
         elif mod_ten == cache_test:
-            # cache test but not src, testing needs to happen
-            file_cache.update_file_timestamp(
-                file_path=unit_test_info.test_file_path,
-                cache_info_suite=cache_info_suite,
-            )
+            # Tests ran, but tests was updated
+            file_cache.update_test_pass_timestamp(file_path=test_file)
+            files_to_update.append(test_file)
             expected_run_process_calls.append(run_process_call)
         else:
             expected_run_process_calls.append(run_process_call)
     file_cache.write_text()
+    sleep(10 / 1000)  # sleep just long enough for a new timestamp when writing file
+    for file_to_update in files_to_update:
+        file_to_update.write_text("Updated File")
     # This is needed for now because INFRA only has one file and therefore
     # skipping it skips the report generating test as well
     if expected_run_process_calls:
@@ -769,7 +736,7 @@ def run_feature_test_side_effect(args: list[Any]) -> None:
             break
 
 
-@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "_mock_entire_subproject")
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
 def test_run_subproject_feature_tests_test_all(
     basic_task_info: BasicTaskInfo,
     subproject_context: SubprojectContext,
@@ -784,10 +751,13 @@ def test_run_subproject_feature_tests_test_all(
         ).run()
         docker_project_root = basic_task_info.docker_project_root
         non_docker_project_root = basic_task_info.non_docker_project_root
-        file_cache = FileCacheEngine(
-            subproject_context=subproject_context, project_root=docker_project_root
-        )
-        feature_test_info = file_cache.get_feature_tests_to_run()
+        test_files = [
+            file
+            for file in mock_docker_subproject.get_test_suite_dir(
+                test_suite=PythonSubproject.TestSuite.FEATURE_TESTS
+            ).glob("*")
+            if FEATURE_TEST_FILE_NAME_REGEX.match(file.name)
+        ]
         expected_calls = [
             call(
                 args=concatenate_args(
@@ -803,26 +773,25 @@ def test_run_subproject_feature_tests_test_all(
                             project_root=docker_project_root
                         ),
                         mock_docker_subproject.get_pytest_feature_test_report_args(),
-                        test_file_to_run,
+                        test_file,
                     ]
                 )
             )
-            for test_file_to_run in feature_test_info.test_files
+            for test_file in test_files
         ]
         if len(expected_calls) > 0:
-            run_process_mock.assert_has_calls(calls=expected_calls)
+            assert run_process_mock.mock_calls == expected_calls
         else:  # pragma: no cov - might only have cases that require calls
             run_process_mock.assert_not_called()
 
 
-@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "_mock_entire_subproject")
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
 def test_run_subproject_feature_tests_in_ci_cd_int_test_mode(
     basic_task_info: BasicTaskInfo,
     subproject_context: SubprojectContext,
     mock_docker_subproject: PythonSubproject,
 ) -> None:
     basic_task_info.ci_cd_feature_test_mode = True
-
     with patch(
         "build_support.ci_cd_tasks.validation_tasks.run_process",
         side_effect=run_feature_test_side_effect,
@@ -832,10 +801,13 @@ def test_run_subproject_feature_tests_in_ci_cd_int_test_mode(
         ).run()
         docker_project_root = basic_task_info.docker_project_root
         non_docker_project_root = basic_task_info.non_docker_project_root
-        file_cache = FileCacheEngine(
-            subproject_context=subproject_context, project_root=docker_project_root
-        )
-        feature_test_info = file_cache.get_feature_tests_to_run()
+        test_files = [
+            file
+            for file in mock_docker_subproject.get_test_suite_dir(
+                test_suite=PythonSubproject.TestSuite.FEATURE_TESTS
+            ).glob("*")
+            if FEATURE_TEST_FILE_NAME_REGEX.match(file.name)
+        ]
         expected_calls = [
             call(
                 args=concatenate_args(
@@ -851,19 +823,19 @@ def test_run_subproject_feature_tests_in_ci_cd_int_test_mode(
                             project_root=docker_project_root
                         ),
                         mock_docker_subproject.get_pytest_feature_test_report_args(),
-                        test_file_to_run,
+                        test_file,
                     ]
                 )
             )
-            for test_file_to_run in feature_test_info.test_files
+            for test_file in test_files
         ]
         if subproject_context == SubprojectContext.BUILD_SUPPORT:
             run_process_mock.assert_not_called()
         else:
-            run_process_mock.assert_has_calls(calls=expected_calls)
+            assert run_process_mock.mock_calls == expected_calls
 
 
-@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "_mock_entire_subproject")
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
 def test_run_subproject_feature_tests_all_cached(
     basic_task_info: BasicTaskInfo,
     subproject_context: SubprojectContext,
@@ -873,18 +845,15 @@ def test_run_subproject_feature_tests_all_cached(
         subproject_context=subproject_context,
         project_root=basic_task_info.docker_project_root,
     )
-    feature_test_info = file_cache.get_feature_tests_to_run()
-    for file in (
-        *feature_test_info.src_files,
-        *feature_test_info.test_files,
-        *get_all_conftest_files(
-            subproject=mock_docker_subproject,
-            cache_info_suite=FileCacheEngine.CacheInfoSuite.FEATURE_TEST,
-        ),
-    ):
-        file_cache.update_file_timestamp(
-            file_path=file, cache_info_suite=FileCacheEngine.CacheInfoSuite.FEATURE_TEST
-        )
+    test_files = [
+        file
+        for file in mock_docker_subproject.get_test_suite_dir(
+            test_suite=PythonSubproject.TestSuite.FEATURE_TESTS
+        ).glob("*")
+        if FEATURE_TEST_FILE_NAME_REGEX.match(file.name)
+    ]
+    for test_file in test_files:
+        file_cache.update_test_pass_timestamp(file_path=test_file)
     file_cache.write_text()
     with patch(
         "build_support.ci_cd_tasks.validation_tasks.run_process"
@@ -895,7 +864,7 @@ def test_run_subproject_feature_tests_all_cached(
         run_process_mock.assert_not_called()
 
 
-@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "_mock_entire_subproject")
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
 def test_run_subproject_feature_tests_all_cached_but_top_test_conftest_updated(
     basic_task_info: BasicTaskInfo,
     subproject_context: SubprojectContext,
@@ -905,24 +874,20 @@ def test_run_subproject_feature_tests_all_cached_but_top_test_conftest_updated(
         subproject_context=subproject_context,
         project_root=basic_task_info.docker_project_root,
     )
-    feature_test_info = file_cache.get_feature_tests_to_run()
-    for file in (
-        *feature_test_info.src_files,
-        *feature_test_info.test_files,
-        *get_all_conftest_files(
-            subproject=mock_docker_subproject,
-            cache_info_suite=FileCacheEngine.CacheInfoSuite.FEATURE_TEST,
-        ),
-    ):
-        file_cache.update_file_timestamp(
-            file_path=file, cache_info_suite=FileCacheEngine.CacheInfoSuite.FEATURE_TEST
-        )
+    test_files = [
+        file
+        for file in mock_docker_subproject.get_test_suite_dir(
+            test_suite=PythonSubproject.TestSuite.FEATURE_TESTS
+        ).glob("*")
+        if FEATURE_TEST_FILE_NAME_REGEX.match(file.name)
+    ]
+    for test_file in test_files:
+        file_cache.update_test_pass_timestamp(file_path=test_file)
     file_cache.write_text()
     sleep(10 / 1000)  # sleep just long enough for a new timestamp when writing file
-    mock_docker_subproject.get_test_dir().joinpath(
-        FileCacheEngine.CONFTEST_NAME
-    ).write_text("Updated Top Level Conftest")
-
+    mock_docker_subproject.get_test_dir().joinpath(CONFTEST_NAME).write_text(
+        "Updated Top Level Conftest"
+    )
     with patch(
         "build_support.ci_cd_tasks.validation_tasks.run_process",
         side_effect=run_feature_test_side_effect,
@@ -947,19 +912,19 @@ def test_run_subproject_feature_tests_all_cached_but_top_test_conftest_updated(
                             project_root=docker_project_root
                         ),
                         mock_docker_subproject.get_pytest_feature_test_report_args(),
-                        test_file_to_run,
+                        test_file,
                     ]
                 )
             )
-            for test_file_to_run in feature_test_info.test_files
+            for test_file in test_files
         ]
         if len(expected_calls) > 0:
-            run_process_mock.assert_has_calls(calls=expected_calls)
+            assert run_process_mock.mock_calls == expected_calls
         else:  # pragma: no cov - might only have cases that require calls
             run_process_mock.assert_not_called()
 
 
-@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "_mock_entire_subproject")
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
 def test_run_subproject_feature_tests_some_cached(
     basic_task_info: BasicTaskInfo,
     subproject_context: SubprojectContext,
@@ -969,21 +934,21 @@ def test_run_subproject_feature_tests_some_cached(
         subproject_context=subproject_context,
         project_root=basic_task_info.docker_project_root,
     )
-    feature_test_info = file_cache.get_feature_tests_to_run()
-    if len(feature_test_info.test_files) <= 1:  # pragma: no cov - might not be true
+    test_files = [
+        file
+        for file in mock_docker_subproject.get_test_suite_dir(
+            test_suite=PythonSubproject.TestSuite.FEATURE_TESTS
+        ).glob("*")
+        if FEATURE_TEST_FILE_NAME_REGEX.match(file.name)
+    ]
+    if len(test_files) <= 1:  # pragma: no cov - might not be true
         return
-
-    for file in (
-        *feature_test_info.src_files,
-        feature_test_info.test_files[0],
-        *get_all_conftest_files(
-            subproject=mock_docker_subproject,
-            cache_info_suite=FileCacheEngine.CacheInfoSuite.FEATURE_TEST,
-        ),
-    ):
-        file_cache.update_file_timestamp(
-            file_path=file, cache_info_suite=FileCacheEngine.CacheInfoSuite.FEATURE_TEST
-        )
+    test_files_to_run = []
+    for index, test_file in enumerate(test_files):
+        if index % 2 == 0:
+            file_cache.update_test_pass_timestamp(file_path=test_file)
+        else:
+            test_files_to_run.append(test_file)
     file_cache.write_text()
 
     with patch(
@@ -1014,12 +979,12 @@ def test_run_subproject_feature_tests_some_cached(
                     ]
                 )
             )
-            for test_file_to_run in feature_test_info.test_files[1:]
+            for test_file_to_run in test_files_to_run
         ]
         run_process_mock.assert_has_calls(calls=expected_calls)
 
 
-@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "_mock_entire_subproject")
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
 def test_run_subproject_feature_tests_one_src_updated(
     basic_task_info: BasicTaskInfo,
     subproject_context: SubprojectContext,
@@ -1029,29 +994,18 @@ def test_run_subproject_feature_tests_one_src_updated(
         subproject_context=subproject_context,
         project_root=basic_task_info.docker_project_root,
     )
-    feature_test_info = file_cache.get_feature_tests_to_run()
-    if len(feature_test_info.src_files) <= 1:  # pragma: no cov - might not be true
-        return
-
-    file_cache = FileCacheEngine(
-        subproject_context=subproject_context,
-        project_root=basic_task_info.docker_project_root,
-    )
-    feature_test_info = file_cache.get_feature_tests_to_run()
-    for file in (
-        *feature_test_info.src_files,
-        *feature_test_info.test_files,
-        *get_all_conftest_files(
-            subproject=mock_docker_subproject,
-            cache_info_suite=FileCacheEngine.CacheInfoSuite.FEATURE_TEST,
-        ),
-    ):
-        file_cache.update_file_timestamp(
-            file_path=file, cache_info_suite=FileCacheEngine.CacheInfoSuite.FEATURE_TEST
-        )
+    test_files = [
+        file
+        for file in mock_docker_subproject.get_test_suite_dir(
+            test_suite=PythonSubproject.TestSuite.FEATURE_TESTS
+        ).glob("*")
+        if FEATURE_TEST_FILE_NAME_REGEX.match(file.name)
+    ]
+    for test_file in test_files:
+        file_cache.update_test_pass_timestamp(file_path=test_file)
     file_cache.write_text()
     sleep(10 / 1000)  # sleep just long enough for a new timestamp when writing file
-    src_file = feature_test_info.src_files[0]
+    src_file = next(mock_docker_subproject.get_all_testable_src_files())
     src_content = src_file.read_text()
     src_file.write_text(src_content + "\n")
 
@@ -1079,11 +1033,11 @@ def test_run_subproject_feature_tests_one_src_updated(
                             project_root=docker_project_root
                         ),
                         mock_docker_subproject.get_pytest_feature_test_report_args(),
-                        test_file_to_run,
+                        test_file,
                     ]
                 )
             )
-            for test_file_to_run in feature_test_info.test_files
+            for test_file in test_files
         ]
         if len(expected_calls) > 0:
             run_process_mock.assert_has_calls(calls=expected_calls)
