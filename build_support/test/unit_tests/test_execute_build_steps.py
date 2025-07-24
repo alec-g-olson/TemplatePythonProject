@@ -6,22 +6,14 @@ from unittest.mock import patch
 import pytest
 from _pytest.fixtures import SubRequest
 
-from build_support.ci_cd_tasks.build_tasks import (
-    BuildAll,
-    BuildDocs,
-    BuildPypi,
-)
+from build_support.ci_cd_tasks.build_tasks import BuildAll, BuildDocs, BuildPypi
 from build_support.ci_cd_tasks.env_setup_tasks import (
     Clean,
     SetupDevEnvironment,
     SetupInfraEnvironment,
     SetupProdEnvironment,
 )
-from build_support.ci_cd_tasks.lint_tasks import (
-    Format,
-    Lint,
-    LintApplyUnsafeFixes,
-)
+from build_support.ci_cd_tasks.lint_tasks import Format, Lint, LintApplyUnsafeFixes
 from build_support.ci_cd_tasks.push_tasks import PushAll, PushPypi
 from build_support.ci_cd_tasks.task_node import (
     BasicTaskInfo,
@@ -32,9 +24,11 @@ from build_support.ci_cd_tasks.validation_tasks import (
     AllSubprojectSecurityChecks,
     AllSubprojectStaticTypeChecking,
     EnforceProcess,
+    SubprojectFeatureTests,
     SubprojectUnitTests,
     ValidateAll,
     ValidatePythonStyle,
+    ValidateStaticTypeChecking,
 )
 from build_support.ci_cd_vars.file_and_dir_path_vars import get_local_info_yaml
 from build_support.ci_cd_vars.project_structure import maybe_build_dir
@@ -58,6 +52,10 @@ def test_constants_not_changed_by_accident() -> None:
         "setup_prod_env": CliTaskInfo(task_node=SetupProdEnvironment),
         "setup_infra_env": CliTaskInfo(task_node=SetupInfraEnvironment),
         "test_style": CliTaskInfo(task_node=ValidatePythonStyle),
+        "type_check_build_support": CliTaskInfo(
+            task_node=ValidateStaticTypeChecking,
+            subproject_context=SubprojectContext.BUILD_SUPPORT,
+        ),
         "type_checks": CliTaskInfo(task_node=AllSubprojectStaticTypeChecking),
         "security_checks": CliTaskInfo(task_node=AllSubprojectSecurityChecks),
         "check_process": CliTaskInfo(task_node=EnforceProcess),
@@ -67,6 +65,13 @@ def test_constants_not_changed_by_accident() -> None:
         ),
         "test_pypi": CliTaskInfo(
             task_node=SubprojectUnitTests, subproject_context=SubprojectContext.PYPI
+        ),
+        "test_pypi_features": CliTaskInfo(
+            task_node=SubprojectFeatureTests, subproject_context=SubprojectContext.PYPI
+        ),
+        "test_build_support_features": CliTaskInfo(
+            task_node=SubprojectFeatureTests,
+            subproject_context=SubprojectContext.BUILD_SUPPORT,
         ),
         "test": CliTaskInfo(task_node=ValidateAll),
         "format": CliTaskInfo(task_node=Format),
@@ -93,7 +98,7 @@ def test_fix_permissions(real_project_root_dir: Path) -> None:
                     for path in real_project_root_dir.glob("*")
                     if path.name not in [".git", "test_scratch_folder"]
                 ],
-            ],
+            ]
         )
         fix_permissions(local_user_uid=1337, local_user_gid=42)
         run_process_mock.assert_called_once_with(
@@ -112,7 +117,7 @@ def non_docker_project_root_arg(request: SubRequest, tmp_path: Path) -> Path:
 
 
 @pytest.fixture(params=[True, False])
-def ci_cd_integration_test_mode(request: SubRequest) -> bool:
+def ci_cd_feature_test_mode(request: SubRequest) -> bool:
     return cast(bool, request.param)
 
 
@@ -121,62 +126,56 @@ def build_task(request: SubRequest) -> str:
     return cast(str, request.param)
 
 
-@pytest.fixture()
+@pytest.fixture
 def cli_arg_combo(
     non_docker_project_root_arg: Path,
     docker_project_root_arg: Path,
     basic_task_info: BasicTaskInfo,
-    ci_cd_integration_test_mode: bool,
+    ci_cd_feature_test_mode: bool,
 ) -> BasicTaskInfo:
     return BasicTaskInfo(
         non_docker_project_root=non_docker_project_root_arg,
         docker_project_root=docker_project_root_arg,
         local_uid=basic_task_info.local_uid,
         local_gid=basic_task_info.local_gid,
-        ci_cd_integration_test_mode=ci_cd_integration_test_mode,
+        ci_cd_feature_test_mode=ci_cd_feature_test_mode,
         local_user_env=basic_task_info.local_user_env,
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def _setup_run_info_yaml(cli_arg_combo: BasicTaskInfo) -> None:
     get_local_info_yaml(project_root=cli_arg_combo.docker_project_root).write_text(
         cli_arg_combo.to_yaml()
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def args_to_test_single_task(
-    docker_project_root_arg: Path,
-    build_task: str,
+    docker_project_root_arg: Path, build_task: str
 ) -> list[str]:
     return [
         str(x) for x in ["--docker-project-root", docker_project_root_arg, build_task]
     ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def expected_namespace_single_task(
-    docker_project_root_arg: Path,
-    build_task: str,
+    docker_project_root_arg: Path, build_task: str
 ) -> Namespace:
     return Namespace(
-        docker_project_root=docker_project_root_arg,
-        build_tasks=[build_task],
+        docker_project_root=docker_project_root_arg, build_tasks=[build_task]
     )
 
 
 def test_parse_args_single_task(
-    args_to_test_single_task: list[str],
-    expected_namespace_single_task: Namespace,
+    args_to_test_single_task: list[str], expected_namespace_single_task: Namespace
 ) -> None:
     assert parse_args(args=args_to_test_single_task) == expected_namespace_single_task
 
 
-@pytest.fixture()
-def args_to_test_all_tasks(
-    docker_project_root_arg: Path,
-) -> list[str]:
+@pytest.fixture
+def args_to_test_all_tasks(docker_project_root_arg: Path) -> list[str]:
     return [
         str(x)
         for x in [
@@ -187,10 +186,8 @@ def args_to_test_all_tasks(
     ]
 
 
-@pytest.fixture()
-def expected_namespace_all_tasks(
-    docker_project_root_arg: Path,
-) -> Namespace:
+@pytest.fixture
+def expected_namespace_all_tasks(docker_project_root_arg: Path) -> Namespace:
     return Namespace(
         docker_project_root=docker_project_root_arg,
         build_tasks=list(CLI_ARG_TO_TASK.keys()),
@@ -205,35 +202,30 @@ def test_parse_args_all_task(
 
 def test_parse_args_no_task() -> None:
     with pytest.raises(SystemExit):
-        parse_args(
-            args=["--docker-project-root", "docker_project_root"],
-        )
+        parse_args(args=["--docker-project-root", "docker_project_root"])
 
 
 def test_parse_args_bad_task() -> None:
     with pytest.raises(SystemExit):
         parse_args(
-            args=["--docker-project-root", "docker_project_root", "INVALID_TASK_NAME"],
+            args=["--docker-project-root", "docker_project_root", "INVALID_TASK_NAME"]
         )
 
 
 def test_parse_args_no_docker_project_root() -> None:
     with pytest.raises(SystemExit):
-        parse_args(
-            args=["clean"],
-        )
+        parse_args(args=["clean"])
 
 
 @pytest.mark.usefixtures("_setup_run_info_yaml")
 def test_run_main_success(cli_arg_combo: BasicTaskInfo) -> None:
     args = Namespace(
-        docker_project_root=cli_arg_combo.docker_project_root,
-        build_tasks=["clean"],
+        docker_project_root=cli_arg_combo.docker_project_root, build_tasks=["clean"]
     )
     with (
         patch("build_support.execute_build_steps.run_tasks") as mock_run_tasks,
         patch(
-            "build_support.execute_build_steps.fix_permissions",
+            "build_support.execute_build_steps.fix_permissions"
         ) as mock_fix_permissions,
     ):
         run_main(args)
@@ -250,23 +242,18 @@ def test_run_main_success(cli_arg_combo: BasicTaskInfo) -> None:
 @pytest.mark.usefixtures("_setup_run_info_yaml")
 def test_run_main_bad_cli_task(cli_arg_combo: BasicTaskInfo) -> None:
     args = Namespace(
-        docker_project_root=cli_arg_combo.docker_project_root,
-        build_tasks=["clean"],
+        docker_project_root=cli_arg_combo.docker_project_root, build_tasks=["clean"]
     )
-    with (
-        patch(
-            "build_support.execute_build_steps.CLI_ARG_TO_TASK",
-            {
-                "clean": CliTaskInfo(
-                    task_node=Clean, subproject_context=SubprojectContext.PYPI
-                )
-            },
-        ),
+    with patch(
+        "build_support.execute_build_steps.CLI_ARG_TO_TASK",
+        {
+            "clean": CliTaskInfo(
+                task_node=Clean, subproject_context=SubprojectContext.PYPI
+            )
+        },
     ):
         msg = (
-            "Incoherent CLI Task Info.\n"
-            "\ttask_node: Clean\n"
-            "\tsubproject_context: PYPI"
+            "Incoherent CLI Task Info.\n\ttask_node: Clean\n\tsubproject_context: PYPI"
         )
         with pytest.raises(ValueError, match=msg):
             run_main(args)
@@ -276,16 +263,13 @@ def test_run_main_bad_cli_task(cli_arg_combo: BasicTaskInfo) -> None:
 def test_run_main_exception(cli_arg_combo: BasicTaskInfo) -> None:
     all_task_list = list(CLI_ARG_TO_TASK.keys())
     args = Namespace(
-        docker_project_root=cli_arg_combo.docker_project_root,
-        build_tasks=all_task_list,
+        docker_project_root=cli_arg_combo.docker_project_root, build_tasks=all_task_list
     )
     with (
         patch("build_support.execute_build_steps.run_tasks") as mock_run_tasks,
+        patch("builtins.print") as mock_print,
         patch(
-            "builtins.print",
-        ) as mock_print,
-        patch(
-            "build_support.execute_build_steps.fix_permissions",
+            "build_support.execute_build_steps.fix_permissions"
         ) as mock_fix_permissions,
     ):
         error_to_raise = RuntimeError("error_message")
@@ -309,7 +293,7 @@ def test_get_standard_task_node(basic_task_info: BasicTaskInfo) -> None:
     class TestTaskNode(TaskNode):
         @override
         def required_tasks(self) -> list[TaskNode]:
-            return []  # pragma: no cover - never called, just a test class
+            return []  # pragma: no cov - never called, just a test class
 
         @override
         def run(self) -> None:
@@ -325,7 +309,7 @@ def test_get_subproject_specific_task_node(basic_task_info: BasicTaskInfo) -> No
     class TestSubprojectSpecificTaskNode(PerSubprojectTask):
         @override
         def required_tasks(self) -> list[TaskNode]:
-            return []  # pragma: no cover - never called, just a test class
+            return []  # pragma: no cov - never called, just a test class
 
         @override
         def run(self) -> None:
@@ -338,6 +322,5 @@ def test_get_subproject_specific_task_node(basic_task_info: BasicTaskInfo) -> No
     assert cli_task_info.get_task_node(
         basic_task_info=basic_task_info
     ) == TestSubprojectSpecificTaskNode(
-        basic_task_info=basic_task_info,
-        subproject_context=SubprojectContext.PYPI,
+        basic_task_info=basic_task_info, subproject_context=SubprojectContext.PYPI
     )

@@ -36,7 +36,7 @@ def test_update_pyproject_toml(tmp_path: Path, real_project_root_dir: Path) -> N
     expected_data["tool"]["poetry"]["version"] = "0.0.0"
     expected_data["tool"]["poetry"]["license"] = new_project_settings.license
     expected_data["tool"]["poetry"]["authors"] = [
-        new_project_settings.organization.formatted_name_and_email(),
+        new_project_settings.organization.formatted_name_and_email()
     ]
     expected_data["tool"]["poetry"]["packages"][0]["include"] = (
         new_project_settings.name

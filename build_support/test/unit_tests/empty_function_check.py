@@ -1,14 +1,14 @@
-from typing import Callable
+from collections.abc import Callable
 
 
-def empty_function() -> None:  # pragma: no cover, exists only for return bytecode
+def empty_function() -> None:  # pragma: no cov, exists only for return bytecode
     return
 
 
 EMPTY_FUNCTION_BYTECODE = empty_function.__code__.co_code
 
 
-def empty_function_with_docstring() -> None:  # pragma: no cover, same as above
+def empty_function_with_docstring() -> None:  # pragma: no cov, same as above
     """A docstring"""
     return
 

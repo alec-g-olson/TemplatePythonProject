@@ -1,7 +1,8 @@
 """Defines the structure of a python subproject."""
 
+from collections.abc import Iterator
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -13,7 +14,7 @@ from build_support.ci_cd_vars.project_structure import get_build_dir, maybe_buil
 from build_support.process_runner import concatenate_args
 
 
-class SubprojectContext(Enum):
+class SubprojectContext(StrEnum):
     """An Enum to track the python subprojects with similar structure."""
 
     PYPI = "pypi_package"
@@ -40,14 +41,21 @@ class PythonSubproject:
     project_root: Path
     subproject_context: SubprojectContext
 
-    class TestSuite(Enum):
+    class TestSuite(StrEnum):
         """An Enum to track the possible test contexts."""
 
         UNIT_TESTS = "unit_tests"
-        INTEGRATION_TESTS = "integration_tests"
+        FEATURE_TESTS = "feature_tests"
         # The Enums below should only be used in the BUILD_SUPPORT subproject
         PROCESS_ENFORCEMENT = "process_enforcement"
         STYLE_ENFORCEMENT = "style_enforcement"
+
+    class TestScope(StrEnum):
+        """An Enum to track if the scope of a pytest call is complete for the suite."""
+
+        COMPLETE = "COMPLETE"
+        INCOMPLETE = "INCOMPLETE"
+        SINGLE_FILE = "SINGLE_FILE"
 
     def get_subproject_name(self) -> str:
         """Gets the name of the subproject.
@@ -92,6 +100,50 @@ class PythonSubproject:
             Path: Path to the src folder in the subproject.
         """
         return self.get_root_dir().joinpath("src")
+
+    @staticmethod
+    def _get_all_files_in(directory: Path) -> Iterator[Path]:
+        return (file for file in directory.rglob("*") if file.is_file())
+
+    @staticmethod
+    def _get_all_python_files_in(directory: Path) -> Iterator[Path]:
+        return (
+            file
+            for file in PythonSubproject._get_all_files_in(directory=directory)
+            if file.name.endswith(".py")
+        )
+
+    def get_all_testable_src_files(self) -> Iterator[Path]:
+        """Gets all the src files that can be tested in a subproject.
+
+        Yields:
+            Path: A testable src file in the subproject.
+        """
+        return (
+            file
+            for file in self._get_all_python_files_in(
+                directory=self.get_python_package_dir()
+            )
+            if file.name != "__init__.py"
+        )
+
+    def get_src_unit_test_file_pairs(self) -> Iterator[tuple[Path, Path]]:
+        """Gets all the src files and their unit test files for a subproject.
+
+        Yields:
+            tuple[Path, Path]: A tuple of a src file, and it's corresponding unit test
+                file.
+        """
+        python_pkg_root_dir = self.get_python_package_dir()
+        unit_test_root_dir = self.get_test_suite_dir(
+            test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+        )
+        for src_file in self.get_all_testable_src_files():
+            relative_path = src_file.parent.relative_to(python_pkg_root_dir)
+            test_file = unit_test_root_dir.joinpath(relative_path).joinpath(
+                f"test_{src_file.name}"
+            )
+            yield src_file, test_file
 
     def get_python_package_dir(self) -> Path:
         """Gets the python package folder in a subproject.
@@ -168,32 +220,45 @@ class PythonSubproject:
         """
         return self.get_reports_dir().joinpath(self.get_bandit_report_name())
 
-    def get_pytest_report_name(self, test_suite: TestSuite) -> str:
+    def get_pytest_report_name(
+        self, test_suite: TestSuite, test_scope: TestScope
+    ) -> str:
         """Get the name of the pytest report for this subproject.
 
         Args:
             test_suite (TestSuite): The test suite enum corresponding to the test suite
                 we are getting the pytest report name for.
+            test_scope (TestScope): The test scope enum indicating how complete the test
+                call will be for the test suite.
 
         Returns:
             str: The name of a pytest report in a standardized format.
         """
+        if test_scope == PythonSubproject.TestScope.COMPLETE:
+            return self._get_test_report_name(
+                test_suite=test_suite, report_extension="pytest_report.xml"
+            )
         return self._get_test_report_name(
-            test_suite=test_suite, report_extension="pytest_report.xml"
+            test_suite=test_suite,
+            report_extension=f"pytest_report_{test_scope.value}.xml",
         )
 
-    def get_pytest_report_path(self, test_suite: TestSuite) -> Path:
+    def get_pytest_report_path(
+        self, test_suite: TestSuite, test_scope: TestScope
+    ) -> Path:
         """Get the path of the pytest report for this subproject.
 
         Args:
             test_suite (TestSuite): The test suite enum corresponding to the test suite
                 we are getting the pytest report path for.
+            test_scope (TestScope): The test scope enum indicating how complete the test
+                call will be for the test suite.
 
         Returns:
             Path: Path to the pytest report for this subproject.
         """
         return self.get_reports_dir().joinpath(
-            self.get_pytest_report_name(test_suite=test_suite)
+            self.get_pytest_report_name(test_suite=test_suite, test_scope=test_scope)
         )
 
     def get_pytest_coverage_report_name(self, test_suite: TestSuite) -> str:
@@ -224,53 +289,59 @@ class PythonSubproject:
             self.get_pytest_coverage_report_name(test_suite=test_suite)
         )
 
-    def get_pytest_report_args(self, test_suite: TestSuite) -> list[str]:
-        """Get the args used by pytest for this subproject.
+    def get_pytest_whole_test_suite_report_args(
+        self, test_suite: TestSuite
+    ) -> list[str]:
+        """Get the args used by pytest when running test suites for this subproject.
 
         Args:
             test_suite (TestSuite): The test suite enum corresponding to the test suite
                 we are getting report args for.
 
         Returns:
-            list[str]: A list of arguments that will be used with pytest for this
-                subproject.
+            list[str]: A list of arguments that will be used with pytest when running
+                unit tests for this subproject.
         """
+        report_path = self.get_pytest_report_path(
+            test_suite=test_suite, test_scope=PythonSubproject.TestScope.COMPLETE
+        )
         report_args: list[Any] = [
             # Always check to make sure all test code is covered
             # It's a good check to make sure we're doing what we expect with our tests
             "--cov-report",
             "term-missing",
             f"--cov={self.get_test_suite_dir(test_suite=test_suite)}",
-            f"--junitxml={self.get_pytest_report_path(test_suite=test_suite)}",
+            f"--junitxml={report_path}",
         ]
         if test_suite == self.TestSuite.UNIT_TESTS:
             coverage_report = self.get_pytest_coverage_report_path(
                 test_suite=test_suite
             )
             report_args.extend(
-                (
-                    f"--cov={self.get_src_dir()}",
-                    "--cov-report",
-                    f"xml:{coverage_report}",
-                )
+                (f"--cov={self.get_src_dir()}", f"--cov-report=xml:{coverage_report}")
             )
         return concatenate_args(args=report_args)
 
-    def get_file_cache_dir(self) -> Path:
-        """Gets the directory that will be used for storing file cache information.
+    def get_pytest_feature_test_report_args(self) -> list[str]:
+        """Get the args used by pytest when running features tests for this subproject.
 
         Returns:
-            Path: Path to this subproject's cache dir in its build dir.
+            list[str]: A list of arguments that will be used with pytest when running
+                feature tests for this subproject.
         """
-        return maybe_build_dir(self.get_build_dir().joinpath("file_caches"))
+        report_path = self.get_pytest_report_path(
+            test_suite=PythonSubproject.TestSuite.FEATURE_TESTS,
+            test_scope=PythonSubproject.TestScope.SINGLE_FILE,
+        )
+        return [f"--junitxml={report_path}"]
 
-    def get_unit_test_cache_yaml(self) -> Path:
-        """Gets the file that holds this subproject's unit test cache information.
+    def get_file_cache_yaml(self) -> Path:
+        """Gets the file that holds this subproject's file cache information.
 
         Returns:
-            Path: Path to this subproject's unit test cache info.
+            Path: Path to this subproject's file cache info.
         """
-        return self.get_file_cache_dir().joinpath("unit_test_cache.yaml")
+        return self.get_build_dir().joinpath("file_cache.yaml")
 
 
 def get_python_subproject(

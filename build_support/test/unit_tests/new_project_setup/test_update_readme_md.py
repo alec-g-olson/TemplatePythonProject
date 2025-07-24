@@ -1,9 +1,7 @@
 import shutil
 from pathlib import Path
 
-from build_support.ci_cd_vars.project_setting_vars import (
-    get_project_name,
-)
+from build_support.ci_cd_vars.project_setting_vars import get_project_name
 from build_support.ci_cd_vars.project_structure import get_readme
 from build_support.new_project_setup.new_project_data_models import (
     Organization,

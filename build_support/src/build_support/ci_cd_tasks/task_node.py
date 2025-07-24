@@ -22,7 +22,7 @@ class BasicTaskInfo(BaseModel):
     local_uid: int = Field(gt=-1)
     local_gid: int = Field(gt=-1)
     local_user_env: dict[str, str] | None = None
-    ci_cd_integration_test_mode: bool = False
+    ci_cd_feature_test_mode: bool = False
 
     @model_validator(mode="after")
     def check_valid_local_user_env(self) -> "BasicTaskInfo":
@@ -98,7 +98,7 @@ class TaskNode(ABC):
     local_uid: int
     local_gid: int
     local_user_env: dict[str, str] | None
-    ci_cd_integration_test_mode: bool
+    ci_cd_feature_test_mode: bool
 
     def __init__(self, basic_task_info: BasicTaskInfo) -> None:
         """Init method for TaskNode.
@@ -114,7 +114,7 @@ class TaskNode(ABC):
         self.local_uid = basic_task_info.local_uid
         self.local_gid = basic_task_info.local_gid
         self.local_user_env = basic_task_info.local_user_env
-        self.ci_cd_integration_test_mode = basic_task_info.ci_cd_integration_test_mode
+        self.ci_cd_feature_test_mode = basic_task_info.ci_cd_feature_test_mode
 
     def get_basic_task_info(self) -> BasicTaskInfo:
         """Get the basic info used to run this task.
@@ -128,7 +128,7 @@ class TaskNode(ABC):
             local_uid=self.local_uid,
             local_gid=self.local_gid,
             local_user_env=self.local_user_env,
-            ci_cd_integration_test_mode=self.ci_cd_integration_test_mode,
+            ci_cd_feature_test_mode=self.ci_cd_feature_test_mode,
         )
 
     def task_label(self) -> str:
@@ -185,9 +185,7 @@ class PerSubprojectTask(TaskNode, ABC):
     subproject: PythonSubproject
 
     def __init__(
-        self,
-        basic_task_info: BasicTaskInfo,
-        subproject_context: SubprojectContext,
+        self, basic_task_info: BasicTaskInfo, subproject_context: SubprojectContext
     ) -> None:
         """Init method for TaskNode.
 

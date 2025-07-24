@@ -23,9 +23,7 @@ from build_support.ci_cd_vars.git_status_vars import (
     git_fetch,
 )
 from build_support.ci_cd_vars.project_setting_vars import get_pulumi_version
-from build_support.ci_cd_vars.project_structure import (
-    get_integration_test_scratch_folder,
-)
+from build_support.ci_cd_vars.project_structure import get_feature_test_scratch_folder
 from build_support.process_runner import run_process
 
 
@@ -48,7 +46,7 @@ class SetupDevEnvironment(TaskNode):
         Returns:
             None
         """
-        if not self.ci_cd_integration_test_mode:
+        if not self.ci_cd_feature_test_mode:
             run_process(
                 args=get_docker_build_command(
                     docker_project_root=self.docker_project_root,
@@ -56,10 +54,10 @@ class SetupDevEnvironment(TaskNode):
                     extra_args={
                         "--build-arg": [
                             "DOCKER_REMOTE_PROJECT_ROOT="
-                            + str(self.docker_project_root.absolute()),
-                        ],
+                            + str(self.docker_project_root.absolute())
+                        ]
                     },
-                ),
+                )
             )
 
 
@@ -82,12 +80,12 @@ class SetupProdEnvironment(TaskNode):
         Returns:
             None
         """
-        if not self.ci_cd_integration_test_mode:
+        if not self.ci_cd_feature_test_mode:
             run_process(
                 args=get_docker_build_command(
                     docker_project_root=self.docker_project_root,
                     target_image=DockerTarget.PROD,
-                ),
+                )
             )
 
 
@@ -110,16 +108,16 @@ class SetupInfraEnvironment(TaskNode):
         Returns:
             None
         """
-        if not self.ci_cd_integration_test_mode:
+        if not self.ci_cd_feature_test_mode:
             run_process(
                 args=get_docker_build_command(
                     docker_project_root=self.docker_project_root,
                     target_image=DockerTarget.INFRA,
                     extra_args={
                         "--build-arg": "PULUMI_VERSION="
-                        + get_pulumi_version(project_root=self.docker_project_root),
+                        + get_pulumi_version(project_root=self.docker_project_root)
                     },
-                ),
+                )
             )
 
 
@@ -143,25 +141,23 @@ class Clean(TaskNode):
             None
         """
         run_process(
-            args=["rm", "-rf", get_build_dir(project_root=self.docker_project_root)],
+            args=["rm", "-rf", get_build_dir(project_root=self.docker_project_root)]
         )
         run_process(
             args=[
                 "rm",
                 "-rf",
-                get_integration_test_scratch_folder(
-                    project_root=self.docker_project_root
-                ),
-            ],
+                get_feature_test_scratch_folder(project_root=self.docker_project_root),
+            ]
         )
         run_process(
-            args=["rm", "-rf", self.docker_project_root.joinpath(".mypy_cache")],
+            args=["rm", "-rf", self.docker_project_root.joinpath(".mypy_cache")]
         )
         run_process(
-            args=["rm", "-rf", self.docker_project_root.joinpath(".pytest_cache")],
+            args=["rm", "-rf", self.docker_project_root.joinpath(".pytest_cache")]
         )
         run_process(
-            args=["rm", "-rf", self.docker_project_root.joinpath(".ruff_cache")],
+            args=["rm", "-rf", self.docker_project_root.joinpath(".ruff_cache")]
         )
 
 
@@ -247,5 +243,5 @@ class GetGitInfo(TaskNode):
             GitInfo(
                 branch=get_current_branch_name(project_root=self.docker_project_root),
                 tags=get_local_tags(project_root=self.docker_project_root),
-            ).to_yaml(),
+            ).to_yaml()
         )

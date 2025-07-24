@@ -1,5 +1,5 @@
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -42,21 +42,21 @@ def test_get_new_license_content() -> None:
         "THE SOFTWARE.\n"
     )
     with patch(
-        "build_support.new_project_setup.setup_license.datetime",
+        "build_support.new_project_setup.setup_license.datetime"
     ) as mock_datetime:
         mock_datetime.now = Mock(
-            return_value=datetime(year=2024, month=1, day=28, tzinfo=timezone.utc)
+            return_value=datetime(year=2024, month=1, day=28, tzinfo=UTC)
         )
         new_license_content = get_new_license_content(
             template_key=ALL_RIGHTS_RESERVED_KEY,
             organization=Organization.model_validate(
-                {"name": "Some small group", "contact_email": "an.email@gmail.com"},
+                {"name": "Some small group", "contact_email": "an.email@gmail.com"}
             ),
         )
         assert new_license_content == expected_license_content
 
 
-@pytest.fixture()
+@pytest.fixture
 def check_template_compatability(is_on_main: bool) -> bool:
     # We only want to check template compatability if we are
     # on a working branch.  If we are on main and something goes
@@ -67,11 +67,11 @@ def check_template_compatability(is_on_main: bool) -> bool:
 
 def test_all_templates_supported(check_template_compatability: bool) -> None:
     # won't hit if check_template_compatability is false
-    if check_template_compatability:  # pragma: no cover
+    if check_template_compatability:  # pragma: no cov
         known_fields_to_skip = [
             "[This is the first released version of the Lesser GPL.  It also counts\n"
             " as the successor of the GNU Library Public License, version 2, hence\n"
-            " the version number 2.1.]",
+            " the version number 2.1.]"
         ]
         template_field_regex = re.compile(r"\[[^]]+]")
         allowed_fields = (
@@ -93,8 +93,7 @@ def test_write_new_license_from_template(tmp_path: Path) -> None:
         {"name": "Some small group", "contact_email": "an.email@gmail.com"}
     )
     expected_contents = get_new_license_content(
-        template_key=template_key,
-        organization=organization,
+        template_key=template_key, organization=organization
     )
     assert not license_dest.exists()
     write_new_license_from_template(

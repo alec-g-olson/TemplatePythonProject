@@ -61,13 +61,13 @@ def test_get_license_templates_dir(mock_project_root: Path) -> None:
 
 def test_get_local_info_yaml(mock_project_root: Path) -> None:
     assert get_local_info_yaml(project_root=mock_project_root) == get_build_dir(
-        project_root=mock_project_root,
+        project_root=mock_project_root
     ).joinpath("local_info.yaml")
 
 
 def test_get_git_info_yaml(mock_project_root: Path) -> None:
     assert get_git_info_yaml(project_root=mock_project_root) == get_build_dir(
-        project_root=mock_project_root,
+        project_root=mock_project_root
     ).joinpath("git_info.yaml")
 
 

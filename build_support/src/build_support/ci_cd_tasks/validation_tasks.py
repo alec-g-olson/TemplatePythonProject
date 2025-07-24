@@ -1,6 +1,16 @@
-"""Should hold all tasks that run tests, both on artifacts and style tests."""
+"""Should hold all tasks that run tests, both on artifacts and style tests.
 
+Attributes:
+    | FEATURE_TEST_FILE_NAME_REGEX: A regex for getting feature test file names.
+"""
+
+import re
+from collections.abc import Iterator
+from dataclasses import dataclass
+from pathlib import Path
 from typing import override
+
+from junitparser import JUnitXml
 
 from build_support.ci_cd_tasks.env_setup_tasks import GetGitInfo, SetupDevEnvironment
 from build_support.ci_cd_tasks.task_node import PerSubprojectTask, TaskNode
@@ -16,9 +26,7 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_all_test_folders,
 )
 from build_support.ci_cd_vars.machine_introspection_vars import THREADS_AVAILABLE
-from build_support.ci_cd_vars.project_structure import (
-    get_integration_test_scratch_folder,
-)
+from build_support.ci_cd_vars.project_structure import get_feature_test_scratch_folder
 from build_support.ci_cd_vars.subproject_structure import (
     PythonSubproject,
     SubprojectContext,
@@ -26,7 +34,7 @@ from build_support.ci_cd_vars.subproject_structure import (
     get_python_subproject,
     get_sorted_subproject_contexts,
 )
-from build_support.file_caching import FileCacheInfo
+from build_support.file_caching import FileCacheEngine
 from build_support.process_runner import concatenate_args, run_process
 
 
@@ -47,7 +55,7 @@ class ValidateAll(TaskNode):
             AllSubprojectStaticTypeChecking(basic_task_info=basic_task_info),
             AllSubprojectSecurityChecks(basic_task_info=basic_task_info),
             EnforceProcess(basic_task_info=basic_task_info),
-            AllSubprojectIntegrationTests(basic_task_info=basic_task_info),
+            AllSubprojectFeatureTests(basic_task_info=basic_task_info),
         ]
 
     @override
@@ -96,14 +104,14 @@ class EnforceProcess(TaskNode):
                     "pytest",
                     "-n",
                     THREADS_AVAILABLE,
-                    build_support_subproject.get_pytest_report_args(
+                    build_support_subproject.get_pytest_whole_test_suite_report_args(
                         test_suite=PythonSubproject.TestSuite.PROCESS_ENFORCEMENT
                     ),
                     build_support_subproject.get_test_suite_dir(
                         test_suite=PythonSubproject.TestSuite.PROCESS_ENFORCEMENT
                     ),
-                ],
-            ),
+                ]
+            )
         )
 
 
@@ -176,8 +184,8 @@ class ValidateStaticTypeChecking(PerSubprojectTask):
                     "mypy",
                     "--explicit-package-bases",
                     self.subproject.get_root_dir(),
-                ],
-            ),
+                ]
+            )
         )
 
 
@@ -243,8 +251,8 @@ class ValidateSecurityChecks(PerSubprojectTask):
                     self.subproject.get_bandit_report_path(),
                     "-r",
                     self.subproject.get_src_dir(),
-                ],
-            ),
+                ]
+            )
         )
 
 
@@ -284,8 +292,8 @@ class ValidatePythonStyle(TaskNode):
                     "ruff",
                     "check",
                     get_all_non_test_folders(project_root=self.docker_project_root),
-                ],
-            ),
+                ]
+            )
         )
         run_process(
             args=concatenate_args(
@@ -300,8 +308,8 @@ class ValidatePythonStyle(TaskNode):
                     "--ignore",
                     "D,FBT",  # These are too onerous to enforce on test code
                     get_all_test_folders(project_root=self.docker_project_root),
-                ],
-            ),
+                ]
+            )
         )
         run_process(
             args=concatenate_args(
@@ -314,14 +322,16 @@ class ValidatePythonStyle(TaskNode):
                     "pytest",
                     "-n",
                     THREADS_AVAILABLE,
-                    subproject[SubprojectContext.BUILD_SUPPORT].get_pytest_report_args(
+                    subproject[
+                        SubprojectContext.BUILD_SUPPORT
+                    ].get_pytest_whole_test_suite_report_args(
                         test_suite=PythonSubproject.TestSuite.STYLE_ENFORCEMENT
                     ),
                     subproject[SubprojectContext.BUILD_SUPPORT].get_test_suite_dir(
                         test_suite=PythonSubproject.TestSuite.STYLE_ENFORCEMENT
                     ),
-                ],
-            ),
+                ]
+            )
         )
 
 
@@ -352,8 +362,68 @@ class AllSubprojectUnitTests(TaskNode):
         """
 
 
+@dataclass
+class UnitTestInfo:
+    """A dataclass for organizing unit test information."""
+
+    src_file_path: Path
+    test_file_path: Path
+
+
 class SubprojectUnitTests(PerSubprojectTask):
     """Task for running unit tests in a single subproject."""
+
+    @staticmethod
+    def get_module_from_path(src_file_path: Path, subproject: PythonSubproject) -> str:
+        """Gets the module name from a path.
+
+        Args:
+            src_file_path (Path): The path to the source file.
+            subproject (PythonSubproject): The subproject the source file is in.
+
+        Returns:
+            str: The module name.
+        """
+        src_root = subproject.get_src_dir()
+        relative_path = src_file_path.relative_to(src_root)
+        relative_path_ext_stripped = relative_path.with_suffix("")
+        return ".".join(relative_path_ext_stripped.parts)
+
+    def get_unit_tests_to_run(
+        self, file_cache: FileCacheEngine
+    ) -> Iterator[UnitTestInfo]:
+        """Gets information required to run unit tests.
+
+        Args:
+            file_cache (FileCacheEngine): The file cache that holds up-to-date
+                information on which tests have passed and which haven't.
+
+        Yields:
+            Iterator[UnitTestInfo]: Generator of unit test info for tests that need to
+                run.
+        """
+        for src_file, test_file in self.subproject.get_src_unit_test_file_pairs():
+            if test_file.exists():
+                most_recent_conftest_update = file_cache.most_recent_conftest_update(
+                    test_dir=test_file.parent
+                )
+                src_file_updated = FileCacheEngine.get_last_modified_time(
+                    file_path=src_file
+                )
+                test_file_updated = FileCacheEngine.get_last_modified_time(
+                    file_path=test_file
+                )
+                test_file_info = file_cache.get_test_info_for_file(file_path=test_file)
+                if (
+                    test_file_info.tests_passed is None
+                    or test_file_info.tests_passed < src_file_updated
+                    or test_file_info.tests_passed < test_file_updated
+                    or test_file_info.tests_passed < most_recent_conftest_update
+                ):
+                    yield UnitTestInfo(src_file_path=src_file, test_file_path=test_file)
+            else:
+                msg = f"Expected {test_file} to exist!"
+                raise ValueError(msg)
 
     @override
     def required_tasks(self) -> list[TaskNode]:
@@ -363,7 +433,7 @@ class SubprojectUnitTests(PerSubprojectTask):
             list[TaskNode]: A list of tasks required to unit test the subproject.
         """
         required_tasks: list[TaskNode] = [
-            SetupDevEnvironment(basic_task_info=self.get_basic_task_info()),
+            SetupDevEnvironment(basic_task_info=self.get_basic_task_info())
         ]
         if self.subproject_context == SubprojectContext.BUILD_SUPPORT:
             required_tasks.append(
@@ -383,100 +453,69 @@ class SubprojectUnitTests(PerSubprojectTask):
             docker_project_root=self.docker_project_root,
             target_image=DockerTarget.DEV,
         )
-        src_root = self.subproject.get_python_package_dir()
-        if src_root.exists():
-            subproject_root = self.subproject.get_root_dir()
-            unit_test_cache_file = self.subproject.get_unit_test_cache_yaml()
-            if unit_test_cache_file.exists():
-                unit_test_cache = FileCacheInfo.from_yaml(
-                    unit_test_cache_file.read_text()
-                )
-            else:
-                unit_test_cache = FileCacheInfo(
-                    group_root_dir=subproject_root, cache_info={}
-                )
-            unit_test_root = self.subproject.get_test_suite_dir(
-                test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+        file_cache = FileCacheEngine(
+            subproject_context=self.subproject_context,
+            project_root=self.docker_project_root,
+        )
+        src_files_tested = 0
+        for unit_test_info in self.get_unit_tests_to_run(file_cache=file_cache):
+            src_files_tested += 1
+            src_module = SubprojectUnitTests.get_module_from_path(
+                src_file_path=unit_test_info.src_file_path, subproject=self.subproject
             )
-            src_files = sorted(src_root.rglob("*"))
-            src_files_checked = 0
-            for src_file in src_files:
-                if (
-                    src_file.is_file()
-                    and src_file.name.endswith(".py")
-                    and src_file.name != "__init__.py"
-                ):
-                    relative_path = src_file.relative_to(src_root)
-                    test_folder = unit_test_root.joinpath(relative_path).parent
-                    test_file = test_folder.joinpath(f"test_{src_file.name}")
-                    src_changed = unit_test_cache.file_has_been_changed(
-                        file_path=src_file
-                    )
-                    test_changed = unit_test_cache.file_has_been_changed(
-                        file_path=test_file
-                    )
-                    # evaluate file change before if to ensure they are updated in the
-                    # file cache data.  Otherwise, if src is different then test is not
-                    # checked and will stay stale until this code is run again.
-                    if src_changed or test_changed:
-                        src_files_checked += 1
-                        run_process(
-                            args=concatenate_args(
-                                args=[
-                                    dev_docker_command,
-                                    "coverage",
-                                    "run",
-                                    "--include",
-                                    src_file,
-                                    "-m",
-                                    "pytest",
-                                    test_file,
-                                ],
-                            ),
-                        )
-                        run_process(
-                            args=concatenate_args(
-                                args=[
-                                    dev_docker_command,
-                                    "coverage",
-                                    "report",
-                                    "-m",
-                                ],
-                            ),
-                        )
-                    unit_test_cache_file.write_text(unit_test_cache.to_yaml())
-            if src_files_checked:
-                run_process(
-                    args=concatenate_args(
-                        args=[
-                            dev_docker_command,
-                            "pytest",
-                            "-n",
-                            THREADS_AVAILABLE,
-                            self.subproject.get_pytest_report_args(
-                                test_suite=PythonSubproject.TestSuite.UNIT_TESTS
-                            ),
-                            self.subproject.get_src_dir(),
-                            self.subproject.get_test_suite_dir(
-                                test_suite=PythonSubproject.TestSuite.UNIT_TESTS
-                            ),
-                        ],
-                    ),
+            run_process(
+                args=concatenate_args(
+                    args=[
+                        dev_docker_command,
+                        "pytest",
+                        "-n",
+                        THREADS_AVAILABLE,
+                        "--cov-report",
+                        "term-missing",
+                        f"--cov={src_module}",
+                        unit_test_info.test_file_path,
+                    ]
                 )
+            )
+            file_cache.update_test_pass_timestamp(
+                file_path=unit_test_info.test_file_path
+            )
+            file_cache.write_text()
+        if src_files_tested:
+            run_process(
+                args=concatenate_args(
+                    args=[
+                        dev_docker_command,
+                        "pytest",
+                        "-n",
+                        THREADS_AVAILABLE,
+                        self.subproject.get_pytest_whole_test_suite_report_args(
+                            test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+                        ),
+                        self.subproject.get_src_dir(),
+                        self.subproject.get_test_suite_dir(
+                            test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+                        ),
+                    ]
+                )
+            )
+
+            # Conftest and file timestamps are already updated by get_unit_test_info()
+            file_cache.write_text()
 
 
-class AllSubprojectIntegrationTests(TaskNode):
-    """Task for running integration tests in all subprojects."""
+class AllSubprojectFeatureTests(TaskNode):
+    """Task for running feature tests in all subprojects."""
 
     @override
     def required_tasks(self) -> list[TaskNode]:
-        """Gets the subproject specific integration test tasks.
+        """Gets the subproject specific feature test tasks.
 
         Returns:
-            list[TaskNode]: All the subproject specific integration test tasks.
+            list[TaskNode]: All the subproject specific feature test tasks.
         """
         return [
-            SubprojectIntegrationTests(
+            SubprojectFeatureTests(
                 basic_task_info=self.get_basic_task_info(),
                 subproject_context=subproject_context,
             )
@@ -492,25 +531,28 @@ class AllSubprojectIntegrationTests(TaskNode):
         """
 
 
-class SubprojectIntegrationTests(PerSubprojectTask):
-    """Task for running integration tests in a single subproject."""
+FEATURE_TEST_FILE_NAME_REGEX = re.compile(r"test_.+_.+\.py")
+
+
+class SubprojectFeatureTests(PerSubprojectTask):
+    """Task for running feature tests in a single subproject."""
 
     @override
     def required_tasks(self) -> list[TaskNode]:
-        """Get the list of tasks to run before we can integration test the subproject.
+        """Get the list of tasks to run before we can feature test the subproject.
 
-        Most of our build process integration tests will break if style and process
+        Most of our build process feature tests will break if style and process
         checks fail.  So we want to make sure that our style and process tests are
-        passing before running build support integration tests.
+        passing before running build support feature tests.
 
         Returns:
-            list[TaskNode]: A list of tasks required to integration test the subproject.
+            list[TaskNode]: A list of tasks required to feature test the subproject.
         """
         required_tasks: list[TaskNode] = [
             SubprojectUnitTests(
                 basic_task_info=self.get_basic_task_info(),
                 subproject_context=self.subproject_context,
-            ),
+            )
         ]
         if self.subproject_context == SubprojectContext.BUILD_SUPPORT:
             required_tasks.extend(
@@ -521,39 +563,104 @@ class SubprojectIntegrationTests(PerSubprojectTask):
             )
         return required_tasks
 
+    def get_feature_tests_to_run(self, file_cache: FileCacheEngine) -> Iterator[Path]:
+        """Gets information required to run feature tests.
+
+        Args:
+            file_cache (FileCacheEngine): The file cache that holds up-to-date
+                information on which tests have passed and which haven't.
+
+        Returns:
+            FeatureTestInfo: A dataclass with the cache information for feature tests.
+        """
+        feature_test_dir = self.subproject.get_test_suite_dir(
+            test_suite=PythonSubproject.TestSuite.FEATURE_TESTS
+        )
+        most_recent_conftest_update = file_cache.most_recent_conftest_update(
+            test_dir=feature_test_dir
+        )
+        most_recent_src_file_update = file_cache.most_recent_src_file_update()
+
+        test_files = [
+            file
+            for file in feature_test_dir.glob("*")
+            if FEATURE_TEST_FILE_NAME_REGEX.match(file.name)
+        ]
+
+        # Update feature test file timestamps
+        for test_file in test_files:
+            test_file_info = file_cache.get_test_info_for_file(file_path=test_file)
+            if (
+                test_file_info.tests_passed is None
+                or test_file_info.tests_passed < most_recent_conftest_update
+                or test_file_info.tests_passed < most_recent_src_file_update
+            ):
+                yield test_file
+
     @override
     def run(self) -> None:
-        """Runs integration tests for the subproject.
+        """Runs feature tests for the subproject.
 
         Returns:
             None
         """
         if (
-            self.ci_cd_integration_test_mode
+            self.ci_cd_feature_test_mode
             and self.subproject_context == SubprojectContext.BUILD_SUPPORT
         ):
-            # prevents recursive calls to integration testing
+            # prevents recursive calls to feature testing
             return
         dev_docker_command = get_docker_command_for_image(
             non_docker_project_root=self.non_docker_project_root,
             docker_project_root=self.docker_project_root,
             target_image=DockerTarget.DEV,
         )
-        run_process(
-            args=concatenate_args(
-                args=[
-                    dev_docker_command,
-                    "pytest",
-                    "--basetemp",
-                    get_integration_test_scratch_folder(
-                        project_root=self.docker_project_root
-                    ),
-                    self.subproject.get_pytest_report_args(
-                        test_suite=PythonSubproject.TestSuite.INTEGRATION_TESTS
-                    ),
-                    self.subproject.get_test_suite_dir(
-                        test_suite=PythonSubproject.TestSuite.INTEGRATION_TESTS
-                    ),
-                ],
-            ),
+
+        file_cache = FileCacheEngine(
+            subproject_context=self.subproject_context,
+            project_root=self.docker_project_root,
         )
+
+        complete_xml_path = self.subproject.get_pytest_report_path(
+            test_suite=PythonSubproject.TestSuite.FEATURE_TESTS,
+            test_scope=PythonSubproject.TestScope.COMPLETE,
+        )
+        incomplete_xml_path = self.subproject.get_pytest_report_path(
+            test_suite=PythonSubproject.TestSuite.FEATURE_TESTS,
+            test_scope=PythonSubproject.TestScope.INCOMPLETE,
+        )
+
+        for feature_test_path in self.get_feature_tests_to_run(file_cache=file_cache):
+            run_process(
+                args=concatenate_args(
+                    args=[
+                        dev_docker_command,
+                        "pytest",
+                        "--basetemp",
+                        get_feature_test_scratch_folder(
+                            project_root=self.docker_project_root
+                        ),
+                        self.subproject.get_pytest_feature_test_report_args(),
+                        feature_test_path,
+                    ]
+                )
+            )
+            single_file_xml_path = self.subproject.get_pytest_report_path(
+                test_suite=PythonSubproject.TestSuite.FEATURE_TESTS,
+                test_scope=PythonSubproject.TestScope.SINGLE_FILE,
+            )
+            if incomplete_xml_path.exists():
+                incomplete_xml_results = JUnitXml.fromfile(str(incomplete_xml_path))
+                single_file_xml_results = JUnitXml.fromfile(str(single_file_xml_path))
+                incomplete_xml_results += single_file_xml_results
+                incomplete_xml_results.write()
+            else:
+                single_file_xml_path.rename(incomplete_xml_path)
+            # Record that the feature test passed
+            file_cache.update_test_pass_timestamp(file_path=feature_test_path)
+            file_cache.write_text()
+
+        if (
+            incomplete_xml_path.exists() and not complete_xml_path.exists()
+        ):  # pragma: no cov
+            incomplete_xml_path.rename(complete_xml_path)

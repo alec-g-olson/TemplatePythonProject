@@ -2,7 +2,6 @@ import re
 from dataclasses import dataclass
 from http import HTTPStatus
 from pathlib import Path
-from typing import Tuple
 
 import pytest
 import requests
@@ -75,8 +74,8 @@ def test_subproject_code_docs_exists_for_subprojects_with_code(
 
 
 def _is_broken_hyperlink(
-    hyperlink: Tuple[str, str],
-) -> bool:  # pragma: no cover - might not hit if check_weblinks is false
+    hyperlink: tuple[str, str],
+) -> bool:  # pragma: no cov - might not hit if check_weblinks is false
     return (
         hyperlink[1].startswith("http")
         and requests.get(hyperlink[1]).status_code != HTTPStatus.OK
@@ -93,7 +92,7 @@ def test_docs_hyperlinks_are_valid(
 
     bad_hyperlinks = []
 
-    if check_weblinks:  # pragma: no cover - might not hit if check_weblinks is false
+    if check_weblinks:  # pragma: no cov - might not hit if check_weblinks is false
         bad_hyperlinks = [
             BadHyperlinkInfo(name=hyperlink[0], url=hyperlink[1])
             for doc_file in get_docs_dir(project_root=real_project_root_dir).rglob(

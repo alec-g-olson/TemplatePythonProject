@@ -4,8 +4,8 @@ Attributes:
     | MAIN_BRANCH_NAME: The name of the main branch for this repo.
 """
 
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 from git import DiffIndex, FetchInfo, Head, Repo
 from git.cmd import execute_kwargs

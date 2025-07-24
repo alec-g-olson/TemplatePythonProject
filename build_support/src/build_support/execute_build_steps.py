@@ -8,22 +8,14 @@ from argparse import ArgumentParser, Namespace
 from dataclasses import dataclass
 from pathlib import Path
 
-from build_support.ci_cd_tasks.build_tasks import (
-    BuildAll,
-    BuildDocs,
-    BuildPypi,
-)
+from build_support.ci_cd_tasks.build_tasks import BuildAll, BuildDocs, BuildPypi
 from build_support.ci_cd_tasks.env_setup_tasks import (
     Clean,
     SetupDevEnvironment,
     SetupInfraEnvironment,
     SetupProdEnvironment,
 )
-from build_support.ci_cd_tasks.lint_tasks import (
-    Format,
-    Lint,
-    LintApplyUnsafeFixes,
-)
+from build_support.ci_cd_tasks.lint_tasks import Format, Lint, LintApplyUnsafeFixes
 from build_support.ci_cd_tasks.push_tasks import PushAll, PushPypi
 from build_support.ci_cd_tasks.task_node import (
     BasicTaskInfo,
@@ -34,9 +26,11 @@ from build_support.ci_cd_tasks.validation_tasks import (
     AllSubprojectSecurityChecks,
     AllSubprojectStaticTypeChecking,
     EnforceProcess,
+    SubprojectFeatureTests,
     SubprojectUnitTests,
     ValidateAll,
     ValidatePythonStyle,
+    ValidateStaticTypeChecking,
 )
 from build_support.ci_cd_vars.file_and_dir_path_vars import get_local_info_yaml
 from build_support.ci_cd_vars.subproject_structure import SubprojectContext
@@ -52,10 +46,7 @@ class CliTaskInfo:
     task_node: type[TaskNode]
     subproject_context: SubprojectContext | None = None
 
-    def get_task_node(
-        self,
-        basic_task_info: BasicTaskInfo,
-    ) -> TaskNode:
+    def get_task_node(self, basic_task_info: BasicTaskInfo) -> TaskNode:
         """Builds a task node based on the contents of this dataclass.
 
         Args:
@@ -102,6 +93,10 @@ CLI_ARG_TO_TASK: dict[str, CliTaskInfo] = {
     "setup_prod_env": CliTaskInfo(task_node=SetupProdEnvironment),
     "setup_infra_env": CliTaskInfo(task_node=SetupInfraEnvironment),
     "test_style": CliTaskInfo(task_node=ValidatePythonStyle),
+    "type_check_build_support": CliTaskInfo(
+        task_node=ValidateStaticTypeChecking,
+        subproject_context=SubprojectContext.BUILD_SUPPORT,
+    ),
     "type_checks": CliTaskInfo(task_node=AllSubprojectStaticTypeChecking),
     "security_checks": CliTaskInfo(task_node=AllSubprojectSecurityChecks),
     "check_process": CliTaskInfo(task_node=EnforceProcess),
@@ -111,6 +106,13 @@ CLI_ARG_TO_TASK: dict[str, CliTaskInfo] = {
     ),
     "test_pypi": CliTaskInfo(
         task_node=SubprojectUnitTests, subproject_context=SubprojectContext.PYPI
+    ),
+    "test_pypi_features": CliTaskInfo(
+        task_node=SubprojectFeatureTests, subproject_context=SubprojectContext.PYPI
+    ),
+    "test_build_support_features": CliTaskInfo(
+        task_node=SubprojectFeatureTests,
+        subproject_context=SubprojectContext.BUILD_SUPPORT,
     ),
     "test": CliTaskInfo(task_node=ValidateAll),
     "format": CliTaskInfo(task_node=Format),
@@ -146,7 +148,7 @@ def fix_permissions(local_user_uid: int, local_user_gid: int) -> None:
                     for path in Path(__file__).parent.parent.parent.parent.glob("*")
                     if path.name not in [".git", "test_scratch_folder"]
                 ],
-            ],
+            ]
         ),
         verbosity=ProcessVerbosity.SILENT,
     )
@@ -203,7 +205,7 @@ def run_main(args: Namespace) -> None:
         run_tasks(
             tasks=requested_tasks, project_root=basic_task_info.docker_project_root
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(e)  # noqa: T201
     finally:
         fix_permissions(
@@ -212,5 +214,5 @@ def run_main(args: Namespace) -> None:
         )
 
 
-if __name__ == "__main__":  # pragma: no cover - main
+if __name__ == "__main__":  # pragma: no cov - main
     run_main(args=parse_args())

@@ -1,19 +1,24 @@
+import re
 import shutil
 from pathlib import Path
+from time import sleep
+from typing import Any
 from unittest.mock import call, patch
 
 import pytest
+from junitparser import JUnitXml, TestCase, TestSuite
 from unit_tests.empty_function_check import is_an_empty_function
 
 from build_support.ci_cd_tasks.env_setup_tasks import GetGitInfo, SetupDevEnvironment
 from build_support.ci_cd_tasks.task_node import BasicTaskInfo
 from build_support.ci_cd_tasks.validation_tasks import (
-    AllSubprojectIntegrationTests,
+    FEATURE_TEST_FILE_NAME_REGEX,
+    AllSubprojectFeatureTests,
     AllSubprojectSecurityChecks,
     AllSubprojectStaticTypeChecking,
     AllSubprojectUnitTests,
     EnforceProcess,
-    SubprojectIntegrationTests,
+    SubprojectFeatureTests,
     SubprojectUnitTests,
     ValidateAll,
     ValidatePythonStyle,
@@ -33,16 +38,14 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_all_test_folders,
 )
 from build_support.ci_cd_vars.machine_introspection_vars import THREADS_AVAILABLE
-from build_support.ci_cd_vars.project_structure import (
-    get_integration_test_scratch_folder,
-)
+from build_support.ci_cd_vars.project_structure import get_feature_test_scratch_folder
 from build_support.ci_cd_vars.subproject_structure import (
     PythonSubproject,
     get_all_python_subprojects_dict,
     get_python_subproject,
     get_sorted_subproject_contexts,
 )
-from build_support.file_caching import FileCacheInfo
+from build_support.file_caching import CONFTEST_NAME, FileCacheEngine
 from build_support.process_runner import concatenate_args
 
 
@@ -53,7 +56,7 @@ def test_validate_all_requires(basic_task_info: BasicTaskInfo) -> None:
         AllSubprojectStaticTypeChecking(basic_task_info=basic_task_info),
         AllSubprojectSecurityChecks(basic_task_info=basic_task_info),
         EnforceProcess(basic_task_info=basic_task_info),
-        AllSubprojectIntegrationTests(basic_task_info=basic_task_info),
+        AllSubprojectFeatureTests(basic_task_info=basic_task_info),
     ]
 
 
@@ -89,13 +92,13 @@ def test_run_enforce_process(basic_task_info: BasicTaskInfo) -> None:
                     "pytest",
                     "-n",
                     THREADS_AVAILABLE,
-                    build_support_subproject.get_pytest_report_args(
+                    build_support_subproject.get_pytest_whole_test_suite_report_args(
                         test_suite=PythonSubproject.TestSuite.PROCESS_ENFORCEMENT
                     ),
                     build_support_subproject.get_test_suite_dir(
                         test_suite=PythonSubproject.TestSuite.PROCESS_ENFORCEMENT
                     ),
-                ],
+                ]
             )
         )
 
@@ -107,8 +110,7 @@ def test_all_subproject_static_type_checking_requires(
         basic_task_info=basic_task_info
     ).required_tasks() == [
         ValidateStaticTypeChecking(
-            basic_task_info=basic_task_info,
-            subproject_context=subproject_context,
+            basic_task_info=basic_task_info, subproject_context=subproject_context
         )
         for subproject_context in get_sorted_subproject_contexts()
     ]
@@ -135,12 +137,10 @@ def test_validate_static_type_checking_requires(
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
 def test_run_validate_static_type_checking(
-    basic_task_info: BasicTaskInfo, subproject_context: SubprojectContext
+    basic_task_info: BasicTaskInfo,
+    subproject_context: SubprojectContext,
+    mock_docker_subproject: PythonSubproject,
 ) -> None:
-    subproject = get_python_subproject(
-        subproject_context=subproject_context,
-        project_root=basic_task_info.docker_project_root,
-    )
     with patch(
         "build_support.ci_cd_tasks.validation_tasks.run_process"
     ) as run_process_mock:
@@ -166,9 +166,9 @@ def test_run_validate_static_type_checking(
                     ),
                     "mypy",
                     "--explicit-package-bases",
-                    subproject.get_root_dir(),
-                ],
-            ),
+                    mock_docker_subproject.get_root_dir(),
+                ]
+            )
         )
 
 
@@ -179,16 +179,13 @@ def test_all_subproject_security_checks_requires(
         basic_task_info=basic_task_info
     ).required_tasks() == [
         ValidateSecurityChecks(
-            basic_task_info=basic_task_info,
-            subproject_context=subproject_context,
+            basic_task_info=basic_task_info, subproject_context=subproject_context
         )
         for subproject_context in get_sorted_subproject_contexts()
     ]
 
 
-def test_run_all_subproject_security_checks(
-    basic_task_info: BasicTaskInfo,
-) -> None:
+def test_run_all_subproject_security_checks(basic_task_info: BasicTaskInfo) -> None:
     assert is_an_empty_function(
         func=AllSubprojectSecurityChecks(basic_task_info=basic_task_info).run
     )
@@ -207,12 +204,10 @@ def test_validate_security_checks_requires(
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
 def test_run_validate_security_checks(
-    basic_task_info: BasicTaskInfo, subproject_context: SubprojectContext
+    basic_task_info: BasicTaskInfo,
+    subproject_context: SubprojectContext,
+    mock_docker_subproject: PythonSubproject,
 ) -> None:
-    subproject = get_python_subproject(
-        subproject_context=subproject_context,
-        project_root=basic_task_info.docker_project_root,
-    )
     with patch(
         "build_support.ci_cd_tasks.validation_tasks.run_process"
     ) as run_process_mock:
@@ -229,11 +224,11 @@ def test_run_validate_security_checks(
                     ),
                     "bandit",
                     "-o",
-                    subproject.get_bandit_report_path(),
+                    mock_docker_subproject.get_bandit_report_path(),
                     "-r",
-                    subproject.get_src_dir(),
-                ],
-            ),
+                    mock_docker_subproject.get_src_dir(),
+                ]
+            )
         )
 
 
@@ -265,7 +260,7 @@ def test_run_validate_python_style(basic_task_info: BasicTaskInfo) -> None:
                 get_all_non_test_folders(
                     project_root=basic_task_info.docker_project_root
                 ),
-            ],
+            ]
         )
         ruff_check_test_args = concatenate_args(
             args=[
@@ -279,7 +274,7 @@ def test_run_validate_python_style(basic_task_info: BasicTaskInfo) -> None:
                 "--ignore",
                 "D,FBT",
                 get_all_test_folders(project_root=basic_task_info.docker_project_root),
-            ],
+            ]
         )
         test_style_enforcement_args = concatenate_args(
             args=[
@@ -291,13 +286,15 @@ def test_run_validate_python_style(basic_task_info: BasicTaskInfo) -> None:
                 "pytest",
                 "-n",
                 THREADS_AVAILABLE,
-                subprojects[SubprojectContext.BUILD_SUPPORT].get_pytest_report_args(
+                subprojects[
+                    SubprojectContext.BUILD_SUPPORT
+                ].get_pytest_whole_test_suite_report_args(
                     test_suite=PythonSubproject.TestSuite.STYLE_ENFORCEMENT
                 ),
                 subprojects[SubprojectContext.BUILD_SUPPORT].get_test_suite_dir(
                     test_suite=PythonSubproject.TestSuite.STYLE_ENFORCEMENT
                 ),
-            ],
+            ]
         )
         all_call_args = [
             ruff_check_src_args,
@@ -305,7 +302,7 @@ def test_run_validate_python_style(basic_task_info: BasicTaskInfo) -> None:
             test_style_enforcement_args,
         ]
         run_process_mock.assert_has_calls(
-            calls=[call(args=args) for args in all_call_args],
+            calls=[call(args=args) for args in all_call_args]
         )
         assert run_process_mock.call_count == len(all_call_args)
 
@@ -313,8 +310,7 @@ def test_run_validate_python_style(basic_task_info: BasicTaskInfo) -> None:
 def test_all_subproject_unit_tests_requires(basic_task_info: BasicTaskInfo) -> None:
     assert AllSubprojectUnitTests(basic_task_info=basic_task_info).required_tasks() == [
         SubprojectUnitTests(
-            basic_task_info=basic_task_info,
-            subproject_context=subproject_context,
+            basic_task_info=basic_task_info, subproject_context=subproject_context
         )
         for subproject_context in get_sorted_subproject_contexts()
     ]
@@ -342,29 +338,38 @@ def test_subproject_unit_tests_requires(
         ).required_tasks() == [SetupDevEnvironment(basic_task_info=basic_task_info)]
 
 
-@pytest.fixture()
-def _mock_entire_subproject(
+@pytest.fixture
+def mock_entire_subproject(
     real_project_root_dir: Path,
     subproject_context: SubprojectContext,
     mock_docker_subproject: PythonSubproject,
 ) -> None:
     real_subproject = get_python_subproject(
         project_root=real_project_root_dir, subproject_context=subproject_context
-    ).get_root_dir()
-    test_subproject = mock_docker_subproject.get_root_dir()
-    shutil.copytree(src=real_subproject, dst=test_subproject)
+    )
+    real_root_dir = real_subproject.get_root_dir()
+    test_root_dir = mock_docker_subproject.get_root_dir()
+    shutil.copytree(src=real_root_dir, dst=test_root_dir)
+    # rename python package dir
+    read_package_name = real_subproject.get_python_package_dir().name
+    copied_dir = mock_docker_subproject.get_src_dir().joinpath(read_package_name)
+    shutil.move(src=copied_dir, dst=mock_docker_subproject.get_python_package_dir())
 
 
-@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "_mock_entire_subproject")
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
 def test_run_subproject_unit_tests_test_all(
     basic_task_info: BasicTaskInfo,
     subproject_context: SubprojectContext,
     mock_docker_subproject: PythonSubproject,
 ) -> None:
-    test_subproject_src = mock_docker_subproject.get_python_package_dir()
     with patch(
         "build_support.ci_cd_tasks.validation_tasks.run_process"
     ) as run_process_mock:
+        top_level_conftest = mock_docker_subproject.get_test_dir().joinpath(
+            CONFTEST_NAME
+        )
+        top_level_conftest.parent.mkdir(parents=True, exist_ok=True)
+        top_level_conftest.touch()
         SubprojectUnitTests(
             basic_task_info=basic_task_info, subproject_context=subproject_context
         ).run()
@@ -374,49 +379,13 @@ def test_run_subproject_unit_tests_test_all(
             target_image=DockerTarget.DEV,
         )
         expected_run_process_calls = []
-
-        if test_subproject_src.exists():
-            unit_test_root = mock_docker_subproject.get_test_suite_dir(
-                test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+        for (
+            src_file,
+            test_file,
+        ) in mock_docker_subproject.get_src_unit_test_file_pairs():
+            src_module = SubprojectUnitTests.get_module_from_path(
+                src_file_path=src_file, subproject=mock_docker_subproject
             )
-            src_files = sorted(test_subproject_src.rglob("*"))
-            for src_file in src_files:
-                if (
-                    src_file.is_file()
-                    and src_file.name.endswith(".py")
-                    and src_file.name != "__init__.py"
-                ):
-                    relative_path = src_file.relative_to(test_subproject_src)
-                    test_folder = unit_test_root.joinpath(relative_path).parent
-                    test_file = test_folder.joinpath(f"test_{src_file.name}")
-                    expected_run_process_calls.append(
-                        call(
-                            args=concatenate_args(
-                                args=[
-                                    docker_command,
-                                    "coverage",
-                                    "run",
-                                    "--include",
-                                    src_file,
-                                    "-m",
-                                    "pytest",
-                                    test_file,
-                                ],
-                            ),
-                        )
-                    )
-                    expected_run_process_calls.append(
-                        call(
-                            args=concatenate_args(
-                                args=[
-                                    docker_command,
-                                    "coverage",
-                                    "report",
-                                    "-m",
-                                ],
-                            ),
-                        )
-                    )
             expected_run_process_calls.append(
                 call(
                     args=concatenate_args(
@@ -425,47 +394,50 @@ def test_run_subproject_unit_tests_test_all(
                             "pytest",
                             "-n",
                             THREADS_AVAILABLE,
-                            mock_docker_subproject.get_pytest_report_args(
-                                test_suite=PythonSubproject.TestSuite.UNIT_TESTS
-                            ),
-                            mock_docker_subproject.get_src_dir(),
-                            mock_docker_subproject.get_test_suite_dir(
-                                test_suite=PythonSubproject.TestSuite.UNIT_TESTS
-                            ),
-                        ],
+                            "--cov-report",
+                            "term-missing",
+                            f"--cov={src_module}",
+                            test_file,
+                        ]
                     )
                 )
             )
-        run_process_mock.assert_has_calls(calls=expected_run_process_calls)
+        expected_run_process_calls.append(
+            call(
+                args=concatenate_args(
+                    args=[
+                        docker_command,
+                        "pytest",
+                        "-n",
+                        THREADS_AVAILABLE,
+                        mock_docker_subproject.get_pytest_whole_test_suite_report_args(
+                            test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+                        ),
+                        mock_docker_subproject.get_src_dir(),
+                        mock_docker_subproject.get_test_suite_dir(
+                            test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+                        ),
+                    ]
+                )
+            )
+        )
+        assert run_process_mock.mock_calls == expected_run_process_calls
 
 
-@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "_mock_entire_subproject")
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
 def test_run_subproject_unit_tests_all_cached(
-    basic_task_info: BasicTaskInfo,
-    subproject_context: SubprojectContext,
-    mock_docker_subproject: PythonSubproject,
+    basic_task_info: BasicTaskInfo, subproject_context: SubprojectContext
 ) -> None:
-    src_root = mock_docker_subproject.get_python_package_dir()
-    unit_test_root = mock_docker_subproject.get_test_suite_dir(
-        test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+    cache_engine = FileCacheEngine(
+        subproject_context=subproject_context,
+        project_root=basic_task_info.docker_project_root,
     )
-    unit_test_cache_file = mock_docker_subproject.get_unit_test_cache_yaml()
-    unit_test_cache = FileCacheInfo(
-        group_root_dir=mock_docker_subproject.get_root_dir(), cache_info={}
-    )
-    src_files = sorted(src_root.rglob("*"))
-    for src_file in src_files:
-        if (
-            src_file.is_file()
-            and src_file.name.endswith(".py")
-            and src_file.name != "__init__.py"
-        ):
-            relative_path = src_file.relative_to(src_root)
-            test_folder = unit_test_root.joinpath(relative_path).parent
-            test_file = test_folder.joinpath(f"test_{src_file.name}")
-            unit_test_cache.file_has_been_changed(file_path=src_file)
-            unit_test_cache.file_has_been_changed(file_path=test_file)
-    unit_test_cache_file.write_text(unit_test_cache.to_yaml())
+    for _, test_file in get_python_subproject(
+        subproject_context=subproject_context,
+        project_root=basic_task_info.docker_project_root,
+    ).get_src_unit_test_file_pairs():
+        cache_engine.update_test_pass_timestamp(file_path=test_file)
+    cache_engine.write_text()
     # Everything above this line makes it so that there is unit test cache file
     # that has all files in it up to date.  This should make it so that no tests are
     # run
@@ -478,53 +450,26 @@ def test_run_subproject_unit_tests_all_cached(
         assert run_process_mock.call_count == 0
 
 
-@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "_mock_entire_subproject")
-def test_run_subproject_unit_tests_some_cached(
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
+def test_run_subproject_unit_tests_all_cached_but_top_test_conftest_updated(
     basic_task_info: BasicTaskInfo,
     subproject_context: SubprojectContext,
     mock_docker_subproject: PythonSubproject,
 ) -> None:
-    src_root = mock_docker_subproject.get_python_package_dir()
-    unit_test_root = mock_docker_subproject.get_test_suite_dir(
-        test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+    cache_engine = FileCacheEngine(
+        subproject_context=subproject_context,
+        project_root=basic_task_info.docker_project_root,
     )
-    unit_test_cache_file = mock_docker_subproject.get_unit_test_cache_yaml()
-    unit_test_cache = FileCacheInfo(
-        group_root_dir=mock_docker_subproject.get_root_dir(), cache_info={}
+    for _, test_file in mock_docker_subproject.get_src_unit_test_file_pairs():
+        cache_engine.update_test_pass_timestamp(file_path=test_file)
+    cache_engine.write_text()
+    sleep(1 / 1000)  # sleep just long enough for a new timestamp when writing file
+    mock_docker_subproject.get_test_dir().joinpath(CONFTEST_NAME).write_text(
+        "Updated Top Level Conftest"
     )
-    src_files = sorted(src_root.rglob("*"))
-    src_files_to_skip_tests_for = []
-    file_index = 0
-    cache_both_src_and_test = 0
-    cache_both_src = 1
-    cache_both_test = 2
-    for src_file in src_files:
-        if (
-            src_file.is_file()
-            and src_file.name.endswith(".py")
-            and src_file.name != "__init__.py"
-        ):
-            relative_path = src_file.relative_to(src_root)
-            test_folder = unit_test_root.joinpath(relative_path).parent
-            test_file = test_folder.joinpath(f"test_{src_file.name}")
-            mod_twenty = file_index % 10
-            if mod_twenty == cache_both_src_and_test:
-                # both src and test are cached skip testing pair of files
-                unit_test_cache.file_has_been_changed(file_path=src_file)
-                unit_test_cache.file_has_been_changed(file_path=test_file)
-                src_files_to_skip_tests_for.append(src_file)
-            elif mod_twenty == cache_both_src:
-                # cache src but not test, testing needs to happen
-                unit_test_cache.file_has_been_changed(file_path=src_file)
-            elif mod_twenty == cache_both_test:
-                # cache test but not src, testing needs to happen
-                unit_test_cache.file_has_been_changed(file_path=test_file)
-            file_index += 1
-    unit_test_cache_file.write_text(unit_test_cache.to_yaml())
     # Everything above this line makes it so that there is unit test cache file
-    # that has some, not all, files in it up to date.  This includes some src files
-    # without their corresponding test file and vice versa, as well as some src and test
-    # file pairs.  This will run tests on most files, but skip some.
+    # that has all files in it up to date, but then update the top level conftest in the
+    # test folder.  This should make it so that all tests are run
     with patch(
         "build_support.ci_cd_tasks.validation_tasks.run_process"
     ) as run_process_mock:
@@ -537,104 +482,200 @@ def test_run_subproject_unit_tests_some_cached(
             target_image=DockerTarget.DEV,
         )
         expected_run_process_calls = []
-        skipped_tests = 0
-        if src_root.exists():
-            assert len(src_files_to_skip_tests_for) > 0
-            unit_test_root = mock_docker_subproject.get_test_suite_dir(
-                test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+
+        for (
+            src_file,
+            test_file,
+        ) in mock_docker_subproject.get_src_unit_test_file_pairs():
+            src_module = SubprojectUnitTests.get_module_from_path(
+                src_file_path=src_file, subproject=mock_docker_subproject
             )
-            src_files = sorted(src_root.rglob("*"))
-            for src_file in src_files:
-                if (
-                    src_file.is_file()
-                    and src_file.name.endswith(".py")
-                    and src_file.name != "__init__.py"
-                ):
-                    if src_file in src_files_to_skip_tests_for:
-                        skipped_tests += 1
-                        continue
-                    relative_path = src_file.relative_to(src_root)
-                    test_folder = unit_test_root.joinpath(relative_path).parent
-                    test_file = test_folder.joinpath(f"test_{src_file.name}")
-                    expected_run_process_calls.append(
-                        call(
-                            args=concatenate_args(
-                                args=[
-                                    docker_command,
-                                    "coverage",
-                                    "run",
-                                    "--include",
-                                    src_file,
-                                    "-m",
-                                    "pytest",
-                                    test_file,
-                                ],
-                            ),
-                        )
-                    )
-                    expected_run_process_calls.append(
-                        call(
-                            args=concatenate_args(
-                                args=[
-                                    docker_command,
-                                    "coverage",
-                                    "report",
-                                    "-m",
-                                ],
-                            ),
-                        )
-                    )
-            # This is needed for now because INFRA only has one file and therefore
-            # skipping it skips the report generating test as well
-            if expected_run_process_calls:
-                expected_run_process_calls.append(
-                    call(
-                        args=concatenate_args(
-                            args=[
-                                docker_command,
-                                "pytest",
-                                "-n",
-                                THREADS_AVAILABLE,
-                                mock_docker_subproject.get_pytest_report_args(
-                                    test_suite=PythonSubproject.TestSuite.UNIT_TESTS
-                                ),
-                                mock_docker_subproject.get_src_dir(),
-                                mock_docker_subproject.get_test_suite_dir(
-                                    test_suite=PythonSubproject.TestSuite.UNIT_TESTS
-                                ),
-                            ],
-                        )
+            expected_run_process_calls.append(
+                call(
+                    args=concatenate_args(
+                        args=[
+                            docker_command,
+                            "pytest",
+                            "-n",
+                            THREADS_AVAILABLE,
+                            "--cov-report",
+                            "term-missing",
+                            f"--cov={src_module}",
+                            test_file,
+                        ]
                     )
                 )
-        assert skipped_tests == len(src_files_to_skip_tests_for)
-        run_process_mock.assert_has_calls(calls=expected_run_process_calls)
+            )
+        expected_run_process_calls.append(
+            call(
+                args=concatenate_args(
+                    args=[
+                        docker_command,
+                        "pytest",
+                        "-n",
+                        THREADS_AVAILABLE,
+                        mock_docker_subproject.get_pytest_whole_test_suite_report_args(
+                            test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+                        ),
+                        mock_docker_subproject.get_src_dir(),
+                        mock_docker_subproject.get_test_suite_dir(
+                            test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+                        ),
+                    ]
+                )
+            )
+        )
+        assert run_process_mock.mock_calls == expected_run_process_calls
 
 
-def test_all_subproject_integration_tests_requires(
-    basic_task_info: BasicTaskInfo,
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
+def test_missing_test_file_for_src(
+    mock_project_root: Path, docker_project_root: Path
 ) -> None:
-    assert AllSubprojectIntegrationTests(
+    subproject_context = SubprojectContext.PYPI
+    subproject = PythonSubproject(
+        project_root=docker_project_root, subproject_context=subproject_context
+    )
+    file_name = "file.py"
+    pypi_package_dir = subproject.get_python_package_dir()
+    pypi_package_dir.mkdir(parents=True)
+    pypi_package_dir.joinpath(file_name).touch()
+    unit_test_folder = subproject.get_test_suite_dir(
+        test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+    )
+    unit_test_folder.mkdir(parents=True)
+    missing_test_file = unit_test_folder.joinpath(f"test_{file_name}")
+    expected_msg = f"Expected {missing_test_file} to exist!"
+    basic_task_info = BasicTaskInfo(
+        non_docker_project_root=mock_project_root,
+        docker_project_root=docker_project_root,
+        local_uid=0,
+        local_gid=0,
+        local_user_env=None,
+    )
+    with pytest.raises(ValueError, match=expected_msg):
+        SubprojectUnitTests(
+            basic_task_info=basic_task_info, subproject_context=subproject_context
+        ).run()
+
+
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
+def test_run_subproject_unit_tests_some_cached(
+    basic_task_info: BasicTaskInfo,
+    subproject_context: SubprojectContext,
+    mock_docker_subproject: PythonSubproject,
+) -> None:
+    file_cache = FileCacheEngine(
+        subproject_context=subproject_context,
+        project_root=basic_task_info.docker_project_root,
+    )
+    expected_run_process_calls = []
+    docker_command = get_docker_command_for_image(
+        non_docker_project_root=basic_task_info.non_docker_project_root,
+        docker_project_root=basic_task_info.docker_project_root,
+        target_image=DockerTarget.DEV,
+    )
+    cache_both_src_and_test = 0
+    cache_src = 1
+    cache_test = 2
+    files_to_update = []
+    for file_index, (src_file, test_file) in enumerate(
+        mock_docker_subproject.get_src_unit_test_file_pairs()
+    ):
+        src_module = SubprojectUnitTests.get_module_from_path(
+            src_file_path=src_file, subproject=mock_docker_subproject
+        )
+        run_process_call = call(
+            args=concatenate_args(
+                args=[
+                    docker_command,
+                    "pytest",
+                    "-n",
+                    THREADS_AVAILABLE,
+                    "--cov-report",
+                    "term-missing",
+                    f"--cov={src_module}",
+                    test_file,
+                ]
+            )
+        )
+        mod_ten = file_index % 10
+        if mod_ten == cache_both_src_and_test:
+            # Tests ran and neither src nor test are updated
+            file_cache.update_test_pass_timestamp(file_path=test_file)
+        elif mod_ten == cache_src:
+            # Tests ran, but src was updated
+            file_cache.update_test_pass_timestamp(file_path=test_file)
+            files_to_update.append(src_file)
+            expected_run_process_calls.append(run_process_call)
+        elif mod_ten == cache_test:
+            # Tests ran, but tests was updated
+            file_cache.update_test_pass_timestamp(file_path=test_file)
+            files_to_update.append(test_file)
+            expected_run_process_calls.append(run_process_call)
+        else:
+            expected_run_process_calls.append(run_process_call)
+    file_cache.write_text()
+    sleep(1 / 1000)  # sleep just long enough for a new timestamp when writing file
+    for file_to_update in files_to_update:
+        file_to_update.write_text("Updated File")
+    # This is needed for now because INFRA only has one file and therefore
+    # skipping it skips the report generating test as well
+    if expected_run_process_calls:
+        expected_run_process_calls.append(
+            call(
+                args=concatenate_args(
+                    args=[
+                        docker_command,
+                        "pytest",
+                        "-n",
+                        THREADS_AVAILABLE,
+                        mock_docker_subproject.get_pytest_whole_test_suite_report_args(
+                            test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+                        ),
+                        mock_docker_subproject.get_src_dir(),
+                        mock_docker_subproject.get_test_suite_dir(
+                            test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+                        ),
+                    ]
+                )
+            )
+        )
+    # Everything above this line makes it so that there is unit test cache file
+    # that has some, not all, files in it up to date.  This includes some src files
+    # without their corresponding test file and vice versa, as well as some src and test
+    # file pairs.  This will run tests on most files, but skip some.
+    with patch(
+        "build_support.ci_cd_tasks.validation_tasks.run_process"
+    ) as run_process_mock:
+        SubprojectUnitTests(
+            basic_task_info=basic_task_info, subproject_context=subproject_context
+        ).run()
+        assert run_process_mock.mock_calls == expected_run_process_calls
+
+
+def test_all_subproject_feature_tests_requires(basic_task_info: BasicTaskInfo) -> None:
+    assert AllSubprojectFeatureTests(
         basic_task_info=basic_task_info
     ).required_tasks() == [
-        SubprojectIntegrationTests(
-            basic_task_info=basic_task_info,
-            subproject_context=subproject_context,
+        SubprojectFeatureTests(
+            basic_task_info=basic_task_info, subproject_context=subproject_context
         )
         for subproject_context in get_sorted_subproject_contexts()
     ]
 
 
-def test_run_all_subproject_integration_tests(basic_task_info: BasicTaskInfo) -> None:
+def test_run_all_subproject_feature_tests(basic_task_info: BasicTaskInfo) -> None:
     assert is_an_empty_function(
-        func=AllSubprojectIntegrationTests(basic_task_info=basic_task_info).run
+        func=AllSubprojectFeatureTests(basic_task_info=basic_task_info).run
     )
 
 
-def test_subproject_integration_tests_requires(
+def test_subproject_feature_tests_requires(
     basic_task_info: BasicTaskInfo, subproject_context: SubprojectContext
 ) -> None:
     if subproject_context == SubprojectContext.BUILD_SUPPORT:
-        assert SubprojectIntegrationTests(
+        assert SubprojectFeatureTests(
             basic_task_info=basic_task_info, subproject_context=subproject_context
         ).required_tasks() == [
             SubprojectUnitTests(
@@ -644,7 +685,7 @@ def test_subproject_integration_tests_requires(
             EnforceProcess(basic_task_info=basic_task_info),
         ]
     else:
-        assert SubprojectIntegrationTests(
+        assert SubprojectFeatureTests(
             basic_task_info=basic_task_info, subproject_context=subproject_context
         ).required_tasks() == [
             SubprojectUnitTests(
@@ -653,80 +694,330 @@ def test_subproject_integration_tests_requires(
         ]
 
 
-@pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
-def test_run_subproject_integration_tests(
-    basic_task_info: BasicTaskInfo, subproject_context: SubprojectContext
-) -> None:
-    subproject = get_python_subproject(
-        subproject_context=subproject_context,
-        project_root=basic_task_info.docker_project_root,
-    )
-    with patch(
-        "build_support.ci_cd_tasks.validation_tasks.run_process"
-    ) as run_process_mock:
-        SubprojectIntegrationTests(
-            basic_task_info=basic_task_info, subproject_context=subproject_context
-        ).run()
-        run_process_mock.assert_called_once_with(
-            args=concatenate_args(
-                args=[
-                    get_docker_command_for_image(
-                        non_docker_project_root=basic_task_info.non_docker_project_root,
-                        docker_project_root=basic_task_info.docker_project_root,
-                        target_image=DockerTarget.DEV,
-                    ),
-                    "pytest",
-                    "--basetemp",
-                    get_integration_test_scratch_folder(
-                        project_root=basic_task_info.docker_project_root
-                    ),
-                    subproject.get_pytest_report_args(
-                        test_suite=PythonSubproject.TestSuite.INTEGRATION_TESTS
-                    ),
-                    subproject.get_test_suite_dir(
-                        test_suite=PythonSubproject.TestSuite.INTEGRATION_TESTS
-                    ),
-                ],
-            ),
-        )
+REPORT_XML_REGEX = re.compile(r"--junitxml=(.+)")
 
 
-@pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
-def test_run_subproject_integration_tests_in_ci_cd_int_test_mode(
-    basic_task_info: BasicTaskInfo, subproject_context: SubprojectContext
+def run_feature_test_side_effect(args: list[Any]) -> None:
+    test_file_name = Path(args[0]).name
+    for arg in args:  # pragma: no cov - should always end early
+        regex_match = REPORT_XML_REGEX.match(arg)
+        if regex_match:
+            path = Path(regex_match[1])
+            case = TestCase(name=test_file_name)
+            suite_name = f"suite_{test_file_name}"
+            # allow for untyped calls to library
+            suite = TestSuite(name=suite_name)  # type: ignore[no-untyped-call]
+            suite.add_testcase(case)
+            xml = JUnitXml()  # type: ignore[no-untyped-call]
+            xml.add_testsuite(suite)
+            xml.write(str(path))
+            break
+
+
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
+def test_run_subproject_feature_tests_test_all(
+    basic_task_info: BasicTaskInfo,
+    subproject_context: SubprojectContext,
+    mock_docker_subproject: PythonSubproject,
 ) -> None:
-    basic_task_info.ci_cd_integration_test_mode = True
-    subproject = get_python_subproject(
-        subproject_context=subproject_context,
-        project_root=basic_task_info.docker_project_root,
-    )
     with patch(
-        "build_support.ci_cd_tasks.validation_tasks.run_process"
+        "build_support.ci_cd_tasks.validation_tasks.run_process",
+        side_effect=run_feature_test_side_effect,
     ) as run_process_mock:
-        SubprojectIntegrationTests(
+        SubprojectFeatureTests(
             basic_task_info=basic_task_info, subproject_context=subproject_context
         ).run()
-        expected_called_with = concatenate_args(
-            args=[
-                get_docker_command_for_image(
-                    non_docker_project_root=basic_task_info.non_docker_project_root,
-                    docker_project_root=basic_task_info.docker_project_root,
-                    target_image=DockerTarget.DEV,
-                ),
-                "pytest",
-                "--basetemp",
-                get_integration_test_scratch_folder(
-                    project_root=basic_task_info.docker_project_root
-                ),
-                subproject.get_pytest_report_args(
-                    test_suite=PythonSubproject.TestSuite.INTEGRATION_TESTS
-                ),
-                subproject.get_test_suite_dir(
-                    test_suite=PythonSubproject.TestSuite.INTEGRATION_TESTS
-                ),
-            ],
-        )
+        docker_project_root = basic_task_info.docker_project_root
+        non_docker_project_root = basic_task_info.non_docker_project_root
+        test_files = [
+            file
+            for file in mock_docker_subproject.get_test_suite_dir(
+                test_suite=PythonSubproject.TestSuite.FEATURE_TESTS
+            ).glob("*")
+            if FEATURE_TEST_FILE_NAME_REGEX.match(file.name)
+        ]
+        expected_calls = [
+            call(
+                args=concatenate_args(
+                    args=[
+                        get_docker_command_for_image(
+                            non_docker_project_root=non_docker_project_root,
+                            docker_project_root=docker_project_root,
+                            target_image=DockerTarget.DEV,
+                        ),
+                        "pytest",
+                        "--basetemp",
+                        get_feature_test_scratch_folder(
+                            project_root=docker_project_root
+                        ),
+                        mock_docker_subproject.get_pytest_feature_test_report_args(),
+                        test_file,
+                    ]
+                )
+            )
+            for test_file in test_files
+        ]
+        if len(expected_calls) > 0:
+            assert run_process_mock.mock_calls == expected_calls
+        else:  # pragma: no cov - might only have cases that require calls
+            run_process_mock.assert_not_called()
+
+
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
+def test_run_subproject_feature_tests_in_ci_cd_int_test_mode(
+    basic_task_info: BasicTaskInfo,
+    subproject_context: SubprojectContext,
+    mock_docker_subproject: PythonSubproject,
+) -> None:
+    basic_task_info.ci_cd_feature_test_mode = True
+    with patch(
+        "build_support.ci_cd_tasks.validation_tasks.run_process",
+        side_effect=run_feature_test_side_effect,
+    ) as run_process_mock:
+        SubprojectFeatureTests(
+            basic_task_info=basic_task_info, subproject_context=subproject_context
+        ).run()
+        docker_project_root = basic_task_info.docker_project_root
+        non_docker_project_root = basic_task_info.non_docker_project_root
+        test_files = [
+            file
+            for file in mock_docker_subproject.get_test_suite_dir(
+                test_suite=PythonSubproject.TestSuite.FEATURE_TESTS
+            ).glob("*")
+            if FEATURE_TEST_FILE_NAME_REGEX.match(file.name)
+        ]
+        expected_calls = [
+            call(
+                args=concatenate_args(
+                    args=[
+                        get_docker_command_for_image(
+                            non_docker_project_root=non_docker_project_root,
+                            docker_project_root=docker_project_root,
+                            target_image=DockerTarget.DEV,
+                        ),
+                        "pytest",
+                        "--basetemp",
+                        get_feature_test_scratch_folder(
+                            project_root=docker_project_root
+                        ),
+                        mock_docker_subproject.get_pytest_feature_test_report_args(),
+                        test_file,
+                    ]
+                )
+            )
+            for test_file in test_files
+        ]
         if subproject_context == SubprojectContext.BUILD_SUPPORT:
             run_process_mock.assert_not_called()
         else:
-            run_process_mock.assert_called_once_with(args=expected_called_with)
+            assert run_process_mock.mock_calls == expected_calls
+
+
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
+def test_run_subproject_feature_tests_all_cached(
+    basic_task_info: BasicTaskInfo,
+    subproject_context: SubprojectContext,
+    mock_docker_subproject: PythonSubproject,
+) -> None:
+    file_cache = FileCacheEngine(
+        subproject_context=subproject_context,
+        project_root=basic_task_info.docker_project_root,
+    )
+    test_files = [
+        file
+        for file in mock_docker_subproject.get_test_suite_dir(
+            test_suite=PythonSubproject.TestSuite.FEATURE_TESTS
+        ).glob("*")
+        if FEATURE_TEST_FILE_NAME_REGEX.match(file.name)
+    ]
+    for test_file in test_files:
+        file_cache.update_test_pass_timestamp(file_path=test_file)
+    file_cache.write_text()
+    with patch(
+        "build_support.ci_cd_tasks.validation_tasks.run_process"
+    ) as run_process_mock:
+        SubprojectFeatureTests(
+            basic_task_info=basic_task_info, subproject_context=subproject_context
+        ).run()
+        run_process_mock.assert_not_called()
+
+
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
+def test_run_subproject_feature_tests_all_cached_but_top_test_conftest_updated(
+    basic_task_info: BasicTaskInfo,
+    subproject_context: SubprojectContext,
+    mock_docker_subproject: PythonSubproject,
+) -> None:
+    file_cache = FileCacheEngine(
+        subproject_context=subproject_context,
+        project_root=basic_task_info.docker_project_root,
+    )
+    test_files = [
+        file
+        for file in mock_docker_subproject.get_test_suite_dir(
+            test_suite=PythonSubproject.TestSuite.FEATURE_TESTS
+        ).glob("*")
+        if FEATURE_TEST_FILE_NAME_REGEX.match(file.name)
+    ]
+    for test_file in test_files:
+        file_cache.update_test_pass_timestamp(file_path=test_file)
+    file_cache.write_text()
+    sleep(1 / 1000)  # sleep just long enough for a new timestamp when writing file
+    mock_docker_subproject.get_test_dir().joinpath(CONFTEST_NAME).write_text(
+        "Updated Top Level Conftest"
+    )
+    with patch(
+        "build_support.ci_cd_tasks.validation_tasks.run_process",
+        side_effect=run_feature_test_side_effect,
+    ) as run_process_mock:
+        SubprojectFeatureTests(
+            basic_task_info=basic_task_info, subproject_context=subproject_context
+        ).run()
+        docker_project_root = basic_task_info.docker_project_root
+        non_docker_project_root = basic_task_info.non_docker_project_root
+        expected_calls = [
+            call(
+                args=concatenate_args(
+                    args=[
+                        get_docker_command_for_image(
+                            non_docker_project_root=non_docker_project_root,
+                            docker_project_root=docker_project_root,
+                            target_image=DockerTarget.DEV,
+                        ),
+                        "pytest",
+                        "--basetemp",
+                        get_feature_test_scratch_folder(
+                            project_root=docker_project_root
+                        ),
+                        mock_docker_subproject.get_pytest_feature_test_report_args(),
+                        test_file,
+                    ]
+                )
+            )
+            for test_file in test_files
+        ]
+        if len(expected_calls) > 0:
+            assert run_process_mock.mock_calls == expected_calls
+        else:  # pragma: no cov - might only have cases that require calls
+            run_process_mock.assert_not_called()
+
+
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
+def test_run_subproject_feature_tests_some_cached(
+    basic_task_info: BasicTaskInfo,
+    subproject_context: SubprojectContext,
+    mock_docker_subproject: PythonSubproject,
+) -> None:
+    file_cache = FileCacheEngine(
+        subproject_context=subproject_context,
+        project_root=basic_task_info.docker_project_root,
+    )
+    test_files = [
+        file
+        for file in mock_docker_subproject.get_test_suite_dir(
+            test_suite=PythonSubproject.TestSuite.FEATURE_TESTS
+        ).glob("*")
+        if FEATURE_TEST_FILE_NAME_REGEX.match(file.name)
+    ]
+    if len(test_files) <= 1:  # pragma: no cov - might not be true
+        return
+    test_files_to_run = []
+    for index, test_file in enumerate(test_files):
+        if index % 2 == 0:
+            file_cache.update_test_pass_timestamp(file_path=test_file)
+        else:
+            test_files_to_run.append(test_file)
+    file_cache.write_text()
+
+    with patch(
+        "build_support.ci_cd_tasks.validation_tasks.run_process",
+        side_effect=run_feature_test_side_effect,
+    ) as run_process_mock:
+        SubprojectFeatureTests(
+            basic_task_info=basic_task_info, subproject_context=subproject_context
+        ).run()
+        docker_project_root = basic_task_info.docker_project_root
+        non_docker_project_root = basic_task_info.non_docker_project_root
+        expected_calls = [
+            call(
+                args=concatenate_args(
+                    args=[
+                        get_docker_command_for_image(
+                            non_docker_project_root=non_docker_project_root,
+                            docker_project_root=docker_project_root,
+                            target_image=DockerTarget.DEV,
+                        ),
+                        "pytest",
+                        "--basetemp",
+                        get_feature_test_scratch_folder(
+                            project_root=docker_project_root
+                        ),
+                        mock_docker_subproject.get_pytest_feature_test_report_args(),
+                        test_file_to_run,
+                    ]
+                )
+            )
+            for test_file_to_run in test_files_to_run
+        ]
+        run_process_mock.assert_has_calls(calls=expected_calls)
+
+
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
+def test_run_subproject_feature_tests_one_src_updated(
+    basic_task_info: BasicTaskInfo,
+    subproject_context: SubprojectContext,
+    mock_docker_subproject: PythonSubproject,
+) -> None:
+    file_cache = FileCacheEngine(
+        subproject_context=subproject_context,
+        project_root=basic_task_info.docker_project_root,
+    )
+    test_files = [
+        file
+        for file in mock_docker_subproject.get_test_suite_dir(
+            test_suite=PythonSubproject.TestSuite.FEATURE_TESTS
+        ).glob("*")
+        if FEATURE_TEST_FILE_NAME_REGEX.match(file.name)
+    ]
+    for test_file in test_files:
+        file_cache.update_test_pass_timestamp(file_path=test_file)
+    file_cache.write_text()
+    sleep(1 / 1000)  # sleep just long enough for a new timestamp when writing file
+    src_file = next(mock_docker_subproject.get_all_testable_src_files())
+    src_content = src_file.read_text()
+    src_file.write_text(src_content + "\n")
+
+    with patch(
+        "build_support.ci_cd_tasks.validation_tasks.run_process",
+        side_effect=run_feature_test_side_effect,
+    ) as run_process_mock:
+        SubprojectFeatureTests(
+            basic_task_info=basic_task_info, subproject_context=subproject_context
+        ).run()
+        docker_project_root = basic_task_info.docker_project_root
+        non_docker_project_root = basic_task_info.non_docker_project_root
+        expected_calls = [
+            call(
+                args=concatenate_args(
+                    args=[
+                        get_docker_command_for_image(
+                            non_docker_project_root=non_docker_project_root,
+                            docker_project_root=docker_project_root,
+                            target_image=DockerTarget.DEV,
+                        ),
+                        "pytest",
+                        "--basetemp",
+                        get_feature_test_scratch_folder(
+                            project_root=docker_project_root
+                        ),
+                        mock_docker_subproject.get_pytest_feature_test_report_args(),
+                        test_file,
+                    ]
+                )
+            )
+            for test_file in test_files
+        ]
+        if len(expected_calls) > 0:
+            run_process_mock.assert_has_calls(calls=expected_calls)
+        else:  # pragma: no cov - might only have cases that require calls
+            run_process_mock.assert_not_called()

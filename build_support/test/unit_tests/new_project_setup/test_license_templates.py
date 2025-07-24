@@ -23,25 +23,22 @@ from build_support.new_project_setup.license_templates import (
 def test_constants_not_changed_by_accident() -> None:
     assert copy(GIT_HUB_TEMPLATE_URL) == "https://api.github.com/licenses"
     assert copy(ALL_RIGHTS_RESERVED_KEY) == "all-rights-reserved"
-    assert (
-        copy(ALL_RIGHTS_RESERVED_TEMPLATE)
-        == (
-            "All Rights Reserved\n"
-            "\n"
-            "Copyright (c) [year] [fullname]\n"
-            "\n"
-            'THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n'  # noqa: E501
-            "IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n"
-            "FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n"  # noqa: E501
-            "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n"
-            "LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n"  # noqa: E501
-            "OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n"  # noqa: E501
-            "THE SOFTWARE.\n"
-        )
+    assert copy(ALL_RIGHTS_RESERVED_TEMPLATE) == (
+        "All Rights Reserved\n"
+        "\n"
+        "Copyright (c) [year] [fullname]\n"
+        "\n"
+        'THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n'
+        "IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n"
+        "FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n"
+        "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n"
+        "LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n"  # noqa: E501
+        "OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n"
+        "THE SOFTWARE.\n"
     )
     assert copy(REAL_PROJECT_ROOT) == Path(__file__).parent.parent.parent.parent.parent
     assert copy(REAL_LICENSE_TEMPLATE_DIR) == get_license_templates_dir(
-        project_root=REAL_PROJECT_ROOT,
+        project_root=REAL_PROJECT_ROOT
     )
 
 
@@ -52,31 +49,28 @@ def test_get_licenses_with_templates() -> None:
 
 
 def test_get_template_for_mit() -> None:
-    assert (
-        get_template_for_license(template_key="mit")
-        == (
-            "MIT License\n"
-            "\n"
-            "Copyright (c) [year] [fullname]\n"
-            "\n"
-            "Permission is hereby granted, free of charge, to any person obtaining a copy\n"  # noqa: E501
-            'of this software and associated documentation files (the "Software"), to deal\n'  # noqa: E501
-            "in the Software without restriction, including without limitation the rights\n"  # noqa: E501
-            "to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n"  # noqa: E501
-            "copies of the Software, and to permit persons to whom the Software is\n"
-            "furnished to do so, subject to the following conditions:\n"
-            "\n"
-            "The above copyright notice and this permission notice shall be included in all\n"  # noqa: E501
-            "copies or substantial portions of the Software.\n"
-            "\n"
-            'THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n'  # noqa: E501
-            "IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n"
-            "FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n"  # noqa: E501
-            "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n"
-            "LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n"  # noqa: E501
-            "OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\n"  # noqa: E501
-            "SOFTWARE.\n"
-        )
+    assert get_template_for_license(template_key="mit") == (
+        "MIT License\n"
+        "\n"
+        "Copyright (c) [year] [fullname]\n"
+        "\n"
+        "Permission is hereby granted, free of charge, to any person obtaining a copy\n"
+        'of this software and associated documentation files (the "Software"), to deal\n'  # noqa: E501
+        "in the Software without restriction, including without limitation the rights\n"
+        "to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n"
+        "copies of the Software, and to permit persons to whom the Software is\n"
+        "furnished to do so, subject to the following conditions:\n"
+        "\n"
+        "The above copyright notice and this permission notice shall be included in all\n"  # noqa: E501
+        "copies or substantial portions of the Software.\n"
+        "\n"
+        'THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n'
+        "IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n"
+        "FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n"
+        "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n"
+        "LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n"  # noqa: E501
+        "OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\n"  # noqa: E501
+        "SOFTWARE.\n"
     )
 
 
@@ -124,7 +118,7 @@ def test_is_valid_license_template(template_key: str, is_valid: bool) -> None:
 @responses.activate
 def test_get_github_license_template_info_blobs(mock_project_root: Path) -> None:
     license_template_info_blobs = get_license_templates_dir(
-        project_root=mock_project_root,
+        project_root=mock_project_root
     ).joinpath("license_template_info_blobs.json")
     json_data = [{"someKey": "someVal"}]
     get_response = responses.get(url=GIT_HUB_TEMPLATE_URL, json=json_data)
@@ -146,13 +140,13 @@ def test_get_github_license_template_info_blobs(mock_project_root: Path) -> None
 def test_get_template_for_license(mock_project_root: Path) -> None:
     fake_license_name = "some-fake-license"
     license_template_file = get_license_templates_dir(
-        project_root=mock_project_root,
+        project_root=mock_project_root
     ).joinpath(fake_license_name)
     template_text = "some template text"
     json_data = {"body": template_text}
     template_info_url = f"https://api.github.com/licenses/{fake_license_name}"
     license_template_info_blobs = get_license_templates_dir(
-        project_root=mock_project_root,
+        project_root=mock_project_root
     ).joinpath("license_template_info_blobs.json")
     blob_data = [{"key": fake_license_name, "url": template_info_url}]
     license_template_info_blobs.write_text(json.dumps(blob_data))

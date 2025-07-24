@@ -8,10 +8,10 @@ from build_support.ci_cd_vars.subproject_structure import (
 )
 
 
-def test_integration_tests_exist_for_ticket(
+def test_feature_tests_exist_for_ticket(
     is_on_main: bool, real_git_info: GitInfo, real_project_root_dir: Path
 ) -> None:
-    if not is_on_main:  # pragma: no cover might be on main
+    if not is_on_main:  # pragma: no cov might be on main
         project_name = get_project_name(project_root=real_project_root_dir)
         ticket_id = real_git_info.get_ticket_id()
         test_name = f"test_{ticket_id}_{project_name}.py"
@@ -22,7 +22,7 @@ def test_integration_tests_exist_for_ticket(
                     project_root=real_project_root_dir
                 )
                 for test_file in subproject.get_test_suite_dir(
-                    test_suite=PythonSubproject.TestSuite.INTEGRATION_TESTS
+                    test_suite=PythonSubproject.TestSuite.FEATURE_TESTS
                 ).rglob("*")
                 if test_file.name == test_name
             ),

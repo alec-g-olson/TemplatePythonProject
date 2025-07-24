@@ -1,7 +1,7 @@
 """The entry point into running build tools."""
 
 from argparse import ArgumentParser, Namespace
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 from build_support.ci_cd_vars.docker_vars import (
@@ -10,7 +10,7 @@ from build_support.ci_cd_vars.docker_vars import (
 )
 
 
-class AllowedCliArgs(Enum):
+class AllowedCliArgs(StrEnum):
     """An Enum to track the retrievable variables."""
 
     DEV_DOCKER_INTERACTIVE = "interactive-dev-docker-command"
@@ -87,11 +87,11 @@ def run_main(args: Namespace) -> None:
                 docker_project_root=docker_project_root,
                 target_image=DockerTarget.INFRA,
             )
-        case _:  # pragma: no cover - can't hit if all enums are implemented
+        case _:  # pragma: no cov - can't hit if all enums are implemented
             msg = f"{command!r} is not a supported enum of AllowedCliArgs."
             raise ValueError(msg)
     print(" ".join(values))  # noqa: T201
 
 
-if __name__ == "__main__":  # pragma: no cover - main
+if __name__ == "__main__":  # pragma: no cov - main
     run_main(args=parse_args())

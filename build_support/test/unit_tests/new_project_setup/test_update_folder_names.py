@@ -1,9 +1,7 @@
 import shutil
 from pathlib import Path
 
-from build_support.ci_cd_vars.project_setting_vars import (
-    get_project_name,
-)
+from build_support.ci_cd_vars.project_setting_vars import get_project_name
 from build_support.ci_cd_vars.subproject_structure import (
     SubprojectContext,
     get_python_subproject,

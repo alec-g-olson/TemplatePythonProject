@@ -22,7 +22,7 @@ from build_support.ci_cd_vars.subproject_structure import (
 @pytest.fixture(
     params=[
         {
-            "ci_cd_integration_test_mode": False,
+            "ci_cd_feature_test_mode": False,
             "docker_project_root": "/usr/dev",
             "local_gid": 2,
             "local_uid": 1,
@@ -30,7 +30,7 @@ from build_support.ci_cd_vars.subproject_structure import (
             "non_docker_project_root": "/some/local/user/path/to/project",
         },
         {
-            "ci_cd_integration_test_mode": False,
+            "ci_cd_feature_test_mode": False,
             "docker_project_root": "/usr/dev",
             "local_gid": 0,
             "local_uid": 0,
@@ -45,7 +45,7 @@ from build_support.ci_cd_vars.subproject_structure import (
             "non_docker_project_root": "/some/local/user/path/to/project",
         },
         {
-            "ci_cd_integration_test_mode": False,
+            "ci_cd_feature_test_mode": False,
             "docker_project_root": "/usr/dev",
             "local_gid": 0,
             "local_uid": 0,
@@ -57,11 +57,11 @@ def basic_task_info_data_dict(request: SubRequest) -> dict[str, Any]:
     return cast(dict[str, Any], request.param)
 
 
-@pytest.fixture()
+@pytest.fixture
 def basic_task_info_yaml_str(basic_task_info_data_dict: dict[str, Any]) -> str:
     data_copy = deepcopy(basic_task_info_data_dict)
-    if "ci_cd_integration_test_mode" not in data_copy:
-        data_copy["ci_cd_integration_test_mode"] = False
+    if "ci_cd_feature_test_mode" not in data_copy:
+        data_copy["ci_cd_feature_test_mode"] = False
     if "local_user_env" not in data_copy:
         data_copy["local_user_env"] = None
     return yaml.dump(data_copy)
@@ -134,11 +134,11 @@ def test_load_bad_local_user_env(basic_task_info_data_dict: dict[str, Any]) -> N
         BasicTaskInfo.from_yaml(yaml_str=basic_task_info_yaml_str)
 
 
-def test_load_bad_ci_cd_integration_test_mode(
+def test_load_bad_ci_cd_feature_test_mode(
     basic_task_info_data_dict: dict[str, Any],
 ) -> None:
     data_copy = deepcopy(basic_task_info_data_dict)
-    data_copy["ci_cd_integration_test_mode"] = "Probably"
+    data_copy["ci_cd_feature_test_mode"] = "Probably"
     basic_task_info_yaml_str = yaml.dump(data_copy)
     with pytest.raises(ValidationError):
         BasicTaskInfo.from_yaml(yaml_str=basic_task_info_yaml_str)
@@ -146,7 +146,7 @@ def test_load_bad_ci_cd_integration_test_mode(
 
 def test_load_bad_uid_gid_pair_uid_0() -> None:
     basic_task_info_data_dict = {
-        "ci_cd_integration_test_mode": False,
+        "ci_cd_feature_test_mode": False,
         "docker_project_root": "/usr/dev",
         "local_gid": 2,
         "local_uid": 0,
@@ -160,7 +160,7 @@ def test_load_bad_uid_gid_pair_uid_0() -> None:
 
 def test_load_bad_uid_gid_pair_gid_0() -> None:
     basic_task_info_data_dict = {
-        "ci_cd_integration_test_mode": False,
+        "ci_cd_feature_test_mode": False,
         "docker_project_root": "/usr/dev",
         "local_gid": 0,
         "local_uid": 1,
@@ -174,7 +174,7 @@ def test_load_bad_uid_gid_pair_gid_0() -> None:
 
 def test_load_bad_local_user_env_for_non_root() -> None:
     basic_task_info_data_dict = {
-        "ci_cd_integration_test_mode": False,
+        "ci_cd_feature_test_mode": False,
         "docker_project_root": "/usr/dev",
         "local_gid": 2,
         "local_uid": 1,
@@ -213,10 +213,7 @@ def build_mock_basic_task(
     return type(  # type: ignore[no-any-return]
         task_name,
         (TaskNode,),
-        {
-            "required_tasks": Mock(return_value=required_mock_tasks),
-            "run": Mock(),
-        },
+        {"required_tasks": Mock(return_value=required_mock_tasks), "run": Mock()},
     )(basic_task_info=expected_basic_task_info)
 
 
@@ -230,14 +227,8 @@ def build_mock_per_subproject_task(
     return type(  # type: ignore[no-any-return]
         task_name,
         (PerSubprojectTask,),
-        {
-            "required_tasks": Mock(return_value=required_mock_tasks),
-            "run": Mock(),
-        },
-    )(
-        basic_task_info=expected_basic_task_info,
-        subproject_context=subproject_context,
-    )
+        {"required_tasks": Mock(return_value=required_mock_tasks), "run": Mock()},
+    )(basic_task_info=expected_basic_task_info, subproject_context=subproject_context)
 
 
 def test_task_init() -> None:
@@ -337,8 +328,7 @@ def test_subproject_task_init(subproject_context: SubprojectContext) -> None:
     assert mock_task.docker_project_root == expected_docker_project_root
     assert mock_task.subproject_context == subproject_context
     assert mock_task.subproject == get_python_subproject(
-        subproject_context=subproject_context,
-        project_root=expected_docker_project_root,
+        subproject_context=subproject_context, project_root=expected_docker_project_root
     )
 
 

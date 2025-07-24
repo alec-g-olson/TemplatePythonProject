@@ -4,7 +4,7 @@ from build_support.ci_cd_vars.project_structure import (
     get_build_dir,
     get_dockerfile,
     get_docs_dir,
-    get_integration_test_scratch_folder,
+    get_feature_test_scratch_folder,
     get_license_file,
     get_poetry_lock_file,
     get_pyproject_toml,
@@ -28,19 +28,19 @@ def test_maybe_build_dir_new_dir(tmp_path: Path) -> None:
 
 def test_get_pyproject_toml(mock_project_root: Path) -> None:
     assert get_pyproject_toml(
-        project_root=mock_project_root,
+        project_root=mock_project_root
     ) == mock_project_root.joinpath("pyproject.toml")
 
 
 def test_get_license_file(mock_project_root: Path) -> None:
     assert get_license_file(
-        project_root=mock_project_root,
+        project_root=mock_project_root
     ) == mock_project_root.joinpath("LICENSE")
 
 
 def test_get_poetry_lock_file(mock_project_root: Path) -> None:
     assert get_poetry_lock_file(
-        project_root=mock_project_root,
+        project_root=mock_project_root
     ) == mock_project_root.joinpath("poetry.lock")
 
 
@@ -51,16 +51,16 @@ def test_get_build_dir(mock_project_root: Path) -> None:
     assert expected_build_dir.exists()
 
 
-def test_get_integration_test_scratch_folder(mock_project_root: Path) -> None:
-    expected_integration_test_scratch_folder = mock_project_root.joinpath(
+def test_get_feature_test_scratch_folder(mock_project_root: Path) -> None:
+    expected_feature_test_scratch_folder = mock_project_root.joinpath(
         "test_scratch_folder"
     )
-    assert not expected_integration_test_scratch_folder.exists()
+    assert not expected_feature_test_scratch_folder.exists()
     assert (
-        get_integration_test_scratch_folder(project_root=mock_project_root)
-        == expected_integration_test_scratch_folder
+        get_feature_test_scratch_folder(project_root=mock_project_root)
+        == expected_feature_test_scratch_folder
     )
-    assert expected_integration_test_scratch_folder.exists()
+    assert expected_feature_test_scratch_folder.exists()
 
 
 def test_get_docs_dir(mock_project_root: Path) -> None:
@@ -72,11 +72,11 @@ def test_get_docs_dir(mock_project_root: Path) -> None:
 
 def test_get_dockerfile(mock_project_root: Path) -> None:
     assert get_dockerfile(project_root=mock_project_root) == mock_project_root.joinpath(
-        "Dockerfile",
+        "Dockerfile"
     )
 
 
 def test_get_readme(mock_project_root: Path) -> None:
     assert get_readme(project_root=mock_project_root) == mock_project_root.joinpath(
-        "README.md",
+        "README.md"
     )

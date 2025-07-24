@@ -3,15 +3,9 @@ from unittest.mock import call, patch
 import pytest
 
 from build_support.ci_cd_tasks.env_setup_tasks import SetupDevEnvironment
-from build_support.ci_cd_tasks.lint_tasks import (
-    Format,
-    Lint,
-    LintApplyUnsafeFixes,
-)
+from build_support.ci_cd_tasks.lint_tasks import Format, Lint, LintApplyUnsafeFixes
 from build_support.ci_cd_tasks.task_node import BasicTaskInfo
-from build_support.ci_cd_tasks.validation_tasks import (
-    AllSubprojectUnitTests,
-)
+from build_support.ci_cd_tasks.validation_tasks import AllSubprojectUnitTests
 from build_support.ci_cd_vars.docker_vars import (
     DockerTarget,
     get_docker_command_for_image,
@@ -48,7 +42,7 @@ def test_run_lint(basic_task_info: BasicTaskInfo) -> None:
                 get_all_python_folders(
                     project_root=basic_task_info.docker_project_root
                 ),
-            ],
+            ]
         )
         format_args = concatenate_args(
             args=[
@@ -62,7 +56,7 @@ def test_run_lint(basic_task_info: BasicTaskInfo) -> None:
                 get_all_python_folders(
                     project_root=basic_task_info.docker_project_root
                 ),
-            ],
+            ]
         )
         Format(basic_task_info=basic_task_info).run()
         expected_run_process_calls = [
@@ -96,7 +90,7 @@ def test_run_ruff_fix_safe(basic_task_info: BasicTaskInfo) -> None:
                 get_all_non_test_folders(
                     project_root=basic_task_info.docker_project_root
                 ),
-            ],
+            ]
         )
         fix_test_args = concatenate_args(
             args=[
@@ -111,20 +105,17 @@ def test_run_ruff_fix_safe(basic_task_info: BasicTaskInfo) -> None:
                 "D,FBT",
                 "--fix",
                 get_all_test_folders(project_root=basic_task_info.docker_project_root),
-            ],
+            ]
         )
         Lint(basic_task_info=basic_task_info).run()
-        expected_run_process_calls = [
-            call(args=fix_src_args),
-            call(args=fix_test_args),
-        ]
+        expected_run_process_calls = [call(args=fix_src_args), call(args=fix_test_args)]
         assert run_process_mock.call_count == len(expected_run_process_calls)
         run_process_mock.assert_has_calls(calls=expected_run_process_calls)
 
 
 def test_apply_ruff_fix_unsafe_requires(basic_task_info: BasicTaskInfo) -> None:
     assert LintApplyUnsafeFixes(basic_task_info=basic_task_info).required_tasks() == [
-        Lint(basic_task_info=basic_task_info),
+        Lint(basic_task_info=basic_task_info)
     ]
 
 
@@ -150,7 +141,7 @@ def test_apply_run_ruff_fix_unsafe(basic_task_info: BasicTaskInfo) -> None:
                 get_all_non_test_folders(
                     project_root=basic_task_info.docker_project_root
                 ),
-            ],
+            ]
         )
         fix_test_args = concatenate_args(
             args=[
@@ -166,13 +157,10 @@ def test_apply_run_ruff_fix_unsafe(basic_task_info: BasicTaskInfo) -> None:
                 "--fix",
                 "--unsafe-fixes",
                 get_all_test_folders(project_root=basic_task_info.docker_project_root),
-            ],
+            ]
         )
         LintApplyUnsafeFixes(basic_task_info=basic_task_info).run()
-        expected_run_process_calls = [
-            call(args=fix_src_args),
-            call(args=fix_test_args),
-        ]
+        expected_run_process_calls = [call(args=fix_src_args), call(args=fix_test_args)]
         assert run_process_mock.call_count == len(expected_run_process_calls)
         run_process_mock.assert_has_calls(calls=expected_run_process_calls)
         commit_changes_mock.assert_called_once_with(

@@ -54,7 +54,7 @@ def get_github_license_template_info_blobs() -> list[dict[str, str]]:
         list[dict[str, str]]: The GitHub license template information.
     """
     license_template_info_blobs = REAL_LICENSE_TEMPLATE_DIR.joinpath(
-        "license_template_info_blobs.json",
+        "license_template_info_blobs.json"
     )
     template_info_blobs: list[dict[str, str]]
     if license_template_info_blobs.exists():
@@ -62,10 +62,10 @@ def get_github_license_template_info_blobs() -> list[dict[str, str]]:
     else:
         sleep(0.1)  # avoid rate limiting
         template_info_blobs = json.loads(
-            requests.get(url=GIT_HUB_TEMPLATE_URL, timeout=30).text,
+            requests.get(url=GIT_HUB_TEMPLATE_URL, timeout=30).text
         )
         license_template_info_blobs.write_text(
-            json.dumps(template_info_blobs, indent=2),
+            json.dumps(template_info_blobs, indent=2)
         )
     return template_info_blobs
 
@@ -125,8 +125,8 @@ def get_template_for_license(template_key: str) -> str:
         blob_by_key = {blob["key"]: blob for blob in supported_github_license_data}
         template_info = blob_by_key[template_key_lower]
         sleep(0.1)  # avoid rate limiting
-        template = json.loads(
-            requests.get(url=template_info["url"], timeout=30).text,
-        )["body"]
+        template = json.loads(requests.get(url=template_info["url"], timeout=30).text)[
+            "body"
+        ]
         license_template_file.write_text(template)
     return template

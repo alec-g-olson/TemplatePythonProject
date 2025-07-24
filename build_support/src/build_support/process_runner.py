@@ -2,23 +2,22 @@
 
 import itertools
 import sys
-from enum import Enum
+from enum import StrEnum
 
 # The purpose of this module is to make subprocess calls
 from subprocess import PIPE, Popen  # nosec: B404
 from typing import IO, Any, AnyStr
 
 
-class ProcessVerbosity(Enum):
+class ProcessVerbosity(StrEnum):
     """Enum for process verbosity to avoid boolean trap."""
 
-    SILENT = 1
-    ALL = 2
+    SILENT = "SILENT"
+    ALL = "ALL"
 
 
 def run_piped_processes(
-    processes: list[list[Any]],
-    verbosity: ProcessVerbosity = ProcessVerbosity.ALL,
+    processes: list[list[Any]], verbosity: ProcessVerbosity = ProcessVerbosity.ALL
 ) -> None:
     """Runs piped processes as they would be on the command line.
 
@@ -35,16 +34,11 @@ def run_piped_processes(
     command_as_str = " | ".join(process_strs)
     if verbosity != ProcessVerbosity.SILENT:
         print(command_as_str, flush=True)  # noqa: T201
-    p1 = build_popen(
-        args=args_list[0],
-    )
+    p1 = build_popen(args=args_list[0])
     popen_processes = [p1]
     for args in args_list[1:]:
         last_process = popen_processes[-1]
-        next_process = build_popen(
-            args=args,
-            stdin=last_process.stdout,
-        )
+        next_process = build_popen(args=args, stdin=last_process.stdout)
         popen_processes.append(next_process)
     output, error = popen_processes[-1].communicate()
     return_code = popen_processes[-1].returncode
@@ -58,8 +52,7 @@ def run_piped_processes(
 
 
 def get_output_of_process(
-    args: list[Any],
-    verbosity: ProcessVerbosity = ProcessVerbosity.ALL,
+    args: list[Any], verbosity: ProcessVerbosity = ProcessVerbosity.ALL
 ) -> str:
     """Runs a process and gets the output.
 
@@ -70,16 +63,12 @@ def get_output_of_process(
     Returns:
         str: The stdout from the subprocess that was run.
     """
-    output = run_process(
-        args=args,
-        verbosity=verbosity,
-    )
+    output = run_process(args=args, verbosity=verbosity)
     return output.decode("utf-8").strip()
 
 
 def run_process(
-    args: list[Any],
-    verbosity: ProcessVerbosity = ProcessVerbosity.ALL,
+    args: list[Any], verbosity: ProcessVerbosity = ProcessVerbosity.ALL
 ) -> bytes:
     """Runs a process.
 
@@ -94,9 +83,7 @@ def run_process(
     command_as_str = " ".join(str_args)
     if verbosity != ProcessVerbosity.SILENT:
         print(command_as_str, flush=True)  # noqa: T201
-    p = build_popen(
-        args=str_args,
-    )
+    p = build_popen(args=str_args)
     output, error = p.communicate()
     return_code = p.returncode
     resolve_process_results(
@@ -109,10 +96,7 @@ def run_process(
     return output
 
 
-def build_popen(
-    args: list[str],
-    stdin: IO[AnyStr] | int | None = None,
-) -> Popen[bytes]:
+def build_popen(args: list[str], stdin: IO[AnyStr] | int | None = None) -> Popen[bytes]:
     """Creates a Popes instance based on the arguments.
 
     Args:
@@ -124,10 +108,7 @@ def build_popen(
     """
     # As this is currently setup, commands are never injected by external users
     return Popen(  # nosec: B603
-        args=args,
-        stdin=stdin,
-        stdout=PIPE,
-        stderr=PIPE,
+        args=args, stdin=stdin, stdout=PIPE, stderr=PIPE
     )
 
 

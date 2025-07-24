@@ -25,6 +25,11 @@ def test_suite(request: SubRequest) -> PythonSubproject.TestSuite:
     return cast(PythonSubproject.TestSuite, request.param)
 
 
+@pytest.fixture(params=list(PythonSubproject.TestScope))
+def test_scope(request: SubRequest) -> PythonSubproject.TestScope:
+    return cast(PythonSubproject.TestScope, request.param)
+
+
 def test_get_subproject_name(
     mock_subproject: PythonSubproject, subproject_context: SubprojectContext
 ) -> None:
@@ -61,6 +66,78 @@ def test_get_root_dir(
 def test_get_src_dir(mock_subproject: PythonSubproject) -> None:
     assert mock_subproject.get_src_dir() == mock_subproject.get_root_dir().joinpath(
         "src"
+    )
+
+
+@pytest.mark.usefixtures("mock_local_pyproject_toml_file")
+def test_get_all_testable_src_files(mock_subproject: PythonSubproject) -> None:
+    package_dir = mock_subproject.get_python_package_dir()
+    top_init = package_dir.joinpath("__init__.py")
+    file_1 = package_dir.joinpath("file_1.py")
+    file_2 = package_dir.joinpath("file_2.py")
+    other_file = package_dir.joinpath("other_file.txt")
+    sub_package_dir = package_dir.joinpath("sub_package")
+    sub_package_dir.mkdir(parents=True)
+    sub_package_init = sub_package_dir.joinpath("__init__.py")
+    file_3 = sub_package_dir.joinpath("file_3.py")
+    file_4 = sub_package_dir.joinpath("file_4.py")
+    different_file_type = sub_package_dir.joinpath("different_file_type.pdf")
+    for file in (
+        top_init,
+        file_1,
+        file_2,
+        other_file,
+        sub_package_init,
+        file_3,
+        file_4,
+        different_file_type,
+    ):
+        file.touch()
+    expected_src_files = [file_1, file_2, file_3, file_4]
+    assert sorted(mock_subproject.get_all_testable_src_files()) == expected_src_files
+
+
+@pytest.mark.usefixtures("mock_local_pyproject_toml_file")
+def test_get_src_unit_test_file_pairs(mock_subproject: PythonSubproject) -> None:
+    package_dir = mock_subproject.get_python_package_dir()
+    top_init = package_dir.joinpath("__init__.py")
+    file_1 = package_dir.joinpath("file_1.py")
+    file_2 = package_dir.joinpath("file_2.py")
+    other_file = package_dir.joinpath("other_file.txt")
+    sub_package_dir = package_dir.joinpath("sub_package")
+    sub_package_dir.mkdir(parents=True)
+    sub_package_init = sub_package_dir.joinpath("__init__.py")
+    file_3 = sub_package_dir.joinpath("file_3.py")
+    file_4 = sub_package_dir.joinpath("file_4.py")
+    different_file_type = sub_package_dir.joinpath("different_file_type.pdf")
+    for file in (
+        top_init,
+        file_1,
+        file_2,
+        other_file,
+        sub_package_init,
+        file_3,
+        file_4,
+        different_file_type,
+    ):
+        file.touch()
+    unit_test_folder = mock_subproject.get_test_suite_dir(
+        test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+    )
+    test_file_1 = unit_test_folder.joinpath("test_file_1.py")
+    test_file_2 = unit_test_folder.joinpath("test_file_2.py")
+    test_sub_package_dir = unit_test_folder.joinpath("sub_package")
+    test_file_3 = test_sub_package_dir.joinpath("test_file_3.py")
+    test_file_4 = test_sub_package_dir.joinpath("test_file_4.py")
+    expected_src_test_files = [
+        (file_1, test_file_1),
+        (file_2, test_file_2),
+        (file_3, test_file_3),
+        (file_4, test_file_4),
+    ]
+    assert (
+        sorted(mock_subproject.get_src_unit_test_file_pairs())
+        == expected_src_test_files
     )
 
 
@@ -150,28 +227,48 @@ def test_get_bandit_report_path(mock_subproject: PythonSubproject) -> None:
 
 @pytest.mark.usefixtures("mock_local_pyproject_toml_file")
 def test_get_pytest_report_name(
-    mock_subproject: PythonSubproject, test_suite: PythonSubproject.TestSuite
+    mock_subproject: PythonSubproject,
+    test_suite: PythonSubproject.TestSuite,
+    test_scope: PythonSubproject.TestScope,
 ) -> None:
-    assert mock_subproject.get_pytest_report_name(
-        test_suite=test_suite
-    ) == get_expected_report_name(
-        subproject=mock_subproject,
-        test_suite=test_suite,
-        report_extension="pytest_report.xml",
+    report_name = mock_subproject.get_pytest_report_name(
+        test_suite=test_suite, test_scope=test_scope
     )
+    if test_scope == PythonSubproject.TestScope.COMPLETE:
+        assert report_name == get_expected_report_name(
+            subproject=mock_subproject,
+            test_suite=test_suite,
+            report_extension="pytest_report.xml",
+        )
+    else:
+        assert report_name == get_expected_report_name(
+            subproject=mock_subproject,
+            test_suite=test_suite,
+            report_extension=f"pytest_report_{test_scope.value}.xml",
+        )
 
 
 @pytest.mark.usefixtures("mock_local_pyproject_toml_file")
 def test_get_pytest_report_path(
-    mock_subproject: PythonSubproject, test_suite: PythonSubproject.TestSuite
+    mock_subproject: PythonSubproject,
+    test_suite: PythonSubproject.TestSuite,
+    test_scope: PythonSubproject.TestScope,
 ) -> None:
-    assert mock_subproject.get_pytest_report_path(
-        test_suite=test_suite
-    ) == get_expected_report_path(
-        subproject=mock_subproject,
-        test_suite=test_suite,
-        report_extension="pytest_report.xml",
+    report_path = mock_subproject.get_pytest_report_path(
+        test_suite=test_suite, test_scope=test_scope
     )
+    if test_scope == PythonSubproject.TestScope.COMPLETE:
+        assert report_path == get_expected_report_path(
+            subproject=mock_subproject,
+            test_suite=test_suite,
+            report_extension="pytest_report.xml",
+        )
+    else:
+        assert report_path == get_expected_report_path(
+            subproject=mock_subproject,
+            test_suite=test_suite,
+            report_extension=f"pytest_report_{test_scope.value}.xml",
+        )
 
 
 @pytest.mark.usefixtures("mock_local_pyproject_toml_file")
@@ -201,56 +298,62 @@ def test_get_pytest_coverage_report_path(
 
 
 @pytest.mark.usefixtures("mock_local_pyproject_toml_file")
-def test_get_pytest_report_args_for_unit_tests(
+def test_get_pytest_whole_test_suite_report_args(
     mock_subproject: PythonSubproject,
 ) -> None:
-    test_suite = PythonSubproject.TestSuite.UNIT_TESTS
-    test_report_path = mock_subproject.get_pytest_report_path(test_suite=test_suite)
-    coverage_report_path = mock_subproject.get_pytest_coverage_report_path(
-        test_suite=test_suite
-    )
-    assert mock_subproject.get_pytest_report_args(test_suite=test_suite) == [
-        "--cov-report",
-        "term-missing",
-        f"--cov={mock_subproject.get_test_suite_dir(test_suite=test_suite)}",
-        f"--junitxml={test_report_path}",
-        f"--cov={mock_subproject.get_src_dir()}",
-        "--cov-report",
-        f"xml:{coverage_report_path}",
-    ]
-
-
-@pytest.mark.usefixtures("mock_local_pyproject_toml_file")
-def test_get_pytest_report_args_for_non_unit_tests(
-    mock_subproject: PythonSubproject,
-) -> None:
-    for test_suite in PythonSubproject.TestSuite:
-        if test_suite != PythonSubproject.TestSuite.UNIT_TESTS:
-            test_report_path = mock_subproject.get_pytest_report_path(
-                test_suite=test_suite
-            )
-            assert mock_subproject.get_pytest_report_args(test_suite=test_suite) == [
+    for test_suite in (
+        test_suite
+        for test_suite in PythonSubproject.TestSuite
+        if test_suite != PythonSubproject.TestSuite.FEATURE_TESTS
+    ):
+        test_scope = PythonSubproject.TestScope.COMPLETE
+        test_report_path = mock_subproject.get_pytest_report_path(
+            test_suite=test_suite, test_scope=test_scope
+        )
+        coverage_report_path = mock_subproject.get_pytest_coverage_report_path(
+            test_suite=test_suite
+        )
+        if test_suite == PythonSubproject.TestSuite.UNIT_TESTS:
+            expected_args = [
+                "--cov-report",
+                "term-missing",
+                f"--cov={mock_subproject.get_test_suite_dir(test_suite=test_suite)}",
+                f"--junitxml={test_report_path}",
+                f"--cov={mock_subproject.get_src_dir()}",
+                f"--cov-report=xml:{coverage_report_path}",
+            ]
+        else:
+            expected_args = [
                 "--cov-report",
                 "term-missing",
                 f"--cov={mock_subproject.get_test_suite_dir(test_suite=test_suite)}",
                 f"--junitxml={test_report_path}",
             ]
+        assert (
+            mock_subproject.get_pytest_whole_test_suite_report_args(
+                test_suite=test_suite
+            )
+            == expected_args
+        )
 
 
 @pytest.mark.usefixtures("mock_local_pyproject_toml_file")
-def test_get_file_cache_dir(mock_subproject: PythonSubproject) -> None:
-    expected_file_cache_dir = mock_subproject.get_build_dir().joinpath("file_caches")
-    assert not expected_file_cache_dir.exists()
-    assert mock_subproject.get_file_cache_dir() == expected_file_cache_dir
-    assert expected_file_cache_dir.exists()
-
-
-@pytest.mark.usefixtures("mock_local_pyproject_toml_file")
-def test_get_unit_test_cache_yaml(mock_subproject: PythonSubproject) -> None:
-    assert (
-        mock_subproject.get_unit_test_cache_yaml()
-        == mock_subproject.get_file_cache_dir().joinpath("unit_test_cache.yaml")
+def test_get_pytest_feature_test_report_args(mock_subproject: PythonSubproject) -> None:
+    report_path = mock_subproject.get_pytest_report_path(
+        test_suite=PythonSubproject.TestSuite.FEATURE_TESTS,
+        test_scope=PythonSubproject.TestScope.SINGLE_FILE,
     )
+    assert mock_subproject.get_pytest_feature_test_report_args() == [
+        f"--junitxml={report_path}"
+    ]
+
+
+@pytest.mark.usefixtures("mock_local_pyproject_toml_file")
+def test_get_file_cache_yaml(mock_subproject: PythonSubproject) -> None:
+    expected_file_cache_yaml = mock_subproject.get_build_dir().joinpath(
+        "file_cache.yaml"
+    )
+    assert mock_subproject.get_file_cache_yaml() == expected_file_cache_yaml
 
 
 def test_get_python_subproject(mock_project_root: Path) -> None:
@@ -291,10 +394,7 @@ def test_get_all_python_subprojects_with_src(mock_project_root: Path) -> None:
 
 
 def test_get_all_python_subprojects_with_test(mock_project_root: Path) -> None:
-    context_to_add_test_for = [
-        SubprojectContext.PYPI,
-        SubprojectContext.BUILD_SUPPORT,
-    ]
+    context_to_add_test_for = [SubprojectContext.PYPI, SubprojectContext.BUILD_SUPPORT]
     subproject_dict = get_all_python_subprojects_dict(project_root=mock_project_root)
     for subproject_context in context_to_add_test_for:
         test_dir = subproject_dict[subproject_context].get_test_dir()

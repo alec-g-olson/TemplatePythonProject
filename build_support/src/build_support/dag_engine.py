@@ -1,6 +1,6 @@
 """Logic for building a DAG of tasks and running them in order."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -13,9 +13,7 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
 
 
 def _add_tasks_to_list_with_dfs(
-    execution_order: list[TaskNode],
-    tasks_added: set[TaskNode],
-    task_to_add: TaskNode,
+    execution_order: list[TaskNode], tasks_added: set[TaskNode], task_to_add: TaskNode
 ) -> None:
     if task_to_add not in tasks_added:
         for required_task in task_to_add.required_tasks():
@@ -43,9 +41,7 @@ def get_task_execution_order(requested_tasks: list[TaskNode]) -> list[TaskNode]:
     tasks_added: set[TaskNode] = set()
     for task in requested_tasks:
         _add_tasks_to_list_with_dfs(
-            execution_order=execution_order,
-            tasks_added=tasks_added,
-            task_to_add=task,
+            execution_order=execution_order, tasks_added=tasks_added, task_to_add=task
         )
     return execution_order
 
@@ -54,7 +50,7 @@ class TaskRunReport(BaseModel):
     """An object containing a report of how long a single task took to run."""
 
     task_name: str
-    duration: str
+    duration: timedelta
 
 
 class BuildRunReport(BaseModel):
@@ -70,7 +66,7 @@ class BuildRunReport(BaseModel):
             yaml_str (str): String of the YAML representation of a BuildRunReport.
 
         Returns:
-            GitInfo: A BuildRunReport object parsed from the YAML.
+            BuildRunReport: A BuildRunReport object parsed from the YAML.
         """
         return BuildRunReport.model_validate(safe_load(yaml_str))
 
@@ -80,7 +76,7 @@ class BuildRunReport(BaseModel):
         Returns:
             str: A YAML representation of this BuildRuntimeReport instance.
         """
-        return safe_dump(self.model_dump())
+        return safe_dump(self.model_dump(mode="json"))
 
 
 def run_tasks(tasks: list[TaskNode], project_root: Path) -> None:
@@ -101,11 +97,11 @@ def run_tasks(tasks: list[TaskNode], project_root: Path) -> None:
         print(f"  - {task.task_label()}", flush=True)  # noqa: T201
     for task in task_execution_order:
         print(f"Starting: {task.task_label()}", flush=True)  # noqa: T201
-        start = datetime.now(tz=timezone.utc)
+        start = datetime.now(tz=UTC)
         task.run()
-        duration = datetime.now(tz=timezone.utc) - start
+        duration = datetime.now(tz=UTC) - start
         run_report.report.append(
-            TaskRunReport(task_name=task.task_label(), duration=str(duration))
+            TaskRunReport(task_name=task.task_label(), duration=duration)
         )
     report_content = run_report.to_yaml()
     print(report_content)  # noqa: T201

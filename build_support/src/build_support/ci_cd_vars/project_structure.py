@@ -70,14 +70,14 @@ def get_build_dir(project_root: Path) -> Path:
     return maybe_build_dir(dir_to_build=project_root.joinpath("build"))
 
 
-def get_integration_test_scratch_folder(project_root: Path) -> Path:
-    """Gets the directory that will be used as a scratch folder for integration tests.
+def get_feature_test_scratch_folder(project_root: Path) -> Path:
+    """Gets the directory that will be used as a scratch folder for feature tests.
 
     Args:
         project_root (Path): Path to this project's root.
 
     Returns:
-        Path: Path to the scratch folder for integration tests.
+        Path: Path to the scratch folder for feature tests.
     """
     return maybe_build_dir(dir_to_build=project_root.joinpath("test_scratch_folder"))
 

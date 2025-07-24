@@ -28,9 +28,7 @@ class Format(TaskNode):
         Returns:
             list[TaskNode]: A list of tasks required to lint project.
         """
-        return [
-            SetupDevEnvironment(basic_task_info=self.get_basic_task_info()),
-        ]
+        return [SetupDevEnvironment(basic_task_info=self.get_basic_task_info())]
 
     @override
     def run(self) -> None:
@@ -53,8 +51,8 @@ class Format(TaskNode):
                     "I",
                     "--fix",
                     get_all_python_folders(project_root=self.docker_project_root),
-                ],
-            ),
+                ]
+            )
         )
         run_process(
             args=concatenate_args(
@@ -67,8 +65,8 @@ class Format(TaskNode):
                     "ruff",
                     "format",
                     get_all_python_folders(project_root=self.docker_project_root),
-                ],
-            ),
+                ]
+            )
         )
 
 
@@ -109,8 +107,8 @@ class Lint(TaskNode):
                     "check",
                     "--fix",
                     get_all_non_test_folders(project_root=self.docker_project_root),
-                ],
-            ),
+                ]
+            )
         )
         run_process(
             args=concatenate_args(
@@ -126,8 +124,8 @@ class Lint(TaskNode):
                     "D,FBT",  # These are too onerous to enforce on test code
                     "--fix",
                     get_all_test_folders(project_root=self.docker_project_root),
-                ],
-            ),
+                ]
+            )
         )
 
 
@@ -146,9 +144,7 @@ class LintApplyUnsafeFixes(TaskNode):
         Returns:
             list[TaskNode]: A list of tasks required to lint project.
         """
-        return [
-            Lint(basic_task_info=self.get_basic_task_info()),
-        ]
+        return [Lint(basic_task_info=self.get_basic_task_info())]
 
     @override
     def run(self) -> None:
@@ -179,8 +175,8 @@ class LintApplyUnsafeFixes(TaskNode):
                     "--fix",
                     "--unsafe-fixes",
                     get_all_non_test_folders(project_root=self.docker_project_root),
-                ],
-            ),
+                ]
+            )
         )
         run_process(
             args=concatenate_args(
@@ -197,6 +193,6 @@ class LintApplyUnsafeFixes(TaskNode):
                     "--fix",
                     "--unsafe-fixes",
                     get_all_test_folders(project_root=self.docker_project_root),
-                ],
-            ),
+                ]
+            )
         )

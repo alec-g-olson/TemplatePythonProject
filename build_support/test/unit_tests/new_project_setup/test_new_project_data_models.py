@@ -7,7 +7,7 @@ from pydantic import ValidationError
 from build_support.new_project_setup.new_project_data_models import ProjectSettings
 
 
-@pytest.fixture()
+@pytest.fixture
 def project_settings_data_dict() -> dict[str, Any]:
     return {
         "name": "test_project_name",
@@ -16,7 +16,7 @@ def project_settings_data_dict() -> dict[str, Any]:
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def project_yaml_str(project_settings_data_dict: dict[str, Any]) -> str:
     return yaml.dump(project_settings_data_dict)
 

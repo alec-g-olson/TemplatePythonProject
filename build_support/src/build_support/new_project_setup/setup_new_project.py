@@ -8,9 +8,7 @@ from typing import override
 
 from build_support.ci_cd_tasks.env_setup_tasks import Clean
 from build_support.ci_cd_tasks.task_node import TaskNode
-from build_support.ci_cd_vars.file_and_dir_path_vars import (
-    get_new_project_settings,
-)
+from build_support.ci_cd_vars.file_and_dir_path_vars import get_new_project_settings
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
 from build_support.ci_cd_vars.project_structure import get_license_file
 from build_support.new_project_setup.new_project_data_models import ProjectSettings
@@ -46,8 +44,8 @@ class MakeProjectFromTemplate(TaskNode):
         original_project_name = get_project_name(project_root=self.docker_project_root)
         new_project_settings = ProjectSettings.from_yaml(
             yaml_str=get_new_project_settings(
-                project_root=self.docker_project_root,
-            ).read_text(),
+                project_root=self.docker_project_root
+            ).read_text()
         )
         update_readme(
             project_root=self.docker_project_root,
