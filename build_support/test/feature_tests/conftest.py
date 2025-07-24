@@ -10,6 +10,7 @@ from build_support.ci_cd_vars.git_status_vars import (
     monkeypatch_git_python_execute_kwargs,
 )
 from build_support.ci_cd_vars.project_structure import (
+    get_build_dir,
     get_feature_test_scratch_folder,
     maybe_build_dir,
 )
@@ -70,11 +71,12 @@ def mock_lightweight_project_copy(
     feature_scratch_name = get_feature_test_scratch_folder(
         project_root=real_project_root_dir
     ).name
+    build_folder = get_build_dir(project_root=real_project_root_dir)
 
     # Copy everything from real project except .git, build, and scratch folders
     for file_or_folder in real_project_root_dir.glob("*"):
         name = file_or_folder.name
-        if name not in [".git", ".idea", "build", feature_scratch_name]:
+        if name not in [".git", ".idea", build_folder, feature_scratch_name]:
             dest = mock_lightweight_project_copy_dir.joinpath(name)
             if file_or_folder.is_dir():
                 shutil.copytree(src=file_or_folder, dst=dest)

@@ -24,6 +24,7 @@ from build_support.ci_cd_tasks.validation_tasks import (
     AllSubprojectSecurityChecks,
     AllSubprojectStaticTypeChecking,
     EnforceProcess,
+    SubprojectFeatureTests,
     SubprojectUnitTests,
     ValidateAll,
     ValidatePythonStyle,
@@ -64,6 +65,13 @@ def test_constants_not_changed_by_accident() -> None:
         ),
         "test_pypi": CliTaskInfo(
             task_node=SubprojectUnitTests, subproject_context=SubprojectContext.PYPI
+        ),
+        "test_pypi_features": CliTaskInfo(
+            task_node=SubprojectFeatureTests, subproject_context=SubprojectContext.PYPI
+        ),
+        "test_build_support_features": CliTaskInfo(
+            task_node=SubprojectFeatureTests,
+            subproject_context=SubprojectContext.BUILD_SUPPORT,
         ),
         "test": CliTaskInfo(task_node=ValidateAll),
         "format": CliTaskInfo(task_node=Format),

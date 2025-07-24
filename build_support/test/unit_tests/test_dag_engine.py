@@ -163,8 +163,8 @@ def test_run_tasks(
 def build_runtime_report_data() -> dict[str, list[dict[str, str]]]:
     return {
         "report": [
-            {"duration": "0:00:00.000036", "task_name": "TASK_5"},
-            {"duration": "0:00:00.000024", "task_name": "TASK_6"},
+            {"duration": "PT0.000036S", "task_name": "TASK_5"},
+            {"duration": "PT0.000024S", "task_name": "TASK_6"},
         ]
     }
 

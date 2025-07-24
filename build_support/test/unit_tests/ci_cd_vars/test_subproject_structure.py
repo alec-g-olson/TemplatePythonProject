@@ -94,7 +94,7 @@ def test_get_all_testable_src_files(mock_subproject: PythonSubproject) -> None:
     ):
         file.touch()
     expected_src_files = [file_1, file_2, file_3, file_4]
-    assert list(mock_subproject.get_all_testable_src_files()) == expected_src_files
+    assert sorted(mock_subproject.get_all_testable_src_files()) == expected_src_files
 
 
 @pytest.mark.usefixtures("mock_local_pyproject_toml_file")
@@ -136,7 +136,8 @@ def test_get_src_unit_test_file_pairs(mock_subproject: PythonSubproject) -> None
         (file_4, test_file_4),
     ]
     assert (
-        list(mock_subproject.get_src_unit_test_file_pairs()) == expected_src_test_files
+        sorted(mock_subproject.get_src_unit_test_file_pairs())
+        == expected_src_test_files
     )
 
 

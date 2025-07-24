@@ -1,6 +1,6 @@
 """Logic for building a DAG of tasks and running them in order."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -50,7 +50,7 @@ class TaskRunReport(BaseModel):
     """An object containing a report of how long a single task took to run."""
 
     task_name: str
-    duration: str
+    duration: timedelta
 
 
 class BuildRunReport(BaseModel):
@@ -76,7 +76,7 @@ class BuildRunReport(BaseModel):
         Returns:
             str: A YAML representation of this BuildRuntimeReport instance.
         """
-        return safe_dump(self.model_dump())
+        return safe_dump(self.model_dump(mode="json"))
 
 
 def run_tasks(tasks: list[TaskNode], project_root: Path) -> None:
@@ -101,7 +101,7 @@ def run_tasks(tasks: list[TaskNode], project_root: Path) -> None:
         task.run()
         duration = datetime.now(tz=UTC) - start
         run_report.report.append(
-            TaskRunReport(task_name=task.task_label(), duration=str(duration))
+            TaskRunReport(task_name=task.task_label(), duration=duration)
         )
     report_content = run_report.to_yaml()
     print(report_content)  # noqa: T201
