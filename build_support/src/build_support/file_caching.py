@@ -13,17 +13,13 @@ It implements the following requirements:
    - Any conftest files the feature test relies on have been updated
 
 Attributes:
-    | FEATURE_TEST_FILE_NAME_REGEX: The regex we use to find files with feature tests.
+    | CONFTEST_NAME: The file name of conftest files.
 
 """
 
-import re
-from collections.abc import Iterator
-from dataclasses import dataclass
 from datetime import UTC, datetime
-from enum import StrEnum
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from pydantic import BaseModel, Field, field_serializer, field_validator
 from yaml import safe_dump, safe_load
@@ -58,6 +54,14 @@ class TestFileInfo(BaseModel):
     @field_validator("file_path", mode="before")
     @classmethod
     def validate_file_path(cls, value: Any) -> Any:  # noqa: ANN401
+        """Coerces a string representing a file path to a Path object.
+
+        Args:
+            value (Any): Any value provided as the file path.
+
+        Returns:
+            Any: A Path object if provided a string, otherwise the provided value.
+        """
         if isinstance(value, str):
             return Path(value)
         return value
@@ -81,7 +85,7 @@ class FileCacheInfo(BaseModel):
             project_root (Path): The path to the root of the project.
 
         Returns:
-            FileCacheInfo:  An object holding the information about when files were last
+            FileCacheInfo: An object holding the information about when files were last
                 updated.
         """
         path_to_file_cache = get_python_subproject(
@@ -147,40 +151,44 @@ class FileCacheEngine:
         """
         self.subproject.get_file_cache_yaml().write_text(self.cache_data.to_yaml())
 
-    @staticmethod
-    def _is_testable_python_file(path: Path) -> bool:
-        """A method for checking if a file is testable.
+    def most_recent_conftest_update(self, test_dir: Path) -> datetime:
+        """Gets the last time a conftest file for a test directory was updated.
+
+        For a given test directory we care about it's conftest file and any conftest
+        file of a parent directory.
 
         Args:
-            path (Path): Path to the file that will be checked to see if it is testable.
+            test_dir (Path): The path to the test directory.
 
         Returns:
-            bool: Is the file testable?
+            datetime: The last time a conftest file for a test directory or any conftest
+                files for parent directories were updated.
         """
-        return (
-            path.is_file() and path.name.endswith(".py") and path.name != "__init__.py"
+        top_level_test_dir = self.subproject.get_test_dir()
+        top_conftest = top_level_test_dir.joinpath(CONFTEST_NAME)
+        most_recent_update = (
+            self.get_last_modified_time(file_path=top_conftest)
+            if top_conftest.exists()
+            else datetime.min.replace(tzinfo=UTC)
         )
 
-    def most_recent_conftest_update(self, test_dir: Path) -> datetime:
-        top_level_test_dir = self.subproject.get_test_dir()
         current_test = test_dir
-        most_recent_update = datetime.min.replace(tzinfo=UTC)
         while current_test != top_level_test_dir:
             current_conftest = current_test.joinpath(CONFTEST_NAME)
             if current_conftest.exists():
-                conftest_updated = self.get_last_modified_time(
-                    file_path=current_conftest
+                most_recent_update = max(
+                    self.get_last_modified_time(file_path=current_conftest),
+                    most_recent_update,
                 )
-                if conftest_updated > most_recent_update:
-                    most_recent_update = conftest_updated
             current_test = current_test.parent
-        top_conftest = top_level_test_dir.joinpath(CONFTEST_NAME)
-        if top_conftest.exists():
-            conftest_updated = self.get_last_modified_time(file_path=top_conftest)
-            most_recent_update = max(conftest_updated, most_recent_update)
         return most_recent_update
 
     def most_recent_src_file_update(self) -> datetime:
+        """Gets the last time any of the src files were updated.
+
+        Returns:
+            datetime: The last time any of the src files were updated.
+        """
         return max(
             (
                 self.get_last_modified_time(file_path=src_file)
@@ -190,6 +198,15 @@ class FileCacheEngine:
         )
 
     def get_test_info_for_file(self, file_path: Path) -> TestFileInfo:
+        """Gets information about the tests that have been run for a file.
+
+        Args:
+            file_path (Path): The path to the test file.
+
+        Returns:
+            TestFileInfo: An object containing information about the tests that have
+                been run for a file.
+        """
         file_info = next(
             (
                 info

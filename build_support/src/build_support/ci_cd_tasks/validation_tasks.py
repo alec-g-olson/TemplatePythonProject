@@ -1,9 +1,14 @@
-"""Should hold all tasks that run tests, both on artifacts and style tests."""
+"""Should hold all tasks that run tests, both on artifacts and style tests.
+
+Attributes:
+    | FEATURE_TEST_FILE_NAME_REGEX: A regex for getting feature test file names.
+"""
 
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterator, override
+from typing import override
 
 from junitparser import JUnitXml
 
@@ -389,6 +394,10 @@ class SubprojectUnitTests(PerSubprojectTask):
     ) -> Iterator[UnitTestInfo]:
         """Gets information required to run unit tests.
 
+        Args:
+            file_cache (FileCacheEngine): The file cache that holds up-to-date
+                information on which tests have passed and which haven't.
+
         Yields:
             Iterator[UnitTestInfo]: Generator of unit test info for tests that need to
                 run.
@@ -556,6 +565,10 @@ class SubprojectFeatureTests(PerSubprojectTask):
 
     def get_feature_tests_to_run(self, file_cache: FileCacheEngine) -> Iterator[Path]:
         """Gets information required to run feature tests.
+
+        Args:
+            file_cache (FileCacheEngine): The file cache that holds up-to-date
+                information on which tests have passed and which haven't.
 
         Returns:
             FeatureTestInfo: A dataclass with the cache information for feature tests.

@@ -1,6 +1,5 @@
 import re
 import shutil
-from collections.abc import Iterator
 from pathlib import Path
 from time import sleep
 from typing import Any
@@ -8,7 +7,6 @@ from unittest.mock import call, patch
 
 import pytest
 from junitparser import JUnitXml, TestCase, TestSuite
-from unit_tests.conftest import basic_task_info
 from unit_tests.empty_function_check import is_an_empty_function
 
 from build_support.ci_cd_tasks.env_setup_tasks import GetGitInfo, SetupDevEnvironment
@@ -358,24 +356,6 @@ def mock_entire_subproject(
     shutil.move(src=copied_dir, dst=mock_docker_subproject.get_python_package_dir())
 
 
-def _recursive_get_conftest_files(current_test_folder: Path) -> Iterator[Path]:
-    """A method to recursively get the all test folders.
-
-    Args:
-        current_test_folder (Path): Path to the test folder being traversed.
-
-    Yields:
-        Iterator[UnitTestInfo]: Generator of unit test info for test caching.
-    """
-    paths_in_dir = sorted(current_test_folder.glob("*"))
-    maybe_conftest = current_test_folder.joinpath(CONFTEST_NAME)
-    if maybe_conftest.exists():
-        yield maybe_conftest
-    dirs = [path for path in paths_in_dir if path.is_dir()]
-    for directory in dirs:
-        yield from _recursive_get_conftest_files(current_test_folder=directory)
-
-
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
 def test_run_subproject_unit_tests_test_all(
     basic_task_info: BasicTaskInfo,
@@ -422,26 +402,25 @@ def test_run_subproject_unit_tests_test_all(
                     )
                 )
             )
-        if expected_run_process_calls:
-            expected_run_process_calls.append(
-                call(
-                    args=concatenate_args(
-                        args=[
-                            docker_command,
-                            "pytest",
-                            "-n",
-                            THREADS_AVAILABLE,
-                            mock_docker_subproject.get_pytest_whole_test_suite_report_args(
-                                test_suite=PythonSubproject.TestSuite.UNIT_TESTS
-                            ),
-                            mock_docker_subproject.get_src_dir(),
-                            mock_docker_subproject.get_test_suite_dir(
-                                test_suite=PythonSubproject.TestSuite.UNIT_TESTS
-                            ),
-                        ]
-                    )
+        expected_run_process_calls.append(
+            call(
+                args=concatenate_args(
+                    args=[
+                        docker_command,
+                        "pytest",
+                        "-n",
+                        THREADS_AVAILABLE,
+                        mock_docker_subproject.get_pytest_whole_test_suite_report_args(
+                            test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+                        ),
+                        mock_docker_subproject.get_src_dir(),
+                        mock_docker_subproject.get_test_suite_dir(
+                            test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+                        ),
+                    ]
                 )
             )
+        )
         assert run_process_mock.mock_calls == expected_run_process_calls
 
 
@@ -484,7 +463,7 @@ def test_run_subproject_unit_tests_all_cached_but_top_test_conftest_updated(
     for _, test_file in mock_docker_subproject.get_src_unit_test_file_pairs():
         cache_engine.update_test_pass_timestamp(file_path=test_file)
     cache_engine.write_text()
-    sleep(10 / 1000)  # sleep just long enough for a new timestamp when writing file
+    sleep(1 / 1000)  # sleep just long enough for a new timestamp when writing file
     mock_docker_subproject.get_test_dir().joinpath(CONFTEST_NAME).write_text(
         "Updated Top Level Conftest"
     )
@@ -527,26 +506,25 @@ def test_run_subproject_unit_tests_all_cached_but_top_test_conftest_updated(
                     )
                 )
             )
-        if expected_run_process_calls:
-            expected_run_process_calls.append(
-                call(
-                    args=concatenate_args(
-                        args=[
-                            docker_command,
-                            "pytest",
-                            "-n",
-                            THREADS_AVAILABLE,
-                            mock_docker_subproject.get_pytest_whole_test_suite_report_args(
-                                test_suite=PythonSubproject.TestSuite.UNIT_TESTS
-                            ),
-                            mock_docker_subproject.get_src_dir(),
-                            mock_docker_subproject.get_test_suite_dir(
-                                test_suite=PythonSubproject.TestSuite.UNIT_TESTS
-                            ),
-                        ]
-                    )
+        expected_run_process_calls.append(
+            call(
+                args=concatenate_args(
+                    args=[
+                        docker_command,
+                        "pytest",
+                        "-n",
+                        THREADS_AVAILABLE,
+                        mock_docker_subproject.get_pytest_whole_test_suite_report_args(
+                            test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+                        ),
+                        mock_docker_subproject.get_src_dir(),
+                        mock_docker_subproject.get_test_suite_dir(
+                            test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+                        ),
+                    ]
                 )
             )
+        )
         assert run_process_mock.mock_calls == expected_run_process_calls
 
 
@@ -638,7 +616,7 @@ def test_run_subproject_unit_tests_some_cached(
         else:
             expected_run_process_calls.append(run_process_call)
     file_cache.write_text()
-    sleep(10 / 1000)  # sleep just long enough for a new timestamp when writing file
+    sleep(1 / 1000)  # sleep just long enough for a new timestamp when writing file
     for file_to_update in files_to_update:
         file_to_update.write_text("Updated File")
     # This is needed for now because INFRA only has one file and therefore
@@ -884,7 +862,7 @@ def test_run_subproject_feature_tests_all_cached_but_top_test_conftest_updated(
     for test_file in test_files:
         file_cache.update_test_pass_timestamp(file_path=test_file)
     file_cache.write_text()
-    sleep(10 / 1000)  # sleep just long enough for a new timestamp when writing file
+    sleep(1 / 1000)  # sleep just long enough for a new timestamp when writing file
     mock_docker_subproject.get_test_dir().joinpath(CONFTEST_NAME).write_text(
         "Updated Top Level Conftest"
     )
@@ -1004,7 +982,7 @@ def test_run_subproject_feature_tests_one_src_updated(
     for test_file in test_files:
         file_cache.update_test_pass_timestamp(file_path=test_file)
     file_cache.write_text()
-    sleep(10 / 1000)  # sleep just long enough for a new timestamp when writing file
+    sleep(1 / 1000)  # sleep just long enough for a new timestamp when writing file
     src_file = next(mock_docker_subproject.get_all_testable_src_files())
     src_content = src_file.read_text()
     src_file.write_text(src_content + "\n")

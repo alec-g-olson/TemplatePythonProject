@@ -70,6 +70,77 @@ def test_get_src_dir(mock_subproject: PythonSubproject) -> None:
 
 
 @pytest.mark.usefixtures("mock_local_pyproject_toml_file")
+def test_get_all_testable_src_files(mock_subproject: PythonSubproject) -> None:
+    package_dir = mock_subproject.get_python_package_dir()
+    top_init = package_dir.joinpath("__init__.py")
+    file_1 = package_dir.joinpath("file_1.py")
+    file_2 = package_dir.joinpath("file_2.py")
+    other_file = package_dir.joinpath("other_file.txt")
+    sub_package_dir = package_dir.joinpath("sub_package")
+    sub_package_dir.mkdir(parents=True)
+    sub_package_init = sub_package_dir.joinpath("__init__.py")
+    file_3 = sub_package_dir.joinpath("file_3.py")
+    file_4 = sub_package_dir.joinpath("file_4.py")
+    different_file_type = sub_package_dir.joinpath("different_file_type.pdf")
+    for file in (
+        top_init,
+        file_1,
+        file_2,
+        other_file,
+        sub_package_init,
+        file_3,
+        file_4,
+        different_file_type,
+    ):
+        file.touch()
+    expected_src_files = [file_1, file_2, file_3, file_4]
+    assert list(mock_subproject.get_all_testable_src_files()) == expected_src_files
+
+
+@pytest.mark.usefixtures("mock_local_pyproject_toml_file")
+def test_get_src_unit_test_file_pairs(mock_subproject: PythonSubproject) -> None:
+    package_dir = mock_subproject.get_python_package_dir()
+    top_init = package_dir.joinpath("__init__.py")
+    file_1 = package_dir.joinpath("file_1.py")
+    file_2 = package_dir.joinpath("file_2.py")
+    other_file = package_dir.joinpath("other_file.txt")
+    sub_package_dir = package_dir.joinpath("sub_package")
+    sub_package_dir.mkdir(parents=True)
+    sub_package_init = sub_package_dir.joinpath("__init__.py")
+    file_3 = sub_package_dir.joinpath("file_3.py")
+    file_4 = sub_package_dir.joinpath("file_4.py")
+    different_file_type = sub_package_dir.joinpath("different_file_type.pdf")
+    for file in (
+        top_init,
+        file_1,
+        file_2,
+        other_file,
+        sub_package_init,
+        file_3,
+        file_4,
+        different_file_type,
+    ):
+        file.touch()
+    unit_test_folder = mock_subproject.get_test_suite_dir(
+        test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+    )
+    test_file_1 = unit_test_folder.joinpath("test_file_1.py")
+    test_file_2 = unit_test_folder.joinpath("test_file_2.py")
+    test_sub_package_dir = unit_test_folder.joinpath("sub_package")
+    test_file_3 = test_sub_package_dir.joinpath("test_file_3.py")
+    test_file_4 = test_sub_package_dir.joinpath("test_file_4.py")
+    expected_src_test_files = [
+        (file_1, test_file_1),
+        (file_2, test_file_2),
+        (file_3, test_file_3),
+        (file_4, test_file_4),
+    ]
+    assert (
+        list(mock_subproject.get_src_unit_test_file_pairs()) == expected_src_test_files
+    )
+
+
+@pytest.mark.usefixtures("mock_local_pyproject_toml_file")
 def test_get_python_package_dir(
     mock_subproject: PythonSubproject,
     subproject_context: SubprojectContext,

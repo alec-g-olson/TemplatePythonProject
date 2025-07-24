@@ -1,9 +1,10 @@
 """Defines the structure of a python subproject."""
 
+from collections.abc import Iterator
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, Iterable, Iterator, Tuple
+from typing import Any
 
 from build_support.ci_cd_vars.project_setting_vars import (
     get_project_name,
@@ -101,27 +102,38 @@ class PythonSubproject:
         return self.get_root_dir().joinpath("src")
 
     @staticmethod
-    def get_all_files_in(directory: Path) -> Iterator[Path]:
+    def _get_all_files_in(directory: Path) -> Iterator[Path]:
         return (file for file in directory.rglob("*") if file.is_file())
 
     @staticmethod
-    def get_all_python_files_in(directory: Path) -> Iterator[Path]:
+    def _get_all_python_files_in(directory: Path) -> Iterator[Path]:
         return (
             file
-            for file in PythonSubproject.get_all_files_in(directory=directory)
+            for file in PythonSubproject._get_all_files_in(directory=directory)
             if file.name.endswith(".py")
         )
 
     def get_all_testable_src_files(self) -> Iterator[Path]:
+        """Gets all the src files that can be tested in a subproject.
+
+        Yields:
+            Path: A testable src file in the subproject.
+        """
         return (
             file
-            for file in self.get_all_python_files_in(
+            for file in self._get_all_python_files_in(
                 directory=self.get_python_package_dir()
             )
             if file.name != "__init__.py"
         )
 
-    def get_src_unit_test_file_pairs(self) -> Iterator[Tuple[Path, Path]]:
+    def get_src_unit_test_file_pairs(self) -> Iterator[tuple[Path, Path]]:
+        """Gets all the src files and their unit test files for a subproject.
+
+        Yields:
+            tuple[Path, Path]: A tuple of a src file, and it's corresponding unit test
+                file.
+        """
         python_pkg_root_dir = self.get_python_package_dir()
         unit_test_root_dir = self.get_test_suite_dir(
             test_suite=PythonSubproject.TestSuite.UNIT_TESTS
