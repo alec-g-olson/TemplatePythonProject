@@ -12,7 +12,11 @@ from typing import override
 
 from junitparser import JUnitXml
 
-from build_support.ci_cd_tasks.env_setup_tasks import GetGitInfo, SetupDevEnvironment
+from build_support.ci_cd_tasks.env_setup_tasks import (
+    GetGitInfo,
+    GitInfo,
+    SetupDevEnvironment,
+)
 from build_support.ci_cd_tasks.task_node import PerSubprojectTask, TaskNode
 from build_support.ci_cd_vars.docker_vars import (
     DockerTarget,
@@ -24,6 +28,7 @@ from build_support.ci_cd_vars.docker_vars import (
 from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_all_non_test_folders,
     get_all_test_folders,
+    get_git_info_yaml,
 )
 from build_support.ci_cd_vars.machine_introspection_vars import THREADS_AVAILABLE
 from build_support.ci_cd_vars.project_structure import get_feature_test_scratch_folder
@@ -335,6 +340,25 @@ class ValidatePythonStyle(TaskNode):
         )
 
 
+def get_subprojects_to_test(project_root: Path) -> list[SubprojectContext]:
+    """Gets the list of subprojects that should be tested.
+
+    If the Dockerfile has been updated or the python dependencies have been updated
+    then all subprojects should be tested.
+
+    Args:
+        project_root (Path):The path to this pro
+
+    """
+    git_info = GitInfo.from_yaml(
+        get_git_info_yaml(project_root=project_root).read_text()
+    )
+    if git_info.dockerfile_modified or git_info.poetry_lock_file_modified:
+        return get_sorted_subproject_contexts()
+    else:
+        return git_info.modified_subprojects
+
+
 class AllSubprojectUnitTests(TaskNode):
     """Task for running unit tests in all subprojects."""
 
@@ -433,12 +457,9 @@ class SubprojectUnitTests(PerSubprojectTask):
             list[TaskNode]: A list of tasks required to unit test the subproject.
         """
         required_tasks: list[TaskNode] = [
-            SetupDevEnvironment(basic_task_info=self.get_basic_task_info())
+            SetupDevEnvironment(basic_task_info=self.get_basic_task_info()),
+            GetGitInfo(basic_task_info=self.get_basic_task_info()),
         ]
-        if self.subproject_context == SubprojectContext.BUILD_SUPPORT:
-            required_tasks.append(
-                GetGitInfo(basic_task_info=self.get_basic_task_info())
-            )
         return required_tasks
 
     @override
@@ -448,6 +469,10 @@ class SubprojectUnitTests(PerSubprojectTask):
         Returns:
             None
         """
+        if self.subproject_context not in get_subprojects_to_test(
+            project_root=self.docker_project_root
+        ):
+            return
         dev_docker_command = get_docker_command_for_image(
             non_docker_project_root=self.non_docker_project_root,
             docker_project_root=self.docker_project_root,
@@ -549,10 +574,11 @@ class SubprojectFeatureTests(PerSubprojectTask):
             list[TaskNode]: A list of tasks required to feature test the subproject.
         """
         required_tasks: list[TaskNode] = [
+            GetGitInfo(basic_task_info=self.get_basic_task_info()),
             SubprojectUnitTests(
                 basic_task_info=self.get_basic_task_info(),
                 subproject_context=self.subproject_context,
-            )
+            ),
         ]
         if self.subproject_context == SubprojectContext.BUILD_SUPPORT:
             required_tasks.extend(
@@ -604,6 +630,10 @@ class SubprojectFeatureTests(PerSubprojectTask):
         Returns:
             None
         """
+        if self.subproject_context not in get_subprojects_to_test(
+            project_root=self.docker_project_root
+        ):
+            return
         if (
             self.ci_cd_feature_test_mode
             and self.subproject_context == SubprojectContext.BUILD_SUPPORT

@@ -189,6 +189,7 @@ def test_run_clean(basic_task_info: BasicTaskInfo) -> None:
 git_info_data_dict: dict[Any, Any] = {
     "branch": "some_branch_name",
     "tags": mock_project_versions,
+    "modified_subprojects": ["build_support", "pypi_package"],
 }
 
 
@@ -247,7 +248,11 @@ def test_get_primary_branch_name() -> None:
 def test_get_ticket_id(branch_name: str, ticket_id: str | None) -> None:
     assert (
         GitInfo.model_validate(
-            {"branch": branch_name, "tags": ["some", "tags"]}
+            {
+                "branch": branch_name,
+                "tags": ["some", "tags"],
+                "modified_subprojects": [],
+            }
         ).get_ticket_id()
         == ticket_id
     )
@@ -266,14 +271,19 @@ def test_run_get_git_info(basic_task_info: BasicTaskInfo) -> None:
         patch(
             "build_support.ci_cd_tasks.env_setup_tasks.get_local_tags"
         ) as get_tags_mock,
+        patch(
+            "build_support.ci_cd_tasks.env_setup_tasks.get_modified_subprojects"
+        ) as get_modified_subprojects_mock,
         patch("build_support.ci_cd_tasks.env_setup_tasks.git_fetch") as git_fetch_mock,
     ):
         branch_name = "some_branch"
         # Some tags added to the repo might be for convenience and not strictly version
         # tags.  This should be allowed behavior.
         tags = ["some_non_version_tag", "0.0.0", "0.1.0"]
+        modified_subprojects = ["build_support", "pypi_package"]
         get_branch_mock.return_value = branch_name
         get_tags_mock.return_value = tags
+        get_modified_subprojects_mock.return_value = modified_subprojects
         git_info_yaml_dest = get_git_info_yaml(
             project_root=basic_task_info.docker_project_root
         )
@@ -285,6 +295,11 @@ def test_run_get_git_info(basic_task_info: BasicTaskInfo) -> None:
             local_gid=basic_task_info.local_gid,
             local_user_env=basic_task_info.local_user_env,
         )
+        get_modified_subprojects_mock.assert_called_once_with(
+            project_root=basic_task_info.docker_project_root
+        )
         observed_git_info = GitInfo.from_yaml(git_info_yaml_dest.read_text())
-        expected_git_info = GitInfo(branch=branch_name, tags=tags)
+        expected_git_info = GitInfo(
+            branch=branch_name, tags=tags, modified_subprojects=modified_subprojects
+        )
         assert observed_git_info == expected_git_info
