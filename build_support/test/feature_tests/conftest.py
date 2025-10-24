@@ -18,6 +18,7 @@ from build_support.ci_cd_vars.subproject_structure import (
     PythonSubproject,
     SubprojectContext,
     get_all_python_subprojects_dict,
+    get_python_subproject,
 )
 
 
@@ -146,6 +147,83 @@ def mock_lightweight_project(
     repo.create_tag(tag_name)
     repo.remote().push(tag_name)
     return repo
+
+
+@pytest.fixture
+def mock_lightweight_project_with_single_feature_test(
+    mock_lightweight_project: Repo, mock_project_root: Path
+) -> Repo:
+    subproject = get_python_subproject(
+        subproject_context=SubprojectContext.PYPI, project_root=mock_project_root
+    )
+    feature_test_dir = subproject.get_test_suite_dir(
+        test_suite=PythonSubproject.TestSuite.FEATURE_TESTS
+    )
+    feature_test_file = feature_test_dir.joinpath("test_empty_test.py")
+    feature_test_file.write_text(
+        "from time import sleep\n"
+        "\n"
+        "def test_something() -> None:\n"
+        "    sleep(1)\n"
+        "    assert True\n"
+    )
+
+    # Commit the lightweight project to git
+    mock_lightweight_project.git.add(update=True)
+    mock_lightweight_project.index.commit("added single lightweight feature test")
+    mock_lightweight_project.remote().push()
+    tag_name = "0.1.0"
+    mock_lightweight_project.create_tag(tag_name)
+    mock_lightweight_project.remote().push(tag_name)
+    return mock_lightweight_project
+
+
+@pytest.fixture
+def mock_lightweight_project_with_unit_tests_and_feature_tests(
+    mock_lightweight_project: Repo, mock_project_root: Path
+) -> Repo:
+    for subproject_context, subproject in get_all_python_subprojects_dict(
+        project_root=mock_project_root
+    ).items():
+        subproject_pkg_dir = subproject.get_python_package_dir()
+        subproject_src_file = subproject_pkg_dir.joinpath("src_file.py")
+        subproject_src_file.write_text(
+            "from time import sleep\n"
+            "\n"
+            "def add_slow(a: int, b: int) -> int:\n"
+            "    sleep(0.5)\n"
+            "    return a + b\n"
+        )
+        project_unit_test_dir = subproject.get_test_suite_dir(
+            test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+        )
+        project_unit_test_file = project_unit_test_dir.joinpath("test_src_file.py")
+        project_unit_test_file.write_text(
+            "from src_file import add_slow\n"
+            "\n"
+            "def test_add_slow() -> None:\n"
+            "    assert add_slow(2, 3) == 5\n"
+        )
+        feature_test_dir = subproject.get_test_suite_dir(
+            test_suite=PythonSubproject.TestSuite.FEATURE_TESTS
+        )
+        feature_test_file = feature_test_dir.joinpath("test_empty_test.py")
+        feature_test_file.write_text(
+            "from time import sleep\n"
+            "\n"
+            "def test_something() -> None:\n"
+            "    sleep(1)\n"
+            "    assert True\n"
+        )
+
+    # Commit the lightweight project to git
+    mock_lightweight_project.git.add(update=True)
+    mock_lightweight_project.index.commit("added single lightweight feature test")
+    mock_lightweight_project.remote().push()
+    tag_name = "0.1.0"
+    mock_lightweight_project.create_tag(tag_name)
+    mock_lightweight_project.remote().push(tag_name)
+    return mock_lightweight_project
 
 
 @pytest.fixture

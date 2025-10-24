@@ -10,7 +10,7 @@ from junitparser import JUnitXml, TestCase, TestSuite
 from unit_tests.empty_function_check import is_an_empty_function
 
 from build_support.ci_cd_tasks.env_setup_tasks import GetGitInfo, SetupDevEnvironment
-from build_support.ci_cd_tasks.task_node import BasicTaskInfo
+from build_support.ci_cd_tasks.task_node import BasicTaskInfo, TaskNode
 from build_support.ci_cd_tasks.validation_tasks import (
     FEATURE_TEST_FILE_NAME_REGEX,
     AllSubprojectFeatureTests,
@@ -325,17 +325,12 @@ def test_run_all_subproject_unit_tests(basic_task_info: BasicTaskInfo) -> None:
 def test_subproject_unit_tests_requires(
     basic_task_info: BasicTaskInfo, subproject_context: SubprojectContext
 ) -> None:
-    if subproject_context == SubprojectContext.BUILD_SUPPORT:
-        assert SubprojectUnitTests(
-            basic_task_info=basic_task_info, subproject_context=subproject_context
-        ).required_tasks() == [
-            SetupDevEnvironment(basic_task_info=basic_task_info),
-            GetGitInfo(basic_task_info=basic_task_info),
-        ]
-    else:
-        assert SubprojectUnitTests(
-            basic_task_info=basic_task_info, subproject_context=subproject_context
-        ).required_tasks() == [SetupDevEnvironment(basic_task_info=basic_task_info)]
+    assert SubprojectUnitTests(
+        basic_task_info=basic_task_info, subproject_context=subproject_context
+    ).required_tasks() == [
+        SetupDevEnvironment(basic_task_info=basic_task_info),
+        GetGitInfo(basic_task_info=basic_task_info),
+    ]
 
 
 @pytest.fixture
@@ -674,24 +669,25 @@ def test_run_all_subproject_feature_tests(basic_task_info: BasicTaskInfo) -> Non
 def test_subproject_feature_tests_requires(
     basic_task_info: BasicTaskInfo, subproject_context: SubprojectContext
 ) -> None:
+    expected_required_tasks: list[TaskNode] = [
+        GetGitInfo(basic_task_info=basic_task_info),
+        SubprojectUnitTests(
+            basic_task_info=basic_task_info, subproject_context=subproject_context
+        ),
+    ]
     if subproject_context == SubprojectContext.BUILD_SUPPORT:
-        assert SubprojectFeatureTests(
+        expected_required_tasks.extend(
+            [
+                ValidatePythonStyle(basic_task_info=basic_task_info),
+                EnforceProcess(basic_task_info=basic_task_info),
+            ]
+        )
+    assert (
+        SubprojectFeatureTests(
             basic_task_info=basic_task_info, subproject_context=subproject_context
-        ).required_tasks() == [
-            SubprojectUnitTests(
-                basic_task_info=basic_task_info, subproject_context=subproject_context
-            ),
-            ValidatePythonStyle(basic_task_info=basic_task_info),
-            EnforceProcess(basic_task_info=basic_task_info),
-        ]
-    else:
-        assert SubprojectFeatureTests(
-            basic_task_info=basic_task_info, subproject_context=subproject_context
-        ).required_tasks() == [
-            SubprojectUnitTests(
-                basic_task_info=basic_task_info, subproject_context=subproject_context
-            )
-        ]
+        ).required_tasks()
+        == expected_required_tasks
+    )
 
 
 REPORT_XML_REGEX = re.compile(r"--junitxml=(.+)")
