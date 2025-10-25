@@ -355,8 +355,7 @@ def get_subprojects_to_test(project_root: Path) -> list[SubprojectContext]:
     )
     if git_info.dockerfile_modified or git_info.poetry_lock_file_modified:
         return get_sorted_subproject_contexts()
-    else:
-        return git_info.modified_subprojects
+    return git_info.modified_subprojects
 
 
 class AllSubprojectUnitTests(TaskNode):

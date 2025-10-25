@@ -6,7 +6,6 @@ Attributes:
 
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Set
 
 from git import Commit, DiffIndex, FetchInfo, Head, Repo
 from git.cmd import execute_kwargs
@@ -231,7 +230,7 @@ def get_most_recent_commit_on_main(repo: Repo) -> Commit:
 
 def get_modified_files_between_commits(
     project_root: Path, repo: Repo, old_commit: Commit, new_commit: Commit
-) -> Set[Path]:
+) -> set[Path]:
     """Gets the set of files that were modified between two commits.
 
     Args:
@@ -247,7 +246,7 @@ def get_modified_files_between_commits(
     return {project_root.joinpath(file) for file in diff_index.split() if file}
 
 
-def get_modified_files(project_root: Path) -> Set[Path]:
+def get_modified_files(project_root: Path) -> set[Path]:
     """Gets the set of files that were modified since the most recent commit on main,
     including uncommitted changes.
 

@@ -9,7 +9,11 @@ import pytest
 from junitparser import JUnitXml, TestCase, TestSuite
 from unit_tests.empty_function_check import is_an_empty_function
 
-from build_support.ci_cd_tasks.env_setup_tasks import GetGitInfo, SetupDevEnvironment
+from build_support.ci_cd_tasks.env_setup_tasks import (
+    GetGitInfo,
+    GitInfo,
+    SetupDevEnvironment,
+)
 from build_support.ci_cd_tasks.task_node import BasicTaskInfo, TaskNode
 from build_support.ci_cd_tasks.validation_tasks import (
     FEATURE_TEST_FILE_NAME_REGEX,
@@ -24,6 +28,7 @@ from build_support.ci_cd_tasks.validation_tasks import (
     ValidatePythonStyle,
     ValidateSecurityChecks,
     ValidateStaticTypeChecking,
+    get_subprojects_to_test,
 )
 from build_support.ci_cd_vars.docker_vars import (
     DockerTarget,
@@ -36,6 +41,7 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     SubprojectContext,
     get_all_non_test_folders,
     get_all_test_folders,
+    get_git_info_yaml,
 )
 from build_support.ci_cd_vars.machine_introspection_vars import THREADS_AVAILABLE
 from build_support.ci_cd_vars.project_structure import get_feature_test_scratch_folder
@@ -351,7 +357,30 @@ def mock_entire_subproject(
     shutil.move(src=copied_dir, dst=mock_docker_subproject.get_python_package_dir())
 
 
-@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
+@pytest.fixture
+def mock_git_info_yaml(
+    docker_project_root: Path, subproject_context: SubprojectContext
+) -> Path:
+    """Creates a mock git_info.yaml file for use in testing."""
+    git_info_yaml_path = get_git_info_yaml(project_root=docker_project_root)
+    git_info_yaml_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Create a GitInfo object with the subproject in the modified list
+    git_info = GitInfo(
+        branch="test-branch",
+        tags=[],
+        modified_subprojects=[subproject_context],
+        dockerfile_modified=False,
+        poetry_lock_file_modified=False,
+    )
+
+    git_info_yaml_path.write_text(git_info.to_yaml())
+    return git_info_yaml_path
+
+
+@pytest.mark.usefixtures(
+    "mock_docker_pyproject_toml_file", "mock_entire_subproject", "mock_git_info_yaml"
+)
 def test_run_subproject_unit_tests_test_all(
     basic_task_info: BasicTaskInfo,
     subproject_context: SubprojectContext,
@@ -419,7 +448,9 @@ def test_run_subproject_unit_tests_test_all(
         assert run_process_mock.mock_calls == expected_run_process_calls
 
 
-@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
+@pytest.mark.usefixtures(
+    "mock_docker_pyproject_toml_file", "mock_entire_subproject", "mock_git_info_yaml"
+)
 def test_run_subproject_unit_tests_all_cached(
     basic_task_info: BasicTaskInfo, subproject_context: SubprojectContext
 ) -> None:
@@ -445,7 +476,9 @@ def test_run_subproject_unit_tests_all_cached(
         assert run_process_mock.call_count == 0
 
 
-@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
+@pytest.mark.usefixtures(
+    "mock_docker_pyproject_toml_file", "mock_entire_subproject", "mock_git_info_yaml"
+)
 def test_run_subproject_unit_tests_all_cached_but_top_test_conftest_updated(
     basic_task_info: BasicTaskInfo,
     subproject_context: SubprojectContext,
@@ -523,7 +556,7 @@ def test_run_subproject_unit_tests_all_cached_but_top_test_conftest_updated(
         assert run_process_mock.mock_calls == expected_run_process_calls
 
 
-@pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_git_info_yaml")
 def test_missing_test_file_for_src(
     mock_project_root: Path, docker_project_root: Path
 ) -> None:
@@ -548,13 +581,21 @@ def test_missing_test_file_for_src(
         local_gid=0,
         local_user_env=None,
     )
-    with pytest.raises(ValueError, match=expected_msg):
-        SubprojectUnitTests(
-            basic_task_info=basic_task_info, subproject_context=subproject_context
-        ).run()
+
+    # Mock get_subprojects_to_test to return the subproject so the test actually runs
+    with patch(
+        "build_support.ci_cd_tasks.validation_tasks.get_subprojects_to_test",
+        return_value=[subproject_context],
+    ):
+        with pytest.raises(ValueError, match=expected_msg):
+            SubprojectUnitTests(
+                basic_task_info=basic_task_info, subproject_context=subproject_context
+            ).run()
 
 
-@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
+@pytest.mark.usefixtures(
+    "mock_docker_pyproject_toml_file", "mock_entire_subproject", "mock_git_info_yaml"
+)
 def test_run_subproject_unit_tests_some_cached(
     basic_task_info: BasicTaskInfo,
     subproject_context: SubprojectContext,
@@ -710,7 +751,9 @@ def run_feature_test_side_effect(args: list[Any]) -> None:
             break
 
 
-@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
+@pytest.mark.usefixtures(
+    "mock_docker_pyproject_toml_file", "mock_entire_subproject", "mock_git_info_yaml"
+)
 def test_run_subproject_feature_tests_test_all(
     basic_task_info: BasicTaskInfo,
     subproject_context: SubprojectContext,
@@ -759,7 +802,9 @@ def test_run_subproject_feature_tests_test_all(
             run_process_mock.assert_not_called()
 
 
-@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
+@pytest.mark.usefixtures(
+    "mock_docker_pyproject_toml_file", "mock_entire_subproject", "mock_git_info_yaml"
+)
 def test_run_subproject_feature_tests_in_ci_cd_int_test_mode(
     basic_task_info: BasicTaskInfo,
     subproject_context: SubprojectContext,
@@ -809,7 +854,9 @@ def test_run_subproject_feature_tests_in_ci_cd_int_test_mode(
             assert run_process_mock.mock_calls == expected_calls
 
 
-@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
+@pytest.mark.usefixtures(
+    "mock_docker_pyproject_toml_file", "mock_entire_subproject", "mock_git_info_yaml"
+)
 def test_run_subproject_feature_tests_all_cached(
     basic_task_info: BasicTaskInfo,
     subproject_context: SubprojectContext,
@@ -838,7 +885,9 @@ def test_run_subproject_feature_tests_all_cached(
         run_process_mock.assert_not_called()
 
 
-@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
+@pytest.mark.usefixtures(
+    "mock_docker_pyproject_toml_file", "mock_entire_subproject", "mock_git_info_yaml"
+)
 def test_run_subproject_feature_tests_all_cached_but_top_test_conftest_updated(
     basic_task_info: BasicTaskInfo,
     subproject_context: SubprojectContext,
@@ -898,7 +947,9 @@ def test_run_subproject_feature_tests_all_cached_but_top_test_conftest_updated(
             run_process_mock.assert_not_called()
 
 
-@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
+@pytest.mark.usefixtures(
+    "mock_docker_pyproject_toml_file", "mock_entire_subproject", "mock_git_info_yaml"
+)
 def test_run_subproject_feature_tests_some_cached(
     basic_task_info: BasicTaskInfo,
     subproject_context: SubprojectContext,
@@ -958,7 +1009,9 @@ def test_run_subproject_feature_tests_some_cached(
         run_process_mock.assert_has_calls(calls=expected_calls)
 
 
-@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_entire_subproject")
+@pytest.mark.usefixtures(
+    "mock_docker_pyproject_toml_file", "mock_entire_subproject", "mock_git_info_yaml"
+)
 def test_run_subproject_feature_tests_one_src_updated(
     basic_task_info: BasicTaskInfo,
     subproject_context: SubprojectContext,
@@ -1017,3 +1070,136 @@ def test_run_subproject_feature_tests_one_src_updated(
             run_process_mock.assert_has_calls(calls=expected_calls)
         else:  # pragma: no cov - might only have cases that require calls
             run_process_mock.assert_not_called()
+
+
+def test_get_subprojects_to_test_dockerfile_modified(docker_project_root: Path) -> None:
+    """Test get_subprojects_to_test when dockerfile is modified."""
+    git_info_yaml_path = get_git_info_yaml(project_root=docker_project_root)
+    git_info_yaml_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Create a GitInfo object with dockerfile modified
+    git_info = GitInfo(
+        branch="test-branch",
+        tags=[],
+        modified_subprojects=[SubprojectContext.PYPI],
+        dockerfile_modified=True,
+        poetry_lock_file_modified=False,
+    )
+
+    git_info_yaml_path.write_text(git_info.to_yaml())
+
+    result = get_subprojects_to_test(project_root=docker_project_root)
+    assert result == get_sorted_subproject_contexts()
+
+
+def test_get_subprojects_to_test_poetry_lock_modified(
+    docker_project_root: Path,
+) -> None:
+    """Test get_subprojects_to_test when poetry.lock is modified."""
+    git_info_yaml_path = get_git_info_yaml(project_root=docker_project_root)
+    git_info_yaml_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Create a GitInfo object with poetry lock modified
+    git_info = GitInfo(
+        branch="test-branch",
+        tags=[],
+        modified_subprojects=[SubprojectContext.PYPI],
+        dockerfile_modified=False,
+        poetry_lock_file_modified=True,
+    )
+
+    git_info_yaml_path.write_text(git_info.to_yaml())
+
+    result = get_subprojects_to_test(project_root=docker_project_root)
+    assert result == get_sorted_subproject_contexts()
+
+
+def test_get_subprojects_to_test_only_modified_subprojects(
+    docker_project_root: Path,
+) -> None:
+    """Test get_subprojects_to_test when only specific subprojects are modified."""
+    git_info_yaml_path = get_git_info_yaml(project_root=docker_project_root)
+    git_info_yaml_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Create a GitInfo object with only specific subprojects modified
+    modified_subprojects = [SubprojectContext.PYPI, SubprojectContext.BUILD_SUPPORT]
+    git_info = GitInfo(
+        branch="test-branch",
+        tags=[],
+        modified_subprojects=modified_subprojects,
+        dockerfile_modified=False,
+        poetry_lock_file_modified=False,
+    )
+
+    git_info_yaml_path.write_text(git_info.to_yaml())
+
+    result = get_subprojects_to_test(project_root=docker_project_root)
+    assert result == modified_subprojects
+
+
+def test_subproject_feature_tests_skips_when_not_in_test_list(
+    basic_task_info: BasicTaskInfo, subproject_context: SubprojectContext
+) -> None:
+    """Test that SubprojectFeatureTests skips when subproject is not in test list."""
+    # Create a git_info.yaml that doesn't include the current subproject
+    other_subprojects = [
+        ctx for ctx in get_sorted_subproject_contexts() if ctx != subproject_context
+    ]
+    git_info_yaml_path = get_git_info_yaml(
+        project_root=basic_task_info.docker_project_root
+    )
+    git_info_yaml_path.parent.mkdir(parents=True, exist_ok=True)
+
+    git_info = GitInfo(
+        branch="test-branch",
+        tags=[],
+        modified_subprojects=other_subprojects,
+        dockerfile_modified=False,
+        poetry_lock_file_modified=False,
+    )
+
+    git_info_yaml_path.write_text(git_info.to_yaml())
+
+    # The test should return early without running any processes
+    with patch(
+        "build_support.ci_cd_tasks.validation_tasks.run_process"
+    ) as run_process_mock:
+        SubprojectFeatureTests(
+            basic_task_info=basic_task_info, subproject_context=subproject_context
+        ).run()
+        # Should not call run_process at all since we return early
+        run_process_mock.assert_not_called()
+
+
+def test_subproject_unit_tests_skips_when_not_in_test_list(
+    basic_task_info: BasicTaskInfo, subproject_context: SubprojectContext
+) -> None:
+    """Test that SubprojectUnitTests skips when subproject is not in test list."""
+    # Create a git_info.yaml that doesn't include the current subproject
+    other_subprojects = [
+        ctx for ctx in get_sorted_subproject_contexts() if ctx != subproject_context
+    ]
+    git_info_yaml_path = get_git_info_yaml(
+        project_root=basic_task_info.docker_project_root
+    )
+    git_info_yaml_path.parent.mkdir(parents=True, exist_ok=True)
+
+    git_info = GitInfo(
+        branch="test-branch",
+        tags=[],
+        modified_subprojects=other_subprojects,
+        dockerfile_modified=False,
+        poetry_lock_file_modified=False,
+    )
+
+    git_info_yaml_path.write_text(git_info.to_yaml())
+
+    # The test should return early without running any processes
+    with patch(
+        "build_support.ci_cd_tasks.validation_tasks.run_process"
+    ) as run_process_mock:
+        SubprojectUnitTests(
+            basic_task_info=basic_task_info, subproject_context=subproject_context
+        ).run()
+        # Should not call run_process at all since we return early
+        run_process_mock.assert_not_called()
