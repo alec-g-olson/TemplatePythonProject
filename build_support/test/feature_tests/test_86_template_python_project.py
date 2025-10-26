@@ -18,7 +18,6 @@ from build_support.ci_cd_vars.project_structure import (
 from build_support.ci_cd_vars.subproject_structure import (
     PythonSubproject,
     SubprojectContext,
-    get_all_python_subprojects_dict,
     get_python_subproject,
 )
 from build_support.dag_engine import BuildRunReport

@@ -7,11 +7,6 @@ import pytest
 from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_build_runtime_report_path,
 )
-from build_support.ci_cd_vars.subproject_structure import (
-    PythonSubproject,
-    SubprojectContext,
-    get_python_subproject,
-)
 from build_support.dag_engine import BuildRunReport
 
 

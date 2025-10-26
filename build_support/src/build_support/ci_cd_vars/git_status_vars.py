@@ -247,8 +247,9 @@ def get_modified_files_between_commits(
 
 
 def get_modified_files(project_root: Path) -> set[Path]:
-    """Gets the set of files that were modified since the most recent commit on main,
-    including uncommitted changes.
+    """Gets the set of files that were modified since the most recent commit on main.
+
+    This includes uncommitted changes.
 
     Args:
         project_root (Path): Path to this project's root.
@@ -268,7 +269,7 @@ def get_modified_files(project_root: Path) -> set[Path]:
             new_commit=current_commit,
         )
     else:
-        # If we're not on main, compare the current HEAD with the most recent commit on main
+        # If we're not on main, compare the HEAD with the most recent commit on main
         head_commit = repo.head.commit
         main_commit = get_most_recent_commit_on_main(repo=repo)
         modified_files = get_modified_files_between_commits(
@@ -320,10 +321,36 @@ def get_modified_subprojects(
 
 
 def dockerfile_was_modified(modified_files: Iterable[Path], project_root: Path) -> bool:
+    """Checks if the dockerfile was modified.
+
+    If the dockerfile has been modified it implies that our environment is different,
+    and we should cast a wide net when testing.
+
+    Args:
+        modified_files: The collection of files that have been modified since the most
+            recent commit on main.
+        project_root: The root of the project.
+
+    Returns:
+        bool: Has the dockerfile been modified since the last commit on main.
+    """
     return get_dockerfile(project_root=project_root) in modified_files
 
 
 def poetry_lock_file_was_modified(
     modified_files: Iterable[Path], project_root: Path
 ) -> bool:
+    """Checks if the poetry lock file was modified.
+
+    If the poetry lock file has been modified it implies that our environment is
+    different, and we should cast a wide net when testing.
+
+    Args:
+        modified_files: The collection of files that have been modified since the most
+            recent commit on main.
+        project_root: The root of the project.
+
+    Returns:
+        bool: Has the poetry lock file been modified since the last commit on main.
+    """
     return get_poetry_lock_file(project_root=project_root) in modified_files

@@ -1,10 +1,10 @@
 from pathlib import Path
 from typing import cast
-from unittest.mock import patch
 
 import pytest
 from _pytest.fixtures import SubRequest
-from git import Commit, Head, Repo, TagReference
+from git import Head, Repo, TagReference
+from git.cmd import execute_kwargs
 
 from build_support.ci_cd_vars.git_status_vars import (
     MAIN_BRANCH_NAME,
@@ -26,6 +26,7 @@ from build_support.ci_cd_vars.git_status_vars import (
     poetry_lock_file_was_modified,
     tag_current_commit_and_push,
 )
+from build_support.ci_cd_vars.subproject_structure import SubprojectContext
 
 
 @pytest.fixture
@@ -235,7 +236,6 @@ def test_get_most_recent_commit_on_main(
 ) -> None:
     """Test that get_most_recent_commit_on_main returns the correct commit."""
     # Create a commit on main branch
-    main_branch = mock_git_repo.active_branch
     new_file = mock_project_root.joinpath("main_commit_file.txt")
     new_file.write_text("main content")
     mock_git_repo.index.add([new_file])
@@ -287,14 +287,14 @@ def test_get_modified_files_on_main(
     initial_file = mock_project_root.joinpath("initial.txt")
     initial_file.write_text("initial content")
     mock_git_repo.index.add([initial_file])
-    initial_commit = mock_git_repo.index.commit("initial commit")
+    mock_git_repo.index.commit("initial commit")
 
     # Create second commit (this will be the current commit)
     initial_file.write_text("modified content")
     new_file = mock_project_root.joinpath("new.txt")
     new_file.write_text("new content")
     mock_git_repo.index.add([initial_file, new_file])
-    current_commit = mock_git_repo.index.commit("modified commit")
+    mock_git_repo.index.commit("modified commit")
 
     # Test the function
     modified_files = get_modified_files(project_root=mock_project_root)
@@ -304,15 +304,16 @@ def test_get_modified_files_on_main(
     assert modified_files == expected_files
 
 
+@pytest.mark.usefixtures("mock_git_branch")
 def test_get_modified_files_not_on_main(
-    mock_project_root: Path, mock_git_repo: Repo, mock_git_branch: Head
+    mock_project_root: Path, mock_git_repo: Repo
 ) -> None:
     """Test get_modified_files when not on main branch."""
     # Create a commit on main first
     main_file = mock_project_root.joinpath("main_file.txt")
     main_file.write_text("main content")
     mock_git_repo.index.add([main_file])
-    main_commit = mock_git_repo.index.commit("main commit")
+    mock_git_repo.index.commit("main commit")
     mock_git_repo.remote().push()  # Push to create origin/main
 
     # Switch to feature branch (already done by mock_git_branch fixture)
@@ -330,7 +331,6 @@ def test_get_modified_files_not_on_main(
     modified_files = get_modified_files(project_root=mock_project_root)
 
     # Should include files modified since main and uncommitted files
-    # The main_file.txt will also be included because it was created after the initial commit
     expected_files = {
         mock_project_root / "main_file.txt",
         mock_project_root / "feature_file.txt",
@@ -362,9 +362,6 @@ def test_get_modified_subprojects(mock_project_root: Path) -> None:
         modified_files=modified_files, project_root=mock_project_root
     )
 
-    # Should include all three subprojects
-    from build_support.ci_cd_vars.subproject_structure import SubprojectContext
-
     expected_subprojects = [
         SubprojectContext.BUILD_SUPPORT,
         SubprojectContext.PYPI,
@@ -374,7 +371,6 @@ def test_get_modified_subprojects(mock_project_root: Path) -> None:
 
 
 def test_get_modified_subprojects_no_files(mock_project_root: Path) -> None:
-    """Test that get_modified_subprojects returns empty list when no files are modified."""
     modified_files = []
 
     modified_subprojects = get_modified_subprojects(
@@ -406,7 +402,6 @@ def test_dockerfile_was_modified(mock_project_root: Path) -> None:
 
 
 def test_poetry_lock_file_was_modified(mock_project_root: Path) -> None:
-    """Test that poetry_lock_file_was_modified correctly identifies poetry.lock changes."""
     # Create a poetry.lock file
     poetry_lock = mock_project_root / "poetry.lock"
     poetry_lock.write_text('[[package]]\nname = "test"')
@@ -435,7 +430,6 @@ def test_poetry_lock_file_was_modified(mock_project_root: Path) -> None:
 
 def test_monkeypatch_git_python_execute_kwargs() -> None:
     """Test that monkeypatch_git_python_execute_kwargs adds the required kwargs."""
-    from git.cmd import execute_kwargs
 
     # Store original state
     original_kwargs = execute_kwargs.copy()

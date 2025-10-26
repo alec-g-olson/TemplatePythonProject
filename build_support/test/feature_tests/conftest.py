@@ -182,9 +182,9 @@ def mock_lightweight_project_with_single_feature_test(
 def mock_lightweight_project_with_unit_tests_and_feature_tests(
     mock_lightweight_project: Repo, mock_project_root: Path
 ) -> Repo:
-    for subproject_context, subproject in get_all_python_subprojects_dict(
+    for subproject in get_all_python_subprojects_dict(
         project_root=mock_project_root
-    ).items():
+    ).values():
         subproject_pkg_dir = subproject.get_python_package_dir()
         subproject_src_file = subproject_pkg_dir.joinpath("src_file.py")
         subproject_src_file.write_text(

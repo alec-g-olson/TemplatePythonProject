@@ -583,14 +583,16 @@ def test_missing_test_file_for_src(
     )
 
     # Mock get_subprojects_to_test to return the subproject so the test actually runs
-    with patch(
-        "build_support.ci_cd_tasks.validation_tasks.get_subprojects_to_test",
-        return_value=[subproject_context],
+    with (
+        patch(
+            "build_support.ci_cd_tasks.validation_tasks.get_subprojects_to_test",
+            return_value=[subproject_context],
+        ),
+        pytest.raises(ValueError, match=expected_msg),
     ):
-        with pytest.raises(ValueError, match=expected_msg):
-            SubprojectUnitTests(
-                basic_task_info=basic_task_info, subproject_context=subproject_context
-            ).run()
+        SubprojectUnitTests(
+            basic_task_info=basic_task_info, subproject_context=subproject_context
+        ).run()
 
 
 @pytest.mark.usefixtures(
