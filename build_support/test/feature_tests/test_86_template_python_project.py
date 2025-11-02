@@ -50,28 +50,42 @@ def test_run_tests_for_single_modified_subproject(
     subproject_pkg_dir = subproject.get_python_package_dir()
     subproject_src_file = subproject_pkg_dir.joinpath("src_file.py")
     subproject_src_file.write_text(
-        "from time import sleep\n"
-        "\n"
-        "def add_slow(a: int, b: int) -> int:\n"
-        "    sleep(0.5)\n"
-        "    return a + b\n"
-        "\n"
-        "def subtract_slow(a: int, b: int) -> int:\n"
-        "    sleep(0.5)\n"
-        "    return a - b\n"
+        '''from time import sleep
+
+
+def add_slow(a: int, b: int) -> int:
+    """Add two numbers slowly."""
+    sleep(0.5)
+    return a + b
+
+def subtract_slow(a: int, b: int) -> int:
+    """Subtract two numbers slowly."""
+    sleep(0.5)
+    return a - b
+'''
     )
     project_unit_test_dir = subproject.get_test_suite_dir(
         test_suite=PythonSubproject.TestSuite.UNIT_TESTS
     )
     project_unit_test_file = project_unit_test_dir.joinpath("test_src_file.py")
     project_unit_test_file.write_text(
-        "from src_file import add_slow, subtract_slow\n"
-        "\n"
-        "def test_add_slow() -> None:\n"
-        "    assert add_slow(2, 3) == 5\n"
-        "\n"
-        "def test_subtract_slow() -> None:\n"
-        "    assert subtract_slow(2, 3) == -1\n"
+        """from src_file import add_slow, subtract_slow
+
+
+def test_add_slow() -> None:
+    a = 2
+    b = 3
+    expected_sum = 5
+    assert add_slow(a=a, b=b) == expected_sum
+
+
+def test_subtract_slow() -> None:
+    a = 2
+    b = 3
+    expected_diff = -1
+    assert subtract_slow(a=a, b=b) == expected_diff
+
+"""
     )
     cmd = Popen(args=(*make_command_prefix, "test"), cwd=mock_project_root)
     cmd.communicate()
