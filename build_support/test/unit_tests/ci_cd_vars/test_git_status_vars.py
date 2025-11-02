@@ -371,7 +371,7 @@ def test_get_modified_subprojects(mock_project_root: Path) -> None:
 
 
 def test_get_modified_subprojects_no_files(mock_project_root: Path) -> None:
-    modified_files = []
+    modified_files: list[Path] = []
 
     modified_subprojects = get_modified_subprojects(
         modified_files=modified_files, project_root=mock_project_root

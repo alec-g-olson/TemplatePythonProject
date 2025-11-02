@@ -347,8 +347,10 @@ def get_subprojects_to_test(project_root: Path) -> list[SubprojectContext]:
     then all subprojects should be tested.
 
     Args:
-        project_root (Path):The path to this pro
+        project_root (Path): The path to this project's root.
 
+    Returns:
+        list[SubprojectContext]: The list of subprojects that should be tested.
     """
     git_info = GitInfo.from_yaml(
         get_git_info_yaml(project_root=project_root).read_text()

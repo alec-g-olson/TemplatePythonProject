@@ -148,7 +148,7 @@ def get_git_diff(project_root: Path) -> DiffIndex[Diff]:
     Returns:
         str: The results of running `git diff`.
     """
-    return git_add_all(project_root=project_root).commit.diff()  # type: ignore[no-any-return]
+    return git_add_all(project_root=project_root).commit.diff()
 
 
 def commit_changes_if_diff(
@@ -304,7 +304,8 @@ def get_modified_subprojects(
     then we don't need to run any tests or formatting checks on it.
 
     Args:
-        modified_files (Iterable[Path]): Path to this project's root.
+        modified_files (Iterable[Path]): The collection of files that have been modified
+            since the most recent commit on main.
         project_root (Path): Path to this project's root.
 
     Returns:
@@ -327,9 +328,9 @@ def dockerfile_was_modified(modified_files: Iterable[Path], project_root: Path) 
     and we should cast a wide net when testing.
 
     Args:
-        modified_files: The collection of files that have been modified since the most
-            recent commit on main.
-        project_root: The root of the project.
+        modified_files (Iterable[Path]): The collection of files that have been modified
+            since the most recent commit on main.
+        project_root (Path): The root of the project.
 
     Returns:
         bool: Has the dockerfile been modified since the last commit on main.
@@ -346,9 +347,9 @@ def poetry_lock_file_was_modified(
     different, and we should cast a wide net when testing.
 
     Args:
-        modified_files: The collection of files that have been modified since the most
-            recent commit on main.
-        project_root: The root of the project.
+        modified_files (Iterable[Path]): The collection of files that have been modified
+            since the most recent commit on main.
+        project_root (Path): The root of the project.
 
     Returns:
         bool: Has the poetry lock file been modified since the last commit on main.

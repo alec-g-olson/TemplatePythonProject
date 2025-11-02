@@ -288,7 +288,7 @@ def test_run_get_git_info(basic_task_info: BasicTaskInfo) -> None:
         # Some tags added to the repo might be for convenience and not strictly version
         # tags.  This should be allowed behavior.
         tags = ["some_non_version_tag", "0.0.0", "0.1.0"]
-        modified_files = []
+        modified_files: list[Path] = []
         modified_subprojects = [SubprojectContext.BUILD_SUPPORT, SubprojectContext.PYPI]
         get_branch_mock.return_value = branch_name
         get_tags_mock.return_value = tags
