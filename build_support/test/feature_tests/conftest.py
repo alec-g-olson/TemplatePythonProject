@@ -182,17 +182,36 @@ def mock_lightweight_project_with_single_feature_test(
 def mock_lightweight_project_with_unit_tests_and_feature_tests(
     mock_lightweight_project: Repo, mock_project_root: Path
 ) -> Repo:
-    for subproject in get_all_python_subprojects_dict(
-        project_root=mock_project_root
-    ).values():
+    for subproject in [
+        get_python_subproject(SubprojectContext.PYPI, mock_project_root)
+    ]:
         subproject_pkg_dir = subproject.get_python_package_dir()
+        subproject_pkg_init_file = subproject_pkg_dir.joinpath("__init__.py")
+        subproject_pkg_init_file.write_text(
+            '''"""Top level package.
+
+Modules:
+    | src_file: A simple source file for testing purposes.
+"""
+'''
+        )
         subproject_src_file = subproject_pkg_dir.joinpath("src_file.py")
         subproject_src_file.write_text(
-            '''from time import sleep
+            '''"""A simple Python module for testing purposes."""
+
+from time import sleep
 
 
 def add_slow(a: int, b: int) -> int:
-    """Adds two numbers slowly."""
+    """Adds two numbers slowly.
+
+    Args:
+        a (int): The first number.
+        b (int): The second number.
+
+    Returns:
+        int: The sum of the two numbers.
+    """
     sleep(0.5)
     return a + b
 '''

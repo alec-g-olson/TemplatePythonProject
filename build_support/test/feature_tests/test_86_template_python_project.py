@@ -69,10 +69,19 @@ def subtract_slow(a: int, b: int) -> int:
     )
     project_unit_test_file = project_unit_test_dir.joinpath("test_src_file.py")
     project_unit_test_file.write_text(
-        """from src_file import add_slow, subtract_slow
+        '''from src_file import add_slow, subtract_slow
 
 
 def test_add_slow() -> None:
+    """Adds two numbers slowly.
+
+    Args:
+        a (int): The first number.
+        b (int): The second number.
+
+    Returns:
+        int: The sum of the two numbers.
+    """
     a = 2
     b = 3
     expected_sum = 5
@@ -80,12 +89,21 @@ def test_add_slow() -> None:
 
 
 def test_subtract_slow() -> None:
+    """Subtracts two numbers slowly.
+
+    Args:
+        a (int): The first number.
+        b (int): The second number.
+
+    Returns:
+        int: The difference of the two numbers.
+    """
     a = 2
     b = 3
     expected_diff = -1
     assert subtract_slow(a=a, b=b) == expected_diff
 
-"""
+'''
     )
     cmd = Popen(args=(*make_command_prefix, "test"), cwd=mock_project_root)
     cmd.communicate()
