@@ -7,9 +7,7 @@ import yaml
 from _pytest.fixtures import SubRequest
 
 from build_support.ci_cd_tasks.task_node import BasicTaskInfo, TaskNode
-from build_support.ci_cd_vars.file_and_dir_path_vars import (
-    get_build_runtime_report_path,
-)
+from build_support.ci_cd_vars.build_paths import get_build_runtime_report_path
 from build_support.dag_engine import BuildRunReport, get_task_execution_order, run_tasks
 
 

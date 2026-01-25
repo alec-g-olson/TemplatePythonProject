@@ -4,9 +4,7 @@ from subprocess import Popen
 
 import pytest
 
-from build_support.ci_cd_vars.file_and_dir_path_vars import (
-    get_build_runtime_report_path,
-)
+from build_support.ci_cd_vars.build_paths import get_build_runtime_report_path
 from build_support.dag_engine import BuildRunReport
 
 

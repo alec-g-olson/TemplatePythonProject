@@ -4,6 +4,7 @@ from pathlib import Path
 
 from build_support.ci_cd_tasks.env_setup_tasks import Clean
 from build_support.ci_cd_tasks.task_node import BasicTaskInfo
+from build_support.ci_cd_vars.project_structure import get_new_project_settings
 from build_support.ci_cd_vars.subproject_structure import (
     SubprojectContext,
     get_python_subproject,
@@ -84,9 +85,7 @@ def _ensure_project_folder_matches_settings(
 def test_make_new_project(tmp_path: Path, real_project_root_dir: Path) -> None:
     tmp_project_path = tmp_path.joinpath("template_python_project")
     shutil.copytree(real_project_root_dir, tmp_project_path)
-    project_settings_path = tmp_project_path.joinpath(
-        "build_support", "new_project_settings.yaml"
-    )
+    project_settings_path = get_new_project_settings(project_root=tmp_project_path)
     original_project_settings = ProjectSettings.from_yaml(
         project_settings_path.read_text()
     )

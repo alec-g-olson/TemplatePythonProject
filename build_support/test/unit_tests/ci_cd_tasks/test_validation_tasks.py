@@ -30,6 +30,7 @@ from build_support.ci_cd_tasks.validation_tasks import (
     ValidateStaticTypeChecking,
     get_subprojects_to_test,
 )
+from build_support.ci_cd_vars.build_paths import get_git_info_yaml
 from build_support.ci_cd_vars.docker_vars import (
     DockerTarget,
     get_base_docker_command_for_image,
@@ -38,15 +39,14 @@ from build_support.ci_cd_vars.docker_vars import (
     get_mypy_path_env,
 )
 from build_support.ci_cd_vars.file_and_dir_path_vars import (
-    SubprojectContext,
     get_all_non_test_folders,
     get_all_test_folders,
-    get_git_info_yaml,
 )
 from build_support.ci_cd_vars.machine_introspection_vars import THREADS_AVAILABLE
 from build_support.ci_cd_vars.project_structure import get_feature_test_scratch_folder
 from build_support.ci_cd_vars.subproject_structure import (
     PythonSubproject,
+    SubprojectContext,
     get_all_python_subprojects_dict,
     get_python_subproject,
     get_sorted_subproject_contexts,

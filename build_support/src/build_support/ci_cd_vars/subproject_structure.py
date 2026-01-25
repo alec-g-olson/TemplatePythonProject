@@ -1,4 +1,9 @@
-"""Defines the structure of a python subproject."""
+"""Defines the repeated structural elements of each Python subproject.
+
+All subprojects (pypi_package, build_support, infra) follow the same directory structure
+pattern: src/, test/, with consistent naming conventions for packages, test suites, and
+build artifacts.
+"""
 
 from collections.abc import Iterator
 from dataclasses import dataclass

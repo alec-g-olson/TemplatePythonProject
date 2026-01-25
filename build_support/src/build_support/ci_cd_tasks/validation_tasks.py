@@ -18,6 +18,7 @@ from build_support.ci_cd_tasks.env_setup_tasks import (
     SetupDevEnvironment,
 )
 from build_support.ci_cd_tasks.task_node import PerSubprojectTask, TaskNode
+from build_support.ci_cd_vars.build_paths import get_git_info_yaml
 from build_support.ci_cd_vars.docker_vars import (
     DockerTarget,
     get_base_docker_command_for_image,
@@ -28,7 +29,6 @@ from build_support.ci_cd_vars.docker_vars import (
 from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_all_non_test_folders,
     get_all_test_folders,
-    get_git_info_yaml,
 )
 from build_support.ci_cd_vars.machine_introspection_vars import THREADS_AVAILABLE
 from build_support.ci_cd_vars.project_structure import get_feature_test_scratch_folder

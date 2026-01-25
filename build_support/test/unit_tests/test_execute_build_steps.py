@@ -30,7 +30,7 @@ from build_support.ci_cd_tasks.validation_tasks import (
     ValidatePythonStyle,
     ValidateStaticTypeChecking,
 )
-from build_support.ci_cd_vars.file_and_dir_path_vars import get_local_info_yaml
+from build_support.ci_cd_vars.build_paths import get_local_info_yaml
 from build_support.ci_cd_vars.project_structure import maybe_build_dir
 from build_support.ci_cd_vars.subproject_structure import SubprojectContext
 from build_support.execute_build_steps import (

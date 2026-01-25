@@ -17,7 +17,7 @@ from time import sleep
 
 import requests
 
-from build_support.ci_cd_vars.file_and_dir_path_vars import get_license_templates_dir
+from build_support.ci_cd_vars.build_paths import get_license_templates_dir
 
 GIT_HUB_TEMPLATE_URL = "https://api.github.com/licenses"
 ALL_RIGHTS_RESERVED_KEY = "all-rights-reserved"

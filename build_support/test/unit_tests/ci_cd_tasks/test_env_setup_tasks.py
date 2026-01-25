@@ -17,13 +17,13 @@ from build_support.ci_cd_tasks.env_setup_tasks import (
     SetupProdEnvironment,
 )
 from build_support.ci_cd_tasks.task_node import BasicTaskInfo
+from build_support.ci_cd_vars.build_paths import get_git_info_yaml
 from build_support.ci_cd_vars.docker_vars import DockerTarget, get_docker_build_command
-from build_support.ci_cd_vars.file_and_dir_path_vars import (
-    get_build_dir,
-    get_git_info_yaml,
-)
 from build_support.ci_cd_vars.project_setting_vars import get_pulumi_version
-from build_support.ci_cd_vars.project_structure import get_feature_test_scratch_folder
+from build_support.ci_cd_vars.project_structure import (
+    get_build_dir,
+    get_feature_test_scratch_folder,
+)
 from build_support.ci_cd_vars.subproject_structure import SubprojectContext
 
 

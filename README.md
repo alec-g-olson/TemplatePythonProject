@@ -123,7 +123,7 @@ the source code management is also set up and controlled.
 ### Creating a New Project From This Template
 
 In order to create a new project from this template first modify the fields in the 
-[project_settings.yaml](build_support/new_project_settings.yaml) to what ever values you
+[project_settings.yaml](new_project_settings.yaml) to what ever values you
 need and then run `make make_new_project`.  This will change the following files and 
 folders in the ways listed below:
 

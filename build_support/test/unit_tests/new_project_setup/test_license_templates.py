@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 import responses
 
-from build_support.ci_cd_vars.file_and_dir_path_vars import get_license_templates_dir
+from build_support.ci_cd_vars.build_paths import get_license_templates_dir
 from build_support.new_project_setup.license_templates import (
     ALL_RIGHTS_RESERVED_KEY,
     ALL_RIGHTS_RESERVED_TEMPLATE,

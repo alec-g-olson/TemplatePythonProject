@@ -6,7 +6,7 @@ from _pytest.fixtures import SubRequest
 from git import Repo
 
 from build_support.ci_cd_tasks.env_setup_tasks import GitInfo
-from build_support.ci_cd_vars.file_and_dir_path_vars import get_git_info_yaml
+from build_support.ci_cd_vars.build_paths import get_git_info_yaml
 from build_support.ci_cd_vars.git_status_vars import MAIN_BRANCH_NAME
 from build_support.ci_cd_vars.project_structure import get_build_dir, maybe_build_dir
 from build_support.ci_cd_vars.subproject_structure import (

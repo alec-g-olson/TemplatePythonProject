@@ -7,9 +7,7 @@ from pydantic import BaseModel
 from yaml import safe_dump, safe_load
 
 from build_support.ci_cd_tasks.task_node import TaskNode
-from build_support.ci_cd_vars.file_and_dir_path_vars import (
-    get_build_runtime_report_path,
-)
+from build_support.ci_cd_vars.build_paths import get_build_runtime_report_path
 
 
 def _add_tasks_to_list_with_dfs(
