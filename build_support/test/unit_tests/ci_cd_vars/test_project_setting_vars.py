@@ -1,8 +1,8 @@
 import re
 from pathlib import Path
-from typing import Any
 
 import pytest
+from tomlkit import TOMLDocument
 
 from build_support.ci_cd_vars.project_setting_vars import (
     ALLOWED_VERSION_REGEX,
@@ -35,7 +35,7 @@ class TestPyprojectToml:
 
     @pytest.mark.usefixtures("mock_local_pyproject_toml_file")
     def test_get_pyproject_toml_data(
-        self, mock_project_root: Path, pyproject_toml_data: dict[Any, Any]
+        self, mock_project_root: Path, pyproject_toml_data: TOMLDocument
     ) -> None:
         assert (
             get_pyproject_toml_data(project_root=mock_project_root)

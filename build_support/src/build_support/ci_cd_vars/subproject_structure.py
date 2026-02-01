@@ -182,6 +182,17 @@ class PythonSubproject:
         """
         return self.get_test_dir().joinpath(test_suite.value)
 
+    def get_test_utils_dir(self) -> Path:
+        """Gets the test_utils folder in a subproject.
+
+        The test_utils folder contains utility Python source files that are used by
+        test files but are not test files themselves.
+
+        Returns:
+            Path: Path to the test_utils folder in the subproject.
+        """
+        return self.get_test_dir().joinpath("test_utils")
+
     def _get_test_report_name(
         self, test_suite: TestSuite | None, report_extension: str
     ) -> str:

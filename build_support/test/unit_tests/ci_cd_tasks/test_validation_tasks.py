@@ -6,8 +6,10 @@ from typing import Any
 from unittest.mock import call, patch
 
 import pytest
+from _pytest.fixtures import SubRequest
 from junitparser import JUnitXml, TestCase, TestSuite
-from unit_tests.empty_function_check import is_an_empty_function
+from test_utils.empty_function_check import is_an_empty_function
+from tomlkit import TOMLDocument, document, parse, table
 
 from build_support.ci_cd_tasks.env_setup_tasks import (
     GetGitInfo,
@@ -24,6 +26,7 @@ from build_support.ci_cd_tasks.validation_tasks import (
     EnforceProcess,
     SubprojectFeatureTests,
     SubprojectUnitTests,
+    UnitTestInfo,
     ValidateAll,
     ValidatePythonStyle,
     ValidateSecurityChecks,
@@ -410,6 +413,11 @@ def test_run_subproject_unit_tests_test_all(
             src_module = SubprojectUnitTests.get_module_from_path(
                 src_file_path=src_file, subproject=mock_docker_subproject
             )
+            test_file_parent = test_file.parent
+            test_file_name = test_file.stem
+            coverage_config_path = mock_docker_subproject.get_build_dir().joinpath(
+                f"coverage_config_{test_file_name}.toml"
+            )
             expected_run_process_calls.append(
                 call(
                     args=concatenate_args(
@@ -421,6 +429,8 @@ def test_run_subproject_unit_tests_test_all(
                             "--cov-report",
                             "term-missing",
                             f"--cov={src_module}",
+                            f"--cov={test_file_parent}",
+                            f"--cov-config={coverage_config_path}",
                             test_file,
                         ]
                     )
@@ -518,6 +528,11 @@ def test_run_subproject_unit_tests_all_cached_but_top_test_conftest_updated(
             src_module = SubprojectUnitTests.get_module_from_path(
                 src_file_path=src_file, subproject=mock_docker_subproject
             )
+            test_file_parent = test_file.parent
+            test_file_name = test_file.stem
+            coverage_config_path = mock_docker_subproject.get_build_dir().joinpath(
+                f"coverage_config_{test_file_name}.toml"
+            )
             expected_run_process_calls.append(
                 call(
                     args=concatenate_args(
@@ -529,6 +544,8 @@ def test_run_subproject_unit_tests_all_cached_but_top_test_conftest_updated(
                             "--cov-report",
                             "term-missing",
                             f"--cov={src_module}",
+                            f"--cov={test_file_parent}",
+                            f"--cov-config={coverage_config_path}",
                             test_file,
                         ]
                     )
@@ -623,6 +640,11 @@ def test_run_subproject_unit_tests_some_cached(
         src_module = SubprojectUnitTests.get_module_from_path(
             src_file_path=src_file, subproject=mock_docker_subproject
         )
+        test_file_parent = test_file.parent
+        test_file_name = test_file.stem
+        coverage_config_path = mock_docker_subproject.get_build_dir().joinpath(
+            f"coverage_config_{test_file_name}.toml"
+        )
         run_process_call = call(
             args=concatenate_args(
                 args=[
@@ -633,6 +655,8 @@ def test_run_subproject_unit_tests_some_cached(
                     "--cov-report",
                     "term-missing",
                     f"--cov={src_module}",
+                    f"--cov={test_file_parent}",
+                    f"--cov-config={coverage_config_path}",
                     test_file,
                 ]
             )
@@ -1205,3 +1229,565 @@ def test_subproject_unit_tests_skips_when_not_in_test_list(
         ).run()
         # Should not call run_process at all since we return early
         run_process_mock.assert_not_called()
+
+
+# Test fixtures for different coverage settings
+def _create_coverage_settings_basic() -> TOMLDocument:
+    """Basic coverage settings with only run and report sections."""
+    settings = document()
+    settings["run"] = table()
+    settings["run"]["branch"] = True
+    settings["run"]["parallel"] = True
+    settings["run"]["concurrency"] = ["multiprocessing", "thread"]
+    settings["report"] = table()
+    settings["report"]["fail_under"] = 100
+    settings["report"]["exclude_lines"] = ["pragma: no cov"]
+    return settings
+
+
+def _create_coverage_settings_with_existing_omit() -> TOMLDocument:
+    """Coverage settings with an existing omit list in run section."""
+    settings = document()
+    settings["run"] = table()
+    settings["run"]["branch"] = True
+    settings["run"]["parallel"] = True
+    settings["run"]["concurrency"] = ["multiprocessing", "thread"]
+    settings["run"]["omit"] = ["existing_file.py", "another_file.py"]
+    settings["report"] = table()
+    settings["report"]["fail_under"] = 100
+    settings["report"]["exclude_lines"] = ["pragma: no cov"]
+    return settings
+
+
+def _create_coverage_settings_only_run() -> TOMLDocument:
+    """Coverage settings with only run section."""
+    settings = document()
+    settings["run"] = table()
+    settings["run"]["branch"] = True
+    settings["run"]["parallel"] = True
+    return settings
+
+
+def _create_coverage_settings_only_report() -> TOMLDocument:
+    """Coverage settings with only report section."""
+    settings = document()
+    settings["report"] = table()
+    settings["report"]["fail_under"] = 100
+    settings["report"]["exclude_lines"] = ["pragma: no cov"]
+    return settings
+
+
+def _create_coverage_settings_minimal() -> TOMLDocument:
+    """Minimal coverage settings with no sections."""
+    return document()
+
+
+@pytest.fixture(
+    params=[
+        ("basic", _create_coverage_settings_basic),
+        ("with_existing_omit", _create_coverage_settings_with_existing_omit),
+        ("only_run", _create_coverage_settings_only_run),
+        ("only_report", _create_coverage_settings_only_report),
+        ("minimal", _create_coverage_settings_minimal),
+    ],
+    ids=["basic", "with_existing_omit", "only_run", "only_report", "minimal"],
+)
+def coverage_settings(request: SubRequest) -> tuple[str, TOMLDocument]:
+    """Parameterized fixture providing different coverage settings configurations.
+
+    Returns:
+        tuple[str, TOMLDocument]: A tuple of (setting_type, settings_document)
+    """
+    setting_type, factory_func = request.param
+    return (setting_type, factory_func())
+
+
+# Factory functions for different test file setups
+def _create_test_setup_single_file(
+    subproject: PythonSubproject, docker_project_root: Path
+) -> tuple[UnitTestInfo, Path, dict[str, Any]]:
+    """Create a test setup with a single test file."""
+    test_dir = subproject.get_test_suite_dir(
+        test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+    ).joinpath("test_module")
+    test_dir.mkdir(parents=True, exist_ok=True)
+    test_file = test_dir.joinpath("test_target.py")
+    test_file.write_text("# test file")
+
+    unit_test_info = UnitTestInfo(
+        src_file_path=subproject.get_src_dir().joinpath("module.py"),
+        test_file_path=test_file,
+    )
+
+    test_dir_relative = test_dir.relative_to(docker_project_root)
+    expected_omit_patterns = [
+        f"{test_dir_relative}/*/test_*.py",
+        f"{test_dir_relative}/**/__init__.py",
+        f"{test_dir_relative}/**/conftest.py",
+    ]
+
+    return (
+        unit_test_info,
+        test_dir,
+        {
+            "expected_omit_patterns": expected_omit_patterns,
+            "expected_other_test_files": [],
+        },
+    )
+
+
+def _create_test_setup_multiple_files(
+    subproject: PythonSubproject, docker_project_root: Path
+) -> tuple[UnitTestInfo, Path, dict[str, Any]]:
+    """Create a test setup with multiple test files in the same directory."""
+    test_dir = subproject.get_test_suite_dir(
+        test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+    ).joinpath("test_module")
+    test_dir.mkdir(parents=True, exist_ok=True)
+
+    test_target = test_dir.joinpath("test_target.py")
+    test_target.write_text("# target test file")
+    test_other1 = test_dir.joinpath("test_other1.py")
+    test_other1.write_text("# other test file 1")
+    test_other2 = test_dir.joinpath("test_other2.py")
+    test_other2.write_text("# other test file 2")
+
+    unit_test_info = UnitTestInfo(
+        src_file_path=subproject.get_src_dir().joinpath("module.py"),
+        test_file_path=test_target,
+    )
+
+    test_dir_relative = test_dir.relative_to(docker_project_root)
+    expected_omit_patterns = [
+        str(test_dir_relative.joinpath("test_other1.py")),
+        str(test_dir_relative.joinpath("test_other2.py")),
+        f"{test_dir_relative}/*/test_*.py",
+        f"{test_dir_relative}/**/__init__.py",
+        f"{test_dir_relative}/**/conftest.py",
+    ]
+
+    return (
+        unit_test_info,
+        test_dir,
+        {
+            "expected_omit_patterns": expected_omit_patterns,
+            "expected_other_test_files": ["test_other1.py", "test_other2.py"],
+        },
+    )
+
+
+def _create_test_setup_with_subdirs(
+    subproject: PythonSubproject, docker_project_root: Path
+) -> tuple[UnitTestInfo, Path, dict[str, Any]]:
+    """Create a test setup with subdirectories containing test files."""
+    test_dir = subproject.get_test_suite_dir(
+        test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+    ).joinpath("test_module")
+    test_dir.mkdir(parents=True, exist_ok=True)
+    test_file = test_dir.joinpath("test_target.py")
+    test_file.write_text("# test file")
+
+    # Create subdirectories with test files
+    subdir1 = test_dir.joinpath("subdir1")
+    subdir1.mkdir()
+    subdir1.joinpath("test_sub1.py").write_text("# sub test")
+    subdir2 = test_dir.joinpath("subdir2")
+    subdir2.mkdir()
+    subdir2.joinpath("test_sub2.py").write_text("# sub test")
+
+    unit_test_info = UnitTestInfo(
+        src_file_path=subproject.get_src_dir().joinpath("module.py"),
+        test_file_path=test_file,
+    )
+
+    test_dir_relative = test_dir.relative_to(docker_project_root)
+    expected_omit_patterns = [
+        f"{test_dir_relative}/*/test_*.py",
+        f"{test_dir_relative}/**/__init__.py",
+        f"{test_dir_relative}/**/conftest.py",
+    ]
+
+    return (
+        unit_test_info,
+        test_dir,
+        {
+            "expected_omit_patterns": expected_omit_patterns,
+            "expected_other_test_files": [],
+            "has_subdirectories": True,
+        },
+    )
+
+
+def _create_test_setup_complex(
+    subproject: PythonSubproject, docker_project_root: Path
+) -> tuple[UnitTestInfo, Path, dict[str, Any]]:
+    """Create a complex test setup with multiple files and subdirectories."""
+    test_dir = subproject.get_test_suite_dir(
+        test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+    ).joinpath("test_module")
+    test_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create multiple test files
+    test_target = test_dir.joinpath("test_target.py")
+    test_target.write_text("# target")
+    test_other1 = test_dir.joinpath("test_other1.py")
+    test_other1.write_text("# other 1")
+    test_other2 = test_dir.joinpath("test_other2.py")
+    test_other2.write_text("# other 2")
+
+    # Create subdirectories
+    subdir = test_dir.joinpath("subdir")
+    subdir.mkdir()
+    subdir.joinpath("__init__.py").write_text("# init")
+    subdir.joinpath("conftest.py").write_text("# conftest")
+    subdir.joinpath("test_sub.py").write_text("# sub test")
+
+    unit_test_info = UnitTestInfo(
+        src_file_path=subproject.get_src_dir().joinpath("module.py"),
+        test_file_path=test_target,
+    )
+
+    test_dir_relative = test_dir.relative_to(docker_project_root)
+    expected_omit_patterns = [
+        str(test_dir_relative.joinpath("test_other1.py")),
+        str(test_dir_relative.joinpath("test_other2.py")),
+        f"{test_dir_relative}/*/test_*.py",
+        f"{test_dir_relative}/**/__init__.py",
+        f"{test_dir_relative}/**/conftest.py",
+    ]
+
+    return (
+        unit_test_info,
+        test_dir,
+        {
+            "expected_omit_patterns": expected_omit_patterns,
+            "expected_other_test_files": ["test_other1.py", "test_other2.py"],
+            "has_subdirectories": True,
+            "has_init_and_conftest": True,
+        },
+    )
+
+
+@pytest.fixture(
+    params=[
+        ("single_file", _create_test_setup_single_file),
+        ("multiple_files", _create_test_setup_multiple_files),
+        ("with_subdirs", _create_test_setup_with_subdirs),
+        ("complex", _create_test_setup_complex),
+    ],
+    ids=["single_file", "multiple_files", "with_subdirs", "complex"],
+)
+def test_file_setup(
+    request: SubRequest, docker_project_root: Path
+) -> tuple[str, UnitTestInfo, Path, dict[str, Any]]:
+    """Parameterized fixture providing different test file setup configurations.
+
+    Returns:
+        tuple[str, UnitTestInfo, Path, dict[str, Any]]: A tuple of
+        (setup_type, unit_test_info, test_dir, validation_info)
+    """
+    setup_type, factory_func = request.param
+    subproject = get_python_subproject(
+        subproject_context=SubprojectContext.BUILD_SUPPORT,
+        project_root=docker_project_root,
+    )
+    unit_test_info, test_dir, validation_info = factory_func(
+        subproject, docker_project_root
+    )
+    return (setup_type, unit_test_info, test_dir, validation_info)
+
+
+# Helper functions for test evaluation
+def _verify_omit_list_content(
+    omit_list: list[str],
+    setup_type: str,
+    test_dir: Path,
+    docker_project_root: Path,
+    validation_info: dict[str, Any],
+    original_omit_entries: list[str] | None = None,
+) -> None:
+    """Verify omit list contains expected patterns based on setup type.
+
+    Args:
+        omit_list: The omit list to verify
+        setup_type: Type of test file setup (single_file, multiple_files, etc.)
+        test_dir: Path to the test directory
+        docker_project_root: Root of the docker project
+        validation_info: Dictionary with expected patterns and metadata
+        original_omit_entries: Optional list of original omit entries that should be
+            present (when merging instead of replacing)
+    """
+    expected_patterns = validation_info["expected_omit_patterns"]
+    test_dir_relative = test_dir.relative_to(docker_project_root)
+
+    # Verify all expected patterns are present (subset check)
+    # This works for both merged and non-merged cases
+    for pattern in expected_patterns:
+        assert pattern in omit_list, (
+            f"Expected pattern '{pattern}' not found in omit list"
+        )
+
+    # If original omit entries were provided, verify they are also present (merged case)
+    if original_omit_entries:
+        for original_entry in original_omit_entries:
+            assert original_entry in omit_list, (
+                f"Original omit entry '{original_entry}' not found in merged omit list"
+            )
+
+    # Verify generic patterns are always present
+    assert f"{test_dir_relative}/*/test_*.py" in omit_list
+    assert f"{test_dir_relative}/**/__init__.py" in omit_list
+    assert f"{test_dir_relative}/**/conftest.py" in omit_list
+
+    # Verify other test files are included if they exist
+    if validation_info.get("expected_other_test_files"):
+        for test_file in validation_info["expected_other_test_files"]:
+            assert str(test_dir_relative.joinpath(test_file)) in omit_list
+
+    # Verify target test file is NOT in omit list
+    assert str(test_dir_relative.joinpath("test_target.py")) not in omit_list
+
+    # For single_file and multiple_files, if no original entries, verify exact match
+    # (to ensure we're not adding unexpected entries)
+    if not original_omit_entries:
+        if setup_type == "single_file":
+            # Should only have the generic patterns (subdirs, __init__, conftest)
+            assert set(omit_list) == set(expected_patterns)
+        elif setup_type == "multiple_files":
+            # Should include the other test files plus generic patterns
+            assert set(omit_list) == set(expected_patterns)
+
+
+def _verify_coverage_settings_preserved(
+    config_content: TOMLDocument, original_settings: TOMLDocument
+) -> None:
+    """Verify that original coverage settings are preserved (except omit).
+
+    Args:
+        config_content: Parsed config content from tomlkit
+        original_settings: Original coverage settings TOMLDocument
+    """
+    coverage = config_content["tool"]["coverage"]
+
+    # Verify all original settings from input are preserved (except omit)
+    if "run" in original_settings:
+        for key, value in original_settings["run"].items():  # type: ignore[attr-defined]
+            if key != "omit":  # omit is replaced, not preserved
+                assert key in coverage["run"]
+                assert coverage["run"][key] == value
+
+    if "report" in original_settings:
+        for key, value in original_settings["report"].items():  # type: ignore[attr-defined]
+            assert key in coverage["report"]
+            assert coverage["report"][key] == value
+
+
+def _verify_coverage_config_structure(
+    coverage: TOMLDocument, setting_type: str, original_settings: TOMLDocument
+) -> None:
+    """Verify coverage config structure based on setting type.
+
+    Args:
+        coverage: The coverage section from parsed config
+        setting_type: Type of coverage settings (basic, with_existing_omit, etc.)
+        original_settings: Original coverage settings TOMLDocument
+    """
+    # Common assertion: run section must always exist with omit list
+    assert "run" in coverage
+    assert "omit" in coverage["run"]
+    assert isinstance(coverage["run"]["omit"], list)
+
+    # Verify omit list was merged (not replaced) for with_existing_omit
+    if setting_type == "with_existing_omit":
+        omit_list = coverage["run"]["omit"]
+        # Original omit entries should be preserved
+        assert "existing_file.py" in omit_list
+        assert "another_file.py" in omit_list
+        # New omit patterns should also be present
+        assert len(omit_list) > 2  # noqa: PLR2004
+
+    # Verify all original settings are preserved (except omit in run section)
+    # Use loops to check each section and key
+    for section_name in original_settings:  # type: ignore[attr-defined]
+        if section_name == "run":
+            # For run section, verify all keys except omit are preserved
+            for key, value in original_settings["run"].items():  # type: ignore[attr-defined]
+                if key != "omit":  # omit is replaced, not preserved
+                    assert key in coverage["run"]
+                    assert coverage["run"][key] == value
+        else:
+            # For other sections (like report), verify all keys are preserved
+            assert section_name in coverage
+            for key, value in original_settings[section_name].items():  # type: ignore[attr-defined]
+                assert key in coverage[section_name]
+                assert coverage[section_name][key] == value
+
+    # Verify sections that don't exist in original_settings are not created
+    # (except run, which is always created even if not in original_settings)
+    original_section_names = set(original_settings.keys())  # type: ignore[attr-defined]
+    original_section_names.add("run")  # run is always created
+    # Verify only expected sections exist in coverage
+    coverage_section_names = set(coverage.keys())
+    assert coverage_section_names <= original_section_names, (
+        f"Unexpected sections in coverage config: "
+        f"{coverage_section_names - original_section_names}"
+    )
+
+
+class TestBuildOmitList:
+    """Tests for build_omit_list method."""
+
+    def test_build_omit_list(
+        self,
+        basic_task_info: BasicTaskInfo,
+        docker_project_root: Path,
+        test_file_setup: tuple[str, UnitTestInfo, Path, dict[str, Any]],
+    ) -> None:
+        """Test omit list generation for various test file setups."""
+        setup_type, unit_test_info, test_dir, validation_info = test_file_setup
+
+        task = SubprojectUnitTests(
+            basic_task_info=basic_task_info,
+            subproject_context=SubprojectContext.BUILD_SUPPORT,
+        )
+
+        omit_list = task.build_omit_list(unit_test_info=unit_test_info)
+
+        # Verify expected patterns based on setup type
+        _verify_omit_list_content(
+            omit_list=omit_list,
+            setup_type=setup_type,
+            test_dir=test_dir,
+            docker_project_root=docker_project_root,
+            validation_info=validation_info,
+        )
+
+
+class TestWriteCoverageConfigFile:
+    """Tests for write_coverage_config_file method."""
+
+    def test_write_coverage_config_file(
+        self,
+        basic_task_info: BasicTaskInfo,
+        coverage_settings: tuple[str, TOMLDocument],
+        test_file_setup: tuple[str, UnitTestInfo, Path, dict[str, Any]],
+    ) -> None:
+        """Test writing config file with various settings and test file setups."""
+        setting_type, settings = coverage_settings
+        setup_type, unit_test_info, test_dir, validation_info = test_file_setup
+
+        task = SubprojectUnitTests(
+            basic_task_info=basic_task_info,
+            subproject_context=SubprojectContext.BUILD_SUPPORT,
+        )
+
+        config_path = task.write_coverage_config_file(
+            unit_test_info=unit_test_info, coverage_settings=settings
+        )
+
+        # Verify file was created
+        assert config_path.exists()
+        assert config_path.name == "coverage_config_test_target.toml"
+
+        # Parse and verify contents
+        config_content = parse(config_path.read_text())
+        assert "tool" in config_content
+        assert "coverage" in config_content["tool"]
+        coverage = config_content["tool"]["coverage"]
+
+        # Verify config structure based on setting type
+        _verify_coverage_config_structure(
+            coverage=coverage, setting_type=setting_type, original_settings=settings
+        )
+
+        # Verify original settings are preserved (except omit)
+        _verify_coverage_settings_preserved(
+            config_content=config_content, original_settings=settings
+        )
+
+    def test_write_coverage_config_preserves_other_settings(
+        self,
+        basic_task_info: BasicTaskInfo,
+        test_file_setup: tuple[str, UnitTestInfo, Path, dict[str, Any]],
+    ) -> None:
+        """Test that other coverage settings are preserved."""
+        setup_type, unit_test_info, test_dir, validation_info = test_file_setup
+
+        task = SubprojectUnitTests(
+            basic_task_info=basic_task_info,
+            subproject_context=SubprojectContext.BUILD_SUPPORT,
+        )
+
+        # Create coverage settings with additional fields
+        settings = document()
+        settings["run"] = table()
+        settings["run"]["branch"] = True
+        settings["run"]["source"] = ["src"]
+        settings["run"]["include"] = ["*.py"]
+        settings["report"] = table()
+        settings["report"]["precision"] = 2
+        settings["report"]["show_missing"] = True
+
+        config_path = task.write_coverage_config_file(
+            unit_test_info=unit_test_info, coverage_settings=settings
+        )
+
+        # Parse and verify contents
+        config_content = parse(config_path.read_text())
+        coverage = config_content["tool"]["coverage"]
+
+        # Verify other settings preserved
+        assert coverage["run"]["branch"] is True
+        assert coverage["run"]["source"] == ["src"]
+        assert coverage["run"]["include"] == ["*.py"]
+        assert coverage["report"]["precision"] == 2  # noqa: PLR2004
+        assert coverage["report"]["show_missing"] is True
+
+        # Verify omit was added/updated
+        assert "omit" in coverage["run"]
+
+    def test_write_coverage_config_omit_list_content(
+        self,
+        basic_task_info: BasicTaskInfo,
+        docker_project_root: Path,
+        coverage_settings: tuple[str, TOMLDocument],
+        test_file_setup: tuple[str, UnitTestInfo, Path, dict[str, Any]],
+    ) -> None:
+        """Test that the omit list contains expected patterns for various structures."""
+        setting_type, settings = coverage_settings
+        setup_type, unit_test_info, test_dir, validation_info = test_file_setup
+
+        task = SubprojectUnitTests(
+            basic_task_info=basic_task_info,
+            subproject_context=SubprojectContext.BUILD_SUPPORT,
+        )
+
+        config_path = task.write_coverage_config_file(
+            unit_test_info=unit_test_info, coverage_settings=settings
+        )
+
+        # Parse and verify omit list
+        config_content = parse(config_path.read_text())
+        omit_list = config_content["tool"]["coverage"]["run"]["omit"]
+
+        # Get original omit entries if they exist (for merge verification)
+        original_omit_entries = None
+        if setting_type == "with_existing_omit" and "run" in settings:
+            original_omit = settings["run"].get("omit")  # type: ignore[attr-defined]
+            # existing_omit is always a list when present
+            original_omit_entries = list(original_omit) if original_omit else None
+
+        # Verify omit list content based on setup type
+        _verify_omit_list_content(
+            omit_list=omit_list,
+            setup_type=setup_type,
+            test_dir=test_dir,
+            docker_project_root=docker_project_root,
+            validation_info=validation_info,
+            original_omit_entries=original_omit_entries,
+        )
+
+        # Verify original settings are preserved (except omit)
+        _verify_coverage_settings_preserved(
+            config_content=config_content, original_settings=settings
+        )

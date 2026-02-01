@@ -71,6 +71,30 @@ def get_all_test_folders(project_root: Path) -> list[Path]:
     return [test_dir for test_dir in test_dirs if test_dir.exists()]
 
 
+def get_test_utils_dirs(project_root: Path) -> list[Path]:
+    """Gets all test_utils directories in the project.
+
+    The test_utils folder contains utility Python source files that are used by
+    test files but are not test files themselves. These directories need to be in
+    MYPYPATH so mypy can resolve imports from test files.
+
+    Args:
+        project_root (Path): Path to this project's root.
+
+    Returns:
+        list[Path]: Path to all test_utils directories in the project that exist.
+    """
+    test_utils_dirs = sorted(
+        subproject.get_test_utils_dir()
+        for subproject in get_all_python_subprojects_with_test(
+            project_root=project_root
+        )
+    )
+    return [
+        test_utils_dir for test_utils_dir in test_utils_dirs if test_utils_dir.exists()
+    ]
+
+
 def get_all_non_test_folders(project_root: Path) -> list[Path]:
     """Gets all the non-test python folders in the project.
 

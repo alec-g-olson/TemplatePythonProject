@@ -1,10 +1,11 @@
 from os import environ
 from pathlib import Path
 from pwd import getpwuid
-from typing import Any, cast
+from typing import cast
 
 import pytest
 from _pytest.fixtures import SubRequest
+from tomlkit import TOMLDocument, document, table
 
 from build_support.ci_cd_tasks.task_node import BasicTaskInfo
 from build_support.ci_cd_vars.project_structure import (
@@ -75,15 +76,45 @@ def basic_task_info(
 
 
 @pytest.fixture
-def pyproject_toml_data(project_version: str, project_name: str) -> dict[Any, Any]:
-    """The dictionary that would be read from the pyproject toml."""
-    return {"tool": {"poetry": {"name": project_name, "version": project_version}}}
+def pyproject_toml_data(project_version: str, project_name: str) -> TOMLDocument:
+    """The TOMLDocument that would be read from the pyproject toml."""
+
+    doc = document()
+    doc["tool"] = table()
+    doc["tool"]["poetry"] = table()
+    doc["tool"]["poetry"]["name"] = project_name
+    doc["tool"]["poetry"]["version"] = project_version
+
+    doc["tool"]["coverage"] = table()
+    doc["tool"]["coverage"]["run"] = table()
+    doc["tool"]["coverage"]["run"]["branch"] = True
+    doc["tool"]["coverage"]["run"]["parallel"] = True
+    doc["tool"]["coverage"]["run"]["concurrency"] = ["multiprocessing", "thread"]
+
+    doc["tool"]["coverage"]["report"] = table()
+    doc["tool"]["coverage"]["report"]["fail_under"] = 100
+    doc["tool"]["coverage"]["report"]["exclude_lines"] = ["pragma: no cov"]
+
+    return doc
 
 
 @pytest.fixture
 def pyproject_toml_contents(project_version: str, project_name: str) -> str:
     """The contents of a pyproject toml to be used in testing."""
-    return f'[tool.poetry]\nname = "{project_name}"\nversion = "{project_version}"'
+    return f"""[tool.poetry]
+name = "{project_name}"
+version = "{project_version}"
+
+[tool.coverage.run]
+branch = true
+parallel = true
+concurrency = ["multiprocessing", "thread"]
+
+[tool.coverage.report]
+fail_under = 100
+exclude_lines = [
+  "pragma: no cov"
+]"""
 
 
 @pytest.fixture

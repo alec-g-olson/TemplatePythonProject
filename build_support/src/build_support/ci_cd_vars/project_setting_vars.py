@@ -7,7 +7,8 @@ Attributes:
 import re
 import tomllib
 from pathlib import Path
-from typing import Any
+
+from tomlkit import TOMLDocument, parse
 
 from build_support.ci_cd_vars.project_structure import (
     get_poetry_lock_file,
@@ -19,16 +20,16 @@ from build_support.ci_cd_vars.project_structure import (
 ########################################
 
 
-def get_pyproject_toml_data(project_root: Path) -> dict[Any, Any]:
-    """Get a dict with the contents of the pyproject.toml in a project.
+def get_pyproject_toml_data(project_root: Path) -> TOMLDocument:
+    """Get a TOMLDocument with the contents of the pyproject.toml in a project.
 
     Args:
         project_root (Path): Path to this project's root.
 
     Returns:
-        dict[Any, Any]: A parsed version of the projects pyproject.toml.
+        TOMLDocument: A parsed TOMLDocument that preserves structure and formatting.
     """
-    return tomllib.loads(get_pyproject_toml(project_root=project_root).read_text())
+    return parse(get_pyproject_toml(project_root=project_root).read_text())
 
 
 ALLOWED_VERSION_REGEX = re.compile(r"^\d+\.\d+\.\d+(-dev\.\d+)?$")
@@ -89,7 +90,7 @@ def get_project_name(project_root: Path) -> str:
     Returns:
         str: The name of the project.
     """
-    return get_pyproject_toml_data(project_root=project_root)["tool"]["poetry"]["name"]  # type: ignore[no-any-return]
+    return get_pyproject_toml_data(project_root=project_root)["tool"]["poetry"]["name"]
 
 
 ########################################

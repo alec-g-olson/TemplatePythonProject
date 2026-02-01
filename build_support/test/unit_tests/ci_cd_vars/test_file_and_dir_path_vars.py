@@ -5,6 +5,7 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_all_python_folders,
     get_all_src_folders,
     get_all_test_folders,
+    get_test_utils_dirs,
 )
 from build_support.ci_cd_vars.project_structure import get_sphinx_conf_dir
 from build_support.ci_cd_vars.subproject_structure import (
@@ -41,6 +42,13 @@ def test_get_all_test_folders(real_project_root_dir: Path) -> None:
         subprojects[SubprojectContext.BUILD_SUPPORT].get_test_dir(),
         subprojects[SubprojectContext.INFRA].get_test_dir(),
         subprojects[SubprojectContext.PYPI].get_test_dir(),
+    ]
+
+
+def test_get_test_utils_dirs(real_project_root_dir: Path) -> None:
+    subprojects = get_all_python_subprojects_dict(project_root=real_project_root_dir)
+    assert get_test_utils_dirs(project_root=real_project_root_dir) == [
+        subprojects[SubprojectContext.BUILD_SUPPORT].get_test_utils_dir()
     ]
 
 

@@ -4,7 +4,11 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
-from build_support.ci_cd_vars.file_and_dir_path_vars import get_all_python_folders
+from build_support.ci_cd_vars.file_and_dir_path_vars import (
+    get_all_python_folders,
+    get_all_src_folders,
+    get_test_utils_dirs,
+)
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
 from build_support.ci_cd_vars.project_structure import get_dockerfile
 from build_support.ci_cd_vars.subproject_structure import (
@@ -99,6 +103,52 @@ def get_python_path_env(docker_project_root: Path, target_image: DockerTarget) -
     )
 
 
+def get_mypy_path_for_target_image(
+    docker_project_root: Path, target_image: DockerTarget
+) -> str:
+    """Gets the mypy path to use with this project.
+
+    Args:
+        docker_project_root (Path): Path to this project's root when running in docker
+            containers.
+        target_image (DockerTarget): An enum specifying which type of docker image we
+            are requesting the mypy path for.
+
+    Returns:
+        str: The MYPYPATH for the specified docker image.
+    """
+    match target_image:
+        case DockerTarget.BUILD:
+            python_folders = [
+                get_python_subproject(
+                    subproject_context=SubprojectContext.BUILD_SUPPORT,
+                    project_root=docker_project_root,
+                ).get_src_dir()
+            ]
+        case DockerTarget.DEV:
+            src_folders = get_all_src_folders(project_root=docker_project_root)
+            test_utils_dirs = get_test_utils_dirs(project_root=docker_project_root)
+            python_folders = src_folders + test_utils_dirs
+        case DockerTarget.PROD:
+            python_folders = [
+                get_python_subproject(
+                    subproject_context=SubprojectContext.PYPI,
+                    project_root=docker_project_root,
+                ).get_src_dir()
+            ]
+        case DockerTarget.INFRA:
+            python_folders = [
+                get_python_subproject(
+                    subproject_context=SubprojectContext.INFRA,
+                    project_root=docker_project_root,
+                ).get_src_dir()
+            ]
+        case _:  # pragma: no cov - can't hit if all enums are implemented
+            msg = f"{target_image!r} is not a valid enum of DockerType."
+            raise ValueError(msg)
+    return ":".join(concatenate_args(args=[python_folders]))
+
+
 def get_mypy_path_env(docker_project_root: Path, target_image: DockerTarget) -> str:
     """Gets the mypy path ENV to use with this project.
 
@@ -112,7 +162,7 @@ def get_mypy_path_env(docker_project_root: Path, target_image: DockerTarget) -> 
         str: The MYPYPATH for the specified docker image in the form on an ENV variable
             that can be used on the command line.
     """
-    return "MYPYPATH=" + get_python_path_for_target_image(
+    return "MYPYPATH=" + get_mypy_path_for_target_image(
         docker_project_root=docker_project_root, target_image=target_image
     )
 

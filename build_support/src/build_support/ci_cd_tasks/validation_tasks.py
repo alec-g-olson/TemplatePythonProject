@@ -6,11 +6,13 @@ Attributes:
 
 import re
 from collections.abc import Iterator
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import override
 
 from junitparser import JUnitXml
+from tomlkit import TOMLDocument, document, dumps, table
 
 from build_support.ci_cd_tasks.env_setup_tasks import (
     GetGitInfo,
@@ -31,6 +33,7 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_all_test_folders,
 )
 from build_support.ci_cd_vars.machine_introspection_vars import THREADS_AVAILABLE
+from build_support.ci_cd_vars.project_setting_vars import get_pyproject_toml_data
 from build_support.ci_cd_vars.project_structure import get_feature_test_scratch_folder
 from build_support.ci_cd_vars.subproject_structure import (
     PythonSubproject,
@@ -398,6 +401,96 @@ class UnitTestInfo:
 class SubprojectUnitTests(PerSubprojectTask):
     """Task for running unit tests in a single subproject."""
 
+    def get_coverage_settings(self) -> TOMLDocument:
+        """Gets the coverage settings from pyproject.toml.
+
+        Returns:
+            TOMLDocument: The coverage settings section from pyproject.toml as
+                TOMLDocument.
+        """
+        pyproject_data = get_pyproject_toml_data(project_root=self.docker_project_root)
+        return pyproject_data["tool"]["coverage"]
+
+    def build_omit_list(self, unit_test_info: UnitTestInfo) -> list[str]:
+        """Builds the list of omit patterns for a coverage config file.
+
+        Args:
+            unit_test_info (UnitTestInfo): Information about the unit test being run.
+
+        Returns:
+            list[str]: List of omit patterns to exclude all test files except the
+                target.
+        """
+        test_file_name = unit_test_info.test_file_path.name
+        test_file_parent = unit_test_info.test_file_path.parent
+        # Build omit patterns for all test files except the one we want
+        test_files_to_omit = [
+            test_file.name
+            for test_file in test_file_parent.glob("test_*.py")
+            if test_file.name != test_file_name
+        ]
+        test_file_parent_relative = test_file_parent.relative_to(
+            self.docker_project_root
+        )
+        test_files_to_omit_relative = [
+            str(test_file_parent_relative.joinpath(pattern))
+            for pattern in test_files_to_omit
+        ]
+        test_file_parent_relative_str = str(test_file_parent_relative)
+        return [
+            *test_files_to_omit_relative,
+            f"{test_file_parent_relative_str}/*/test_*.py",
+            f"{test_file_parent_relative_str}/**/__init__.py",
+            f"{test_file_parent_relative_str}/**/conftest.py",
+        ]
+
+    def write_coverage_config_file(
+        self, unit_test_info: UnitTestInfo, coverage_settings: TOMLDocument
+    ) -> Path:
+        """Writes a coverage config file in TOML format.
+
+        Preserves all existing coverage settings from pyproject.toml and only
+        updates the `tool.coverage.run.omit` field with test-specific omit patterns.
+
+        Args:
+            unit_test_info (UnitTestInfo): Information about the unit test being run.
+            coverage_settings (TOMLDocument): The coverage settings section from
+                pyproject.toml.
+
+        Returns:
+            Path: Path to the created config file.
+        """
+        test_file_name = unit_test_info.test_file_path.stem
+        coverage_config_path = self.subproject.get_build_dir().joinpath(
+            f"coverage_config_{test_file_name}.toml"
+        )
+        coverage_config_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Build omit list for this specific test file
+        new_omit_list = self.build_omit_list(unit_test_info=unit_test_info)
+
+        # Deep copy to avoid modifying original
+        coverage_config = deepcopy(coverage_settings)
+
+        # Ensure run section exists and merge omit lists
+        if "run" not in coverage_config:
+            coverage_config["run"] = table()
+
+        # Merge existing omit list (if any) with new omit list
+        existing_omit = coverage_config["run"].get("omit", [])  # type: ignore[index]
+        # Combine lists, removing duplicates while preserving order
+        merged_omit = list(dict.fromkeys(list(existing_omit) + new_omit_list))
+
+        coverage_config["run"]["omit"] = merged_omit  # type: ignore[index]
+
+        # Create TOML document from coverage settings
+        config_doc = document()
+        config_doc["tool"] = {"coverage": coverage_config}
+
+        # Write TOML file
+        coverage_config_path.write_text(dumps(config_doc))
+        return coverage_config_path
+
     @staticmethod
     def get_module_from_path(src_file_path: Path, subproject: PythonSubproject) -> str:
         """Gets the module name from a path.
@@ -483,11 +576,16 @@ class SubprojectUnitTests(PerSubprojectTask):
             subproject_context=self.subproject_context,
             project_root=self.docker_project_root,
         )
+        coverage_settings = self.get_coverage_settings()
         src_files_tested = 0
         for unit_test_info in self.get_unit_tests_to_run(file_cache=file_cache):
             src_files_tested += 1
             src_module = SubprojectUnitTests.get_module_from_path(
                 src_file_path=unit_test_info.src_file_path, subproject=self.subproject
+            )
+            test_file_parent = unit_test_info.test_file_path.parent
+            coverage_config_path = self.write_coverage_config_file(
+                unit_test_info=unit_test_info, coverage_settings=coverage_settings
             )
             run_process(
                 args=concatenate_args(
@@ -499,6 +597,8 @@ class SubprojectUnitTests(PerSubprojectTask):
                         "--cov-report",
                         "term-missing",
                         f"--cov={src_module}",
+                        f"--cov={test_file_parent}",
+                        f"--cov-config={coverage_config_path}",
                         unit_test_info.test_file_path,
                     ]
                 )
