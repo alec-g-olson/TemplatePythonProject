@@ -58,7 +58,18 @@ def get_github_license_template_info_blobs() -> list[dict[str, str]]:
     )
     template_info_blobs: list[dict[str, str]]
     if license_template_info_blobs.exists():
-        template_info_blobs = json.loads(license_template_info_blobs.read_text())
+        try:
+            template_info_blobs = json.loads(license_template_info_blobs.read_text())
+        except (json.JSONDecodeError, ValueError):
+            # Cache file is corrupted/empty, delete and refetch
+            license_template_info_blobs.unlink()
+            sleep(0.1)  # avoid rate limiting
+            template_info_blobs = json.loads(
+                requests.get(url=GIT_HUB_TEMPLATE_URL, timeout=30).text
+            )
+            license_template_info_blobs.write_text(
+                json.dumps(template_info_blobs, indent=2)
+            )
     else:
         sleep(0.1)  # avoid rate limiting
         template_info_blobs = json.loads(
