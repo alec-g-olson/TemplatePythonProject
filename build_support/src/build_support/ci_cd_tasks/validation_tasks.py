@@ -34,7 +34,10 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
 )
 from build_support.ci_cd_vars.machine_introspection_vars import THREADS_AVAILABLE
 from build_support.ci_cd_vars.project_setting_vars import get_pyproject_toml_data
-from build_support.ci_cd_vars.project_structure import get_feature_test_scratch_folder
+from build_support.ci_cd_vars.project_structure import (
+    get_feature_test_scratch_folder,
+    get_test_resource_dir,
+)
 from build_support.ci_cd_vars.subproject_structure import (
     PythonSubproject,
     SubprojectContext,
@@ -533,12 +536,19 @@ class SubprojectUnitTests(PerSubprojectTask):
                 test_file_updated = FileCacheEngine.get_last_modified_time(
                     file_path=test_file
                 )
+                resource_dir = get_test_resource_dir(test_file=test_file)
+                most_recent_resource_update = (
+                    FileCacheEngine.most_recent_file_update_in_dir(
+                        directory=resource_dir,
+                    )
+                )
                 test_file_info = file_cache.get_test_info_for_file(file_path=test_file)
                 if (
                     test_file_info.tests_passed is None
                     or test_file_info.tests_passed < src_file_updated
                     or test_file_info.tests_passed < test_file_updated
                     or test_file_info.tests_passed < most_recent_conftest_update
+                    or test_file_info.tests_passed < most_recent_resource_update
                 ):
                     yield UnitTestInfo(src_file_path=src_file, test_file_path=test_file)
             else:
@@ -716,13 +726,19 @@ class SubprojectFeatureTests(PerSubprojectTask):
             if FEATURE_TEST_FILE_NAME_REGEX.match(file.name)
         ]
 
-        # Update feature test file timestamps
         for test_file in test_files:
+            resource_dir = get_test_resource_dir(test_file=test_file)
+            most_recent_resource_update = (
+                FileCacheEngine.most_recent_file_update_in_dir(
+                    directory=resource_dir,
+                )
+            )
             test_file_info = file_cache.get_test_info_for_file(file_path=test_file)
             if (
                 test_file_info.tests_passed is None
                 or test_file_info.tests_passed < most_recent_conftest_update
                 or test_file_info.tests_passed < most_recent_src_file_update
+                or test_file_info.tests_passed < most_recent_resource_update
             ):
                 yield test_file
 

@@ -12,6 +12,7 @@ from build_support.ci_cd_vars.project_structure import (
     get_pyproject_toml,
     get_readme,
     get_sphinx_conf_dir,
+    get_test_resource_dir,
     maybe_build_dir,
 )
 
@@ -112,3 +113,17 @@ def test_get_new_project_settings(mock_project_root: Path) -> None:
     assert get_new_project_settings(
         project_root=mock_project_root
     ) == mock_project_root.joinpath("new_project_settings.yaml")
+
+
+def test_get_test_resource_dir() -> None:
+    test_file = Path("/a/b/test_foo.py")
+    assert get_test_resource_dir(test_file=test_file) == Path(
+        "/a/b/test_foo_resources"
+    )
+
+
+def test_get_test_resource_dir_nested() -> None:
+    test_file = Path("/project/tests/unit/test_bar.py")
+    assert get_test_resource_dir(test_file=test_file) == Path(
+        "/project/tests/unit/test_bar_resources"
+    )

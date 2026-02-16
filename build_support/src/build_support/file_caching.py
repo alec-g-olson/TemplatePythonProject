@@ -7,10 +7,12 @@ It implements the following requirements:
    - The source file has been updated since the test last passed
    - The test file has been updated since it last passed
    - Any conftest files the test relies on have been updated
+   - Any files in the test's resource directory have been updated
 
 2. Feature tests should be run if:
    - Any source files in the subproject have been updated
    - Any conftest files the feature test relies on have been updated
+   - Any files in the test's resource directory have been updated
 
 Attributes:
     | CONFTEST_NAME: The file name of conftest files.
@@ -219,6 +221,30 @@ class FileCacheEngine:
             file_info = TestFileInfo(file_path=file_path, tests_passed=None)
             self.cache_data.test_cache_info.append(file_info)
         return file_info
+
+    @staticmethod
+    def most_recent_file_update_in_dir(directory: Path) -> datetime:
+        """Return the most recent mtime of any file in a directory tree.
+
+        Returns ``datetime.min`` (UTC) if the directory does not exist or
+        contains no files.
+
+        Args:
+            directory (Path): The directory to scan recursively.
+
+        Returns:
+            datetime: The most recent modification time found.
+        """
+        if not directory.exists():
+            return datetime.min.replace(tzinfo=UTC)
+        return max(
+            (
+                FileCacheEngine.get_last_modified_time(file_path=f)
+                for f in directory.rglob("*")
+                if f.is_file()
+            ),
+            default=datetime.min.replace(tzinfo=UTC),
+        )
 
     @staticmethod
     def get_last_modified_time(file_path: Path) -> datetime:

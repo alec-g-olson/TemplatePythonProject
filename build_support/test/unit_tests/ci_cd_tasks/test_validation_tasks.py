@@ -50,7 +50,10 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_all_test_folders,
 )
 from build_support.ci_cd_vars.machine_introspection_vars import THREADS_AVAILABLE
-from build_support.ci_cd_vars.project_structure import get_feature_test_scratch_folder
+from build_support.ci_cd_vars.project_structure import (
+    get_feature_test_scratch_folder,
+    get_test_resource_dir,
+)
 from build_support.ci_cd_vars.subproject_structure import (
     PythonSubproject,
     SubprojectContext,
@@ -577,6 +580,93 @@ def test_run_subproject_unit_tests_all_cached_but_top_test_conftest_updated(
         assert run_process_mock.mock_calls == expected_run_process_calls
 
 
+@pytest.mark.usefixtures(
+    "mock_docker_pyproject_toml_file", "mock_entire_subproject", "mock_git_info_yaml"
+)
+def test_run_subproject_unit_tests_all_cached_but_resource_updated(
+    basic_task_info: BasicTaskInfo,
+    subproject_context: SubprojectContext,
+    mock_docker_subproject: PythonSubproject,
+) -> None:
+    cache_engine = FileCacheEngine(
+        subproject_context=subproject_context,
+        project_root=basic_task_info.docker_project_root,
+    )
+    for _, test_file in mock_docker_subproject.get_src_unit_test_file_pairs():
+        cache_engine.update_test_pass_timestamp(file_path=test_file)
+    cache_engine.write_text()
+    sleep(1 / 1000)
+    # Create a resource file for each test file
+    for _, test_file in mock_docker_subproject.get_src_unit_test_file_pairs():
+        resource_dir = get_test_resource_dir(test_file=test_file)
+        resource_dir.mkdir(parents=True, exist_ok=True)
+        resource_dir.joinpath("data.txt").write_text("resource data")
+    with patch(
+        "build_support.ci_cd_tasks.validation_tasks.run_process"
+    ) as run_process_mock:
+        SubprojectUnitTests(
+            basic_task_info=basic_task_info, subproject_context=subproject_context
+        ).run()
+        docker_command = get_docker_command_for_image(
+            non_docker_project_root=basic_task_info.non_docker_project_root,
+            docker_project_root=basic_task_info.docker_project_root,
+            target_image=DockerTarget.DEV,
+        )
+        expected_run_process_calls = []
+        for (
+            src_file,
+            test_file,
+        ) in mock_docker_subproject.get_src_unit_test_file_pairs():
+            src_module = SubprojectUnitTests.get_module_from_path(
+                src_file_path=src_file, subproject=mock_docker_subproject
+            )
+            test_file_parent = test_file.parent
+            test_file_name = test_file.stem
+            coverage_config_path = (
+                mock_docker_subproject.get_build_dir().joinpath(
+                    f"coverage_config_{test_file_name}.toml"
+                )
+            )
+            expected_run_process_calls.append(
+                call(
+                    args=concatenate_args(
+                        args=[
+                            docker_command,
+                            "pytest",
+                            "-n",
+                            THREADS_AVAILABLE,
+                            "--cov-report",
+                            "term-missing",
+                            f"--cov={src_module}",
+                            f"--cov={test_file_parent}",
+                            f"--cov-config={coverage_config_path}",
+                            test_file,
+                        ]
+                    )
+                )
+            )
+        expected_run_process_calls.append(
+            call(
+                args=concatenate_args(
+                    args=[
+                        docker_command,
+                        "pytest",
+                        "-n",
+                        THREADS_AVAILABLE,
+                        mock_docker_subproject.get_pytest_whole_test_suite_report_args(
+                            test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+                        ),
+                        mock_docker_subproject.get_src_dir(),
+                        mock_docker_subproject.get_test_suite_dir(
+                            test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+                        ),
+                    ]
+                )
+            )
+        )
+        assert run_process_mock.mock_calls == expected_run_process_calls
+
+
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_git_info_yaml")
 def test_missing_test_file_for_src(
     mock_project_root: Path, docker_project_root: Path
@@ -637,7 +727,9 @@ def test_run_subproject_unit_tests_some_cached(
     cache_both_src_and_test = 0
     cache_src = 1
     cache_test = 2
-    files_to_update = []
+    cache_resource = 3
+    files_to_update: list[Path] = []
+    resource_dirs_to_create: list[Path] = []
     for file_index, (src_file, test_file) in enumerate(
         mock_docker_subproject.get_src_unit_test_file_pairs()
     ):
@@ -679,12 +771,21 @@ def test_run_subproject_unit_tests_some_cached(
             file_cache.update_test_pass_timestamp(file_path=test_file)
             files_to_update.append(test_file)
             expected_run_process_calls.append(run_process_call)
+        elif mod_ten == cache_resource:
+            # Tests ran, but a resource file was added
+            file_cache.update_test_pass_timestamp(file_path=test_file)
+            resource_dir = get_test_resource_dir(test_file=test_file)
+            resource_dirs_to_create.append(resource_dir)
+            expected_run_process_calls.append(run_process_call)
         else:
             expected_run_process_calls.append(run_process_call)
     file_cache.write_text()
     sleep(1 / 1000)  # sleep just long enough for a new timestamp when writing file
     for file_to_update in files_to_update:
         file_to_update.write_text("Updated File")
+    for resource_dir in resource_dirs_to_create:
+        resource_dir.mkdir(parents=True, exist_ok=True)
+        resource_dir.joinpath("data.txt").write_text("resource")
     # This is needed for now because INFRA only has one file and therefore
     # skipping it skips the report generating test as well
     if expected_run_process_calls:
@@ -980,6 +1081,70 @@ def test_run_subproject_feature_tests_all_cached_but_top_test_conftest_updated(
 @pytest.mark.usefixtures(
     "mock_docker_pyproject_toml_file", "mock_entire_subproject", "mock_git_info_yaml"
 )
+def test_run_subproject_feature_tests_all_cached_but_resource_updated(
+    basic_task_info: BasicTaskInfo,
+    subproject_context: SubprojectContext,
+    mock_docker_subproject: PythonSubproject,
+) -> None:
+    file_cache = FileCacheEngine(
+        subproject_context=subproject_context,
+        project_root=basic_task_info.docker_project_root,
+    )
+    test_files = [
+        file
+        for file in mock_docker_subproject.get_test_suite_dir(
+            test_suite=PythonSubproject.TestSuite.FEATURE_TESTS
+        ).glob("*")
+        if FEATURE_TEST_FILE_NAME_REGEX.match(file.name)
+    ]
+    for test_file in test_files:
+        file_cache.update_test_pass_timestamp(file_path=test_file)
+    file_cache.write_text()
+    sleep(1 / 1000)
+    # Create a resource file for each feature test
+    for test_file in test_files:
+        resource_dir = get_test_resource_dir(test_file=test_file)
+        resource_dir.mkdir(parents=True, exist_ok=True)
+        resource_dir.joinpath("data.txt").write_text("resource data")
+    with patch(
+        "build_support.ci_cd_tasks.validation_tasks.run_process",
+        side_effect=run_feature_test_side_effect,
+    ) as run_process_mock:
+        SubprojectFeatureTests(
+            basic_task_info=basic_task_info, subproject_context=subproject_context
+        ).run()
+        docker_project_root = basic_task_info.docker_project_root
+        non_docker_project_root = basic_task_info.non_docker_project_root
+        expected_calls = [
+            call(
+                args=concatenate_args(
+                    args=[
+                        get_docker_command_for_image(
+                            non_docker_project_root=non_docker_project_root,
+                            docker_project_root=docker_project_root,
+                            target_image=DockerTarget.DEV,
+                        ),
+                        "pytest",
+                        "--basetemp",
+                        get_feature_test_scratch_folder(
+                            project_root=docker_project_root
+                        ),
+                        mock_docker_subproject.get_pytest_feature_test_report_args(),
+                        test_file,
+                    ]
+                )
+            )
+            for test_file in test_files
+        ]
+        if len(expected_calls) > 0:
+            assert run_process_mock.mock_calls == expected_calls
+        else:  # pragma: no cov - might only have cases that require calls
+            run_process_mock.assert_not_called()
+
+
+@pytest.mark.usefixtures(
+    "mock_docker_pyproject_toml_file", "mock_entire_subproject", "mock_git_info_yaml"
+)
 def test_run_subproject_feature_tests_some_cached(
     basic_task_info: BasicTaskInfo,
     subproject_context: SubprojectContext,
@@ -1235,9 +1400,6 @@ def test_subproject_unit_tests_skips_when_not_in_test_list(
         run_process_mock.assert_not_called()
 
 
-COVERAGE_CONFIG_TEST_DATA = Path(__file__).parent / "coverage_config_test_data"
-
-
 @dataclass(frozen=True)
 class CoverageTestFileSetup:
     """A file setup configuration for coverage config tests."""
@@ -1249,10 +1411,12 @@ class CoverageTestFileSetup:
 @pytest.fixture(
     params=["basic", "with_existing_omit", "only_run", "only_report", "minimal"]
 )
-def coverage_settings(request: SubRequest) -> tuple[str, TOMLDocument]:
+def coverage_settings(
+    request: SubRequest, test_resource_dir: Path
+) -> tuple[str, TOMLDocument]:
     """Fixture providing coverage settings read from resource TOML files."""
     settings_name: str = request.param
-    settings_path = COVERAGE_CONFIG_TEST_DATA / "inputs" / f"{settings_name}.toml"
+    settings_path = test_resource_dir / "inputs" / f"{settings_name}.toml"
     return settings_name, parse(settings_path.read_text())
 
 
@@ -1405,6 +1569,7 @@ class TestWriteCoverageConfigFile:
         basic_task_info: BasicTaskInfo,
         coverage_settings: tuple[str, TOMLDocument],
         test_file_setup: CoverageTestFileSetup,
+        test_resource_dir: Path,
     ) -> None:
         """Test writing config file with various settings and test file setups."""
         settings_name, settings = coverage_settings
@@ -1427,7 +1592,7 @@ class TestWriteCoverageConfigFile:
         assert config_path.name == "coverage_config_test_target.toml"
 
         expected_path = (
-            COVERAGE_CONFIG_TEST_DATA
+            test_resource_dir
             / "expected_outputs"
             / settings_name
             / f"{test_file_setup.name}.toml"
@@ -1437,11 +1602,14 @@ class TestWriteCoverageConfigFile:
         assert settings == settings_before
 
     def test_write_coverage_config_preserves_other_settings(
-        self, basic_task_info: BasicTaskInfo, test_file_setup: CoverageTestFileSetup
+        self,
+        basic_task_info: BasicTaskInfo,
+        test_file_setup: CoverageTestFileSetup,
+        test_resource_dir: Path,
     ) -> None:
         """Test that other coverage settings are preserved."""
         settings_name = "preserves_other_settings"
-        settings_path = COVERAGE_CONFIG_TEST_DATA / "inputs" / f"{settings_name}.toml"
+        settings_path = test_resource_dir / "inputs" / f"{settings_name}.toml"
         settings = parse(settings_path.read_text())
         settings_before = deepcopy(settings)
 
@@ -1455,7 +1623,7 @@ class TestWriteCoverageConfigFile:
         )
 
         expected_path = (
-            COVERAGE_CONFIG_TEST_DATA
+            test_resource_dir
             / "expected_outputs"
             / settings_name
             / f"{test_file_setup.name}.toml"

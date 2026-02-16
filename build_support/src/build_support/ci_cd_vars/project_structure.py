@@ -166,3 +166,18 @@ def get_new_project_settings(project_root: Path) -> Path:
         Path: Path to the new_project_settings.yaml file in this project.
     """
     return project_root.joinpath("new_project_settings.yaml")
+
+
+def get_test_resource_dir(test_file: Path) -> Path:
+    """Return the resource directory for a given test file.
+
+    Convention: a test file ``test_foo.py`` has resources in a sibling
+    directory named ``test_foo_resources/``.
+
+    Args:
+        test_file (Path): Path to the test file.
+
+    Returns:
+        Path: Path to the test file's resource directory.
+    """
+    return test_file.parent / f"{test_file.stem}_resources"
