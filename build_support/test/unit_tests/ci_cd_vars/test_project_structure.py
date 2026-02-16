@@ -117,9 +117,7 @@ def test_get_new_project_settings(mock_project_root: Path) -> None:
 
 def test_get_test_resource_dir() -> None:
     test_file = Path("/a/b/test_foo.py")
-    assert get_test_resource_dir(test_file=test_file) == Path(
-        "/a/b/test_foo_resources"
-    )
+    assert get_test_resource_dir(test_file=test_file) == Path("/a/b/test_foo_resources")
 
 
 def test_get_test_resource_dir_nested() -> None:

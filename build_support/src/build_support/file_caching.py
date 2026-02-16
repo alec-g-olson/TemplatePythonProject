@@ -223,7 +223,7 @@ class FileCacheEngine:
         return file_info
 
     @staticmethod
-    def most_recent_file_update_in_dir(directory: Path) -> datetime:
+    def get_most_recent_file_update_in_dir(directory: Path) -> datetime:
         """Return the most recent mtime of any file in a directory tree.
 
         Returns ``datetime.min`` (UTC) if the directory does not exist or

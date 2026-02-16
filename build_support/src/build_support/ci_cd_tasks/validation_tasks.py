@@ -399,6 +399,7 @@ class UnitTestInfo:
 
     src_file_path: Path
     test_file_path: Path
+    coverage_config_path: Path
 
 
 class SubprojectUnitTests(PerSubprojectTask):
@@ -463,36 +464,25 @@ class SubprojectUnitTests(PerSubprojectTask):
         Returns:
             Path: Path to the created config file.
         """
-        test_file_name = unit_test_info.test_file_path.stem
-        coverage_config_path = self.subproject.get_build_dir().joinpath(
-            f"coverage_config_{test_file_name}.toml"
-        )
+        coverage_config_path = unit_test_info.coverage_config_path
         coverage_config_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Build omit list for this specific test file
         new_omit_list = self.build_omit_list(unit_test_info=unit_test_info)
 
-        # Deep copy to avoid modifying original
+        # Combine the new omit list with existing configuration settings
         coverage_config = deepcopy(coverage_settings)
-
-        # Ensure run section exists and merge omit lists
         if "run" not in coverage_config:
             coverage_config["run"] = table()
-
-        # Merge existing omit list (if any) with new omit list
         existing_omit = coverage_config["run"].get(  # type: ignore[union-attr]
             "omit", []
         )
-        # Combine lists, removing duplicates while preserving order
         merged_omit = list(dict.fromkeys(list(existing_omit) + new_omit_list))
-
         coverage_config["run"]["omit"] = merged_omit  # type: ignore[index]
 
-        # Create TOML document from coverage settings
+        # Write TOML file
         config_doc = document()
         config_doc["tool"] = {"coverage": coverage_config}
-
-        # Write TOML file
         coverage_config_path.write_text(dumps(config_doc))
         return coverage_config_path
 
@@ -538,8 +528,8 @@ class SubprojectUnitTests(PerSubprojectTask):
                 )
                 resource_dir = get_test_resource_dir(test_file=test_file)
                 most_recent_resource_update = (
-                    FileCacheEngine.most_recent_file_update_in_dir(
-                        directory=resource_dir,
+                    FileCacheEngine.get_most_recent_file_update_in_dir(
+                        directory=resource_dir
                     )
                 )
                 test_file_info = file_cache.get_test_info_for_file(file_path=test_file)
@@ -550,7 +540,15 @@ class SubprojectUnitTests(PerSubprojectTask):
                     or test_file_info.tests_passed < most_recent_conftest_update
                     or test_file_info.tests_passed < most_recent_resource_update
                 ):
-                    yield UnitTestInfo(src_file_path=src_file, test_file_path=test_file)
+                    test_file_name = test_file.stem
+                    coverage_config_path = self.subproject.get_build_dir().joinpath(
+                        f"coverage_config_{test_file_name}.toml"
+                    )
+                    yield UnitTestInfo(
+                        src_file_path=src_file,
+                        test_file_path=test_file,
+                        coverage_config_path=coverage_config_path,
+                    )
             else:
                 msg = f"Expected {test_file} to exist!"
                 raise ValueError(msg)
@@ -729,8 +727,8 @@ class SubprojectFeatureTests(PerSubprojectTask):
         for test_file in test_files:
             resource_dir = get_test_resource_dir(test_file=test_file)
             most_recent_resource_update = (
-                FileCacheEngine.most_recent_file_update_in_dir(
-                    directory=resource_dir,
+                FileCacheEngine.get_most_recent_file_update_in_dir(
+                    directory=resource_dir
                 )
             )
             test_file_info = file_cache.get_test_info_for_file(file_path=test_file)

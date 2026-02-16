@@ -68,12 +68,10 @@ def test_all_non_package_dirs_follow_resource_naming(
     """
     violations: list[str] = []
     for subproject in get_all_python_subprojects_with_test(
-        project_root=real_project_root_dir,
+        project_root=real_project_root_dir
     ):
         for test_suite in TEST_SUITES_TO_CHECK:
-            suite_dir = subproject.get_test_suite_dir(
-                test_suite=test_suite,
-            )
+            suite_dir = subproject.get_test_suite_dir(test_suite=test_suite)
             for non_pkg_dir in _get_non_package_dirs(root=suite_dir):
                 dir_name = non_pkg_dir.name
                 if not dir_name.endswith("_resources"):  # pragma: no cov
@@ -83,12 +81,8 @@ def test_all_non_package_dirs_follow_resource_naming(
                         f"convention."
                     )
                     continue
-                expected_test_stem = dir_name.removesuffix(
-                    "_resources",
-                )
-                expected_test_file = non_pkg_dir.parent / (
-                    f"{expected_test_stem}.py"
-                )
+                expected_test_stem = dir_name.removesuffix("_resources")
+                expected_test_file = non_pkg_dir.parent / (f"{expected_test_stem}.py")
                 if not expected_test_file.exists():  # pragma: no cov
                     violations.append(
                         f"{non_pkg_dir} has no corresponding test "
@@ -96,7 +90,7 @@ def test_all_non_package_dirs_follow_resource_naming(
                     )
                     continue
                 expected_resource_dir = get_test_resource_dir(
-                    test_file=expected_test_file,
+                    test_file=expected_test_file
                 )
                 if non_pkg_dir != expected_resource_dir:  # pragma: no cov
                     violations.append(

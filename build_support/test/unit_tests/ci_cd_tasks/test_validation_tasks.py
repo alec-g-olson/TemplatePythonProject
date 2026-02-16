@@ -2,6 +2,7 @@ import re
 import shutil
 from copy import deepcopy
 from dataclasses import dataclass
+from itertools import islice
 from pathlib import Path
 from time import sleep
 from typing import Any
@@ -596,8 +597,11 @@ def test_run_subproject_unit_tests_all_cached_but_resource_updated(
         cache_engine.update_test_pass_timestamp(file_path=test_file)
     cache_engine.write_text()
     sleep(1 / 1000)
-    # Create a resource file for each test file
-    for _, test_file in mock_docker_subproject.get_src_unit_test_file_pairs():
+    # Create a resource file for some test files
+    resource_dirs_updated = 10
+    for _, test_file in islice(
+        mock_docker_subproject.get_src_unit_test_file_pairs(), resource_dirs_updated
+    ):
         resource_dir = get_test_resource_dir(test_file=test_file)
         resource_dir.mkdir(parents=True, exist_ok=True)
         resource_dir.joinpath("data.txt").write_text("resource data")
@@ -613,19 +617,16 @@ def test_run_subproject_unit_tests_all_cached_but_resource_updated(
             target_image=DockerTarget.DEV,
         )
         expected_run_process_calls = []
-        for (
-            src_file,
-            test_file,
-        ) in mock_docker_subproject.get_src_unit_test_file_pairs():
+        for src_file, test_file in islice(
+            mock_docker_subproject.get_src_unit_test_file_pairs(), resource_dirs_updated
+        ):
             src_module = SubprojectUnitTests.get_module_from_path(
                 src_file_path=src_file, subproject=mock_docker_subproject
             )
             test_file_parent = test_file.parent
             test_file_name = test_file.stem
-            coverage_config_path = (
-                mock_docker_subproject.get_build_dir().joinpath(
-                    f"coverage_config_{test_file_name}.toml"
-                )
+            coverage_config_path = mock_docker_subproject.get_build_dir().joinpath(
+                f"coverage_config_{test_file_name}.toml"
             )
             expected_run_process_calls.append(
                 call(
@@ -767,12 +768,12 @@ def test_run_subproject_unit_tests_some_cached(
             files_to_update.append(src_file)
             expected_run_process_calls.append(run_process_call)
         elif mod_ten == cache_test:
-            # Tests ran, but tests was updated
+            # Tests ran, but test was updated
             file_cache.update_test_pass_timestamp(file_path=test_file)
             files_to_update.append(test_file)
             expected_run_process_calls.append(run_process_call)
         elif mod_ten == cache_resource:
-            # Tests ran, but a resource file was added
+            # Tests ran, but a resource file was updated
             file_cache.update_test_pass_timestamp(file_path=test_file)
             resource_dir = get_test_resource_dir(test_file=test_file)
             resource_dirs_to_create.append(resource_dir)
@@ -1401,11 +1402,40 @@ def test_subproject_unit_tests_skips_when_not_in_test_list(
 
 
 @dataclass(frozen=True)
-class CoverageTestFileSetup:
-    """A file setup configuration for coverage config tests."""
+class FullUnitTestInfo:
+    """Test helper dataclass with all unit test information including resource dir."""
 
-    name: str
-    unit_test_info: UnitTestInfo
+    src_file_path: Path
+    test_file_path: Path
+    coverage_config_path: Path
+    test_resource_dir_path: Path | None
+
+
+def create_full_unit_test_info(
+    src_file_path: Path, test_file_path: Path, subproject: PythonSubproject
+) -> FullUnitTestInfo:
+    """Create a FullUnitTestInfo from file paths.
+
+    Args:
+        src_file_path: Path to the source file.
+        test_file_path: Path to the test file.
+        subproject: The subproject containing these files.
+
+    Returns:
+        FullUnitTestInfo with all computed paths.
+    """
+    coverage_config_path = subproject.get_build_dir().joinpath(
+        f"coverage_config_{test_file_path.stem}.toml"
+    )
+    test_resource_dir = get_test_resource_dir(test_file=test_file_path)
+    test_resource_dir_path = test_resource_dir if test_resource_dir.exists() else None
+
+    return FullUnitTestInfo(
+        src_file_path=src_file_path,
+        test_file_path=test_file_path,
+        coverage_config_path=coverage_config_path,
+        test_resource_dir_path=test_resource_dir_path,
+    )
 
 
 @pytest.fixture(
@@ -1421,58 +1451,48 @@ def coverage_settings(
 
 
 # Factory functions for different test file setups
-def _create_test_setup_single_file(
-    subproject: PythonSubproject,
-) -> CoverageTestFileSetup:
+def _create_test_setup_single_file(subproject: PythonSubproject) -> FullUnitTestInfo:
     """Create a test setup with a single test file."""
     test_dir = subproject.get_test_suite_dir(
         test_suite=PythonSubproject.TestSuite.UNIT_TESTS
     ).joinpath("test_module")
     test_dir.mkdir(parents=True, exist_ok=True)
-    test_file = test_dir.joinpath("test_target.py")
+    test_file = test_dir.joinpath("test_single_file.py")
     test_file.write_text("# test file")
 
-    return CoverageTestFileSetup(
-        name="single_file",
-        unit_test_info=UnitTestInfo(
-            src_file_path=subproject.get_src_dir().joinpath("module.py"),
-            test_file_path=test_file,
-        ),
+    return create_full_unit_test_info(
+        src_file_path=subproject.get_src_dir().joinpath("single_file.py"),
+        test_file_path=test_file,
+        subproject=subproject,
     )
 
 
-def _create_test_setup_multiple_files(
-    subproject: PythonSubproject,
-) -> CoverageTestFileSetup:
+def _create_test_setup_multiple_files(subproject: PythonSubproject) -> FullUnitTestInfo:
     """Create a test setup with multiple test files in the same directory."""
     test_dir = subproject.get_test_suite_dir(
         test_suite=PythonSubproject.TestSuite.UNIT_TESTS
     ).joinpath("test_module")
     test_dir.mkdir(parents=True, exist_ok=True)
 
-    test_target = test_dir.joinpath("test_target.py")
+    test_target = test_dir.joinpath("test_multiple_files.py")
     test_target.write_text("# target test file")
     test_dir.joinpath("test_other1.py").write_text("# other test file 1")
     test_dir.joinpath("test_other2.py").write_text("# other test file 2")
 
-    return CoverageTestFileSetup(
-        name="multiple_files",
-        unit_test_info=UnitTestInfo(
-            src_file_path=subproject.get_src_dir().joinpath("module.py"),
-            test_file_path=test_target,
-        ),
+    return create_full_unit_test_info(
+        src_file_path=subproject.get_src_dir().joinpath("multiple_files.py"),
+        test_file_path=test_target,
+        subproject=subproject,
     )
 
 
-def _create_test_setup_with_subdirs(
-    subproject: PythonSubproject,
-) -> CoverageTestFileSetup:
+def _create_test_setup_with_subdirs(subproject: PythonSubproject) -> FullUnitTestInfo:
     """Create a test setup with subdirectories containing test files."""
     test_dir = subproject.get_test_suite_dir(
         test_suite=PythonSubproject.TestSuite.UNIT_TESTS
     ).joinpath("test_module")
     test_dir.mkdir(parents=True, exist_ok=True)
-    test_file = test_dir.joinpath("test_target.py")
+    test_file = test_dir.joinpath("test_with_subdirs.py")
     test_file.write_text("# test file")
 
     subdir1 = test_dir.joinpath("subdir1")
@@ -1482,23 +1502,21 @@ def _create_test_setup_with_subdirs(
     subdir2.mkdir()
     subdir2.joinpath("test_sub2.py").write_text("# sub test")
 
-    return CoverageTestFileSetup(
-        name="with_subdirs",
-        unit_test_info=UnitTestInfo(
-            src_file_path=subproject.get_src_dir().joinpath("module.py"),
-            test_file_path=test_file,
-        ),
+    return create_full_unit_test_info(
+        src_file_path=subproject.get_src_dir().joinpath("with_subdirs.py"),
+        test_file_path=test_file,
+        subproject=subproject,
     )
 
 
-def _create_test_setup_complex(subproject: PythonSubproject) -> CoverageTestFileSetup:
+def _create_test_setup_complex(subproject: PythonSubproject) -> FullUnitTestInfo:
     """Create a complex test setup with multiple files and subdirectories."""
     test_dir = subproject.get_test_suite_dir(
         test_suite=PythonSubproject.TestSuite.UNIT_TESTS
     ).joinpath("test_module")
     test_dir.mkdir(parents=True, exist_ok=True)
 
-    test_target = test_dir.joinpath("test_target.py")
+    test_target = test_dir.joinpath("test_complex.py")
     test_target.write_text("# target")
     test_dir.joinpath("test_other1.py").write_text("# other 1")
     test_dir.joinpath("test_other2.py").write_text("# other 2")
@@ -1509,12 +1527,10 @@ def _create_test_setup_complex(subproject: PythonSubproject) -> CoverageTestFile
     subdir.joinpath("conftest.py").write_text("# conftest")
     subdir.joinpath("test_sub.py").write_text("# sub test")
 
-    return CoverageTestFileSetup(
-        name="complex",
-        unit_test_info=UnitTestInfo(
-            src_file_path=subproject.get_src_dir().joinpath("module.py"),
-            test_file_path=test_target,
-        ),
+    return create_full_unit_test_info(
+        src_file_path=subproject.get_src_dir().joinpath("complex.py"),
+        test_file_path=test_target,
+        subproject=subproject,
     )
 
 
@@ -1527,16 +1543,13 @@ def _create_test_setup_complex(subproject: PythonSubproject) -> CoverageTestFile
     ],
     ids=["single_file", "multiple_files", "with_subdirs", "complex"],
 )
-def test_file_setup(
-    request: SubRequest, docker_project_root: Path
-) -> CoverageTestFileSetup:
+def test_file_setup(request: SubRequest, docker_project_root: Path) -> FullUnitTestInfo:
     """Parameterized fixture providing different test file setup configurations."""
     subproject = get_python_subproject(
         subproject_context=SubprojectContext.BUILD_SUPPORT,
         project_root=docker_project_root,
     )
-    result: CoverageTestFileSetup = request.param(subproject)
-    return result
+    return request.param(subproject)
 
 
 def _assert_coverage_config_matches_expected(
@@ -1568,7 +1581,7 @@ class TestWriteCoverageConfigFile:
         self,
         basic_task_info: BasicTaskInfo,
         coverage_settings: tuple[str, TOMLDocument],
-        test_file_setup: CoverageTestFileSetup,
+        test_file_setup: FullUnitTestInfo,
         test_resource_dir: Path,
     ) -> None:
         """Test writing config file with various settings and test file setups."""
@@ -1581,7 +1594,12 @@ class TestWriteCoverageConfigFile:
         )
 
         config_path = task.write_coverage_config_file(
-            unit_test_info=test_file_setup.unit_test_info, coverage_settings=settings
+            unit_test_info=UnitTestInfo(
+                src_file_path=test_file_setup.src_file_path,
+                test_file_path=test_file_setup.test_file_path,
+                coverage_config_path=test_file_setup.coverage_config_path,
+            ),
+            coverage_settings=settings,
         )
 
         subproject = get_python_subproject(
@@ -1589,13 +1607,17 @@ class TestWriteCoverageConfigFile:
             project_root=basic_task_info.docker_project_root,
         )
         assert config_path.parent == subproject.get_build_dir()
-        assert config_path.name == "coverage_config_test_target.toml"
+        # Derive expected config name from test file name
+        test_file_stem = test_file_setup.test_file_path.stem
+        assert config_path.name == f"coverage_config_{test_file_stem}.toml"
 
+        # Derive name for expected output by removing "test_" prefix
+        expected_name = test_file_stem.removeprefix("test_")
         expected_path = (
             test_resource_dir
             / "expected_outputs"
             / settings_name
-            / f"{test_file_setup.name}.toml"
+            / f"{expected_name}.toml"
         )
         _assert_coverage_config_matches_expected(config_path, expected_path)
 
@@ -1604,7 +1626,7 @@ class TestWriteCoverageConfigFile:
     def test_write_coverage_config_preserves_other_settings(
         self,
         basic_task_info: BasicTaskInfo,
-        test_file_setup: CoverageTestFileSetup,
+        test_file_setup: FullUnitTestInfo,
         test_resource_dir: Path,
     ) -> None:
         """Test that other coverage settings are preserved."""
@@ -1619,14 +1641,21 @@ class TestWriteCoverageConfigFile:
         )
 
         config_path = task.write_coverage_config_file(
-            unit_test_info=test_file_setup.unit_test_info, coverage_settings=settings
+            unit_test_info=UnitTestInfo(
+                src_file_path=test_file_setup.src_file_path,
+                test_file_path=test_file_setup.test_file_path,
+                coverage_config_path=test_file_setup.coverage_config_path,
+            ),
+            coverage_settings=settings,
         )
 
+        # Derive name for expected output by removing "test_" prefix
+        expected_name = test_file_setup.test_file_path.stem.removeprefix("test_")
         expected_path = (
             test_resource_dir
             / "expected_outputs"
             / settings_name
-            / f"{test_file_setup.name}.toml"
+            / f"{expected_name}.toml"
         )
         _assert_coverage_config_matches_expected(config_path, expected_path)
 
