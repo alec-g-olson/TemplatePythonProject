@@ -1,3 +1,10 @@
+"""Shared fixtures and helpers for feature tests.
+
+Provides utilities for creating lightweight mock projects, running
+inner ``make test`` invocations inside Docker containers, and
+managing temporary git repositories used by the feature test suite.
+"""
+
 import shutil
 from pathlib import Path
 from subprocess import PIPE, Popen
@@ -26,6 +33,11 @@ from build_support.ci_cd_vars.subproject_structure import (
 
 
 def remove_dir_and_all_contents(path: Path) -> None:
+    """Recursively remove a directory and all of its contents.
+
+    Args:
+        path (Path): The directory to remove.
+    """
     for sub in path.iterdir():
         if sub.is_dir():
             remove_dir_and_all_contents(path=sub)
@@ -80,6 +92,21 @@ def run_command_and_save_logs(
 def make_command_prefix(
     mock_project_root: Path, real_project_root_dir: Path, mock_remote_git_folder: Path
 ) -> list[str]:
+    """Build the ``make`` command prefix for running inner builds.
+
+    Constructs a ``make`` invocation that targets the mock project
+    instead of the real project, mounts the mock remote git repo,
+    and enables ``--ci-cd-feature-test-mode`` to skip Docker image
+    rebuilds inside the inner build.
+
+    Args:
+        mock_project_root (Path): Root of the mock project.
+        real_project_root_dir (Path): Root of the real project.
+        mock_remote_git_folder (Path): Path to the mock bare repo.
+
+    Returns:
+        list[str]: Command tokens for ``make`` with overrides.
+    """
     docker_project_root = real_project_root_dir
     test_project_relative_root = mock_project_root.relative_to(docker_project_root)
     remote_repo_relative_root = mock_remote_git_folder.relative_to(docker_project_root)
@@ -102,6 +129,14 @@ def make_command_prefix(
 
 @pytest.fixture(scope="session")
 def mock_lightweight_project_copy_dir(real_build_dir: Path) -> Path:
+    """Return the directory path for the lightweight project cache.
+
+    Args:
+        real_build_dir (Path): The real project's build directory.
+
+    Returns:
+        Path: Path to the lightweight project copy directory.
+    """
     return maybe_build_dir(dir_to_build=real_build_dir.joinpath("lightweight_project"))
 
 
@@ -109,6 +144,21 @@ def mock_lightweight_project_copy_dir(real_build_dir: Path) -> Path:
 def mock_lightweight_project_copy(
     mock_lightweight_project_copy_dir: Path, real_project_root_dir: Path
 ) -> Path:
+    """Create a cached lightweight copy of the real project.
+
+    Copies the real project tree (excluding ``.git``, ``.idea``,
+    build, and scratch directories) and strips non-build-support
+    subprojects down to minimal skeletons with empty ``__init__.py``
+    files. This session-scoped copy is reused across tests to avoid
+    redundant filesystem work.
+
+    Args:
+        mock_lightweight_project_copy_dir (Path): Destination dir.
+        real_project_root_dir (Path): Real project root.
+
+    Returns:
+        Path: The populated lightweight project copy directory.
+    """
     if mock_lightweight_project_copy_dir.exists():
         # If the lightweight copy already exists, return it
         remove_dir_and_all_contents(path=mock_lightweight_project_copy_dir)
@@ -163,6 +213,22 @@ def mock_lightweight_project(
     mock_remote_git_repo: Repo,
     mock_lightweight_project_copy: Path,
 ) -> Repo:
+    """Create a fresh git-tracked mock project for a single test.
+
+    Clones the mock remote repo, overlays the cached lightweight
+    project copy onto it, commits, pushes, and tags ``0.0.0``. The
+    resulting repo is ready for a test to modify files and run
+    ``make test`` against.
+
+    Args:
+        docker_project_root (Path): Docker project root path.
+        mock_project_root (Path): Where to create the mock repo.
+        mock_remote_git_repo (Repo): The mock bare remote repo.
+        mock_lightweight_project_copy (Path): Cached project copy.
+
+    Returns:
+        Repo: The initialised mock project git repository.
+    """
     if mock_project_root.exists():
         remove_dir_and_all_contents(path=mock_project_root)
 
@@ -198,6 +264,18 @@ def mock_lightweight_project(
 def mock_lightweight_project_with_single_feature_test(
     mock_lightweight_project: Repo, mock_project_root: Path
 ) -> Repo:
+    """Add a single feature test to the PYPI subproject.
+
+    Creates a minimal feature test file, commits it with tag
+    ``0.1.0``, and pushes to the remote.
+
+    Args:
+        mock_lightweight_project (Repo): The mock project repo.
+        mock_project_root (Path): Root of the mock project.
+
+    Returns:
+        Repo: The updated mock project repository.
+    """
     subproject = get_python_subproject(
         subproject_context=SubprojectContext.PYPI, project_root=mock_project_root
     )
@@ -227,6 +305,22 @@ def mock_lightweight_project_with_single_feature_test(
 def mock_lightweight_project_with_unit_tests_and_feature_tests(
     mock_lightweight_project: Repo, mock_project_root: Path
 ) -> Repo:
+    """Add source, unit tests, and feature tests to the mock project.
+
+    Populates the PYPI subproject with a source module, a matching
+    unit test file, and a feature test. All generated Python files
+    must include module-level docstrings and Google-style function
+    docstrings with typed ``Args`` and ``Returns`` sections, because
+    the inner ``make test`` enforces ruff and style-enforcement
+    checks against the mounted mock project files.
+
+    Args:
+        mock_lightweight_project (Repo): The mock project repo.
+        mock_project_root (Path): Root of the mock project.
+
+    Returns:
+        Repo: The updated mock project repository.
+    """
     for subproject in [
         get_python_subproject(SubprojectContext.PYPI, mock_project_root)
     ]:
@@ -303,6 +397,11 @@ def test_something() -> None:
 
 @pytest.fixture
 def current_ticket_name() -> str:
+    """Return a fixed ticket name for mock branch creation.
+
+    Returns:
+        str: The ticket name ``TEST001``.
+    """
     return "TEST001"
 
 
@@ -310,6 +409,16 @@ def current_ticket_name() -> str:
 def mock_new_branch(
     mock_remote_git_repo: Repo, mock_lightweight_project: Repo, current_ticket_name: str
 ) -> Head:
+    """Create and check out a new feature branch on the mock project.
+
+    Args:
+        mock_remote_git_repo (Repo): The mock bare remote repo.
+        mock_lightweight_project (Repo): The mock project repo.
+        current_ticket_name (str): Ticket name used in branch.
+
+    Returns:
+        Head: The newly created and checked-out branch.
+    """
     branch_name = f"{current_ticket_name}-some-ticket-description"
     mock_remote_git_repo.create_head(branch_name)
     mock_lightweight_project.remote().fetch()
