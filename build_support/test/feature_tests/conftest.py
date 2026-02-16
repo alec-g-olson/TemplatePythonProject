@@ -162,6 +162,9 @@ def mock_lightweight_project_copy(
     if mock_lightweight_project_copy_dir.exists():
         # If the lightweight copy already exists, return it
         remove_dir_and_all_contents(path=mock_lightweight_project_copy_dir)
+    
+    # Ensure the directory exists
+    mock_lightweight_project_copy_dir.mkdir(parents=True, exist_ok=True)
 
     # Create the lightweight project copy
     feature_scratch_name = get_feature_test_scratch_folder(
