@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from itertools import islice
 from pathlib import Path
 from time import sleep
-from typing import Any
+from typing import Any, cast
 from unittest.mock import call, patch
 
 import pytest
@@ -1547,7 +1547,7 @@ def test_file_setup(request: SubRequest, docker_project_root: Path) -> FullUnitT
         subproject_context=SubprojectContext.BUILD_SUPPORT,
         project_root=docker_project_root,
     )
-    return request.param(subproject)
+    return cast(FullUnitTestInfo, request.param(subproject))
 
 
 def _assert_coverage_config_matches_expected(

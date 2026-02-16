@@ -7,7 +7,7 @@ from typing import Any
 from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_all_python_folders,
     get_all_src_folders,
-    get_test_utils_dirs,
+    get_all_test_folders,
 )
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
 from build_support.ci_cd_vars.project_structure import get_dockerfile
@@ -127,8 +127,8 @@ def get_mypy_path_for_target_image(
             ]
         case DockerTarget.DEV:
             src_folders = get_all_src_folders(project_root=docker_project_root)
-            test_utils_dirs = get_test_utils_dirs(project_root=docker_project_root)
-            python_folders = src_folders + test_utils_dirs
+            test_folders = get_all_test_folders(project_root=docker_project_root)
+            python_folders = src_folders + test_folders
         case DockerTarget.PROD:
             python_folders = [
                 get_python_subproject(
