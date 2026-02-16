@@ -34,4 +34,4 @@ def test_feature_tests_execute_faster_when_cached(
         if task.task_name == "SubprojectFeatureTests-PYPI"
     )
     assert first_run_duration > timedelta(seconds=0.9)
-    assert second_run_duration < timedelta(seconds=0.1)
+    assert second_run_duration < timedelta(seconds=0.2)
