@@ -1,0 +1,12 @@
+[tool.coverage.run]
+branch = true
+source = ["src"]
+include = ["*.py"]
+omit = ["build_support/test/unit_tests/test_module/**/__init__.py", "build_support/test/unit_tests/test_module/**/conftest.py", "build_support/test/unit_tests/test_module/*/test_*.py"]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+
+[tool.coverage.html]
+directory = "coverage_html_report"

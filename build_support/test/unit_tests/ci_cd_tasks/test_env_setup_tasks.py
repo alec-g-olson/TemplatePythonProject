@@ -6,7 +6,6 @@ from unittest.mock import patch
 import pytest
 import yaml
 from pydantic import ValidationError
-from unit_tests.conftest import mock_project_versions
 
 from build_support.ci_cd_tasks.env_setup_tasks import (
     Clean,
@@ -17,13 +16,14 @@ from build_support.ci_cd_tasks.env_setup_tasks import (
     SetupProdEnvironment,
 )
 from build_support.ci_cd_tasks.task_node import BasicTaskInfo
+from build_support.ci_cd_vars.build_paths import get_git_info_yaml
 from build_support.ci_cd_vars.docker_vars import DockerTarget, get_docker_build_command
-from build_support.ci_cd_vars.file_and_dir_path_vars import (
-    get_build_dir,
-    get_git_info_yaml,
-)
 from build_support.ci_cd_vars.project_setting_vars import get_pulumi_version
-from build_support.ci_cd_vars.project_structure import get_feature_test_scratch_folder
+from build_support.ci_cd_vars.project_structure import (
+    get_build_dir,
+    get_feature_test_scratch_folder,
+)
+from build_support.ci_cd_vars.subproject_structure import SubprojectContext
 
 
 def test_build_dev_env_requires(basic_task_info: BasicTaskInfo) -> None:
@@ -186,23 +186,31 @@ def test_run_clean(basic_task_info: BasicTaskInfo) -> None:
         assert not folder.exists()
 
 
-git_info_data_dict: dict[Any, Any] = {
-    "branch": "some_branch_name",
-    "tags": mock_project_versions,
-}
+@pytest.fixture
+def git_info_data_dict(mock_project_versions_list: list[str]) -> dict[Any, Any]:
+    """Returns mock git info data dictionary for GitInfo testing."""
+    return {
+        "branch": "some_branch_name",
+        "tags": mock_project_versions_list,
+        "modified_subprojects": ["build_support", "pypi_package"],
+        "dockerfile_modified": False,
+        "poetry_lock_file_modified": False,
+    }
 
 
 @pytest.fixture
-def git_info_yaml_str() -> str:
+def git_info_yaml_str(git_info_data_dict: dict[Any, Any]) -> str:
     return yaml.dump(git_info_data_dict)
 
 
-def test_load_git_info(git_info_yaml_str: str) -> None:
+def test_load_git_info(
+    git_info_yaml_str: str, git_info_data_dict: dict[Any, Any]
+) -> None:
     git_info = GitInfo.from_yaml(git_info_yaml_str)
     assert git_info == GitInfo.model_validate(git_info_data_dict)
 
 
-def test_load_git_info_bad_branch() -> None:
+def test_load_git_info_bad_branch(git_info_data_dict: dict[Any, Any]) -> None:
     bad_dict = copy(git_info_data_dict)
     bad_dict["branch"] = 4
     git_info_yaml_str = yaml.dump(bad_dict)
@@ -210,7 +218,7 @@ def test_load_git_info_bad_branch() -> None:
         GitInfo.from_yaml(git_info_yaml_str)
 
 
-def test_load_git_info_bad_tags_not_list() -> None:
+def test_load_git_info_bad_tags_not_list(git_info_data_dict: dict[Any, Any]) -> None:
     bad_dict = copy(git_info_data_dict)
     bad_dict["tags"] = "0.0.0"
     git_info_yaml_str = yaml.dump(bad_dict)
@@ -218,7 +226,9 @@ def test_load_git_info_bad_tags_not_list() -> None:
         GitInfo.from_yaml(git_info_yaml_str)
 
 
-def test_load_git_info_bad_tags_not_list_of_str() -> None:
+def test_load_git_info_bad_tags_not_list_of_str(
+    git_info_data_dict: dict[Any, Any],
+) -> None:
     bad_dict = copy(git_info_data_dict)
     bad_dict["tags"] = [0, 1, "0.1.0"]
     git_info_yaml_str = yaml.dump(bad_dict)
@@ -226,7 +236,9 @@ def test_load_git_info_bad_tags_not_list_of_str() -> None:
         GitInfo.from_yaml(git_info_yaml_str)
 
 
-def test_dump_git_info(git_info_yaml_str: str) -> None:
+def test_dump_git_info(
+    git_info_yaml_str: str, git_info_data_dict: dict[Any, Any]
+) -> None:
     git_info = GitInfo.model_validate(git_info_data_dict)
     assert git_info.to_yaml() == git_info_yaml_str
 
@@ -247,7 +259,13 @@ def test_get_primary_branch_name() -> None:
 def test_get_ticket_id(branch_name: str, ticket_id: str | None) -> None:
     assert (
         GitInfo.model_validate(
-            {"branch": branch_name, "tags": ["some", "tags"]}
+            {
+                "branch": branch_name,
+                "tags": ["some", "tags"],
+                "modified_subprojects": [],
+                "dockerfile_modified": False,
+                "poetry_lock_file_modified": False,
+            }
         ).get_ticket_id()
         == ticket_id
     )
@@ -266,14 +284,24 @@ def test_run_get_git_info(basic_task_info: BasicTaskInfo) -> None:
         patch(
             "build_support.ci_cd_tasks.env_setup_tasks.get_local_tags"
         ) as get_tags_mock,
+        patch(
+            "build_support.ci_cd_tasks.env_setup_tasks.get_modified_files"
+        ) as get_modified_files_mock,
+        patch(
+            "build_support.ci_cd_tasks.env_setup_tasks.get_modified_subprojects"
+        ) as get_modified_subprojects_mock,
         patch("build_support.ci_cd_tasks.env_setup_tasks.git_fetch") as git_fetch_mock,
     ):
         branch_name = "some_branch"
         # Some tags added to the repo might be for convenience and not strictly version
         # tags.  This should be allowed behavior.
         tags = ["some_non_version_tag", "0.0.0", "0.1.0"]
+        modified_files: list[Path] = []
+        modified_subprojects = [SubprojectContext.BUILD_SUPPORT, SubprojectContext.PYPI]
         get_branch_mock.return_value = branch_name
         get_tags_mock.return_value = tags
+        get_modified_subprojects_mock.return_value = modified_subprojects
+        get_modified_files_mock.return_value = modified_files
         git_info_yaml_dest = get_git_info_yaml(
             project_root=basic_task_info.docker_project_root
         )
@@ -285,6 +313,16 @@ def test_run_get_git_info(basic_task_info: BasicTaskInfo) -> None:
             local_gid=basic_task_info.local_gid,
             local_user_env=basic_task_info.local_user_env,
         )
+        get_modified_subprojects_mock.assert_called_once_with(
+            modified_files=modified_files,
+            project_root=basic_task_info.docker_project_root,
+        )
         observed_git_info = GitInfo.from_yaml(git_info_yaml_dest.read_text())
-        expected_git_info = GitInfo(branch=branch_name, tags=tags)
+        expected_git_info = GitInfo(
+            branch=branch_name,
+            tags=tags,
+            modified_subprojects=modified_subprojects,
+            dockerfile_modified=False,
+            poetry_lock_file_modified=False,
+        )
         assert observed_git_info == expected_git_info

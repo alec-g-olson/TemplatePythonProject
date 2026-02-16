@@ -6,14 +6,21 @@ Attributes:
 
 import re
 from collections.abc import Iterator
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import override
 
 from junitparser import JUnitXml
+from tomlkit import TOMLDocument, document, dumps, table
 
-from build_support.ci_cd_tasks.env_setup_tasks import GetGitInfo, SetupDevEnvironment
+from build_support.ci_cd_tasks.env_setup_tasks import (
+    GetGitInfo,
+    GitInfo,
+    SetupDevEnvironment,
+)
 from build_support.ci_cd_tasks.task_node import PerSubprojectTask, TaskNode
+from build_support.ci_cd_vars.build_paths import get_git_info_yaml
 from build_support.ci_cd_vars.docker_vars import (
     DockerTarget,
     get_base_docker_command_for_image,
@@ -26,7 +33,11 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_all_test_folders,
 )
 from build_support.ci_cd_vars.machine_introspection_vars import THREADS_AVAILABLE
-from build_support.ci_cd_vars.project_structure import get_feature_test_scratch_folder
+from build_support.ci_cd_vars.project_setting_vars import get_pyproject_toml_data
+from build_support.ci_cd_vars.project_structure import (
+    get_feature_test_scratch_folder,
+    get_test_resource_dir,
+)
 from build_support.ci_cd_vars.subproject_structure import (
     PythonSubproject,
     SubprojectContext,
@@ -335,6 +346,26 @@ class ValidatePythonStyle(TaskNode):
         )
 
 
+def get_subprojects_to_test(project_root: Path) -> list[SubprojectContext]:
+    """Gets the list of subprojects that should be tested.
+
+    If the Dockerfile has been updated or the python dependencies have been updated
+    then all subprojects should be tested.
+
+    Args:
+        project_root (Path): The path to this project's root.
+
+    Returns:
+        list[SubprojectContext]: The list of subprojects that should be tested.
+    """
+    git_info = GitInfo.from_yaml(
+        get_git_info_yaml(project_root=project_root).read_text()
+    )
+    if git_info.dockerfile_modified or git_info.poetry_lock_file_modified:
+        return get_sorted_subproject_contexts()
+    return git_info.modified_subprojects
+
+
 class AllSubprojectUnitTests(TaskNode):
     """Task for running unit tests in all subprojects."""
 
@@ -368,10 +399,92 @@ class UnitTestInfo:
 
     src_file_path: Path
     test_file_path: Path
+    coverage_config_path: Path
 
 
 class SubprojectUnitTests(PerSubprojectTask):
     """Task for running unit tests in a single subproject."""
+
+    def get_coverage_settings(self) -> TOMLDocument:
+        """Gets the coverage settings from pyproject.toml.
+
+        Returns:
+            TOMLDocument: The coverage settings section from pyproject.toml as
+                TOMLDocument.
+        """
+        pyproject_data = get_pyproject_toml_data(project_root=self.docker_project_root)
+        return pyproject_data["tool"]["coverage"]  # type: ignore[index, return-value]
+
+    def build_omit_list(self, unit_test_info: UnitTestInfo) -> list[str]:
+        """Builds the list of omit patterns for a coverage config file.
+
+        Args:
+            unit_test_info (UnitTestInfo): Information about the unit test being run.
+
+        Returns:
+            list[str]: List of omit patterns to exclude all test files except the
+                target.
+        """
+        test_file_name = unit_test_info.test_file_path.name
+        test_file_parent = unit_test_info.test_file_path.parent
+        # Build omit patterns for all test files except the one we want
+        test_files_to_omit = [
+            test_file.name
+            for test_file in test_file_parent.glob("test_*.py")
+            if test_file.name != test_file_name
+        ]
+        test_file_parent_relative = test_file_parent.relative_to(
+            self.docker_project_root
+        )
+        test_files_to_omit_relative = [
+            str(test_file_parent_relative.joinpath(pattern))
+            for pattern in test_files_to_omit
+        ]
+        test_file_parent_relative_str = str(test_file_parent_relative)
+        return [
+            *test_files_to_omit_relative,
+            f"{test_file_parent_relative_str}/*/test_*.py",
+            f"{test_file_parent_relative_str}/**/__init__.py",
+            f"{test_file_parent_relative_str}/**/conftest.py",
+        ]
+
+    def write_coverage_config_file(
+        self, unit_test_info: UnitTestInfo, coverage_settings: TOMLDocument
+    ) -> Path:
+        """Writes a coverage config file in TOML format.
+
+        Preserves all existing coverage settings from pyproject.toml and only
+        updates the `tool.coverage.run.omit` field with test-specific omit patterns.
+
+        Args:
+            unit_test_info (UnitTestInfo): Information about the unit test being run.
+            coverage_settings (TOMLDocument): The coverage settings section from
+                pyproject.toml.
+
+        Returns:
+            Path: Path to the created config file.
+        """
+        coverage_config_path = unit_test_info.coverage_config_path
+        coverage_config_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Build omit list for this specific test file
+        new_omit_list = self.build_omit_list(unit_test_info=unit_test_info)
+
+        # Combine the new omit list with existing configuration settings
+        coverage_config = deepcopy(coverage_settings)
+        if "run" not in coverage_config:
+            coverage_config["run"] = table()
+        existing_omit = coverage_config["run"].get(  # type: ignore[union-attr]
+            "omit", []
+        )
+        merged_omit = list(dict.fromkeys(list(existing_omit) + new_omit_list))
+        coverage_config["run"]["omit"] = merged_omit  # type: ignore[index]
+
+        # Write TOML file
+        config_doc = document()
+        config_doc["tool"] = {"coverage": coverage_config}
+        coverage_config_path.write_text(dumps(config_doc))
+        return coverage_config_path
 
     @staticmethod
     def get_module_from_path(src_file_path: Path, subproject: PythonSubproject) -> str:
@@ -413,14 +526,29 @@ class SubprojectUnitTests(PerSubprojectTask):
                 test_file_updated = FileCacheEngine.get_last_modified_time(
                     file_path=test_file
                 )
+                resource_dir = get_test_resource_dir(test_file=test_file)
+                most_recent_resource_update = (
+                    FileCacheEngine.get_most_recent_file_update_in_dir(
+                        directory=resource_dir
+                    )
+                )
                 test_file_info = file_cache.get_test_info_for_file(file_path=test_file)
                 if (
                     test_file_info.tests_passed is None
                     or test_file_info.tests_passed < src_file_updated
                     or test_file_info.tests_passed < test_file_updated
                     or test_file_info.tests_passed < most_recent_conftest_update
+                    or test_file_info.tests_passed < most_recent_resource_update
                 ):
-                    yield UnitTestInfo(src_file_path=src_file, test_file_path=test_file)
+                    test_file_name = test_file.stem
+                    coverage_config_path = self.subproject.get_build_dir().joinpath(
+                        f"coverage_config_{test_file_name}.toml"
+                    )
+                    yield UnitTestInfo(
+                        src_file_path=src_file,
+                        test_file_path=test_file,
+                        coverage_config_path=coverage_config_path,
+                    )
             else:
                 msg = f"Expected {test_file} to exist!"
                 raise ValueError(msg)
@@ -433,12 +561,9 @@ class SubprojectUnitTests(PerSubprojectTask):
             list[TaskNode]: A list of tasks required to unit test the subproject.
         """
         required_tasks: list[TaskNode] = [
-            SetupDevEnvironment(basic_task_info=self.get_basic_task_info())
+            SetupDevEnvironment(basic_task_info=self.get_basic_task_info()),
+            GetGitInfo(basic_task_info=self.get_basic_task_info()),
         ]
-        if self.subproject_context == SubprojectContext.BUILD_SUPPORT:
-            required_tasks.append(
-                GetGitInfo(basic_task_info=self.get_basic_task_info())
-            )
         return required_tasks
 
     @override
@@ -448,6 +573,10 @@ class SubprojectUnitTests(PerSubprojectTask):
         Returns:
             None
         """
+        if self.subproject_context not in get_subprojects_to_test(
+            project_root=self.docker_project_root
+        ):
+            return
         dev_docker_command = get_docker_command_for_image(
             non_docker_project_root=self.non_docker_project_root,
             docker_project_root=self.docker_project_root,
@@ -457,11 +586,16 @@ class SubprojectUnitTests(PerSubprojectTask):
             subproject_context=self.subproject_context,
             project_root=self.docker_project_root,
         )
+        coverage_settings = self.get_coverage_settings()
         src_files_tested = 0
         for unit_test_info in self.get_unit_tests_to_run(file_cache=file_cache):
             src_files_tested += 1
             src_module = SubprojectUnitTests.get_module_from_path(
                 src_file_path=unit_test_info.src_file_path, subproject=self.subproject
+            )
+            test_file_parent = unit_test_info.test_file_path.parent
+            coverage_config_path = self.write_coverage_config_file(
+                unit_test_info=unit_test_info, coverage_settings=coverage_settings
             )
             run_process(
                 args=concatenate_args(
@@ -473,6 +607,8 @@ class SubprojectUnitTests(PerSubprojectTask):
                         "--cov-report",
                         "term-missing",
                         f"--cov={src_module}",
+                        f"--cov={test_file_parent}",
+                        f"--cov-config={coverage_config_path}",
                         unit_test_info.test_file_path,
                     ]
                 )
@@ -549,10 +685,11 @@ class SubprojectFeatureTests(PerSubprojectTask):
             list[TaskNode]: A list of tasks required to feature test the subproject.
         """
         required_tasks: list[TaskNode] = [
+            GetGitInfo(basic_task_info=self.get_basic_task_info()),
             SubprojectUnitTests(
                 basic_task_info=self.get_basic_task_info(),
                 subproject_context=self.subproject_context,
-            )
+            ),
         ]
         if self.subproject_context == SubprojectContext.BUILD_SUPPORT:
             required_tasks.extend(
@@ -587,13 +724,19 @@ class SubprojectFeatureTests(PerSubprojectTask):
             if FEATURE_TEST_FILE_NAME_REGEX.match(file.name)
         ]
 
-        # Update feature test file timestamps
         for test_file in test_files:
+            resource_dir = get_test_resource_dir(test_file=test_file)
+            most_recent_resource_update = (
+                FileCacheEngine.get_most_recent_file_update_in_dir(
+                    directory=resource_dir
+                )
+            )
             test_file_info = file_cache.get_test_info_for_file(file_path=test_file)
             if (
                 test_file_info.tests_passed is None
                 or test_file_info.tests_passed < most_recent_conftest_update
                 or test_file_info.tests_passed < most_recent_src_file_update
+                or test_file_info.tests_passed < most_recent_resource_update
             ):
                 yield test_file
 
@@ -604,6 +747,10 @@ class SubprojectFeatureTests(PerSubprojectTask):
         Returns:
             None
         """
+        if self.subproject_context not in get_subprojects_to_test(
+            project_root=self.docker_project_root
+        ):
+            return
         if (
             self.ci_cd_feature_test_mode
             and self.subproject_context == SubprojectContext.BUILD_SUPPORT

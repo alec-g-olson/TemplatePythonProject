@@ -64,7 +64,7 @@ enable_error_code = [
 
 [tool.poetry]
 name = "template_python_project"
-version = "0.2.32"
+version = "0.2.33"
 license = "unlicense"
 packages = [{include = "template_python_project", from="pypi_package/src"}]
 description = "A project that can be used as a template to provide some CI/CD out of the box."
@@ -84,11 +84,9 @@ optional = true
 
 [tool.poetry.group.build.dependencies]
 gitpython = "^3.1"
-junitparser = "^3.2"
+junitparser = "^4.0"
 pyyaml = "^6.0"
 types-PyYAML = "^6.0"
-requests = "^2.32"
-types-requests = "^2.32"
 tomlkit = "^0.13"
 
 [tool.poetry.group.dev]
@@ -96,13 +94,12 @@ optional = true
 
 [tool.poetry.group.dev.dependencies]
 bandit = {extras = ["baseline", "toml"], version = "^1.8"}
-mypy = "^1.16"
+mypy = "^1.17"
 pytest = "^8.4"
 pytest-cov = "^6.2"
-pytest-xdist = "^3.7"
-responses = "^0.25"
+pytest-xdist = "^3.8"
 requests = "^2.32"
-ruff = "0.11.13"  # When upgrading ensure we run all stable rules and exclude previews
+ruff = "0.12.4"  # When upgrading ensure we run all stable rules and exclude previews
 sphinx = "^8.2"
 sphinx-rtd-theme = "^3.0"
 types-requests = "^2.32"
@@ -111,8 +108,8 @@ types-requests = "^2.32"
 optional = true
 
 [tool.poetry.group.pulumi.dependencies]
-pulumi = "3.177.0"  # If changed here change PULUMI_VERSION in Dockerfile
-pulumi-aws = "^6.82"
+pulumi = "3.185.0"  # If changed here change PULUMI_VERSION in Dockerfile
+pulumi-aws = "^7.1"
 
 [build-system]
 requires = ["poetry-core==2.1.3"]  # If changed here change POETRY_VERSION in Dockerfile

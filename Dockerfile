@@ -81,7 +81,7 @@ FROM base AS pulumi
 RUN poetry install --no-root --with pulumi
 
 # make sure to update tool.poetry.group.pulumi.dependencies.pulumi in pyproject.toml
-ARG PULUMI_VERSION=3.177.0
+ARG PULUMI_VERSION=3.185.0
 
 ENV PULUMI_VERSION=$PULUMI_VERSION
 ENV PULUMI_HOME="/root/.pulumi/"

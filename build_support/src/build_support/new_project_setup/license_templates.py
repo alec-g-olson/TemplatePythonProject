@@ -1,25 +1,21 @@
 """Module for handling licence template information.
 
+License templates are stored as committed resource files in the
+``license_templates_resources/`` directory adjacent to this module.
+Each file is named after its license key (e.g. ``mit``, ``gpl-3.0``)
+and contains the full template body text.
+
 Attributes:
-    | GIT_HUB_TEMPLATE_URL: The GitHub URL we make API call to in order to get license
-        templates.
     | ALL_RIGHTS_RESERVED_KEY: The value we use to indicate we want to use an all
         rights reserved license template.
     | ALL_RIGHTS_RESERVED_TEMPLATE: A string containing an all rights reserved
         template.
-    | REAL_PROJECT_ROOT: A path to the root of this project.
-    | REAL_LICENSE_TEMPLATE_DIR: A path to a folder that will cache license templates.
+    | LICENSE_TEMPLATES_DIR: A path to the committed resource directory containing
+        license template files.
 """
 
-import json
 from pathlib import Path
-from time import sleep
 
-import requests
-
-from build_support.ci_cd_vars.file_and_dir_path_vars import get_license_templates_dir
-
-GIT_HUB_TEMPLATE_URL = "https://api.github.com/licenses"
 ALL_RIGHTS_RESERVED_KEY = "all-rights-reserved"
 ALL_RIGHTS_RESERVED_TEMPLATE = (
     "All Rights Reserved\n"
@@ -35,39 +31,7 @@ ALL_RIGHTS_RESERVED_TEMPLATE = (
     "THE SOFTWARE.\n"
 )
 
-
-#######################################################################################
-# To avoid rate limiting we are caching the calls made to GitHub as files.  The
-# "@cache" decorator is not as clean as a solution as it would initially appear,
-# because each test calls it again in a new context.  To ensure that we don't call
-# out to GitHub during each test, we have "hard coded" the real project root so that
-# all test calls use the same folder.
-#######################################################################################
-REAL_PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.parent
-REAL_LICENSE_TEMPLATE_DIR = get_license_templates_dir(project_root=REAL_PROJECT_ROOT)
-
-
-def get_github_license_template_info_blobs() -> list[dict[str, str]]:
-    """Gets all the info for GitHub license templates.
-
-    Returns:
-        list[dict[str, str]]: The GitHub license template information.
-    """
-    license_template_info_blobs = REAL_LICENSE_TEMPLATE_DIR.joinpath(
-        "license_template_info_blobs.json"
-    )
-    template_info_blobs: list[dict[str, str]]
-    if license_template_info_blobs.exists():
-        template_info_blobs = json.loads(license_template_info_blobs.read_text())
-    else:
-        sleep(0.1)  # avoid rate limiting
-        template_info_blobs = json.loads(
-            requests.get(url=GIT_HUB_TEMPLATE_URL, timeout=30).text
-        )
-        license_template_info_blobs.write_text(
-            json.dumps(template_info_blobs, indent=2)
-        )
-    return template_info_blobs
+LICENSE_TEMPLATES_DIR = Path(__file__).parent / "license_templates"
 
 
 def get_licenses_with_templates() -> list[str]:
@@ -77,9 +41,8 @@ def get_licenses_with_templates() -> list[str]:
         list[str]: A list of all valid template names.
     """
     licenses_with_templates = [ALL_RIGHTS_RESERVED_KEY]
-    supported_github_license_data = get_github_license_template_info_blobs()
     licenses_with_templates.extend(
-        blob["key"] for blob in supported_github_license_data
+        sorted(f.name for f in LICENSE_TEMPLATES_DIR.iterdir() if f.is_file())
     )
     return licenses_with_templates
 
@@ -117,16 +80,5 @@ def get_template_for_license(template_key: str) -> str:
         raise ValueError(msg)
     if template_key_lower == ALL_RIGHTS_RESERVED_KEY:
         return ALL_RIGHTS_RESERVED_TEMPLATE
-    license_template_file = REAL_LICENSE_TEMPLATE_DIR.joinpath(template_key_lower)
-    if license_template_file.exists():
-        template = license_template_file.read_text()
-    else:
-        supported_github_license_data = get_github_license_template_info_blobs()
-        blob_by_key = {blob["key"]: blob for blob in supported_github_license_data}
-        template_info = blob_by_key[template_key_lower]
-        sleep(0.1)  # avoid rate limiting
-        template = json.loads(requests.get(url=template_info["url"], timeout=30).text)[
-            "body"
-        ]
-        license_template_file.write_text(template)
-    return template
+    license_template_file = LICENSE_TEMPLATES_DIR / template_key_lower
+    return license_template_file.read_text()

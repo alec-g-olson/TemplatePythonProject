@@ -1,7 +1,7 @@
 from unittest.mock import call, patch
 
 import pytest
-from unit_tests.empty_function_check import is_an_empty_function
+from test_utils.empty_function_check import is_an_empty_function
 
 from build_support.ci_cd_tasks.build_tasks import BuildAll, BuildDocs, BuildPypi
 from build_support.ci_cd_tasks.env_setup_tasks import SetupProdEnvironment
@@ -10,21 +10,20 @@ from build_support.ci_cd_tasks.validation_tasks import (
     SubprojectUnitTests,
     ValidatePythonStyle,
 )
-from build_support.ci_cd_vars.docker_vars import (
-    DockerTarget,
-    get_docker_command_for_image,
-)
-from build_support.ci_cd_vars.file_and_dir_path_vars import (
+from build_support.ci_cd_vars.build_paths import (
     get_build_docs_build_dir,
     get_build_docs_source_dir,
     get_dist_dir,
-    get_sphinx_conf_dir,
+)
+from build_support.ci_cd_vars.docker_vars import (
+    DockerTarget,
+    get_docker_command_for_image,
 )
 from build_support.ci_cd_vars.project_setting_vars import (
     get_project_name,
     get_project_version,
 )
-from build_support.ci_cd_vars.project_structure import get_docs_dir
+from build_support.ci_cd_vars.project_structure import get_docs_dir, get_sphinx_conf_dir
 from build_support.ci_cd_vars.subproject_structure import (
     SubprojectContext,
     get_python_subproject,

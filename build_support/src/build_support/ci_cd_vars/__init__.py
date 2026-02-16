@@ -4,6 +4,8 @@ The functions, constants, and enums in these files are held here so that they ca
 imported to tasks in ci_cd_tasks without fear of circular dependencies.
 
 Modules:
+    | build_paths: Contains functions for paths to files and directories within the
+        build directory.
     | file_and_dir_path_vars: All path variables and enforcement of project
         structure should go here.
     | git_status_vars: Holds functions that reflect the current git status.

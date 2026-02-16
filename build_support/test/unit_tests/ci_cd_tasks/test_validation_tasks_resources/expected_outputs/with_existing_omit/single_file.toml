@@ -1,0 +1,9 @@
+[tool.coverage.run]
+branch = true
+parallel = true
+concurrency = ["multiprocessing", "thread"]
+omit = ["another_file.py", "build_support/test/unit_tests/test_module/**/__init__.py", "build_support/test/unit_tests/test_module/**/conftest.py", "build_support/test/unit_tests/test_module/*/test_*.py", "existing_file.py"]
+
+[tool.coverage.report]
+fail_under = 100
+exclude_lines = ["pragma: no cov"]

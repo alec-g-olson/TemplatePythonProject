@@ -6,9 +6,13 @@ from _pytest.fixtures import SubRequest
 from git import Repo
 
 from build_support.ci_cd_tasks.env_setup_tasks import GitInfo
-from build_support.ci_cd_vars.file_and_dir_path_vars import get_git_info_yaml
+from build_support.ci_cd_vars.build_paths import get_git_info_yaml
 from build_support.ci_cd_vars.git_status_vars import MAIN_BRANCH_NAME
-from build_support.ci_cd_vars.project_structure import get_build_dir, maybe_build_dir
+from build_support.ci_cd_vars.project_structure import (
+    get_build_dir,
+    get_test_resource_dir,
+    maybe_build_dir,
+)
 from build_support.ci_cd_vars.subproject_structure import (
     PythonSubproject,
     SubprojectContext,
@@ -98,3 +102,20 @@ def mock_remote_git_repo(mock_remote_git_folder: Path) -> Repo:
     )
     repo.index.commit("initial remote commit")
     return repo
+
+
+@pytest.fixture
+def test_resource_dir(request: SubRequest) -> Path:
+    """Return the resource directory for the requesting test file.
+
+    Derives the path automatically from the test file's location
+    using the ``{test_file_stem}_resources`` convention. This is
+    the canonical way for test code to access resource files.
+
+    Args:
+        request (SubRequest): The pytest request object.
+
+    Returns:
+        Path: Path to the test file's resource directory.
+    """
+    return get_test_resource_dir(test_file=request.path)

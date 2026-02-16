@@ -32,13 +32,14 @@ def test_update_pyproject_toml(tmp_path: Path, real_project_root_dir: Path) -> N
         project_root=tmp_project_path, new_project_settings=new_project_settings
     )
 
-    expected_data["tool"]["poetry"]["name"] = new_project_settings.name
-    expected_data["tool"]["poetry"]["version"] = "0.0.0"
-    expected_data["tool"]["poetry"]["license"] = new_project_settings.license
-    expected_data["tool"]["poetry"]["authors"] = [
+    expected_poetry = expected_data["tool"]["poetry"]  # type: ignore[index]
+    expected_poetry["name"] = new_project_settings.name  # type: ignore[index]
+    expected_poetry["version"] = "0.0.0"  # type: ignore[index]
+    expected_poetry["license"] = new_project_settings.license  # type: ignore[index]
+    expected_poetry["authors"] = [  # type: ignore[index]
         new_project_settings.organization.formatted_name_and_email()
     ]
-    expected_data["tool"]["poetry"]["packages"][0]["include"] = (
+    expected_poetry["packages"][0]["include"] = (  # type: ignore[index]
         new_project_settings.name
     )
 

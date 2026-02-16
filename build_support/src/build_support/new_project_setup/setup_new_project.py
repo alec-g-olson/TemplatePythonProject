@@ -8,9 +8,11 @@ from typing import override
 
 from build_support.ci_cd_tasks.env_setup_tasks import Clean
 from build_support.ci_cd_tasks.task_node import TaskNode
-from build_support.ci_cd_vars.file_and_dir_path_vars import get_new_project_settings
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
-from build_support.ci_cd_vars.project_structure import get_license_file
+from build_support.ci_cd_vars.project_structure import (
+    get_license_file,
+    get_new_project_settings,
+)
 from build_support.new_project_setup.new_project_data_models import ProjectSettings
 from build_support.new_project_setup.setup_license import (
     write_new_license_from_template,

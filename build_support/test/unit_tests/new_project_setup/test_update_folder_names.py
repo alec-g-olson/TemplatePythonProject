@@ -2,6 +2,10 @@ import shutil
 from pathlib import Path
 
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
+from build_support.ci_cd_vars.project_structure import (
+    get_build_dir,
+    get_feature_test_scratch_folder,
+)
 from build_support.ci_cd_vars.subproject_structure import (
     SubprojectContext,
     get_python_subproject,
@@ -17,7 +21,28 @@ from build_support.new_project_setup.update_folder_names import (
 
 def test_update_folders_in_project(tmp_path: Path, real_project_root_dir: Path) -> None:
     tmp_project_path = tmp_path.joinpath("template_python_project")
-    shutil.copytree(real_project_root_dir, tmp_project_path)
+    # Exclude build artifacts to avoid recursive directory structures and long paths
+    build_folder_name = get_build_dir(project_root=real_project_root_dir).name
+    feature_scratch_name = get_feature_test_scratch_folder(
+        project_root=real_project_root_dir
+    ).name
+
+    # Copy everything from real project except .git, build, and scratch folders
+    tmp_project_path.mkdir(parents=True, exist_ok=True)
+    for file_or_folder in real_project_root_dir.glob("*"):
+        name = file_or_folder.name
+        if name not in [
+            ".git",
+            ".idea",
+            build_folder_name,
+            feature_scratch_name,
+            ".pytest_cache",
+        ]:
+            dest = tmp_project_path.joinpath(name)
+            if file_or_folder.is_dir():
+                shutil.copytree(src=file_or_folder, dst=dest)
+            else:
+                shutil.copy(src=file_or_folder, dst=dest)
 
     expected_relative_path_strs = set()
 

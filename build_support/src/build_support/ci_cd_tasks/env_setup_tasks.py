@@ -12,18 +12,23 @@ from pydantic import BaseModel, Field
 from yaml import safe_dump, safe_load
 
 from build_support.ci_cd_tasks.task_node import TaskNode
+from build_support.ci_cd_vars.build_paths import get_git_info_yaml
 from build_support.ci_cd_vars.docker_vars import DockerTarget, get_docker_build_command
-from build_support.ci_cd_vars.file_and_dir_path_vars import (
-    get_build_dir,
-    get_git_info_yaml,
-)
 from build_support.ci_cd_vars.git_status_vars import (
+    dockerfile_was_modified,
     get_current_branch_name,
     get_local_tags,
+    get_modified_files,
+    get_modified_subprojects,
     git_fetch,
+    poetry_lock_file_was_modified,
 )
 from build_support.ci_cd_vars.project_setting_vars import get_pulumi_version
-from build_support.ci_cd_vars.project_structure import get_feature_test_scratch_folder
+from build_support.ci_cd_vars.project_structure import (
+    get_build_dir,
+    get_feature_test_scratch_folder,
+)
+from build_support.ci_cd_vars.subproject_structure import SubprojectContext
 from build_support.process_runner import run_process
 
 
@@ -169,6 +174,9 @@ class GitInfo(BaseModel):
 
     branch: str = Field(pattern=GIT_BRANCH_NAME_REGEX)
     tags: list[str]
+    modified_subprojects: list[SubprojectContext] = Field(default_factory=list)
+    dockerfile_modified: bool
+    poetry_lock_file_modified: bool
 
     @staticmethod
     def get_primary_branch_name() -> str:
@@ -211,7 +219,7 @@ class GitInfo(BaseModel):
         Returns:
             str: A YAML representation of this GitInfo instance.
         """
-        return safe_dump(self.model_dump())
+        return safe_dump(self.model_dump(mode="json"))
 
 
 class GetGitInfo(TaskNode):
@@ -239,9 +247,19 @@ class GetGitInfo(TaskNode):
             local_gid=self.local_gid,
             local_user_env=self.local_user_env,
         )
+        modified_files = get_modified_files(project_root=self.docker_project_root)
         get_git_info_yaml(project_root=self.docker_project_root).write_text(
             GitInfo(
                 branch=get_current_branch_name(project_root=self.docker_project_root),
                 tags=get_local_tags(project_root=self.docker_project_root),
+                modified_subprojects=get_modified_subprojects(
+                    modified_files=modified_files, project_root=self.docker_project_root
+                ),
+                dockerfile_modified=dockerfile_was_modified(
+                    modified_files=modified_files, project_root=self.docker_project_root
+                ),
+                poetry_lock_file_modified=poetry_lock_file_was_modified(
+                    modified_files=modified_files, project_root=self.docker_project_root
+                ),
             ).to_yaml()
         )

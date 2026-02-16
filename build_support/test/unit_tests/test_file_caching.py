@@ -260,3 +260,44 @@ def test_update_test_pass_timestamp(file_cache_engine: FileCacheEngine) -> None:
     assert file_cache_engine.get_test_info_for_file(test_file) == TestFileInfo(
         file_path=test_file, tests_passed=datetime_to_use
     )
+
+
+def test_get_most_recent_file_update_in_dir_nonexistent(tmp_path: Path) -> None:
+    non_existent = tmp_path / "does_not_exist"
+    result = FileCacheEngine.get_most_recent_file_update_in_dir(directory=non_existent)
+    assert result == datetime.min.replace(tzinfo=UTC)
+
+
+def test_get_most_recent_file_update_in_dir_empty(tmp_path: Path) -> None:
+    empty_dir = tmp_path / "empty"
+    empty_dir.mkdir()
+    result = FileCacheEngine.get_most_recent_file_update_in_dir(directory=empty_dir)
+    assert result == datetime.min.replace(tzinfo=UTC)
+
+
+def test_get_most_recent_file_update_in_dir_with_files(tmp_path: Path) -> None:
+    resource_dir = tmp_path / "resources"
+    resource_dir.mkdir()
+    file_a = resource_dir / "a.txt"
+    file_a.write_text("aaa")
+    sleep(0.001)
+    file_b = resource_dir / "b.txt"
+    file_b.write_text("bbb")
+    result = FileCacheEngine.get_most_recent_file_update_in_dir(directory=resource_dir)
+    expected = FileCacheEngine.get_last_modified_time(file_path=file_b)
+    assert result == expected
+
+
+def test_get_most_recent_file_update_in_dir_nested(tmp_path: Path) -> None:
+    resource_dir = tmp_path / "resources"
+    resource_dir.mkdir()
+    sub_dir = resource_dir / "sub"
+    sub_dir.mkdir()
+    file_a = resource_dir / "a.txt"
+    file_a.write_text("aaa")
+    sleep(0.001)
+    nested_file = sub_dir / "nested.txt"
+    nested_file.write_text("nested")
+    result = FileCacheEngine.get_most_recent_file_update_in_dir(directory=resource_dir)
+    expected = FileCacheEngine.get_last_modified_time(file_path=nested_file)
+    assert result == expected

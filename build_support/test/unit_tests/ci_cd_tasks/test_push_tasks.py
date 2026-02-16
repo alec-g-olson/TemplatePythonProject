@@ -1,7 +1,7 @@
 from unittest.mock import patch
 
 import pytest
-from unit_tests.empty_function_check import is_an_empty_function
+from test_utils.empty_function_check import is_an_empty_function
 
 from build_support.ci_cd_tasks.build_tasks import BuildPypi
 from build_support.ci_cd_tasks.push_tasks import PushAll, PushPypi, PushTags

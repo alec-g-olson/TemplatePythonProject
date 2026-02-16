@@ -167,6 +167,13 @@ def test_get_test_dir(mock_subproject: PythonSubproject) -> None:
     )
 
 
+def test_get_test_utils_dir(mock_subproject: PythonSubproject) -> None:
+    assert (
+        mock_subproject.get_test_utils_dir()
+        == mock_subproject.get_test_dir().joinpath("test_utils")
+    )
+
+
 def test_get_test_suite_dir(
     mock_subproject: PythonSubproject, test_suite: PythonSubproject.TestSuite
 ) -> None:
