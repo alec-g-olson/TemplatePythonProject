@@ -5,6 +5,10 @@ successfully.  However, the values needed to make the new project should all be
 available in the new_project_settings.yaml, and the work should all be managed by
 MakeProjectFromTemplate task in the setup_new_project module.
 
+SubPackages:
+    | license_templates: Resource directory containing committed license template
+        files (not a Python package).
+
 Modules:
     | new_project_data_models: Contains the data models that can parse
         new_project_settings.yaml. Once parsed it is available in code.

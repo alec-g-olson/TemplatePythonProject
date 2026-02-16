@@ -27,23 +27,6 @@ def get_dist_dir(project_root: Path) -> Path:
     )
 
 
-def get_license_templates_dir(project_root: Path) -> Path:
-    """Gets the dir that will contain license templates used in building a new project.
-
-    Args:
-        project_root (Path): Path to this project's root.
-
-    Returns:
-        Path: Path to the directory that will contain license templates used in
-            building a new project.
-    """
-    return maybe_build_dir(
-        dir_to_build=get_build_dir(project_root=project_root).joinpath(
-            "license_templates"
-        )
-    )
-
-
 def get_build_docs_dir(project_root: Path) -> Path:
     """Gets the dir that will be used for building the documentation of this project.
 
