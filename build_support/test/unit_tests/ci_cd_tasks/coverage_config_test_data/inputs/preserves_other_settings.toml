@@ -1,0 +1,11 @@
+[run]
+branch = true
+source = ["src"]
+include = ["*.py"]
+
+[report]
+precision = 2
+show_missing = true
+
+[html]
+directory = "coverage_html_report"

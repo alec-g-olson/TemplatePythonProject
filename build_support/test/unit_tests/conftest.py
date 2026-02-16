@@ -81,19 +81,25 @@ def pyproject_toml_data(project_version: str, project_name: str) -> TOMLDocument
 
     doc = document()
     doc["tool"] = table()
-    doc["tool"]["poetry"] = table()
-    doc["tool"]["poetry"]["name"] = project_name
-    doc["tool"]["poetry"]["version"] = project_version
+    tool = doc["tool"]
+    tool["poetry"] = table()  # type: ignore[index]
+    tool["poetry"]["name"] = project_name  # type: ignore[index]
+    tool["poetry"]["version"] = project_version  # type: ignore[index]
 
-    doc["tool"]["coverage"] = table()
-    doc["tool"]["coverage"]["run"] = table()
-    doc["tool"]["coverage"]["run"]["branch"] = True
-    doc["tool"]["coverage"]["run"]["parallel"] = True
-    doc["tool"]["coverage"]["run"]["concurrency"] = ["multiprocessing", "thread"]
+    tool["coverage"] = table()  # type: ignore[index]
+    tool["coverage"]["run"] = table()  # type: ignore[index]
+    tool["coverage"]["run"]["branch"] = True  # type: ignore[index]
+    tool["coverage"]["run"]["parallel"] = True  # type: ignore[index]
+    tool["coverage"]["run"]["concurrency"] = [  # type: ignore[index]
+        "multiprocessing",
+        "thread",
+    ]
 
-    doc["tool"]["coverage"]["report"] = table()
-    doc["tool"]["coverage"]["report"]["fail_under"] = 100
-    doc["tool"]["coverage"]["report"]["exclude_lines"] = ["pragma: no cov"]
+    tool["coverage"]["report"] = table()  # type: ignore[index]
+    tool["coverage"]["report"]["fail_under"] = 100  # type: ignore[index]
+    tool["coverage"]["report"]["exclude_lines"] = [  # type: ignore[index]
+        "pragma: no cov"
+    ]
 
     return doc
 

@@ -3,6 +3,9 @@ from pathlib import Path
 
 import pytest
 from _pytest.fixtures import SubRequest
+from feature_tests.conftest import (  # type: ignore[import-untyped]
+    run_command_and_save_logs,
+)
 
 from build_support.ci_cd_tasks.validation_tasks import (
     SubprojectFeatureTests,
@@ -20,9 +23,6 @@ from build_support.ci_cd_vars.subproject_structure import (
     get_python_subproject,
 )
 from build_support.dag_engine import BuildRunReport
-
-# Import from conftest - this works because conftest is auto-loaded by pytest
-from build_support.test.feature_tests.conftest import run_command_and_save_logs
 
 
 @pytest.mark.usefixtures("mock_lightweight_project_with_unit_tests_and_feature_tests")

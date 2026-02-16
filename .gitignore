@@ -2,4 +2,5 @@
 /test_scratch_folder/
 .idea
 .coverage
+.claude
 *.pyc

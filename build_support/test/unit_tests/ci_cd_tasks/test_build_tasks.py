@@ -1,7 +1,9 @@
 from unittest.mock import call, patch
 
 import pytest
-from test_utils.empty_function_check import is_an_empty_function
+from test_utils.empty_function_check import (  # type: ignore[import-untyped]
+    is_an_empty_function,
+)
 
 from build_support.ci_cd_tasks.build_tasks import BuildAll, BuildDocs, BuildPypi
 from build_support.ci_cd_tasks.env_setup_tasks import SetupProdEnvironment

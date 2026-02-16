@@ -44,8 +44,9 @@ def get_project_version(project_root: Path) -> str:
     Returns:
         str: The current version of the project.
     """
+    pyproject_data = get_pyproject_toml_data(project_root=project_root)
     version_str: str
-    version_str = get_pyproject_toml_data(project_root=project_root)["tool"]["poetry"][
+    version_str = pyproject_data["tool"]["poetry"][  # type: ignore[index, assignment]
         "version"
     ]
     if not ALLOWED_VERSION_REGEX.match(version_str):
@@ -90,7 +91,8 @@ def get_project_name(project_root: Path) -> str:
     Returns:
         str: The name of the project.
     """
-    return get_pyproject_toml_data(project_root=project_root)["tool"]["poetry"]["name"]
+    pyproject_data = get_pyproject_toml_data(project_root=project_root)
+    return pyproject_data["tool"]["poetry"]["name"]  # type: ignore[index, return-value]
 
 
 ########################################
