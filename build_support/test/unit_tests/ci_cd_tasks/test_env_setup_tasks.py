@@ -6,7 +6,6 @@ from unittest.mock import patch
 import pytest
 import yaml
 from pydantic import ValidationError
-from unit_tests.conftest import mock_project_versions
 
 from build_support.ci_cd_tasks.env_setup_tasks import (
     Clean,
@@ -187,26 +186,31 @@ def test_run_clean(basic_task_info: BasicTaskInfo) -> None:
         assert not folder.exists()
 
 
-git_info_data_dict: dict[Any, Any] = {
-    "branch": "some_branch_name",
-    "tags": mock_project_versions,
-    "modified_subprojects": ["build_support", "pypi_package"],
-    "dockerfile_modified": False,
-    "poetry_lock_file_modified": False,
-}
+@pytest.fixture
+def git_info_data_dict(mock_project_versions_list: list[str]) -> dict[Any, Any]:
+    """Returns mock git info data dictionary for GitInfo testing."""
+    return {
+        "branch": "some_branch_name",
+        "tags": mock_project_versions_list,
+        "modified_subprojects": ["build_support", "pypi_package"],
+        "dockerfile_modified": False,
+        "poetry_lock_file_modified": False,
+    }
 
 
 @pytest.fixture
-def git_info_yaml_str() -> str:
+def git_info_yaml_str(git_info_data_dict: dict[Any, Any]) -> str:
     return yaml.dump(git_info_data_dict)
 
 
-def test_load_git_info(git_info_yaml_str: str) -> None:
+def test_load_git_info(
+    git_info_yaml_str: str, git_info_data_dict: dict[Any, Any]
+) -> None:
     git_info = GitInfo.from_yaml(git_info_yaml_str)
     assert git_info == GitInfo.model_validate(git_info_data_dict)
 
 
-def test_load_git_info_bad_branch() -> None:
+def test_load_git_info_bad_branch(git_info_data_dict: dict[Any, Any]) -> None:
     bad_dict = copy(git_info_data_dict)
     bad_dict["branch"] = 4
     git_info_yaml_str = yaml.dump(bad_dict)
@@ -214,7 +218,7 @@ def test_load_git_info_bad_branch() -> None:
         GitInfo.from_yaml(git_info_yaml_str)
 
 
-def test_load_git_info_bad_tags_not_list() -> None:
+def test_load_git_info_bad_tags_not_list(git_info_data_dict: dict[Any, Any]) -> None:
     bad_dict = copy(git_info_data_dict)
     bad_dict["tags"] = "0.0.0"
     git_info_yaml_str = yaml.dump(bad_dict)
@@ -222,7 +226,9 @@ def test_load_git_info_bad_tags_not_list() -> None:
         GitInfo.from_yaml(git_info_yaml_str)
 
 
-def test_load_git_info_bad_tags_not_list_of_str() -> None:
+def test_load_git_info_bad_tags_not_list_of_str(
+    git_info_data_dict: dict[Any, Any],
+) -> None:
     bad_dict = copy(git_info_data_dict)
     bad_dict["tags"] = [0, 1, "0.1.0"]
     git_info_yaml_str = yaml.dump(bad_dict)
@@ -230,7 +236,9 @@ def test_load_git_info_bad_tags_not_list_of_str() -> None:
         GitInfo.from_yaml(git_info_yaml_str)
 
 
-def test_dump_git_info(git_info_yaml_str: str) -> None:
+def test_dump_git_info(
+    git_info_yaml_str: str, git_info_data_dict: dict[Any, Any]
+) -> None:
     git_info = GitInfo.model_validate(git_info_data_dict)
     assert git_info.to_yaml() == git_info_yaml_str
 

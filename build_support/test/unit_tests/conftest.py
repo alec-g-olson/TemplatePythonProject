@@ -13,9 +13,16 @@ from build_support.ci_cd_vars.project_structure import (
     get_pyproject_toml,
 )
 
+# Test parameterization constants
 mock_project_versions = ["0.0.0", "0.0.1", "0.1.0", "1.0.0", "1.0.0-dev.1"]
 mock_project_names = ["project_one", "project_two"]
 mock_local_user_ids = [(0, 0), (2, 1)]
+
+
+@pytest.fixture
+def mock_project_versions_list() -> list[str]:
+    """Returns the list of mock project versions for testing."""
+    return mock_project_versions
 
 
 @pytest.fixture(params=mock_project_versions)
@@ -78,7 +85,6 @@ def basic_task_info(
 @pytest.fixture
 def pyproject_toml_data(project_version: str, project_name: str) -> TOMLDocument:
     """The TOMLDocument that would be read from the pyproject toml."""
-
     doc = document()
     doc["tool"] = table()
     tool = doc["tool"]
