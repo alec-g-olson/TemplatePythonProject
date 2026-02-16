@@ -35,9 +35,7 @@ from pathlib import Path
 
 import pytest
 from _pytest.fixtures import SubRequest
-from feature_tests.conftest import (  # type: ignore[import-untyped]
-    run_command_and_save_logs,
-)
+from feature_tests.conftest import run_command_and_save_logs
 
 from build_support.ci_cd_tasks.validation_tasks import (
     SubprojectFeatureTests,

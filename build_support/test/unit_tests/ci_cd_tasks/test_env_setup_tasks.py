@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 import yaml
 from pydantic import ValidationError
-from unit_tests.conftest import mock_project_versions  # type: ignore[import-untyped]
+from unit_tests.conftest import mock_project_versions
 
 from build_support.ci_cd_tasks.env_setup_tasks import (
     Clean,

@@ -11,9 +11,7 @@ from unittest.mock import call, patch
 import pytest
 from _pytest.fixtures import SubRequest
 from junitparser import JUnitXml, TestCase, TestSuite
-from test_utils.empty_function_check import (  # type: ignore[import-untyped]
-    is_an_empty_function,
-)
+from test_utils.empty_function_check import is_an_empty_function
 from tomlkit import TOMLDocument, parse
 
 from build_support.ci_cd_tasks.env_setup_tasks import (

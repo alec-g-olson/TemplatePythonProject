@@ -113,7 +113,7 @@ def get_pulumi_version(project_root: Path) -> str:
     lock_data = tomllib.loads(lock_file.read_text())
     for package in lock_data["package"]:
         if package["name"] == "pulumi":
-            return package["version"]  # type: ignore[no-any-return]
+            return str(package["version"])
     msg = (
         "poetry.lock does not have a pulumi package installed, "
         "or is no longer a toml format."
