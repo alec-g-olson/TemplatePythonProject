@@ -11,7 +11,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        ref: ${{ github.event.push.base_ref }}
+        fetch-depth: 0
 
     - name: Push artifact
       run: make push
