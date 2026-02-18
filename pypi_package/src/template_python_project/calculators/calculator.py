@@ -1,27 +1,39 @@
-"""Module implementing calculator logic."""
+"""Domain engine for calculation operations.
+
+This module implements pure business logic for basic arithmetic operations.
+All functions accept only domain types (dataclasses and primitives) and
+communicate via dataclasses.
+
+Functions:
+    calculate: Execute an arithmetic operation and return the result.
+"""
 
 from template_python_project.calculators.data_models import (
     CalculationType,
-    CalculatorInput,
-    CalculatorOutput,
+    CalculationRequest,
+    CalculationResult,
 )
 
 
-def calculate_result(args: CalculatorInput) -> CalculatorOutput:
-    """Perform calculation based on the inputs.
+def calculate(request: CalculationRequest) -> CalculationResult:
+    """Perform arithmetic calculation based on the request.
 
     Args:
-      args (CalculatorInput): Input for calculation.
+        request (CalculationRequest): The calculation parameters including operation
+            type and two operands.
 
     Returns:
-      CalculatorOutput: Output of the calculation.
+        CalculationResult: The result of the calculation.
+
+    Raises:
+        ZeroDivisionError: If division by zero is attempted.
     """
-    if args.type_of_calc == CalculationType.ADD:
-        result = args.value1 + args.value2
-    elif args.type_of_calc == CalculationType.SUBTRACT:
-        result = args.value1 - args.value2
-    elif args.type_of_calc == CalculationType.MULTIPLY:
-        result = args.value1 * args.value2
-    else:
-        result = args.value1 / args.value2
-    return CalculatorOutput(result=result)
+    if request.operation == CalculationType.ADD:
+        result = request.value1 + request.value2
+    elif request.operation == CalculationType.SUBTRACT:
+        result = request.value1 - request.value2
+    elif request.operation == CalculationType.MULTIPLY:
+        result = request.value1 * request.value2
+    else:  # DIVIDE
+        result = request.value1 / request.value2
+    return CalculationResult(result=result)

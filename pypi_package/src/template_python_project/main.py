@@ -3,11 +3,9 @@
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 
-from template_python_project.calculators.calculator import calculate_result
-from template_python_project.calculators.data_models import (
-    CalculationType,
-    CalculatorInput,
-)
+from template_python_project.api.api import calculate
+from template_python_project.api.data_models import CalculatorInput, CalculatorOutput
+from template_python_project.calculators.data_models import CalculationType
 
 
 def parse_args(args: list[str] | None = None) -> Namespace:
@@ -53,12 +51,12 @@ def run_main(args: Namespace) -> None:
         None
 
     """
-    input_vals = CalculatorInput(
+    request: CalculatorInput = CalculatorInput(
         type_of_calc=CalculationType[args.type], value1=args.val1, value2=args.val2
     )
-    output = calculate_result(input_vals)
+    result: CalculatorOutput = calculate(request=request)
     with args.out_file.open("w") as out_writer:
-        out_writer.write(output.model_dump_json())
+        out_writer.write(result.model_dump_json())
 
 
 if __name__ == "__main__":  # pragma: no cov

@@ -1,48 +1,52 @@
+"""Tests for the calculator domain engine."""
+
 import pytest
-from template_python_project.calculators.calculator import calculate_result
+from template_python_project.calculators.calculator import calculate
 from template_python_project.calculators.data_models import (
+    CalculationRequest,
+    CalculationResult,
     CalculationType,
-    CalculatorInput,
-    CalculatorOutput,
 )
 
-calculate_results_test_cases = [
+_calculate_test_cases = [
     (
-        CalculatorInput(type_of_calc=CalculationType.ADD, value1=2, value2=1),
-        CalculatorOutput(result=3),
+        CalculationRequest(operation=CalculationType.ADD, value1=2, value2=1),
+        CalculationResult(result=3),
     ),
     (
-        CalculatorInput(type_of_calc=CalculationType.SUBTRACT, value1=1, value2=2),
-        CalculatorOutput(result=-1),
+        CalculationRequest(operation=CalculationType.SUBTRACT, value1=1, value2=2),
+        CalculationResult(result=-1),
     ),
     (
-        CalculatorInput(type_of_calc=CalculationType.MULTIPLY, value1=3, value2=3),
-        CalculatorOutput(result=9),
+        CalculationRequest(operation=CalculationType.MULTIPLY, value1=3, value2=3),
+        CalculationResult(result=9),
     ),
     (
-        CalculatorInput(type_of_calc=CalculationType.DIVIDE, value1=5, value2=2),
-        CalculatorOutput(result=2.5),
+        CalculationRequest(operation=CalculationType.DIVIDE, value1=5, value2=2),
+        CalculationResult(result=2.5),
     ),
 ]
 
 
-@pytest.mark.parametrize(("input_values", "result"), calculate_results_test_cases)
-def test_calculate_result(
-    input_values: CalculatorInput, result: CalculatorOutput
+@pytest.mark.parametrize(("request", "expected"), _calculate_test_cases)
+def test_calculate_produces_correct_result(
+    request: CalculationRequest, expected: CalculationResult
 ) -> None:
-    assert calculate_result(args=input_values) == result
+    """Each operation type produces the expected arithmetic result."""
+    assert calculate(request) == expected
 
 
-def test_calculate_result_all_types_covered() -> None:
-    assert len(
-        {input_value[0].type_of_calc for input_value in calculate_results_test_cases}
-    ) == len(CalculationType)
+def test_calculate_covers_all_operation_types() -> None:
+    """Test cases cover every member of CalculationType."""
+    tested_types = {case[0].operation for case in _calculate_test_cases}
+    assert tested_types == set(CalculationType)
 
 
-def test_divide_by_zero() -> None:
+def test_calculate_divide_by_zero_raises() -> None:
+    """Division by zero raises ZeroDivisionError."""
     with pytest.raises(ZeroDivisionError):
-        calculate_result(
-            args=CalculatorInput(
-                type_of_calc=CalculationType.DIVIDE, value1=199, value2=0
+        calculate(
+            CalculationRequest(
+                operation=CalculationType.DIVIDE, value1=199, value2=0
             )
         )
