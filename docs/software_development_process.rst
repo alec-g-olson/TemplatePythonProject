@@ -179,7 +179,8 @@ creating a new feature ticket is:
 
 1. The Product Manager creates a GitHub issue with a brief description of the need
 2. The Product Manager creates a branch from the GitHub issue (GitHub will automatically
-   name the branch as :code:`{ticket_id}-{short-description}`)
+   suggest :code:`{ticket_id}-{short-description}`; for this project, the short
+   description is optional and :code:`{ticket_id}` alone is also valid)
 3. The Product Manager creates a corresponding :code:`.rst` file in the :code:`docs/tickets`
    directory named :code:`{full-branch-name}.rst`, using the
    :doc:`ticket template <tickets/TEMPLATE>` as a starting point
@@ -306,11 +307,10 @@ Branching
 ^^^^^^^^^
 
 **One ticket = one branch.** Branches are created by the Product Manager when a ticket is
-first created in GitHub. Branch names must start with the ticket ID followed by a hyphen
-and a short description of the work, e.g., :code:`{ticket_id}-{description}`.  This format
-matches the default when you create a branch from a GitHub issue.  Our pipeline extracts
-the ticket ID from the branch name for checks such as requiring a corresponding feature
-test file.
+first created in GitHub. Branch names must start with the ticket ID.  An optional short
+description may be appended after a hyphen, e.g., :code:`{ticket_id}` or
+:code:`{ticket_id}-{description}`.  Our pipeline extracts the ticket ID from the branch
+name for checks such as requiring a corresponding feature test file.
 
 The same branch is used throughout the ticket lifecycle: first by the Product Manager to
 document requirements in :code:`docs/tickets`, and then by developers to implement the

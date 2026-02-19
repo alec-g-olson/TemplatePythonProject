@@ -11,7 +11,8 @@ This repo uses GitHub only to track the status and approvals of work done.
 The description of the work is in the [tickets](docs/tickets) directory.
 
 **One ticket = one branch.** Each ticket has exactly one associated GitHub branch, created
-when the ticket is opened. The branch name encodes the ticket ID and description.
+when the ticket is opened. The branch name starts with the ticket ID and may include a
+hyphenated description.
 
 1. Get the current branch name:
    ```bash

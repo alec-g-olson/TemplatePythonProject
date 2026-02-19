@@ -383,3 +383,14 @@ def mock_new_branch(
     mock_lightweight_project.remote().fetch()
     mock_lightweight_project.git.checkout(branch_name)
     return mock_lightweight_project.active_branch
+
+
+@pytest.fixture
+def mock_new_branch_without_description(
+    mock_remote_git_repo: Repo, mock_lightweight_project: Repo, current_ticket_name: str
+) -> Head:
+    """Create and check out a feature branch with only the ticket id."""
+    mock_remote_git_repo.create_head(current_ticket_name)
+    mock_lightweight_project.remote().fetch()
+    mock_lightweight_project.git.checkout(current_ticket_name)
+    return mock_lightweight_project.active_branch

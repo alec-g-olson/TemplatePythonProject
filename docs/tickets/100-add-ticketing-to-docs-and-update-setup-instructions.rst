@@ -17,7 +17,7 @@ User Flow
 2. The user must make a matching ticket file at
    ``docs/tickets/{full-branch-name}.rst`` where the filename exactly matches the
    branch name.  As a reminder, branch names follow the format
-   ``{ticket-id}-{short-description}``.
+   ``{ticket_id}`` or ``{ticket_id}-{short-description}``.
 
 Additional Documentation
 ~~~~~~~~~~~~~~~~~~~~~~~~

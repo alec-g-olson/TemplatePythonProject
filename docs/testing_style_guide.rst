@@ -138,8 +138,9 @@ folder and must follow this naming convention:
 
     test_{ticket_id}_{project_name}.py
 
-The ticket ID is the numeric portion of the branch name (e.g., ``42`` from
-``42-add-csv-export``).  The project name is the package name as declared in
+The ticket ID is the first segment of the branch name before the first hyphen, or the
+entire branch name when no hyphen is present (e.g., ``42`` from either
+``42-add-csv-export`` or ``42``).  The project name is the package name as declared in
 ``pyproject.toml``.  The build pipeline enforces that this file exists before a pull
 request can be merged.
 
