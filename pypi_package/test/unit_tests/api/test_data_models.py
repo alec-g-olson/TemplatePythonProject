@@ -8,33 +8,28 @@ from semver import Version
 from template_python_project.api.data_models import CalculatorInput, CalculatorOutput
 from template_python_project.calculators.data_models import CalculationType
 
-
 # ---------------------------------------------------------------------------
 # CalculatorInput — construction and validation
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture()
+@pytest.fixture
 def calculator_input_dict() -> dict[str, Any]:
     """Valid raw dict for constructing a CalculatorInput."""
     return {"type_of_calc": "ADD", "value1": 5.1, "value2": 10.0}
 
 
-@pytest.fixture()
+@pytest.fixture
 def calculator_input_obj() -> CalculatorInput:
     """A CalculatorInput constructed from known-good values."""
-    return CalculatorInput(
-        type_of_calc=CalculationType.ADD, value1=5.1, value2=10.0
-    )
+    return CalculatorInput(type_of_calc=CalculationType.ADD, value1=5.1, value2=10.0)
 
 
 def test_calculator_input_defaults_to_current_version(
     calculator_input_obj: CalculatorInput,
 ) -> None:
     """When data_model_version is omitted, it defaults to current_version."""
-    assert calculator_input_obj.data_model_version == Version(
-        major=1, minor=0, patch=0
-    )
+    assert calculator_input_obj.data_model_version == Version(major=1, minor=0, patch=0)
 
 
 def test_calculator_input_validates_from_dict(
@@ -110,13 +105,13 @@ def test_calculator_input_json_round_trips(
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture()
+@pytest.fixture
 def calculator_output_dict() -> dict[str, Any]:
     """Valid raw dict for constructing a CalculatorOutput."""
     return {"result": 5.1}
 
 
-@pytest.fixture()
+@pytest.fixture
 def calculator_output_obj() -> CalculatorOutput:
     """A CalculatorOutput constructed from a known-good value."""
     return CalculatorOutput(result=5.1)

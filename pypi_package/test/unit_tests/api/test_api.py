@@ -25,12 +25,12 @@ _calculate_test_cases = [
 ]
 
 
-@pytest.mark.parametrize(("request", "expected"), _calculate_test_cases)
+@pytest.mark.parametrize(("calc_request", "expected"), _calculate_test_cases)
 def test_calculate_returns_correct_versioned_output(
-    request: CalculatorInput, expected: CalculatorOutput
+    calc_request: CalculatorInput, expected: CalculatorOutput
 ) -> None:
     """The API function translates to domain, computes, and wraps correctly."""
-    assert calculate(request=request) == expected
+    assert calculate(request=calc_request) == expected
 
 
 def test_calculate_covers_all_operation_types() -> None:

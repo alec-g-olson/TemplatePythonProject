@@ -42,4 +42,4 @@ should replace it with useful code as soon as you start a new project!
 
 Also update this description!
 
-:doc:`assembly_design`
+:doc:`template_python_project`

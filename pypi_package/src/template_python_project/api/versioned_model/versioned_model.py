@@ -17,7 +17,9 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from pydantic.main import IncEx
 from semver import Version
 
-from template_python_project.versioned_model.pydantic_semver_annotation import PydanticSemVer
+from template_python_project.api.versioned_model.pydantic_semver_annotation import (
+    PydanticSemVer,
+)
 
 
 class VersionedModel(BaseModel, ABC):
@@ -144,6 +146,20 @@ class VersionedModel(BaseModel, ABC):
         and ``serialize_as_any`` defaults to ``True``.  All other parameters are
         forwarded unchanged; see the Pydantic docs for their full descriptions.
 
+        Args:
+            mode (str): Serialization mode passed through to Pydantic.
+            include (IncEx | None): Fields to include.
+            exclude (IncEx | None): Fields to exclude.
+            context (Any | None): Serialization context object.
+            by_alias (bool | None): Whether to use field aliases.
+            exclude_unset (bool): Whether to exclude unset fields.
+            exclude_defaults (bool): Whether to exclude default-valued fields.
+            exclude_none (bool): Whether to exclude ``None`` fields.
+            round_trip (bool): Whether to preserve values for round-tripping.
+            warnings (bool | Literal["none", "warn", "error"]): Warning handling mode.
+            fallback (Callable[[Any], Any] | None): Fallback serializer callback.
+            serialize_as_any (bool): Whether to enable duck-typed serialization.
+
         Returns:
             dict[str, Any]: A dictionary representation of the model.
         """
@@ -184,6 +200,20 @@ class VersionedModel(BaseModel, ABC):
         Overrides Pydantic's ``model_dump_json`` so that ``serialize_as_any``
         defaults to ``True``.  All other parameters are forwarded unchanged;
         see the Pydantic docs for their full descriptions.
+
+        Args:
+            indent (int | None): Pretty-print indentation level.
+            include (IncEx | None): Fields to include.
+            exclude (IncEx | None): Fields to exclude.
+            context (Any | None): Serialization context object.
+            by_alias (bool | None): Whether to use field aliases.
+            exclude_unset (bool): Whether to exclude unset fields.
+            exclude_defaults (bool): Whether to exclude default-valued fields.
+            exclude_none (bool): Whether to exclude ``None`` fields.
+            round_trip (bool): Whether to preserve values for round-tripping.
+            warnings (bool | Literal["none", "warn", "error"]): Warning handling mode.
+            fallback (Callable[[Any], Any] | None): Fallback serializer callback.
+            serialize_as_any (bool): Whether to enable duck-typed serialization.
 
         Returns:
             str: A JSON string representation of the model.

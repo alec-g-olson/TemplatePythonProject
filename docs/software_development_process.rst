@@ -181,7 +181,7 @@ creating a new feature ticket is:
 2. The Product Manager creates a branch from the GitHub issue (GitHub will automatically
    name the branch as :code:`{ticket_id}-{short-description}`)
 3. The Product Manager creates a corresponding :code:`.rst` file in the :code:`docs/tickets`
-   directory named :code:`{ticket_id}-{short-description}.rst`, using the
+   directory named :code:`{full-branch-name}.rst`, using the
    :doc:`ticket template <tickets/TEMPLATE>` as a starting point
 4. The Product Manager documents all requirements and acceptance criteria in the
    :code:`.rst` file
@@ -429,6 +429,12 @@ and that the sections for those headers have some contents.
 
 When running tests on any branch other than :code:`main` we test to make sure that all
 URLs used in hyperlinks point to a valid website.
+
+Check the Structure of AGENTS.md and CLAUDE.md
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+We check that the headers are as we expect in  :code:`AGENTS.md` and :code:`CLAUDE.md`,
+and that the links in these files point to correctly named files that exist in the repo.
 
 Check the Contents of "docs" RST Files
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

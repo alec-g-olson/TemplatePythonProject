@@ -12,8 +12,8 @@ from typing import ClassVar
 
 from semver import Version
 
+from template_python_project.api.versioned_model.versioned_model import VersionedModel
 from template_python_project.calculators.data_models import CalculationType
-from template_python_project.versioned_model import VersionedModel
 
 
 class CalculatorInput(VersionedModel):

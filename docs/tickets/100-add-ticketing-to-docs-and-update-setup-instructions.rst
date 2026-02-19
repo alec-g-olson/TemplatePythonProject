@@ -14,7 +14,7 @@ Requirements
 User Flow
 ~~~~~~~~~
 1. A developer creates or checks out a branch.
-2. The use must make a matching ticket file at
+2. The user must make a matching ticket file at
    ``docs/tickets/{full-branch-name}.rst`` where the filename exactly matches the
    branch name.  As a reminder, branch names follow the format
    ``{ticket-id}-{short-description}``.
@@ -29,7 +29,7 @@ Additional Documentation
   be followed by both developers and AI agents.
 - Update ``AGENTS.md`` so agent instructions align with the ticket workflow and
   template-project terminology.
-- Add a ``CLAUDE.md`` that references ``AGENST.md``.
+- Add a ``CLAUDE.md`` that references ``AGENTS.md``.
 - Add a ``TEMPLATE.rst`` ticket.
 
 Example Code Updates

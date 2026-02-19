@@ -1,9 +1,11 @@
 """Unit tests for versioned_model.pydantic_semver_annotation."""
 
 import pytest
-from template_python_project.versioned_model.pydantic_semver_annotation import PydanticSemVer
 from pydantic import BaseModel, ValidationError
 from semver import Version
+from template_python_project.api.versioned_model.pydantic_semver_annotation import (
+    PydanticSemVer,
+)
 
 
 class _SemVerModel(BaseModel):

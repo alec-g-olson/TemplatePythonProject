@@ -3,9 +3,9 @@
 from typing import Any, ClassVar, override
 
 import pytest
-from template_python_project.versioned_model.versioned_model import VersionedModel
 from pydantic import ValidationError
 from semver import Version
+from template_python_project.api.versioned_model.versioned_model import VersionedModel
 
 # ---------------------------------------------------------------------------
 # Constants for ChildModelB coercion defaults
@@ -13,6 +13,9 @@ from semver import Version
 
 _NEW_VALUE_1_DEFAULT: int = 100
 _NEW_VALUE_2_DEFAULT: float = 200.0
+_CHILD_MODEL_B_EXPLICIT_NEW_VALUE_1 = 1
+_CHILD_MODEL_B_EXPLICIT_NEW_VALUE_2 = 2.0
+_CHILD_MODEL_B_EXISTING_NEW_VALUE_1 = 10
 
 
 # ---------------------------------------------------------------------------
@@ -84,7 +87,7 @@ def test_simple_versioned_model_defaults_to_current_version() -> None:
     "data_model_version", [Version(major=50, minor=10, patch=0), "50.10.0"]
 )
 def test_simple_versioned_model_accepts_versions_within_supported_range(
-    data_model_version: Any,
+    data_model_version: Version | str,
 ) -> None:
     """SimpleVersionedModel accepts versions within [lowest_supported, current]."""
     model = SimpleVersionedModel(name="ok", data_model_version=data_model_version)
@@ -101,7 +104,7 @@ def test_simple_versioned_model_accepts_versions_within_supported_range(
 def test_simple_versioned_model_rejects_versions_outside_supported_range(
     bad_version: str,
 ) -> None:
-    """SimpleVersionedModel rejects versions lower than lowest or greater than current."""
+    """SimpleVersionedModel rejects versions outside the supported range."""
     with pytest.raises(ValidationError) as exc_info:
         SimpleVersionedModel(name="bad", data_model_version=bad_version)
     msg = str(exc_info.value)
@@ -167,13 +170,17 @@ def test_child_model_a_pins_single_supported_version() -> None:
 
 def test_child_model_b_basic_construction_and_dump() -> None:
     """ChildModelB constructs with current version and serializes correctly."""
-    model = ChildModelB(name="child-b", new_value_1=1, new_value_2=2.0)
+    model = ChildModelB(
+        name="child-b",
+        new_value_1=_CHILD_MODEL_B_EXPLICIT_NEW_VALUE_1,
+        new_value_2=_CHILD_MODEL_B_EXPLICIT_NEW_VALUE_2,
+    )
     assert model.data_model_version == Version(major=5, minor=2, patch=0)
 
     dumped = model.model_dump()
     assert dumped["name"] == "child-b"
-    assert dumped["new_value_1"] == 1
-    assert dumped["new_value_2"] == 2.0
+    assert dumped["new_value_1"] == _CHILD_MODEL_B_EXPLICIT_NEW_VALUE_1
+    assert dumped["new_value_2"] == _CHILD_MODEL_B_EXPLICIT_NEW_VALUE_2
     assert dumped["data_model_version"] == "5.2.0"
 
 
@@ -184,11 +191,15 @@ def test_child_model_b_basic_construction_and_dump() -> None:
 
 def test_child_model_b_coerces_5_1_0_payload_to_current_version() -> None:
     """Payloads from version 5.1.0 get new_value_2 backfilled and version bumped."""
-    raw = {"name": "from-5.1.0", "new_value_1": 10, "data_model_version": "5.1.0"}
+    raw = {
+        "name": "from-5.1.0",
+        "new_value_1": _CHILD_MODEL_B_EXISTING_NEW_VALUE_1,
+        "data_model_version": "5.1.0",
+    }
     model = ChildModelB.model_validate(raw)
     assert model.data_model_version == Version(major=5, minor=2, patch=0)
     # new_value_1 preserved, new_value_2 backfilled
-    assert model.new_value_1 == 10
+    assert model.new_value_1 == _CHILD_MODEL_B_EXISTING_NEW_VALUE_1
     assert model.new_value_2 == _NEW_VALUE_2_DEFAULT
 
 
@@ -201,9 +212,9 @@ def test_child_model_b_coerces_5_0_0_payload_to_current_version() -> None:
     assert model.new_value_2 == _NEW_VALUE_2_DEFAULT
 
 
-def test_child_model_b_rejects_versions_outside_supported_range() -> None:
-    """ChildModelB rejects payloads with versions outside [5.0.0, 5.2.0]."""
-    for bad in ["4.9.9", "6.0.0"]:
+def test_child_model_b_rejects_unsupported_and_invalid_versions() -> None:
+    """ChildModelB rejects out-of-range and invalid-semver version payloads."""
+    for bad in ["4.9.9", "6.0.0", "not-a-semver"]:
         raw = {"name": "bad", "data_model_version": bad}
         with pytest.raises(ValidationError):
             ChildModelB.model_validate(raw)

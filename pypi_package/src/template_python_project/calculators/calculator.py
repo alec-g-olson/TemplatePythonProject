@@ -9,9 +9,9 @@ Functions:
 """
 
 from template_python_project.calculators.data_models import (
-    CalculationType,
     CalculationRequest,
     CalculationResult,
+    CalculationType,
 )
 
 

@@ -11,4 +11,4 @@ Code Docs:
 
     build_support
     infra
-    assembly_design
+    template_python_project

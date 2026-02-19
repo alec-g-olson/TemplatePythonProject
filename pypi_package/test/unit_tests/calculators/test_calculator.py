@@ -28,12 +28,12 @@ _calculate_test_cases = [
 ]
 
 
-@pytest.mark.parametrize(("request", "expected"), _calculate_test_cases)
+@pytest.mark.parametrize(("calc_request", "expected"), _calculate_test_cases)
 def test_calculate_produces_correct_result(
-    request: CalculationRequest, expected: CalculationResult
+    calc_request: CalculationRequest, expected: CalculationResult
 ) -> None:
     """Each operation type produces the expected arithmetic result."""
-    assert calculate(request) == expected
+    assert calculate(calc_request) == expected
 
 
 def test_calculate_covers_all_operation_types() -> None:
@@ -46,7 +46,5 @@ def test_calculate_divide_by_zero_raises() -> None:
     """Division by zero raises ZeroDivisionError."""
     with pytest.raises(ZeroDivisionError):
         calculate(
-            CalculationRequest(
-                operation=CalculationType.DIVIDE, value1=199, value2=0
-            )
+            CalculationRequest(operation=CalculationType.DIVIDE, value1=199, value2=0)
         )

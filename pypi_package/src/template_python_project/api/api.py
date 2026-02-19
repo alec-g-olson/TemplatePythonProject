@@ -29,9 +29,7 @@ def calculate(request: CalculatorInput) -> CalculatorOutput:
         ZeroDivisionError: If division by zero is attempted.
     """
     domain_request = CalculationRequest(
-        operation=request.type_of_calc,
-        value1=request.value1,
-        value2=request.value2,
+        operation=request.type_of_calc, value1=request.value1, value2=request.value2
     )
     domain_result = calculate_domain(domain_request)
     return CalculatorOutput(result=domain_result.result)

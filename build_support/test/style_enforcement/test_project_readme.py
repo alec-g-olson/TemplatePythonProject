@@ -19,6 +19,16 @@ def project_readme(real_project_root_dir: Path) -> Path:
     return real_project_root_dir.joinpath("README.md")
 
 
+@pytest.fixture
+def agents_markdown(real_project_root_dir: Path) -> Path:
+    return real_project_root_dir.joinpath("AGENTS.md")
+
+
+@pytest.fixture
+def claude_markdown(real_project_root_dir: Path) -> Path:
+    return real_project_root_dir.joinpath("CLAUDE.md")
+
+
 def _build_header_regex(header_level: int, header_title: str) -> str:
     return "^" + "#" * header_level + " " + header_title + "$"
 
@@ -217,6 +227,19 @@ TOP_LEVEL_README_HEADER_REGEXES = _build_header_regexes(
     header_level_dict=TOP_LEVEL_README_HEADER_LEVEL_DICT
 )
 
+AGENTS_HEADER_LEVEL_DICT = {
+    "Agent Guide": 1,
+    "1. Finding the Ticket for the Current Work": 2,
+    "2. Useful Developer Commands": 2,
+    "3. Running Commands in Docker": 2,
+    "4. Designing Source Code": 2,
+    "5. Designing and Writing Tests": 2,
+}
+
+AGENTS_HEADER_REGEXES = _build_header_regexes(
+    header_level_dict=AGENTS_HEADER_LEVEL_DICT
+)
+
 
 def test_top_level_readme_has_required_headers(project_readme: Path) -> None:
     missing_headers = _get_missing_headers(
@@ -245,6 +268,50 @@ def test_top_level_readme_hyperlinks_are_valid(
     assert (
         _get_all_bad_hyperlinks(
             readme_path=project_readme, check_weblinks=check_weblinks
+        )
+        == []
+    )
+
+
+def test_agents_markdown_has_required_headers(agents_markdown: Path) -> None:
+    missing_headers = _get_missing_headers(
+        header_regexes=AGENTS_HEADER_REGEXES, readme_path=agents_markdown
+    )
+    assert missing_headers == []
+
+
+def test_agents_markdown_headers_have_details(agents_markdown: Path) -> None:
+    headers_missing_details = _get_headers_missing_details(
+        header_regexes=AGENTS_HEADER_REGEXES, readme_path=agents_markdown
+    )
+    assert headers_missing_details == []
+
+
+def test_agents_markdown_hyperlinks_are_valid(
+    agents_markdown: Path, check_weblinks: bool
+) -> None:
+    assert (
+        _get_all_bad_hyperlinks(
+            readme_path=agents_markdown, check_weblinks=check_weblinks
+        )
+        == []
+    )
+
+
+def test_claude_markdown_has_canonical_agents_link(claude_markdown: Path) -> None:
+    non_empty_lines = [
+        line.strip() for line in claude_markdown.read_text().splitlines()
+    ]
+    non_empty_lines = [line for line in non_empty_lines if line]
+    assert non_empty_lines == ["See [AGENTS.md](AGENTS.md)."]
+
+
+def test_claude_markdown_hyperlinks_are_valid(
+    claude_markdown: Path, check_weblinks: bool
+) -> None:
+    assert (
+        _get_all_bad_hyperlinks(
+            readme_path=claude_markdown, check_weblinks=check_weblinks
         )
         == []
     )

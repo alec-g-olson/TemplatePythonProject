@@ -24,7 +24,7 @@ Active Tickets
    1. Create a GitHub issue with a brief description of the need
    2. Create a branch associated with the GitHub issue
    3. Add a new :code:`.rst` file in the :code:`docs/tickets` directory following the naming
-      convention :code:`{ticket_id}-{short-description}.rst`
+      convention :code:`{full-branch-name}.rst`
    4. Document all requirements and acceptance criteria in the :code:`.rst` file
    5. Move the GitHub issue to "Ready" when requirements are clear and acceptance criteria
       is falsifiable

@@ -5,7 +5,7 @@ models and service functions. It translates between external versioned models
 and internal domain types.
 
 SubPackages:
-    None
+    | versioned_model: Shared versioned model utilities and semver helpers.
 
 Modules:
     | data_models: Versioned API request/response models.
