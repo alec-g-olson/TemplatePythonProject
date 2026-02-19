@@ -10,16 +10,15 @@ any task.
 This repo uses GitHub only to track the status and approvals of work done.
 The description of the work is in the [tickets](docs/tickets) directory.
 
-The branch name encodes the ticket you are working on.
+**One ticket = one branch.** Each ticket has exactly one associated GitHub branch, created
+when the ticket is opened. The branch name encodes the ticket ID and description.
 
 1. Get the current branch name:
    ```bash
    git branch --show-current
    ```
 
-2. Extract the ticket ID — the integer before the first hyphen.
-
-3. Open the corresponding requirements file:
+2. Open or create the corresponding requirements file:
    ```
    docs/tickets/{full-branch-name}.rst
    ```
@@ -27,6 +26,12 @@ The branch name encodes the ticket you are working on.
 
 That file contains the requirements and acceptance criteria for the work.  Read it before
 writing any code.
+
+**Multiple branches for the same ticket should not be created.** If a ticket is prematurely
+merged before all work is complete, a new bug ticket must be created to finish the work,
+with its own branch and documentation.
+
+When creating a new ticket, use the [ticket template](docs/tickets/TEMPLATE.rst) as a starting point.
 
 ---
 

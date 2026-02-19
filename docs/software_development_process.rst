@@ -181,10 +181,11 @@ creating a new feature ticket is:
 2. The Product Manager creates a branch from the GitHub issue (GitHub will automatically
    name the branch as :code:`{ticket_id}-{short-description}`)
 3. The Product Manager creates a corresponding :code:`.rst` file in the :code:`docs/tickets`
-   directory named :code:`{ticket_id}-{short-description}.rst`
+   directory named :code:`{ticket_id}-{short-description}.rst`, using the
+   :doc:`ticket template <tickets/TEMPLATE>` as a starting point
 4. The Product Manager documents all requirements and acceptance criteria in the
    :code:`.rst` file
-5. When the developers agree that requirements are complete and clear, and the 
+5. When the developers agree that requirements are complete and clear, and the
    acceptance criteria is falsifiable, the Product Manager may move the GitHub issue to
    "Ready" status
 
@@ -225,7 +226,8 @@ documented in the ticket's :code:`.rst` file.
 The developers may break down the feature into sub-tickets as they see fit and then score
 them.  When breaking down features, sub-tickets should be created as GitHub issues and
 linked to the parent ticket.  Each sub-ticket must have its own :code:`.rst` file in
-:code:`docs/tickets` with acceptance criteria and a complexity score.  This acceptance
+:code:`docs/tickets` with acceptance criteria and a complexity score, using the
+:doc:`ticket template <tickets/TEMPLATE>` as a starting point.  This acceptance
 criteria should be written in a technically agnostic way that emphasizes the useful nature
 of the work.  For example, instead of "A column named 'xxx' is added to table 'yyy' in our
 database," write the acceptance criteria as "A developer can store and access a value for
@@ -303,16 +305,21 @@ they see fit as long as they follow our `Branching`_ and `Pull Request`_ strateg
 Branching
 ^^^^^^^^^
 
-Branches are created by the Product Manager when a ticket is first created in GitHub.
-Branch names must start with the ticket ID followed by a hyphen and a short description
-of the work, e.g., :code:`{ticket_id}-{description}`.  This format matches the default
-when you create a branch from a GitHub issue.  Our pipeline extracts the ticket ID from
-the branch name for checks such as requiring a corresponding feature test file.
+**One ticket = one branch.** Branches are created by the Product Manager when a ticket is
+first created in GitHub. Branch names must start with the ticket ID followed by a hyphen
+and a short description of the work, e.g., :code:`{ticket_id}-{description}`.  This format
+matches the default when you create a branch from a GitHub issue.  Our pipeline extracts
+the ticket ID from the branch name for checks such as requiring a corresponding feature
+test file.
 
 The same branch is used throughout the ticket lifecycle: first by the Product Manager to
 document requirements in :code:`docs/tickets`, and then by developers to implement the
 feature or fix.  All changes are merged together in a single pull request when the work
 is complete.
+
+If a ticket is prematurely merged to main before all acceptance criteria are met, a new
+bug ticket must be created with its own branch to complete the remaining work. Do not
+create additional branches for the same ticket.
 
 Pull Request
 ^^^^^^^^^^^^
