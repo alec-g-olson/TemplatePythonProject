@@ -382,6 +382,20 @@ def mock_new_branch(
     mock_remote_git_repo.create_head(branch_name)
     mock_lightweight_project.remote().fetch()
     mock_lightweight_project.git.checkout(branch_name)
+    mock_project_root = Path(mock_lightweight_project.working_dir)
+    project_name = get_project_name(project_root=mock_project_root)
+    ticket_file = mock_project_root.joinpath(
+        "docs", "tickets", project_name, f"{branch_name}.rst"
+    )
+    ticket_file.parent.mkdir(parents=True, exist_ok=True)
+    ticket_file.write_text(
+        "TEST001: Mock Ticket\n"
+        "====================\n"
+        "\n"
+        "Overview\n"
+        "--------\n"
+        "Mock ticket file for feature test fixture setup.\n"
+    )
     return mock_lightweight_project.active_branch
 
 
@@ -393,4 +407,18 @@ def mock_new_branch_without_description(
     mock_remote_git_repo.create_head(current_ticket_name)
     mock_lightweight_project.remote().fetch()
     mock_lightweight_project.git.checkout(current_ticket_name)
+    mock_project_root = Path(mock_lightweight_project.working_dir)
+    project_name = get_project_name(project_root=mock_project_root)
+    ticket_file = mock_project_root.joinpath(
+        "docs", "tickets", project_name, f"{current_ticket_name}.rst"
+    )
+    ticket_file.parent.mkdir(parents=True, exist_ok=True)
+    ticket_file.write_text(
+        "TEST001: Mock Ticket\n"
+        "====================\n"
+        "\n"
+        "Overview\n"
+        "--------\n"
+        "Mock ticket file for feature test fixture setup.\n"
+    )
     return mock_lightweight_project.active_branch

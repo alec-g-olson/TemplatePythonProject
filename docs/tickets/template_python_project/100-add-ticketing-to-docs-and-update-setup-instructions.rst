@@ -15,8 +15,8 @@ User Flow
 ~~~~~~~~~
 1. A developer creates or checks out a branch.
 2. The user must make a matching ticket file at
-   ``docs/tickets/{full-branch-name}.rst`` where the filename exactly matches the
-   branch name.  As a reminder, branch names follow the format
+   ``docs/tickets/{project_name}/{full-branch-name}.rst`` where the filename exactly
+   matches the branch name.  As a reminder, branch names follow the format
    ``{ticket_id}`` or ``{ticket_id}-{short-description}``.
 
 Additional Documentation
@@ -44,8 +44,8 @@ Acceptance Criteria / Feature Tests
 User Flow
 ~~~~~~~~~
 - A feature test exists that checks the ticket-file workflow is enforced (e.g. that
-  a ticket file at ``docs/tickets/{full-branch-name}.rst`` is required or validated
-  where the filename matches the current branch name).
+  a ticket file at ``docs/tickets/{project_name}/{full-branch-name}.rst`` is required
+  or validated where the filename matches the current branch name).
 
 Documentation Requirements
 ~~~~~~~~~~~~~~~~~~~~~~~~~~

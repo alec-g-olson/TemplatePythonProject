@@ -21,9 +21,9 @@ hyphenated description.
 
 2. Open or create the corresponding requirements file:
    ```
-   docs/tickets/{full-branch-name}.rst
+   docs/tickets/{project_name}/{full-branch-name}.rst
    ```
-   For example: `docs/tickets/42-add-csv-export.rst`
+   For example: `docs/tickets/template_python_project/42-add-csv-export.rst`
 
 That file contains the requirements and acceptance criteria for the work.  Read it before
 writing any code.

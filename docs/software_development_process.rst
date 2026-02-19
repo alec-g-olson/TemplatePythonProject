@@ -181,9 +181,9 @@ creating a new feature ticket is:
 2. The Product Manager creates a branch from the GitHub issue (GitHub will automatically
    suggest :code:`{ticket_id}-{short-description}`; for this project, the short
    description is optional and :code:`{ticket_id}` alone is also valid)
-3. The Product Manager creates a corresponding :code:`.rst` file in the :code:`docs/tickets`
-   directory named :code:`{full-branch-name}.rst`, using the
-   :doc:`ticket template <tickets/TEMPLATE>` as a starting point
+3. The Product Manager creates a corresponding :code:`.rst` file in the
+   :code:`docs/tickets/{project_name}` directory named :code:`{full-branch-name}.rst`,
+   using the :doc:`ticket template <tickets/TEMPLATE>` as a starting point
 4. The Product Manager documents all requirements and acceptance criteria in the
    :code:`.rst` file
 5. When the developers agree that requirements are complete and clear, and the
