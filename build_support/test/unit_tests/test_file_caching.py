@@ -128,11 +128,14 @@ def test_get_last_modified_time(tmp_path: Path) -> None:
     assert not file_path.exists()
     with pytest.raises(FileNotFoundError):
         FileCacheEngine.get_last_modified_time(file_path=file_path)
-    current_time = datetime.now(tz=UTC)
+    time_before_write = datetime.now(tz=UTC)
     sleep(0.001)
     file_path.parent.mkdir(parents=True)
     file_path.write_text("some contents")
-    assert FileCacheEngine.get_last_modified_time(file_path=file_path) > current_time
+    sleep(0.001)
+    time_after_write = datetime.now(tz=UTC)
+    mtime = FileCacheEngine.get_last_modified_time(file_path=file_path)
+    assert time_before_write < mtime < time_after_write
 
 
 def test_most_recent_conftest_update(file_cache_engine: FileCacheEngine) -> None:
