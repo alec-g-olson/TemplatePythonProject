@@ -183,44 +183,38 @@ def _get_all_bad_hyperlinks(
     return bad_hyperlinks
 
 
+def test_header_hyperlink_validation() -> None:
+    known_header_links = ["#setup"]
+    assert (
+        _is_broken_hyperlink(
+            current_dir=Path(),
+            hyperlink=("Setup", "#setup"),
+            check_weblinks=False,
+            all_headers=known_header_links,
+        )
+        is False
+    )
+    assert (
+        _is_broken_hyperlink(
+            current_dir=Path(),
+            hyperlink=("Missing", "#missing"),
+            check_weblinks=False,
+            all_headers=known_header_links,
+        )
+        is True
+    )
+
+
 TOP_LEVEL_README_HEADER_LEVEL_DICT = {
-    "Template Project": 1,
-    "Goals of Template Project": 3,
-    "Enforcement of Development Practices": 4,
-    "Enforcement of Development and Production Environments": 4,
-    "Organization of Template Project": 3,
-    "Scope of Template Project": 3,
-    "Architecture Layers": 4,
-    "Environments this Template Strives to Support": 4,
-    "Additional Control this Template Tries to Provide": 4,
-    "Creating a New Project From This Template": 3,
-    "Primary Services": 2,
-    "API": 3,
-    "Other Service": 3,
-    "Getting Started": 1,
-    "Development Environment Setup": 2,
-    "PyCharm": 3,
-    "PyCharm: Setting the Python Interpreter": 4,
-    "PyCharm: Setting Src and Test Folders": 4,
-    "PyCharm: Configuring PyCharm to Use Pytest": 4,
-    "PyCharm: Adjusting Docstring Settings": 4,
-    "PyCharm: Setting Vertical Ruler to 88": 4,
-    "PyCharm: Checking Your Work by Running the Tests": 4,
-    "VS Code": 3,
-    "Working in this Repository": 1,
-    "Selected Build Commands": 2,
-    "Tools Enforcing Dev Standards": 2,
-    "Poetry": 3,
-    "PyTest and PyTest-Cov": 3,
-    "Ruff": 3,
-    "Process and Style Enforcement": 3,
-    "MyPy": 3,
-    "Bandit": 3,
-    "Technologies and Frameworks": 1,
-    "Major Technologies": 2,
-    "Other tools": 2,
-    "Versioning": 1,
-    "Creating a Release": 1,
+    "Template Python Project": 1,
+    "Goals of Template Python Project": 3,
+    "Philosophy of This Repository": 3,
+    "Ticketing and Software Lifecycle": 3,
+    "Embedding Intent With the Code": 4,
+    "Pull Request Approval and Review Expectations": 4,
+    "Quickstart Setup": 2,
+    "Accessing Documentation": 3,
+    "Setup": 3,
 }
 
 TOP_LEVEL_README_HEADER_REGEXES = _build_header_regexes(
