@@ -39,7 +39,6 @@ def calculate(request: CalculationRequest) -> CalculationResult:
         case CalculationType.DIVIDE:
             result = request.value1 / request.value2
         case _:
-            raise NotImplementedError(
-                f"No implementation for operation {request.operation!r}"
-            )
+            msg = f"No implementation for operation {request.operation!r}"
+            raise NotImplementedError(msg)
     return CalculationResult(result=result)

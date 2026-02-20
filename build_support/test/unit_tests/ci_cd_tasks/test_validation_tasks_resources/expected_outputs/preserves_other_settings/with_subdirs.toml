@@ -2,7 +2,7 @@
 branch = true
 source = ["src"]
 include = ["*.py"]
-omit = ["build_support/test/unit_tests/test_module/**/__init__.py", "build_support/test/unit_tests/test_module/**/conftest.py", "build_support/test/unit_tests/test_module/*/test_*.py"]
+omit = ["build_support/test/unit_tests/test_module/**/__init__.py", "build_support/test/unit_tests/test_module/**/conftest.py", "build_support/test/unit_tests/test_module/*/**/test_*.py"]
 
 [tool.coverage.report]
 precision = 2

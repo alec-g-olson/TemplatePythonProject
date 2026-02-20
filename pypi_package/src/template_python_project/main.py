@@ -18,7 +18,9 @@ def parse_args(args: list[str] | None = None) -> Namespace:
         Namespace: An object with fields parsed from the command line.
     """
     parser = ArgumentParser(
-        description="Reads calculator input from a file and writes the result to a file."
+        description=(
+            "Reads calculator input from a file and writes the result to a file."
+        )
     )
     parser.add_argument(
         "--input",

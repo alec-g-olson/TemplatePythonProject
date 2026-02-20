@@ -443,7 +443,7 @@ class SubprojectUnitTests(PerSubprojectTask):
         test_file_parent_relative_str = str(test_file_parent_relative)
         return [
             *test_files_to_omit_relative,
-            f"{test_file_parent_relative_str}/*/test_*.py",
+            f"{test_file_parent_relative_str}/*/**/test_*.py",
             f"{test_file_parent_relative_str}/**/__init__.py",
             f"{test_file_parent_relative_str}/**/conftest.py",
         ]

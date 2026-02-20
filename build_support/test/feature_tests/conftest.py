@@ -426,15 +426,12 @@ def ticket_for_current_branch(
 
 
 @pytest.fixture
-def dummy_feature_test(
-    mock_project_root: Path, current_ticket_id: str, current_branch_name: str
-) -> Path:
+def dummy_feature_test(mock_project_root: Path, current_ticket_id: str) -> Path:
     """Write the required dummy feature test for process checks.
 
     Args:
         mock_project_root (Path): Root of the mock project.
         current_ticket_id (str): Current ticket id.
-        current_branch_name (str): Current branch under test.
 
     Returns:
         Path: Path to the written dummy feature test file.
@@ -446,7 +443,7 @@ def dummy_feature_test(
         "feature_tests",
         f"test_{current_ticket_id}_{project_name}.py",
     )
-    feature_test_file.write_text(f"def test_dummy() -> None:\n    assert True\n")
+    feature_test_file.write_text("def test_dummy() -> None:\n    assert True\n")
     return feature_test_file
 
 
