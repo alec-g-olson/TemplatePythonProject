@@ -15,9 +15,7 @@ def pypi_package_root_dir() -> Path:
 
 
 @pytest.fixture(scope="session")
-def staged_pypi_package_root(
-    tmp_path: Path, pypi_package_root_dir: Path
-) -> Path:
+def staged_pypi_package_root(tmp_path: Path, pypi_package_root_dir: Path) -> Path:
     """Create a session-scoped copy of ``pypi_package`` for subprocess tests."""
     staged_root = tmp_path.joinpath("pypi_package")
     shutil.copytree(

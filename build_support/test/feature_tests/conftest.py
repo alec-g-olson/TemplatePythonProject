@@ -355,70 +355,116 @@ def test_something() -> None:
 
 
 @pytest.fixture
-def current_ticket_name() -> str:
-    """Return a fixed ticket name for mock branch creation.
+def current_ticket_id() -> str:
+    """Return a fixed ticket id for mock branch creation.
 
     Returns:
-        str: The ticket name ``TEST001``.
+        str: The ticket id ``TEST001``.
     """
     return "TEST001"
 
 
+@pytest.fixture(
+    params=["", "branch-description"], ids=["id-only-branch", "described-branch"]
+)
+def current_branch_name(request: pytest.FixtureRequest, current_ticket_id: str) -> str:
+    """Build a branch name from the current ticket id.
+
+    Args:
+        request (pytest.FixtureRequest): Access to the requested fixture variant.
+        current_ticket_id (str): The ticket id to embed in the branch name.
+
+    Returns:
+        str: Either ``<ticket_id>`` or ``<ticket_id>-some-ticket-description``.
+    """
+    return (
+        f"{current_ticket_id}-{request.param}" if request.param else current_ticket_id
+    )
+
+
+@pytest.fixture
+def current_ticket_file(mock_project_root: Path, current_branch_name: str) -> Path:
+    """Get the ticket path for the current branch name.
+
+    Args:
+        mock_project_root (Path): Root of the mock project.
+        current_branch_name (str): Current branch under test.
+
+    Returns:
+        Path: Expected ticket file path.
+    """
+    project_name = get_project_name(project_root=mock_project_root)
+    return mock_project_root.joinpath(
+        "docs", "tickets", project_name, f"{current_branch_name}.rst"
+    )
+
+
+@pytest.fixture
+def ticket_for_current_branch(
+    current_ticket_file: Path, current_ticket_id: str, current_branch_name: str
+) -> Path:
+    """Write a ticket file matching the active branch name.
+
+    Args:
+        current_ticket_file (Path): Expected ticket file path.
+        current_ticket_id (str): Current ticket id.
+        current_branch_name (str): Current branch under test.
+
+    Returns:
+        Path: The written ticket file path.
+    """
+    current_ticket_file.parent.mkdir(parents=True, exist_ok=True)
+    current_ticket_file.write_text(
+        f"{current_ticket_id}: Mock Ticket\n"
+        "====================\n"
+        "\n"
+        "Overview\n"
+        "--------\n"
+        f"Mock ticket file for branch `{current_branch_name}`.\n"
+    )
+    return current_ticket_file
+
+
+@pytest.fixture
+def dummy_feature_test(
+    mock_project_root: Path, current_ticket_id: str, current_branch_name: str
+) -> Path:
+    """Write the required dummy feature test for process checks.
+
+    Args:
+        mock_project_root (Path): Root of the mock project.
+        current_ticket_id (str): Current ticket id.
+        current_branch_name (str): Current branch under test.
+
+    Returns:
+        Path: Path to the written dummy feature test file.
+    """
+    project_name = get_project_name(project_root=mock_project_root)
+    feature_test_file = mock_project_root.joinpath(
+        "build_support",
+        "test",
+        "feature_tests",
+        f"test_{current_ticket_id}_{project_name}.py",
+    )
+    feature_test_file.write_text(f"def test_dummy() -> None:\n    assert True\n")
+    return feature_test_file
+
+
 @pytest.fixture
 def mock_new_branch(
-    mock_remote_git_repo: Repo, mock_lightweight_project: Repo, current_ticket_name: str
+    mock_remote_git_repo: Repo, mock_lightweight_project: Repo, current_branch_name: str
 ) -> Head:
     """Create and check out a new feature branch on the mock project.
 
     Args:
         mock_remote_git_repo (Repo): The mock bare remote repo.
         mock_lightweight_project (Repo): The mock project repo.
-        current_ticket_name (str): Ticket name used in branch.
+        current_branch_name (str): Branch name used for this test case.
 
     Returns:
         Head: The newly created and checked-out branch.
     """
-    branch_name = f"{current_ticket_name}-some-ticket-description"
-    mock_remote_git_repo.create_head(branch_name)
+    mock_remote_git_repo.create_head(current_branch_name)
     mock_lightweight_project.remote().fetch()
-    mock_lightweight_project.git.checkout(branch_name)
-    mock_project_root = Path(mock_lightweight_project.working_dir)
-    project_name = get_project_name(project_root=mock_project_root)
-    ticket_file = mock_project_root.joinpath(
-        "docs", "tickets", project_name, f"{branch_name}.rst"
-    )
-    ticket_file.parent.mkdir(parents=True, exist_ok=True)
-    ticket_file.write_text(
-        "TEST001: Mock Ticket\n"
-        "====================\n"
-        "\n"
-        "Overview\n"
-        "--------\n"
-        "Mock ticket file for feature test fixture setup.\n"
-    )
-    return mock_lightweight_project.active_branch
-
-
-@pytest.fixture
-def mock_new_branch_without_description(
-    mock_remote_git_repo: Repo, mock_lightweight_project: Repo, current_ticket_name: str
-) -> Head:
-    """Create and check out a feature branch with only the ticket id."""
-    mock_remote_git_repo.create_head(current_ticket_name)
-    mock_lightweight_project.remote().fetch()
-    mock_lightweight_project.git.checkout(current_ticket_name)
-    mock_project_root = Path(mock_lightweight_project.working_dir)
-    project_name = get_project_name(project_root=mock_project_root)
-    ticket_file = mock_project_root.joinpath(
-        "docs", "tickets", project_name, f"{current_ticket_name}.rst"
-    )
-    ticket_file.parent.mkdir(parents=True, exist_ok=True)
-    ticket_file.write_text(
-        "TEST001: Mock Ticket\n"
-        "====================\n"
-        "\n"
-        "Overview\n"
-        "--------\n"
-        "Mock ticket file for feature test fixture setup.\n"
-    )
+    mock_lightweight_project.git.checkout(current_branch_name)
     return mock_lightweight_project.active_branch
