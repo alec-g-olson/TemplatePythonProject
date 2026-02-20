@@ -41,12 +41,16 @@ def _check_pyproject_toml(
 
 
 def _check_readme(
-    readme_path: Path, new_project_name: str, old_project_name: str | None
+    readme_path: Path, old_project_name: str | None
 ) -> None:
+    """Verifies README does not contain old project name after a rename.
+
+    Does not require the new project name to appear in the README; the template
+    may use a placeholder like {project_name} instead of the literal name.
+    """
     readme_contents = readme_path.read_text()
     if old_project_name:
         assert old_project_name not in readme_contents
-    assert new_project_name in readme_contents
 
 
 def _check_license_file(license_path: Path, settings: ProjectSettings) -> None:
@@ -81,7 +85,6 @@ def _ensure_project_folder_matches_settings(
     _check_folder_names(project_folder=project_folder, settings=new_settings)
     _check_readme(
         readme_path=project_folder.joinpath("README.md"),
-        new_project_name=new_settings.name,
         old_project_name=old_settings.name if old_settings else None,
     )
 

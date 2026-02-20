@@ -61,10 +61,9 @@ enable_error_code = [
   "unimported-reveal",
 ]
 
-
 [tool.poetry]
 name = "template_python_project"
-version = "0.2.34"
+version = "0.2.35"
 license = "unlicense"
 packages = [{include = "template_python_project", from="pypi_package/src"}]
 description = "A project that can be used as a template to provide some CI/CD out of the box."
