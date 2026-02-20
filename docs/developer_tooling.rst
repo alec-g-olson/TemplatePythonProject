@@ -72,10 +72,10 @@ a few important ones for people who are new to this repository.
      - Runs linting and allows Ruff to apply unsafe fixes. All tests must still pass.
    * - make test_pypi
      -
-     - Runs unit and integration tests for the :code:`pypi_package` subproject.
+     - Runs unit tests for the :code:`pypi_package` subproject.
    * - make test_build_support
      -
-     - Runs unit and integration tests for the :code:`build_support` subproject.
+     - Runs unit tests for the :code:`build_support` subproject.
    * - make test_pypi_features
      -
      - Runs feature tests for the :code:`pypi_package` subproject.

@@ -396,13 +396,24 @@ commit with the projects version (located in the :code:`pyproject.toml` file).  
 of this we enforce the following checks on the project's version.
 
 - There are no existing tags in our git repo that match the project's version
-- If we are deploying from the :code:`main` branch we ensure the version follows the
-  standard `SemVer <https://semver.org>`_ format for production releases.
-  :code:`MAJOR.MINOR.PATCH`
-- If we are deploying from any other branch we ensure the version follows our standard
-  for dev versions. :code:`MAJOR.MINOR.PATCH-dev.ATTEMPT`
+- The version in :code:`pyproject.toml` follows one of these formats:
+  :code:`MAJOR.MINOR.PATCH` or :code:`MAJOR.MINOR.PATCH-dev.ATTEMPT`
+- This version convention is compatible with the `SemVer <https://semver.org>`_
+  standard.
 
 Major, Minor, Patch, and Attempt must all be integer numbers.
+
+Branch and version compatibility is enforced when tagging during
+:code:`make push`: :code:`main` requires a production version
+(:code:`MAJOR.MINOR.PATCH`) and non-main branches require a dev version
+(:code:`MAJOR.MINOR.PATCH-dev.ATTEMPT`).
+
+Verify Branch Ticket File Exists
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+On any branch other than :code:`main`, we require a matching ticket file in
+:code:`docs/tickets/{project_name}` named :code:`{full-branch-name}.rst`.
+The filename must exactly match the branch name. The :code:`main` branch is exempt.
 
 Verify Feature Tests Were Added
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -414,9 +425,9 @@ for a file named :code:`test_{ticket_id}_{project_name}.py`.  That file must exi
 must define at least one test function (a line containing :code:`def test_`).  Pull
 request reviewers are responsible for ensuring the test actually validates the intended
 behavior.  In rare cases (e.g. a performance-only change with no behavior change),
-writing a meaningful test may not be feasible; in those cases the developer must add a
-comment in the file explaining what validation was done and why a real test is not
-possible, and may add a minimal passing test so this check still passes.
+reviewers may accept a brief comment describing what validation was done and why a real
+behavioral test is not feasible. The pipeline check itself only enforces file existence
+and the presence of at least one test function.
 
 See :doc:`testing_style_guide` for the full conventions around how feature tests should
 be written.

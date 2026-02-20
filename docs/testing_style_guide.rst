@@ -145,9 +145,10 @@ entire branch name when no hyphen is present (e.g., ``42`` from either
 request can be merged.
 
 For rare cases where a meaningful test is not feasible (e.g., a pure-performance change
-with no observable behavior change), the file must still exist and contain a comment
-explaining what validation was performed and why a real test is not possible.  A minimal
-passing ``assert True`` test keeps the pipeline check satisfied.
+with no observable behavior change), the pipeline still requires this file to exist and
+contain at least one test function.  In those cases, reviewers may ask for a short
+comment explaining what validation was performed and why a behavioral test is not
+feasible; a minimal passing ``assert True`` test can satisfy the enforcement check.
 
 Coverage
 ~~~~~~~~
