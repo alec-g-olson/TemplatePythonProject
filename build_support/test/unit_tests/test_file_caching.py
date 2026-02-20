@@ -132,8 +132,8 @@ def test_get_last_modified_time(tmp_path: Path) -> None:
     sleep(0.001)
     file_path.parent.mkdir(parents=True)
     file_path.write_text("some contents")
-    time_after_write = datetime.now(tz=UTC)
     sleep(0.001)
+    time_after_write = datetime.now(tz=UTC)
     mtime = FileCacheEngine.get_last_modified_time(file_path=file_path)
     assert time_before_write < mtime < time_after_write
 
