@@ -40,17 +40,15 @@ def test_main_cli_writes_expected_output_for_each_calculation_type(
 ) -> None:
     """Run the staged CLI with Popen and assert the output JSON is correct."""
     calculation_type_name = calculator_input.type_of_calc.name.lower()
+    input_file = tmp_path.joinpath(f"{calculation_type_name}_input.json")
     output_file = tmp_path.joinpath(f"{calculation_type_name}_result.json")
+    input_file.write_text(calculator_input.model_dump_json())
     cmd = Popen(
         args=[
             *staged_main_command,
-            "--type",
-            calculator_input.type_of_calc.name,
-            "--val1",
-            str(calculator_input.value1),
-            "--val2",
-            str(calculator_input.value2),
-            "--out-file",
+            "--input",
+            str(input_file),
+            "--output",
             str(output_file),
         ],
         env=staged_python_env,
@@ -69,17 +67,18 @@ def test_main_cli_fails_for_divide_by_zero(
     staged_main_command: list[str], staged_python_env: dict[str, str], tmp_path: Path
 ) -> None:
     """Division by zero exits non-zero and does not produce an output file."""
+    input_file = tmp_path.joinpath("divide_by_zero_input.json")
     output_file = tmp_path.joinpath("divide_by_zero_result.json")
+    divide_by_zero_input = CalculatorInput(
+        type_of_calc=CalculationType.DIVIDE, value1=5, value2=0
+    )
+    input_file.write_text(divide_by_zero_input.model_dump_json())
     cmd = Popen(
         args=[
             *staged_main_command,
-            "--type",
-            "DIVIDE",
-            "--val1",
-            "5",
-            "--val2",
-            "0",
-            "--out-file",
+            "--input",
+            str(input_file),
+            "--output",
             str(output_file),
         ],
         env=staged_python_env,

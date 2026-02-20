@@ -26,14 +26,20 @@ def calculate(request: CalculationRequest) -> CalculationResult:
         CalculationResult: The result of the calculation.
 
     Raises:
+        NotImplementedError: If the operation type has no implementation.
         ZeroDivisionError: If division by zero is attempted.
     """
-    if request.operation == CalculationType.ADD:
-        result = request.value1 + request.value2
-    elif request.operation == CalculationType.SUBTRACT:
-        result = request.value1 - request.value2
-    elif request.operation == CalculationType.MULTIPLY:
-        result = request.value1 * request.value2
-    else:  # DIVIDE
-        result = request.value1 / request.value2
+    match request.operation:
+        case CalculationType.ADD:
+            result = request.value1 + request.value2
+        case CalculationType.SUBTRACT:
+            result = request.value1 - request.value2
+        case CalculationType.MULTIPLY:
+            result = request.value1 * request.value2
+        case CalculationType.DIVIDE:
+            result = request.value1 / request.value2
+        case _:
+            raise NotImplementedError(
+                f"No implementation for operation {request.operation!r}"
+            )
     return CalculationResult(result=result)

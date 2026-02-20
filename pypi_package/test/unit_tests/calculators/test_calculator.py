@@ -1,5 +1,8 @@
 """Tests for the calculator domain engine."""
 
+from enum import StrEnum
+from typing import cast
+
 import pytest
 from template_python_project.calculators.calculator import calculate
 from template_python_project.calculators.data_models import (
@@ -7,6 +10,14 @@ from template_python_project.calculators.data_models import (
     CalculationResult,
     CalculationType,
 )
+
+
+class _FakeCalculationType(StrEnum):
+    """Test-only enum with an unimplemented member to trigger the default branch."""
+
+    IMPLEMENTED = CalculationType.ADD.value
+    UNIMPLEMENTED = "UNIMPLEMENTED"
+
 
 _calculate_test_cases = [
     (
@@ -48,3 +59,17 @@ def test_calculate_divide_by_zero_raises() -> None:
         calculate(
             CalculationRequest(operation=CalculationType.DIVIDE, value1=199, value2=0)
         )
+
+
+def test_calculate_unimplemented_operation_raises() -> None:
+    """Unimplemented operation type raises NotImplementedError (covers default case)."""
+    request_with_unimplemented_op = cast(
+        CalculationRequest,
+        CalculationRequest(
+            operation=_FakeCalculationType.UNIMPLEMENTED, value1=1.0, value2=2.0
+        ),
+    )
+    with pytest.raises(NotImplementedError) as exc_info:
+        calculate(request_with_unimplemented_op)
+    assert "No implementation for operation" in str(exc_info.value)
+    assert "UNIMPLEMENTED" in str(exc_info.value)

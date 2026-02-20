@@ -5,7 +5,6 @@ from pathlib import Path
 
 from template_python_project.api.api import calculate
 from template_python_project.api.data_models import CalculatorInput, CalculatorOutput
-from template_python_project.calculators.data_models import CalculationType
 
 
 def parse_args(args: list[str] | None = None) -> Namespace:
@@ -19,22 +18,19 @@ def parse_args(args: list[str] | None = None) -> Namespace:
         Namespace: An object with fields parsed from the command line.
     """
     parser = ArgumentParser(
-        description="Takes 2 numbers and a calculation type to report the result."
+        description="Reads calculator input from a file and writes the result to a file."
     )
     parser.add_argument(
-        "--type",
-        type=str,
-        choices=[str(x) for x in CalculationType],
-        help="The type of calculation to do.",
+        "--input",
+        type=Path,
+        required=True,
+        help="Path to the input JSON file (CalculatorInput format).",
     )
     parser.add_argument(
-        "--val1", type=float, help="The first value to use in calculation."
-    )
-    parser.add_argument(
-        "--val2", type=float, help="The second value to use in calculation."
-    )
-    parser.add_argument(
-        "--out-file", type=Path, help="The location of the output file."
+        "--output",
+        type=Path,
+        required=True,
+        help="Path to the output JSON file (CalculatorOutput format).",
     )
     return parser.parse_args(args=args)
 
@@ -51,11 +47,11 @@ def run_main(args: Namespace) -> None:
         None
 
     """
-    request: CalculatorInput = CalculatorInput(
-        type_of_calc=CalculationType[args.type], value1=args.val1, value2=args.val2
+    request: CalculatorInput = CalculatorInput.model_validate_json(
+        args.input.read_text()
     )
     result: CalculatorOutput = calculate(request=request)
-    with args.out_file.open("w") as out_writer:
+    with args.output.open("w") as out_writer:
         out_writer.write(result.model_dump_json())
 
 
