@@ -189,6 +189,10 @@ def test_get_base_docker_command_for_image(
             get_python_path_env(
                 docker_project_root=docker_project_root, target_image=docker_target
             ),
+            "-e",
+            f"NON_DOCKER_PROJECT_ROOT={mock_project_root.absolute()}",
+            "-e",
+            f"DOCKER_REMOTE_PROJECT_ROOT={docker_project_root.absolute()}",
             "-v",
             "/var/run/docker.sock:/var/run/docker.sock",
             "-v",

@@ -76,6 +76,10 @@ FROM base AS prod
 
 RUN poetry install --no-root
 
+COPY pypi_package/src /usr/dev/pypi_package/src
+ENV PYTHONPATH=/usr/dev/pypi_package/src
+WORKDIR /usr/dev
+
 FROM base AS pulumi
 
 RUN poetry install --no-root --with pulumi

@@ -18,6 +18,7 @@ from build_support.ci_cd_tasks.env_setup_tasks import (
     GetGitInfo,
     GitInfo,
     SetupDevEnvironment,
+    SetupProdEnvironment,
 )
 from build_support.ci_cd_tasks.task_node import PerSubprojectTask, TaskNode
 from build_support.ci_cd_vars.build_paths import get_git_info_yaml
@@ -443,7 +444,7 @@ class SubprojectUnitTests(PerSubprojectTask):
         test_file_parent_relative_str = str(test_file_parent_relative)
         return [
             *test_files_to_omit_relative,
-            f"{test_file_parent_relative_str}/*/test_*.py",
+            f"{test_file_parent_relative_str}/*/**/test_*.py",
             f"{test_file_parent_relative_str}/**/__init__.py",
             f"{test_file_parent_relative_str}/**/conftest.py",
         ]
@@ -698,6 +699,10 @@ class SubprojectFeatureTests(PerSubprojectTask):
                     EnforceProcess(basic_task_info=self.get_basic_task_info()),
                 ]
             )
+        if self.subproject_context == SubprojectContext.PYPI:
+            required_tasks.append(
+                SetupProdEnvironment(basic_task_info=self.get_basic_task_info())
+            )
         return required_tasks
 
     def get_feature_tests_to_run(self, file_cache: FileCacheEngine) -> Iterator[Path]:
@@ -707,8 +712,8 @@ class SubprojectFeatureTests(PerSubprojectTask):
             file_cache (FileCacheEngine): The file cache that holds up-to-date
                 information on which tests have passed and which haven't.
 
-        Returns:
-            FeatureTestInfo: A dataclass with the cache information for feature tests.
+        Yields:
+            Iterator[Path]: Feature test file paths that need to run.
         """
         feature_test_dir = self.subproject.get_test_suite_dir(
             test_suite=PythonSubproject.TestSuite.FEATURE_TESTS

@@ -1,9 +1,14 @@
-"""Data models used for calculations."""
+"""Domain data models and enums for calculations.
 
+Attributes:
+    CalculationType: Enum of supported calculation operations.
+    CalculationRequest: Input dataclass for the calculation domain.
+    CalculationResult: Output dataclass from the calculation domain.
+"""
+
+from dataclasses import dataclass
 from enum import StrEnum
 from typing import override
-
-from pydantic import BaseModel
 
 
 class CalculationType(StrEnum):
@@ -24,15 +29,17 @@ class CalculationType(StrEnum):
         return self.name
 
 
-class CalculatorInput(BaseModel):
-    """Object containing the information required to do a calculation."""
+@dataclass(frozen=True)
+class CalculationRequest:
+    """Input parameters for a calculation operation."""
 
-    type_of_calc: CalculationType
+    operation: CalculationType
     value1: float
     value2: float
 
 
-class CalculatorOutput(BaseModel):
-    """Object containing the information resulting from a calculation."""
+@dataclass(frozen=True)
+class CalculationResult:
+    """Result of a calculation operation."""
 
     result: float

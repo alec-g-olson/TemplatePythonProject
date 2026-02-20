@@ -1,4 +1,4 @@
 [tool.coverage.run]
 branch = true
 parallel = true
-omit = ["build_support/test/unit_tests/test_module/**/__init__.py", "build_support/test/unit_tests/test_module/**/conftest.py", "build_support/test/unit_tests/test_module/*/test_*.py"]
+omit = ["build_support/test/unit_tests/test_module/**/__init__.py", "build_support/test/unit_tests/test_module/**/conftest.py", "build_support/test/unit_tests/test_module/*/**/test_*.py"]

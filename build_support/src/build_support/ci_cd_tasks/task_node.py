@@ -85,7 +85,7 @@ class BasicTaskInfo(BaseModel):
         """Dumps object as a yaml str.
 
         Returns:
-            str: A YAML representation of this ProjectSettings instance.
+            str: A YAML representation of this BasicTaskInfo instance.
         """
         return safe_dump(self.model_dump())
 

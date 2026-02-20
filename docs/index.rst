@@ -16,9 +16,14 @@ _________
     :maxdepth: 1
 
     creating_a_new_project
+    project_setup
     subprojects
     subproject_code_docs
     software_development_process
+    source_code_style_guide
+    testing_style_guide
+    tickets
+    retrospectives
     license
 
 

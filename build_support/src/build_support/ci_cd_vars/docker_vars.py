@@ -191,7 +191,7 @@ def get_base_docker_command_for_image(
             for.
 
     Returns:
-        str: A list of arguments that we can use to run a command in the specified
+        list[str]: A list of arguments that we can use to run a command in the specified
             docker container.
     """
     return concatenate_args(
@@ -206,6 +206,10 @@ def get_base_docker_command_for_image(
             get_python_path_env(
                 docker_project_root=docker_project_root, target_image=target_image
             ),
+            "-e",
+            f"NON_DOCKER_PROJECT_ROOT={non_docker_project_root.absolute()}",
+            "-e",
+            f"DOCKER_REMOTE_PROJECT_ROOT={docker_project_root.absolute()}",
             "-v",
             "/var/run/docker.sock:/var/run/docker.sock",
             "-v",
@@ -236,7 +240,7 @@ def get_docker_command_for_image(
             for.
 
     Returns:
-        str: A list of arguments that we can use to run a command in the specified
+        list[str]: A list of arguments that we can use to run a command in the specified
             docker container.
     """
     return concatenate_args(
@@ -268,8 +272,8 @@ def get_interactive_docker_command_for_image(
             shell in that image.
 
     Returns:
-        str: A list of arguments that we can use to open an interactive shell in the
-            specified docker container.
+        list[str]: A list of arguments that we can use to open an interactive
+            shell in the specified docker container.
     """
     return concatenate_args(
         args=[
@@ -301,7 +305,7 @@ def get_docker_build_command(
             build command for a special case.
 
     Returns:
-        str: A list of arguments that we can use to build the specified docker
+        list[str]: A list of arguments that we can use to build the specified docker
             container.
     """
     flattened_extra_args = []

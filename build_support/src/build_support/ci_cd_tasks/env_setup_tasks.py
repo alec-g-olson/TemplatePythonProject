@@ -191,7 +191,8 @@ class GitInfo(BaseModel):
         """Extracts the ticket id from the branch name.
 
         Returns:
-            str: The id of the ticket associated with the branch.
+            Optional[str]: The ticket id associated with the branch, or ``None``
+                when on the primary branch.
         """
         match = re.search(pattern=GIT_BRANCH_NAME_REGEX, string=self.branch)
         ticket_id = match.group(1) if match is not None else None

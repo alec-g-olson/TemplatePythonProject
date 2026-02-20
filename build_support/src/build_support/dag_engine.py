@@ -72,7 +72,7 @@ class BuildRunReport(BaseModel):
         """Dumps object as a yaml str.
 
         Returns:
-            str: A YAML representation of this BuildRuntimeReport instance.
+            str: A YAML representation of this BuildRunReport instance.
         """
         return safe_dump(self.model_dump(mode="json"))
 

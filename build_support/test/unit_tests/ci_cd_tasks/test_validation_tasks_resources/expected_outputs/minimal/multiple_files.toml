@@ -1,2 +1,2 @@
 [tool.coverage.run]
-omit = ["build_support/test/unit_tests/test_module/**/__init__.py", "build_support/test/unit_tests/test_module/**/conftest.py", "build_support/test/unit_tests/test_module/*/test_*.py", "build_support/test/unit_tests/test_module/test_other1.py", "build_support/test/unit_tests/test_module/test_other2.py"]
+omit = ["build_support/test/unit_tests/test_module/**/__init__.py", "build_support/test/unit_tests/test_module/**/conftest.py", "build_support/test/unit_tests/test_module/*/**/test_*.py", "build_support/test/unit_tests/test_module/test_other1.py", "build_support/test/unit_tests/test_module/test_other2.py"]

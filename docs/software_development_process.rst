@@ -35,6 +35,48 @@ these enforcement tickets or changes to process will take too long the technical
 and product manager (in consultation with the team) must reduce the scope of the
 changes, and allow the excess changes to be addressed in a future retrospective.
 
+Retrospective
+~~~~~~~~~~~~~
+
+All changes to the team’s process must be unanimously approved by the participants of a
+retrospective meeting, including the Technical Lead and Project Manager. If a change
+later proves ineffective or unnecessarily burdensome, it may be reversed in a future
+retrospective.
+
+Retrospectives may be held at any time and are not required to follow a fixed schedule.
+However, the must be minimally attended by the Product Manager, the Technical Lead, and
+at least half of the Developers.
+
+Retrospective Process
+^^^^^^^^^^^^^^^^^^^^^
+
+At the beginning of each retrospective, create a new GitHub issue and a branch.  Then make
+a new retrospective page in the :code:`docs/retros` directory following the naming
+convention :code:`YYYY-MM-DD-retrospective.rst`.  All meeting notes and action items must
+go on this page inside the documentation for this project.  Once it is done a PR will be
+opened for the branch and the attendees of the retro will approve its merge to main.
+
+All retrospectives are linked from the :doc:`retrospectives` page.
+
+Start by linking the previous retrospective page and reviewing any outstanding action
+items. Then discuss new pain points or process insights that have arisen since the last
+retrospective. (what went well, what went poorly, what should we start doing, what
+should we stop doing) All action items require unanimous approval from retrospective
+participants. Once approved, categorize each action item as either Immediate or Future.
+
+**Immediate Action Items**
+These are process changes and related enforcement updates that can reasonably be
+implemented, reviewed, and merged into :code:`main` by the end of the day. Following
+the standard development workflow.
+
+**Future Action Items**
+These are items that cannot reasonably be completed within that timeframe.
+
+After categorization, implement all Immediate action items on this branch.
+
+Each Future action item must be converted into its own ticket and handled according
+to the process defined in the `Outstanding Process Enforcement Tickets`_ section.
+
 Outstanding Process Enforcement Tickets
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -80,7 +122,7 @@ Technical Lead
 Responsibilities
 ^^^^^^^^^^^^^^^^
 
-The the technical lead has all of the responsibilities of the developers, with the
+The technical lead has all of the responsibilities of the developers, with the
 added responsibility of being the final decision maker for technical decisions.  This
 includes but is not limited to technical processes, product architecture, and
 technologies selected for development.  Although the technical lead has final say, they
@@ -116,10 +158,11 @@ Definitions
    * - Term
      - Definition
    * - Ticket
-     - A document that exists to track work required to deliver features.  Can have
-       sub-tickets and parent tickets.
+     - A GitHub issue that tracks the status of work.  Detailed requirements and
+       acceptance criteria are documented in corresponding :code:`.rst` files in the
+       :code:`docs/tickets` directory.  Can have sub-tickets and parent tickets.
    * - Backlog
-     - The collection of all tickets that have not been approved for development.
+     - The collection of all GitHub issues that have not been approved for development.
    * - Feature
      - A proposed capability of the software that is believed will provide business
        value.
@@ -130,49 +173,75 @@ Definitions
 
 Adding Features to the Backlog
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Feature tickets can be only added to the backlog by the product manager.  Feature
-tickets can stay in the backlog in a partially completed state as the product manager
-gathers requirements and assesses the business value of the ticket.
 
-The product manager is the only person who can declare a feature's requirements to be
-ready, and is also the only person who can assign a business value to a ticket.
+Feature tickets can only be added to the backlog by the Product Manager.  The process for
+creating a new feature ticket is:
+
+1. The Product Manager creates a GitHub issue with a brief description of the need
+2. The Product Manager creates a branch from the GitHub issue (GitHub will automatically
+   suggest :code:`{ticket_id}-{short-description}`; for this project, the short
+   description is optional and :code:`{ticket_id}` alone is also valid)
+3. The Product Manager creates a corresponding :code:`.rst` file in the
+   :code:`docs/tickets/{project_name}` directory named :code:`{full-branch-name}.rst`,
+   using the :doc:`ticket template <tickets/TEMPLATE>` as a starting point
+4. The Product Manager documents all requirements and acceptance criteria in the
+   :code:`.rst` file
+5. When the developers agree that requirements are complete and clear, and the
+   acceptance criteria is falsifiable, the Product Manager may move the GitHub issue to
+   "Ready" status
+
+Feature tickets can remain in the backlog in a partially completed state as the Product
+Manager gathers requirements and assesses the business value of the ticket.  All
+requirements and acceptance criteria should be documented in the ticket's :code:`.rst`
+file in the :code:`docs/tickets` directory.
+
+The Product Manager is also the only person who can assign a business value to a
+ticket, or move the ticket to "Ready" (given developer approval).
+
+All tickets are linked from the :doc:`tickets` page.
 
 Adding Bugs to the Backlog
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Bugs can be submitted by anyone but must have clear instructions for reproduction.  If
-a developer cannot reproduce the bug the developer should go to the individual who
-submitted the bug and work with them to determine the steps for reproduction.
+Bugs can be submitted by anyone by creating a GitHub issue.  The bug report must have
+clear instructions for reproduction.  If a developer cannot reproduce the bug, the
+developer should work with the individual who submitted the bug to determine the steps
+for reproduction.
 
-The acceptance criteria of a should always be that the broken feature works as
-previously described.  This can only be changed in consultation with the product
-manager.
+The acceptance criteria of a bug should always be that the broken feature works as
+previously described.  This can only be changed in consultation with the Product Manager.
 
 Bugs do not get a complexity score.  This is because they represent missed complexity
-in past estimates of features.  So the team's velocity should be punished for going back
-to do work that they already took credit for.
+in past estimates of features.  So the team's velocity should be punished for going
+back to do work that they already took credit for.
 
 Scoring and Scoping Features
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Once the product manager has completed gathering requirements and accessing the business
-value of a feature it is ready to be scored and scoped by the developers.  The
-developers will breaking down the feature into sub-tickets as they see fit and then
-score them.  When breaking down features the sub-tickets must have an acceptance
-criteria and a score.  This acceptance criteria should be written in a technically
-agnostic way that emphasizes the useful nature of the work.   For example, instead of
-"A column named 'xxx' is added to table 'yyy' in our database." write the acceptance
-criteria as "A developer can store and access a value for property 'xxx' of object 'yyy'
-using our API."
+Once the Product Manager has completed gathering requirements and assessing the business
+value of a feature (documented in the ticket's :code:`.rst` file in :code:`docs/tickets`
+and marked the GitHub issue as "Ready"), it is ready to be scored and scoped by the
+developers.  The developers will review the requirements and acceptance criteria
+documented in the ticket's :code:`.rst` file.
 
-If a feature requires minimal technical work to complete it is possible that a new
-ticket does not need to be created.  In this case the feature's requirements can be
-considered it's acceptance criteria and only an complexity score should be added to it.
+The developers may break down the feature into sub-tickets as they see fit and then score
+them.  When breaking down features, sub-tickets should be created as GitHub issues and
+linked to the parent ticket.  Each sub-ticket must have its own :code:`.rst` file in
+:code:`docs/tickets` with acceptance criteria and a complexity score, using the
+:doc:`ticket template <tickets/TEMPLATE>` as a starting point.  This acceptance
+criteria should be written in a technically agnostic way that emphasizes the useful nature
+of the work.  For example, instead of "A column named 'xxx' is added to table 'yyy' in our
+database," write the acceptance criteria as "A developer can store and access a value for
+property 'xxx' of object 'yyy' using our API."
 
-If there are many sub-tickets it's likely that some of them will be dependent on
-each other.  Tickets should link to each other in a way that makes it clear to the
-members of the team what tickets are blocked and what work needs to be done to unblock
-them.
+If a feature requires minimal technical work to complete, it is possible that sub-tickets
+do not need to be created.  In this case, the feature's requirements (as documented in its
+:code:`.rst` file) can be considered its acceptance criteria and only a complexity score
+needs to be added to the GitHub issue.
+
+If there are many sub-tickets, it's likely that some of them will be dependent on each
+other.  Tickets should be linked in GitHub in a way that makes it clear to the members
+of the team what tickets are blocked and what work needs to be done to unblock them.
 
 Estimating Complexity
 ^^^^^^^^^^^^^^^^^^^^^
@@ -184,26 +253,27 @@ To estimate the complexity of a ticket the developers will first discuss the tic
 get a cursory understanding of the ticket, this should take no more than 5 minutes and
 should generally be 1-2 minutes.  Then each developer can vote (without the knowledge of
 other developers votes) on the complexity they expect the ticket will take.  This is
-done by submitting a fibonacci number (1, 2, 3, 5, 8, 13, etc...).  Once all voting members have
-submitted their vote they check to see if they all agree.
+done by submitting a fibonacci number (1, 2, 3, 5, 8, 13, etc...).  Once all voting
+members have submitted their vote they check to see if they all agree.
 
 Complexity Values
 '''''''''''''''''
 These values should start as days of work, but eventually become relative to past
 tickets.  This is so that the team can measure its velocity in complexity navigated.
 Hopefully as the team builds better tooling and establishes better processes its
-velocity can increase.  If the team sticks to complexity being measured in days of work
-then the velocity cannot increase.
+velocity can increase.  If the team sticks to complexity being measured in days of
+work then the velocity cannot increase.
 
 Prioritizing Ready Tickets
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 When tickets belonging to a feature with business value have both an acceptance criteria
-and a complexity assigned they can be considered ready.  The product manager is responsible
-for ordering the ready tickets by priority for the developers.  Generally tickets
-belonging to the same feature will be grouped together, but it can be possible for
-the team to be working on multiple features at once if the higher priority feature has
-tickets that are blocked.
+(documented in :code:`docs/tickets`) and a complexity score assigned (recorded in the
+GitHub issue), they can be considered ready.  The Product Manager is responsible for
+ordering the ready tickets by priority for the developers in GitHub.  Generally, tickets
+belonging to the same feature will be grouped together, but it is possible for the team
+to be working on multiple features at once if the higher priority feature has tickets
+that are blocked.
 
 Backlog Grooming
 ~~~~~~~~~~~~~~~~
@@ -224,8 +294,45 @@ Completing Tickets
 The work associated with a ticket must be reviewed by another developer, as well as any
 required stakeholders as defined by the software development process.
 
-If the ticket being completed is a feature the product manager must review the new
-behavior before it can be closed.
+Developers will work on the same branch that was created by the Product Manager when the
+ticket was first created.  This branch will contain both the ticket's requirements
+documentation (in :code:`docs/tickets`) and all implementation work.  When the work is
+complete, a single pull request will be opened to merge all changes (documentation and
+implementation) into the main branch at once.
+
+For any given piece of work, developers have freedom to complete their work in any way
+they see fit as long as they follow our `Branching`_ and `Pull Request`_ strategies.
+
+Branching
+^^^^^^^^^
+
+**One ticket = one branch.** Branches are created by the Product Manager when a ticket is
+first created in GitHub. Branch names must start with the ticket ID.  An optional short
+description may be appended after a hyphen, e.g., :code:`{ticket_id}` or
+:code:`{ticket_id}-{description}`.  Our pipeline extracts the ticket ID from the branch
+name for checks such as requiring a corresponding feature test file.
+
+The same branch is used throughout the ticket lifecycle: first by the Product Manager to
+document requirements in :code:`docs/tickets`, and then by developers to implement the
+feature or fix.  All changes are merged together in a single pull request when the work
+is complete.
+
+If a ticket is prematurely merged to main before all acceptance criteria are met, a new
+bug ticket must be created with its own branch to complete the remaining work. Do not
+create additional branches for the same ticket.
+
+Pull Request
+^^^^^^^^^^^^
+
+Before a pull request can be merged, the full verification pipeline must pass. Run
+:code:`make test` from the project root and ensure every step succeeds.  What that
+pipeline does is described under `Verification of Completed Work`_.
+
+Reviewers must also check every use of :code:`pragma: no cover`, :code:`noqa`,
+:code:`type: ignore`, and :code:`nosec` in the changed code.  Each of these exceptions
+must have a clear, valid reason.  For :code:`nosec` (or when the comment would be too
+long on one line), the justification may appear on the line above the exception
+comment.
 
 
 Continuous Integration and Deployment Process
@@ -264,6 +371,14 @@ a command can be sent to the local machine's docker daemon and executed outside 
 :code:`build` container in another container.  The docker container that is chosen to
 execute the commands is coded into the :doc:`build_support`'s code.
 
+We use `Poetry <https://python-poetry.org>`_ to manage Python dependencies.  Declared
+dependencies live in the root :code:`pyproject.toml`; the exact versions used in the
+build are pinned in :code:`poetry.lock`.  We allow loose version constraints in
+:code:`pyproject.toml` (e.g. :code:`^2.11`); the lock file is the source of truth when
+Docker images are built, and we do not update the lock file during test, build, or
+deployment.  Each Docker image installs a clean set of dependencies from the lock file
+so that we avoid untracked or drifting dependencies.
+
 This system should allow for the build, testing, and deployment of our project to be
 done in consistent environments across all \*nix based platforms.
 
@@ -281,12 +396,41 @@ commit with the projects version (located in the :code:`pyproject.toml` file).  
 of this we enforce the following checks on the project's version.
 
 - There are no existing tags in our git repo that match the project's version
-- If we are deploying from the :code:`main` branch we ensure the version follows the
-  standard `SemVer <https://semver.org>`_ format. :code:`MAJOR.MINOR.PATCH`
-- If we are deploying from any other branch we ensure the version follows our standard
-  for dev versions. :code:`MAJOR.MINOR.PATCH-dev.ATTEMPT`
+- The version in :code:`pyproject.toml` follows one of these formats:
+  :code:`MAJOR.MINOR.PATCH` or :code:`MAJOR.MINOR.PATCH-dev.ATTEMPT`
+- This version convention is compatible with the `SemVer <https://semver.org>`_
+  standard.
 
-Major, Minor, Patch, and Attempt should all be integer numbers.
+Major, Minor, Patch, and Attempt must all be integer numbers.
+
+Branch and version compatibility is enforced when tagging during
+:code:`make push`: :code:`main` requires a production version
+(:code:`MAJOR.MINOR.PATCH`) and non-main branches require a dev version
+(:code:`MAJOR.MINOR.PATCH-dev.ATTEMPT`).
+
+Verify Branch Ticket File Exists
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+On any branch other than :code:`main`, we require a matching ticket file in
+:code:`docs/tickets/{project_name}` named :code:`{full-branch-name}.rst`.
+The filename must exactly match the branch name. The :code:`main` branch is exempt.
+
+Verify Feature Tests Were Added
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+On any branch other than :code:`main`, we require a feature test file for the ticket.
+The pipeline derives the ticket id from the branch name and the project name from
+:code:`pyproject.toml`, then looks in each subproject's :code:`feature_tests` folder
+for a file named :code:`test_{ticket_id}_{project_name}.py`.  That file must exist and
+must define at least one test function (a line containing :code:`def test_`).  Pull
+request reviewers are responsible for ensuring the test actually validates the intended
+behavior.  In rare cases (e.g. a performance-only change with no behavior change),
+reviewers may accept a brief comment describing what validation was done and why a real
+behavioral test is not feasible. The pipeline check itself only enforces file existence
+and the presence of at least one test function.
+
+See :doc:`testing_style_guide` for the full conventions around how feature tests should
+be written.
 
 Check the Structure of the README.md
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -296,6 +440,12 @@ and that the sections for those headers have some contents.
 
 When running tests on any branch other than :code:`main` we test to make sure that all
 URLs used in hyperlinks point to a valid website.
+
+Check the Structure of AGENTS.md and CLAUDE.md
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+We check that the headers are as we expect in  :code:`AGENTS.md` and :code:`CLAUDE.md`,
+and that the links in these files point to correctly named files that exist in the repo.
 
 Check the Contents of "docs" RST Files
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -316,6 +466,12 @@ subproject_code_docs.rst
 We check to make sure there is a link to the sphinx generated documentation of every
 subproject with source code.
 
+developer_tooling.rst
+'''''''''''''''''''''
+
+We require that every target defined in the root :code:`Makefile` is documented in the
+developer tooling page.
+
 Check Hyperlinks are Valid
 ''''''''''''''''''''''''''
 
@@ -326,6 +482,11 @@ referenced website has changed URLs since it was first built.
 
 General Python Package Validation Strategy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The design-level conventions for source code — how to structure modules, when to use
+classes vs functions, how to define data models, and more — are described in the
+:doc:`source_code_style_guide`.  The tooling below enforces the surface-level rules
+automatically; the style guide covers everything the tools cannot check.
 
 There is a general validation strategy that the following python packages go through:
  - :doc:`build_support`
@@ -349,30 +510,16 @@ so that all stable rules are run, and unstable rules are skipped.
 
 When running on test code we also turn off pydocstyle (D) and flake8-boolean-trap (FBT)
 rules, because they are onerous to enforce and provide very little benefit in test code.
-
-Testing Source Code
-'''''''''''''''''''
-All subprojects with source code follow the same testing standards.
-
-The :code:`process_and_style_enforcement` package in this project consists entirely of
-test code that is run to enforce our development practices.  There is no source code to
-test.
-
-Unit Tests
-""""""""""
-For each subproject we test each src file with a corresponding test file in the unit
-test folder of the subproject. The test file should have the name
-:code:`test_{src_file_name}`.  Each src file must have 100% coverage when it's
-corresponding test file is executed.
-
-After all individual files are checked for 100% coverage we run all unit tests for the
-subproject at once and generate test reports that we put in the subproject's report
-folder.
-
 Static Type Checking - MyPy
 '''''''''''''''''''''''''''
 
-We run :code:`mypy` on every package to ensure that typing in enforced.
+We run :code:`mypy` on every package to ensure that typing is enforced.  The version
+and configuration live in :code:`pyproject.toml` under :code:`[tool.mypy]`.  We use the
+Pydantic plugin and enable a strict set of checks: disallow untyped defs and untyped
+calls, warn on redundant casts and return of :code:`Any`, disallow unimported
+:code:`Any`, and enable error codes such as redundant-self, possibly-undefined,
+truthy-bool, explicit-override, and others.  Any use of :code:`type: ignore` must be
+explained to the satisfaction of the pull request reviewer.
 
 Bandit Security Tests
 '''''''''''''''''''''
@@ -406,18 +553,45 @@ Modules
 .......
 
   * A :code:`Attributes` section exists where each non-function and non-class element of
-    the module is described, if there are any it the module.
+    the module is described, if there are any in the module.
 
 Functions and Methods
 .....................
 
-  * An :code:`Args` section exists where the function or methods arguments are given a
+  * An :code:`Args` section exists where the function or method's arguments are given a
     description.
   * Either a :code:`Returns` or :code:`Yields` section exists where the result of the
     function or method is described.
 
-The :code:`process_and_style_enforcement` package has no source code and is not subject
-to these standards.
+Testing Source Code
+'''''''''''''''''''
+All subprojects with source code follow the same testing standards, described in full in
+the :doc:`testing_style_guide`.  The summary below covers the enforcement mechanics;
+consult that document for philosophy, conventions, and examples.
+
+The :code:`process_and_style_enforcement` package in this project consists entirely of
+test code that is run to enforce our development practices.  There is no source code to
+test.
+
+Unit Tests
+""""""""""
+For each subproject we test each src file with a corresponding test file in the unit
+test folder of the subproject.  The test file must be named :code:`test_{src_file_name}`
+and mirror the directory structure of :code:`src/`.  Each src file must have 100%
+branch and line coverage when its corresponding test file is executed in isolation.
+
+After all individual files are checked for 100% coverage we run all unit tests for the
+subproject at once and generate test reports that we put in the subproject's report
+folder.
+
+Feature Tests
+"""""""""""""
+For each subproject we run all the feature tests that have been written for the
+subproject.  When running these tests we generate a test report that we put in the
+subproject's report folder.  Feature tests evaluate the software from the outside,
+through the same interface that real users have access to (currently a CLI, later an
+API, eventually a live service instance).  We require all feature tests to pass and all
+test files must have 100% coverage to prevent dead code from persisting.
 
 
 Deployment Process

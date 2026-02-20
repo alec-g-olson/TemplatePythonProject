@@ -1,6 +1,9 @@
-"""Package for doing calculation.
+"""Calculation domain package.
+
+Contains pure calculation logic and internal domain data models used by the
+package API layer.
 
 Modules:
-    | calculator: Contains the business logic for calculations.
-    | data_models: Holds the data models and enums used for calculations.
+    | calculator: Domain engine with pure calculation logic.
+    | data_models: Domain types and enums.
 """
