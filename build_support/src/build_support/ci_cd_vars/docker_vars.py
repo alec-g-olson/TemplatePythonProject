@@ -191,7 +191,7 @@ def get_base_docker_command_for_image(
             for.
 
     Returns:
-        str: A list of arguments that we can use to run a command in the specified
+        list[str]: A list of arguments that we can use to run a command in the specified
             docker container.
     """
     return concatenate_args(
@@ -240,7 +240,7 @@ def get_docker_command_for_image(
             for.
 
     Returns:
-        str: A list of arguments that we can use to run a command in the specified
+        list[str]: A list of arguments that we can use to run a command in the specified
             docker container.
     """
     return concatenate_args(
@@ -272,8 +272,8 @@ def get_interactive_docker_command_for_image(
             shell in that image.
 
     Returns:
-        str: A list of arguments that we can use to open an interactive shell in the
-            specified docker container.
+        list[str]: A list of arguments that we can use to open an interactive
+            shell in the specified docker container.
     """
     return concatenate_args(
         args=[
@@ -305,7 +305,7 @@ def get_docker_build_command(
             build command for a special case.
 
     Returns:
-        str: A list of arguments that we can use to build the specified docker
+        list[str]: A list of arguments that we can use to build the specified docker
             container.
     """
     flattened_extra_args = []

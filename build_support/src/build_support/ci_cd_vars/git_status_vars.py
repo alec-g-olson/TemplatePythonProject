@@ -146,7 +146,7 @@ def get_git_diff(project_root: Path) -> DiffIndex[Diff]:
         project_root (Path): Path to this project's root.
 
     Returns:
-        str: The results of running `git diff`.
+        DiffIndex[Diff]: The results of running ``git diff``.
     """
     return git_add_all(project_root=project_root).commit.diff()
 

@@ -480,7 +480,7 @@ automatically; the style guide covers everything the tools cannot check.
 There is a general validation strategy that the following python packages go through:
  - :doc:`build_support`
  - :doc:`infra`
- - :doc:`assembly_design`
+ - :doc:`template_python_project`
  - :code:`process_and_style_enforcement`
 
 Each package generates reports during validation that are placed in

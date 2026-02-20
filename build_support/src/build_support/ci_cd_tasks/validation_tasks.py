@@ -712,8 +712,8 @@ class SubprojectFeatureTests(PerSubprojectTask):
             file_cache (FileCacheEngine): The file cache that holds up-to-date
                 information on which tests have passed and which haven't.
 
-        Returns:
-            FeatureTestInfo: A dataclass with the cache information for feature tests.
+        Yields:
+            Iterator[Path]: Feature test file paths that need to run.
         """
         feature_test_dir = self.subproject.get_test_suite_dir(
             test_suite=PythonSubproject.TestSuite.FEATURE_TESTS

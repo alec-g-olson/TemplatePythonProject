@@ -102,11 +102,11 @@ class FileCacheInfo(BaseModel):
         """Builds an object from a YAML str.
 
         Args:
-            yaml_str (str): String of the YAML representation of a ProjectSettings
+            yaml_str (str): String of the YAML representation of a FileCacheInfo
                 instance.
 
         Returns:
-            GitInfo: A ProjectSettings object parsed from the YAML.
+            FileCacheInfo: A FileCacheInfo object parsed from the YAML.
         """
         return FileCacheInfo.model_validate(safe_load(yaml_str))
 
@@ -114,7 +114,7 @@ class FileCacheInfo(BaseModel):
         """Dumps object as a yaml str.
 
         Returns:
-            str: A YAML representation of this ProjectSettings instance.
+            str: A YAML representation of this FileCacheInfo instance.
         """
         return safe_dump(self.model_dump(mode="json"))
 
@@ -254,7 +254,7 @@ class FileCacheEngine:
             file_path (Path): The path to the file.
 
         Returns:
-            str: The ISO 8601 timestamp that the file was last modified.
+            datetime: The timestamp that the file was last modified.
         """
         return datetime.fromtimestamp(timestamp=file_path.stat().st_mtime, tz=UTC)
 

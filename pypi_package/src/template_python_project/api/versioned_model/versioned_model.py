@@ -102,8 +102,9 @@ class VersionedModel(BaseModel, ABC):
 
         Returns the parsed ``Version`` only when ``data`` is a dict containing a
         ``data_model_version`` key whose value is a valid semver string (or
-        ``Version`` instance) within the supported range.  Returns ``None`` in
-        every other case without raising.
+        ``Version`` instance) within the supported range. Returns ``None`` for
+        missing/invalid versions that fail semver parsing with ``ValueError``.
+        Type mismatches are intentionally left to Pydantic's normal validation path.
 
         Args:
             data (Any): The raw data being validated by Pydantic.

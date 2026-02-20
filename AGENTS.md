@@ -121,7 +121,7 @@ docker run --rm \
 ### Dependency Changes
 
 Never run `poetry install` or `poetry lock` outside a container.
-`docker run ... <command>` is sufficent.
+`docker run ... <command>` is sufficient.
 
 ---
 

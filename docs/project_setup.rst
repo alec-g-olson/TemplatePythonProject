@@ -34,7 +34,7 @@ docker image with the correct interpreter.
 Once you have done this go to PyCharm's Interpreter Settings and navigate to
 :code:`Add Interpreter` > :code:`On Docker`.
 Select :code:`Pull or use existing` and fill the :code:`image tag` field with
-:code:`assembly_design:dev`.
+:code:`template-python-project:dev`.
 Click :code:`Next`, wait for the image to load, click :code:`Next`, ensure that
 :code:`System Interpreter` is selected on the left with :code:`/usr/local/bin/python3`,
 and finally click :code:`Create`.

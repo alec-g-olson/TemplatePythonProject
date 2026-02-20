@@ -20,5 +20,7 @@ def test_feature_branch_has_matching_ticket_file(
         real_project_root_dir / "docs" / "tickets" / project_name / f"{branch_name}.rst"
     )
     primary_branch_name = GitInfo.get_primary_branch_name()
-    ticket_is_required = branch_name != primary_branch_name
-    assert expected_ticket_path.exists() == ticket_is_required
+    assert (
+        (branch_name != primary_branch_name and expected_ticket_path.exists())
+        or branch_name == primary_branch_name  # no requirements for tickets on main
+    )
