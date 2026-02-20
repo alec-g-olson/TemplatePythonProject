@@ -1,58 +1,75 @@
 """Shared fixtures for PYPI feature tests."""
 
 import os
-import shutil
-import sys
 from pathlib import Path
 
 import pytest
 
+from build_support.ci_cd_vars.docker_vars import DockerTarget, get_docker_image_name
+from build_support.ci_cd_vars.project_structure import (
+    get_feature_test_scratch_folder,
+    maybe_build_dir,
+)
 
-@pytest.fixture(scope="session")
-def pypi_package_root_dir() -> Path:
-    """Return the root directory of the ``pypi_package`` subproject."""
-    return Path(__file__).resolve().parents[2]
+
+def _sanitize_test_id(node_name: str) -> str:
+    """Sanitize pytest node name for use as a directory name."""
+    return node_name.replace("[", "_").replace("]", "_").replace("::", "_").rstrip("_")
 
 
-@pytest.fixture(scope="session")
-def staged_pypi_package_root(tmp_path: Path, pypi_package_root_dir: Path) -> Path:
-    """Create a session-scoped copy of ``pypi_package`` for subprocess tests."""
-    staged_root = tmp_path.joinpath("pypi_package")
-    shutil.copytree(
-        src=pypi_package_root_dir,
-        dst=staged_root,
-        ignore=shutil.ignore_patterns("__pycache__", ".pytest_cache", "*.pyc"),
+@pytest.fixture
+def prod_workdir() -> str:
+    """Path inside the prod container where host_tmp_path is mounted."""
+    return "/usr/workdir"
+
+
+@pytest.fixture
+def pypi_feature_test_scratch_path(request: pytest.FixtureRequest) -> Path:
+    """Per-test scratch dir under test_scratch_folder for file I/O and prod -v mount.
+
+    Uses test_scratch_folder/pypi_prod_scratch/<test_id> so the path is stable and
+    under the project root for correct host-path translation when running in dev.
+    """
+    project_root = Path(os.environ.get("DOCKER_REMOTE_PROJECT_ROOT") or Path.cwd())
+    scratch_base = get_feature_test_scratch_folder(project_root=project_root)
+    test_id = _sanitize_test_id(request.node.name)
+    return maybe_build_dir(
+        dir_to_build=scratch_base.joinpath("pypi_prod_scratch", test_id)
     )
-    return staged_root
 
 
-@pytest.fixture(scope="session")
-def staged_pypi_src_dir(staged_pypi_package_root: Path) -> Path:
-    """Return the src directory from the staged package copy."""
-    return staged_pypi_package_root.joinpath("src")
+@pytest.fixture
+def host_tmp_path(pypi_feature_test_scratch_path: Path) -> Path:
+    """Path to the scratch dir as seen by the host Docker daemon for -v mount.
+
+    When running inside a dev container, returns the host path so the daemon can
+    mount it. Otherwise returns the scratch path as-is.
+    """
+    scratch_path = pypi_feature_test_scratch_path
+    non_docker_root = os.environ.get("NON_DOCKER_PROJECT_ROOT")
+    docker_root = os.environ.get("DOCKER_REMOTE_PROJECT_ROOT", "/usr/dev")
+    if non_docker_root is not None and str(scratch_path).startswith(docker_root):
+        return Path(non_docker_root) / scratch_path.relative_to(docker_root)
+    return scratch_path
 
 
-@pytest.fixture(scope="session")
-def staged_main_file(staged_pypi_src_dir: Path) -> Path:
-    """Return the staged CLI entrypoint path."""
-    return staged_pypi_src_dir.joinpath("template_python_project", "main.py")
-
-
-@pytest.fixture(scope="session")
-def staged_main_command(staged_main_file: Path) -> list[str]:
-    """Return the command prefix for running the staged CLI."""
-    return [sys.executable, str(staged_main_file)]
-
-
-@pytest.fixture(scope="session")
-def staged_python_env(staged_pypi_src_dir: Path) -> dict[str, str]:
-    """Build environment vars so subprocesses import from the staged src path."""
-    env = os.environ.copy()
-    existing_python_path = env.get("PYTHONPATH")
-    staged_src = str(staged_pypi_src_dir)
-    env["PYTHONPATH"] = (
-        staged_src
-        if existing_python_path is None
-        else f"{staged_src}{os.pathsep}{existing_python_path}"
+@pytest.fixture
+def prod_docker_command_prefix(host_tmp_path: Path, prod_workdir: str) -> list[str]:
+    """Docker run prefix for prod image with tmp dir mounted at prod_workdir."""
+    docker_project_root = Path(os.environ.get("DOCKER_REMOTE_PROJECT_ROOT", "/usr/dev"))
+    image = get_docker_image_name(
+        project_root=docker_project_root, target_image=DockerTarget.PROD
     )
-    return env
+    return [
+        "docker",
+        "run",
+        "--rm",
+        "--network",
+        "host",
+        "-i",
+        "-v",
+        f"{host_tmp_path}:{prod_workdir}",
+        "-w",
+        prod_workdir,
+        image,
+    ]

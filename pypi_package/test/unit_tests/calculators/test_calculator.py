@@ -63,11 +63,10 @@ def test_calculate_divide_by_zero_raises() -> None:
 
 def test_calculate_unimplemented_operation_raises() -> None:
     """Unimplemented operation type raises NotImplementedError (covers default case)."""
-    request_with_unimplemented_op = cast(
-        CalculationRequest,
-        CalculationRequest(
-            operation=_FakeCalculationType.UNIMPLEMENTED, value1=1.0, value2=2.0
-        ),
+    request_with_unimplemented_op = CalculationRequest(
+        operation=cast(CalculationType, _FakeCalculationType.UNIMPLEMENTED),
+        value1=1.0,
+        value2=2.0,
     )
     with pytest.raises(NotImplementedError) as exc_info:
         calculate(request_with_unimplemented_op)

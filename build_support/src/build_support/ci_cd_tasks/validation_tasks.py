@@ -18,6 +18,7 @@ from build_support.ci_cd_tasks.env_setup_tasks import (
     GetGitInfo,
     GitInfo,
     SetupDevEnvironment,
+    SetupProdEnvironment,
 )
 from build_support.ci_cd_tasks.task_node import PerSubprojectTask, TaskNode
 from build_support.ci_cd_vars.build_paths import get_git_info_yaml
@@ -697,6 +698,10 @@ class SubprojectFeatureTests(PerSubprojectTask):
                     ValidatePythonStyle(basic_task_info=self.get_basic_task_info()),
                     EnforceProcess(basic_task_info=self.get_basic_task_info()),
                 ]
+            )
+        if self.subproject_context == SubprojectContext.PYPI:
+            required_tasks.append(
+                SetupProdEnvironment(basic_task_info=self.get_basic_task_info())
             )
         return required_tasks
 

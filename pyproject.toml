@@ -78,6 +78,7 @@ repository = "https://github.com/alec-g-olson/TemplatePythonProject"
 # - target version of python for ruff: [tool.ruff] => target-version
 python = "3.13.5"
 Pydantic = "^2.11"
+semver = "^3.0"
 
 [tool.poetry.group.build]
 optional = true

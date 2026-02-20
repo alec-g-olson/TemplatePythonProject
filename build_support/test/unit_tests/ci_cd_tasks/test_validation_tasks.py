@@ -18,6 +18,7 @@ from build_support.ci_cd_tasks.env_setup_tasks import (
     GetGitInfo,
     GitInfo,
     SetupDevEnvironment,
+    SetupProdEnvironment,
 )
 from build_support.ci_cd_tasks.task_node import BasicTaskInfo, TaskNode
 from build_support.ci_cd_tasks.validation_tasks import (
@@ -852,6 +853,10 @@ def test_subproject_feature_tests_requires(
                 ValidatePythonStyle(basic_task_info=basic_task_info),
                 EnforceProcess(basic_task_info=basic_task_info),
             ]
+        )
+    if subproject_context == SubprojectContext.PYPI:
+        expected_required_tasks.append(
+            SetupProdEnvironment(basic_task_info=basic_task_info)
         )
     assert (
         SubprojectFeatureTests(

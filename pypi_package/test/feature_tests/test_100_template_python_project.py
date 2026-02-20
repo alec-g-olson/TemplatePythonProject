@@ -1,11 +1,31 @@
 """Feature tests for ticket 100 calculator CLI behavior."""
 
+import subprocess
 from pathlib import Path
-from subprocess import PIPE, Popen
 
 import pytest
 from template_python_project.api.data_models import CalculatorInput, CalculatorOutput
 from template_python_project.calculators.data_models import CalculationType
+
+
+def _run_cli_in_prod_docker(
+    prod_docker_command_prefix: list[str],
+    prod_workdir: str,
+    input_filename: str,
+    output_filename: str,
+) -> subprocess.CompletedProcess[str]:
+    """Run the CLI in the prod container with tmp_path mounted at prod_workdir."""
+    args = [
+        *prod_docker_command_prefix,
+        "python",
+        "-m",
+        "template_python_project.main",
+        "--input",
+        f"{prod_workdir}/{input_filename}",
+        "--output",
+        f"{prod_workdir}/{output_filename}",
+    ]
+    return subprocess.run(args, check=False, capture_output=True, text=True)
 
 
 @pytest.mark.parametrize(
@@ -34,59 +54,48 @@ from template_python_project.calculators.data_models import CalculationType
 def test_main_cli_writes_expected_output_for_each_calculation_type(
     calculator_input: CalculatorInput,
     expected_output: CalculatorOutput,
-    staged_main_command: list[str],
-    staged_python_env: dict[str, str],
-    tmp_path: Path,
+    prod_docker_command_prefix: list[str],
+    prod_workdir: str,
+    pypi_feature_test_scratch_path: Path,
 ) -> None:
-    """Run the staged CLI with Popen and assert the output JSON is correct."""
+    """Check if the CLI produces the expected output for each calculation input."""
     calculation_type_name = calculator_input.type_of_calc.name.lower()
-    input_file = tmp_path.joinpath(f"{calculation_type_name}_input.json")
-    output_file = tmp_path.joinpath(f"{calculation_type_name}_result.json")
+    input_filename = f"{calculation_type_name}_input.json"
+    output_filename = f"{calculation_type_name}_result.json"
+    input_file = pypi_feature_test_scratch_path.joinpath(input_filename)
+    output_file = pypi_feature_test_scratch_path.joinpath(output_filename)
     input_file.write_text(calculator_input.model_dump_json())
-    cmd = Popen(
-        args=[
-            *staged_main_command,
-            "--input",
-            str(input_file),
-            "--output",
-            str(output_file),
-        ],
-        env=staged_python_env,
-        stdout=PIPE,
-        stderr=PIPE,
-        text=True,
+    result = _run_cli_in_prod_docker(
+        prod_docker_command_prefix=prod_docker_command_prefix,
+        prod_workdir=prod_workdir,
+        input_filename=input_filename,
+        output_filename=output_filename,
     )
-    _, stderr = cmd.communicate()
-    assert cmd.returncode == 0, stderr
-
+    assert result.returncode == 0, result.stderr
     observed_output = CalculatorOutput.model_validate_json(output_file.read_text())
     assert observed_output == expected_output
 
 
 def test_main_cli_fails_for_divide_by_zero(
-    staged_main_command: list[str], staged_python_env: dict[str, str], tmp_path: Path
+    prod_docker_command_prefix: list[str],
+    prod_workdir: str,
+    pypi_feature_test_scratch_path: Path,
 ) -> None:
     """Division by zero exits non-zero and does not produce an output file."""
-    input_file = tmp_path.joinpath("divide_by_zero_input.json")
-    output_file = tmp_path.joinpath("divide_by_zero_result.json")
+    input_filename = "divide_by_zero_input.json"
+    output_filename = "divide_by_zero_result.json"
+    input_file = pypi_feature_test_scratch_path.joinpath(input_filename)
+    output_file = pypi_feature_test_scratch_path.joinpath(output_filename)
     divide_by_zero_input = CalculatorInput(
         type_of_calc=CalculationType.DIVIDE, value1=5, value2=0
     )
     input_file.write_text(divide_by_zero_input.model_dump_json())
-    cmd = Popen(
-        args=[
-            *staged_main_command,
-            "--input",
-            str(input_file),
-            "--output",
-            str(output_file),
-        ],
-        env=staged_python_env,
-        stdout=PIPE,
-        stderr=PIPE,
-        text=True,
+    result = _run_cli_in_prod_docker(
+        prod_docker_command_prefix=prod_docker_command_prefix,
+        prod_workdir=prod_workdir,
+        input_filename=input_filename,
+        output_filename=output_filename,
     )
-    _, stderr = cmd.communicate()
-    assert cmd.returncode != 0
-    assert "ZeroDivisionError" in stderr
+    assert result.returncode != 0
+    assert "ZeroDivisionError" in result.stderr
     assert not output_file.exists()
