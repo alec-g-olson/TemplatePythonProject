@@ -11,6 +11,10 @@ from pathlib import Path
 import pytest
 import yaml
 from git import Head, Repo
+from test_utils.feature_test_branching import (
+    get_feature_test_ticket_id,
+    tag_current_branch_images_for_feature_test_ticket_id,
+)
 
 from build_support.ci_cd_vars.build_paths import get_local_info_yaml
 from build_support.ci_cd_vars.git_status_vars import (
@@ -46,7 +50,10 @@ def remove_dir_and_all_contents(path: Path) -> None:
 
 @pytest.fixture
 def make_command_prefix(
-    mock_project_root: Path, real_project_root_dir: Path, mock_remote_git_folder: Path
+    mock_project_root: Path,
+    real_project_root_dir: Path,
+    mock_remote_git_folder: Path,
+    tag_current_branch_images_for_test_names: None,
 ) -> list[str]:
     """Build the ``make`` command prefix for running inner builds.
 
@@ -54,10 +61,14 @@ def make_command_prefix(
     instead of the real project, mounts the mock remote git repo,
     and enables ``--ci-cd-feature-test-mode`` to skip Docker image
     rebuilds inside the inner build.
+
     Args:
         mock_project_root (Path): Root of the mock project.
         real_project_root_dir (Path): Root of the real project.
         mock_remote_git_folder (Path): Path to the mock bare repo.
+        tag_current_branch_images_for_test_names (None): Ensures test-tag aliases
+            are created for current-branch Docker images before running inner
+            ``make`` calls.
 
     Returns:
         list[str]: Command tokens for ``make`` with overrides.
@@ -74,6 +85,8 @@ def make_command_prefix(
     remote_repo_non_docker_root = non_docker_project_root.joinpath(
         remote_repo_relative_root
     )
+    # Trigger image tag setup before any inner make invocations run.
+    _ = tag_current_branch_images_for_test_names
     return [
         "make",
         f"NON_DOCKER_ROOT={test_non_docker_root}",
@@ -354,13 +367,36 @@ def test_something() -> None:
 
 
 @pytest.fixture
-def current_ticket_id() -> str:
-    """Return a fixed ticket id for mock branch creation.
+def current_ticket_id(real_project_root_dir: Path) -> str:
+    """Build a test ticket id prefixed by the current branch context.
+
+    Args:
+        real_project_root_dir (Path): Root of the real project.
 
     Returns:
-        str: The ticket id ``TEST001``.
+        str: A value that starts with ``f"{current_branch_name}TEST"``.
     """
-    return "TEST001"
+    return get_feature_test_ticket_id(
+        project_root=real_project_root_dir, test_ticket_id="TEST"
+    )
+
+
+@pytest.fixture
+def tag_current_branch_images_for_test_names(
+    real_project_root_dir: Path, current_ticket_id: str
+) -> None:
+    """Tag current-branch Docker images with test-branch image names.
+
+    Args:
+        real_project_root_dir (Path): Root of the real project.
+        current_ticket_id (str): Ticket id used by the test branch names.
+
+    Returns:
+        None
+    """
+    tag_current_branch_images_for_feature_test_ticket_id(
+        project_root=real_project_root_dir, ticket_id=current_ticket_id
+    )
 
 
 @pytest.fixture(

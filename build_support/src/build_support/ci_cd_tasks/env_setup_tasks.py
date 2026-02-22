@@ -1,8 +1,4 @@
-"""Holds all tasks that setup environments during the build process.
-
-Attributes:
-    | GIT_BRANCH_NAME_REGEX: The regex used to validate branch names in ``GitInfo``.
-"""
+"""Holds all tasks that setup environments during the build process."""
 
 from typing import override
 
