@@ -218,7 +218,7 @@ def test_load_git_info_without_ticket_id(
     legacy_git_info_data_dict.pop("ticket_id")
     git_info_yaml_str = yaml.dump(legacy_git_info_data_dict)
     observed_git_info = GitInfo.from_yaml(git_info_yaml_str)
-    assert observed_git_info.ticket_id == "some_branch_name"
+    assert observed_git_info.ticket_id is None
 
 
 def test_load_git_info_bad_branch(git_info_data_dict: dict[Any, Any]) -> None:
@@ -258,42 +258,18 @@ def test_get_primary_branch_name() -> None:
     assert GitInfo.get_primary_branch_name() == "main"
 
 
-@pytest.mark.parametrize(
-    argnames=("branch_name", "ticket_id"),
-    argvalues=[
-        ("main", None),
-        ("branch", "branch"),
-        ("42-branch-name", "42"),
-        ("INFRA001-an-infra-ticket", "INFRA001"),
-    ],
-)
-def test_get_ticket_id(branch_name: str, ticket_id: str | None) -> None:
+def test_git_info_ticket_id_field_round_trip() -> None:
     git_info = GitInfo.model_validate(
         {
-            "branch": branch_name,
+            "branch": "feature-branch",
             "tags": ["some", "tags"],
             "modified_subprojects": [],
             "dockerfile_modified": False,
             "poetry_lock_file_modified": False,
+            "ticket_id": "FEATURE001",
         }
     )
-    assert git_info.ticket_id == ticket_id
-    assert git_info.get_ticket_id() == ticket_id
-
-
-def test_ticket_id_is_none_on_primary_branch_even_when_present_in_input() -> None:
-    git_info = GitInfo.model_validate(
-        {
-            "branch": GitInfo.get_primary_branch_name(),
-            "tags": ["some", "tags"],
-            "modified_subprojects": [],
-            "dockerfile_modified": False,
-            "poetry_lock_file_modified": False,
-            "ticket_id": "STALE001",
-        }
-    )
-    assert git_info.ticket_id is None
-    assert git_info.get_ticket_id() is None
+    assert git_info.ticket_id == "FEATURE001"
 
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
@@ -306,6 +282,9 @@ def test_run_get_git_info(basic_task_info: BasicTaskInfo) -> None:
         patch(
             "build_support.ci_cd_tasks.env_setup_tasks.get_current_branch_name"
         ) as get_branch_mock,
+        patch(
+            "build_support.ci_cd_tasks.env_setup_tasks.get_current_branch_ticket_id"
+        ) as get_ticket_id_mock,
         patch(
             "build_support.ci_cd_tasks.env_setup_tasks.get_local_tags"
         ) as get_tags_mock,
@@ -323,7 +302,9 @@ def test_run_get_git_info(basic_task_info: BasicTaskInfo) -> None:
         tags = ["some_non_version_tag", "0.0.0", "0.1.0"]
         modified_files: list[Path] = []
         modified_subprojects = [SubprojectContext.BUILD_SUPPORT, SubprojectContext.PYPI]
+        ticket_id = "some_branch"
         get_branch_mock.return_value = branch_name
+        get_ticket_id_mock.return_value = ticket_id
         get_tags_mock.return_value = tags
         get_modified_subprojects_mock.return_value = modified_subprojects
         get_modified_files_mock.return_value = modified_files
@@ -342,6 +323,9 @@ def test_run_get_git_info(basic_task_info: BasicTaskInfo) -> None:
             modified_files=modified_files,
             project_root=basic_task_info.docker_project_root,
         )
+        get_ticket_id_mock.assert_called_once_with(
+            project_root=basic_task_info.docker_project_root
+        )
         observed_git_info = GitInfo.from_yaml(git_info_yaml_dest.read_text())
         expected_git_info = GitInfo(
             branch=branch_name,
@@ -349,5 +333,6 @@ def test_run_get_git_info(basic_task_info: BasicTaskInfo) -> None:
             modified_subprojects=modified_subprojects,
             dockerfile_modified=False,
             poetry_lock_file_modified=False,
+            ticket_id=ticket_id,
         )
         assert observed_git_info == expected_git_info

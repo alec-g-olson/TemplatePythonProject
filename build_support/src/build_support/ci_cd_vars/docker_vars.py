@@ -9,7 +9,7 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_all_src_folders,
     get_all_test_folders,
 )
-from build_support.ci_cd_vars.git_status_vars import get_git_info
+from build_support.ci_cd_vars.git_status_vars import get_current_branch_ticket_id
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
 from build_support.ci_cd_vars.project_structure import get_dockerfile
 from build_support.ci_cd_vars.subproject_structure import (
@@ -37,7 +37,7 @@ def get_docker_tag_suffix(project_root: Path) -> str:
     Returns:
         str: ``-<ticket_id>`` on non-primary branches, otherwise an empty string.
     """
-    ticket_id = get_git_info(project_root=project_root).ticket_id
+    ticket_id = get_current_branch_ticket_id(project_root=project_root)
     return f"-{ticket_id}" if ticket_id else ""
 
 

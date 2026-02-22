@@ -3,23 +3,24 @@
 Attributes:
     | GIT_BRANCH_NAME_REGEX: The regex used to validate branch names in ``GitInfo``.
 """
-import re
 from typing import override
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 from yaml import safe_dump, safe_load
 
 from build_support.ci_cd_tasks.task_node import TaskNode
 from build_support.ci_cd_vars.build_paths import get_git_info_yaml
 from build_support.ci_cd_vars.docker_vars import DockerTarget, get_docker_build_command
 from build_support.ci_cd_vars.git_status_vars import (
+    PRIMARY_BRANCH_NAME,
     dockerfile_was_modified,
     get_current_branch_name,
+    get_current_branch_ticket_id,
     get_local_tags,
     get_modified_files,
     get_modified_subprojects,
     git_fetch,
-    poetry_lock_file_was_modified, PRIMARY_BRANCH_NAME,
+    poetry_lock_file_was_modified,
 )
 from build_support.ci_cd_vars.project_setting_vars import get_pulumi_version
 from build_support.ci_cd_vars.project_structure import (
@@ -172,40 +173,10 @@ class GitInfo(BaseModel):
 
     branch: str = Field(pattern=GIT_BRANCH_NAME_REGEX)
     tags: list[str]
+    ticket_id: str | None = None
     modified_subprojects: list[SubprojectContext] = Field(default_factory=list)
     dockerfile_modified: bool
     poetry_lock_file_modified: bool
-    ticket_id: str | None = None
-
-    @staticmethod
-    def derive_ticket_id(branch_name: str) -> str | None:
-        """Derives the ticket id from a branch name.
-
-        Args:
-            branch_name (str): Branch name to inspect.
-
-        Returns:
-            Optional[str]: Ticket id on non-primary branches, else ``None``.
-        """
-        if branch_name == GitInfo.get_primary_branch_name():
-            return None
-        match = re.search(pattern=GIT_BRANCH_NAME_REGEX, string=branch_name)
-        ticket_id = match.group(1) if match is not None else None
-        return (
-            ticket_id
-            if ticket_id is not None and ticket_id != GitInfo.get_primary_branch_name()
-            else None
-        )
-
-    @model_validator(mode="after")
-    def validate_ticket_id(self) -> "GitInfo":
-        """Derive the ticket id from the branch name.
-
-        Returns:
-            GitInfo: This object with ``ticket_id`` synchronized to ``branch``.
-        """
-        self.ticket_id = self.derive_ticket_id(branch_name=self.branch)
-        return self
 
     @staticmethod
     def get_primary_branch_name() -> str:
@@ -215,15 +186,6 @@ class GitInfo(BaseModel):
             str: The primary branch name for this repo.
         """
         return PRIMARY_BRANCH_NAME
-
-    def get_ticket_id(self) -> str | None:
-        """Extracts the ticket id from the branch name.
-
-        Returns:
-            Optional[str]: The ticket id associated with the branch, or ``None``
-                when on the primary branch.
-        """
-        return self.ticket_id
 
     @staticmethod
     def from_yaml(yaml_str: str) -> "GitInfo":
@@ -276,6 +238,9 @@ class GetGitInfo(TaskNode):
             GitInfo(
                 branch=get_current_branch_name(project_root=self.docker_project_root),
                 tags=get_local_tags(project_root=self.docker_project_root),
+                ticket_id=get_current_branch_ticket_id(
+                    project_root=self.docker_project_root
+                ),
                 modified_subprojects=get_modified_subprojects(
                     modified_files=modified_files, project_root=self.docker_project_root
                 ),

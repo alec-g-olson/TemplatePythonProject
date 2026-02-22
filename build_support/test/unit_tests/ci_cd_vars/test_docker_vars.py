@@ -4,9 +4,8 @@ from unittest.mock import patch
 
 import pytest
 from _pytest.fixtures import SubRequest
+from git.exc import InvalidGitRepositoryError
 
-from build_support.ci_cd_tasks.env_setup_tasks import GitInfo
-from build_support.ci_cd_vars.build_paths import get_git_info_yaml
 from build_support.ci_cd_vars.docker_vars import (
     DockerTarget,
     get_base_docker_command_for_image,
@@ -75,33 +74,32 @@ def test_get_docker_image_name_with_branch_suffix(
 def test_get_docker_tag_suffix_when_git_info_is_missing(
     mock_project_root: Path,
 ) -> None:
-    assert get_docker_tag_suffix(project_root=mock_project_root) == ""
+    with patch(
+        "build_support.ci_cd_vars.docker_vars.get_current_branch_ticket_id"
+    ) as get_current_branch_ticket_id_mock:
+        get_current_branch_ticket_id_mock.side_effect = InvalidGitRepositoryError(
+            mock_project_root
+        )
+        with pytest.raises(InvalidGitRepositoryError):
+            get_docker_tag_suffix(project_root=mock_project_root)
 
 
 @pytest.mark.parametrize(
-    argnames=("branch_name", "expected_suffix"),
+    argnames=("ticket_id", "expected_suffix"),
     argvalues=[
-        (GitInfo.get_primary_branch_name(), ""),
+        (None, ""),
         ("TEST001", "-TEST001"),
-        ("TEST001-short-description", "-TEST001"),
         ("101", "-101"),
     ],
 )
-def test_get_docker_tag_suffix_from_git_info(
-    mock_project_root: Path, branch_name: str, expected_suffix: str
+def test_get_docker_tag_suffix_from_current_branch_ticket_id(
+    mock_project_root: Path, ticket_id: str | None, expected_suffix: str
 ) -> None:
-    git_info = GitInfo(
-        branch=branch_name,
-        tags=[],
-        modified_subprojects=[],
-        dockerfile_modified=False,
-        poetry_lock_file_modified=False,
-    )
-    git_info_yaml_path = get_git_info_yaml(project_root=mock_project_root)
-    git_info_yaml_path.parent.mkdir(parents=True, exist_ok=True)
-    git_info_yaml_path.write_text(git_info.to_yaml())
-
-    assert get_docker_tag_suffix(project_root=mock_project_root) == expected_suffix
+    with patch(
+        "build_support.ci_cd_vars.docker_vars.get_current_branch_ticket_id"
+    ) as get_current_branch_ticket_id_mock:
+        get_current_branch_ticket_id_mock.return_value = ticket_id
+        assert get_docker_tag_suffix(project_root=mock_project_root) == expected_suffix
 
 
 def test_get_python_path_for_target_image(

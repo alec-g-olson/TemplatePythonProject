@@ -1,7 +1,7 @@
 """Collection of all functions and variable that report git information.
 
 Attributes:
-    | MAIN_BRANCH_NAME: The name of the main branch for this repo.
+    | PRIMARY_BRANCH_NAME: The name of the main branch for this repo.
 """
 
 from collections.abc import Iterable
@@ -77,6 +77,21 @@ def current_branch_is_main(project_root: Path) -> bool:
         bool: Is the current branch the main branch.
     """
     return get_current_branch_name(project_root=project_root) == PRIMARY_BRANCH_NAME
+
+
+def get_current_branch_ticket_id(project_root: Path) -> str | None:
+    """Gets the ticket id for the currently checked out branch.
+
+    Args:
+        project_root (Path): Path to this project's root.
+
+    Returns:
+        str | None: Ticket id for non-primary branches, otherwise ``None``.
+    """
+    branch_name = get_current_branch_name(project_root=project_root)
+    if branch_name == PRIMARY_BRANCH_NAME:
+        return None
+    return branch_name.split("-", maxsplit=1)[0]
 
 
 def get_git_info(project_root: Path) -> "GitInfo":
