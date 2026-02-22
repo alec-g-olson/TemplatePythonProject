@@ -32,16 +32,17 @@ def test_update_pyproject_toml(tmp_path: Path, real_project_root_dir: Path) -> N
         project_root=tmp_project_path, new_project_settings=new_project_settings
     )
 
-    expected_poetry = expected_data["tool"]["poetry"]  # type: ignore[index]
-    expected_poetry["name"] = new_project_settings.name  # type: ignore[index]
-    expected_poetry["version"] = "0.0.0"  # type: ignore[index]
-    expected_poetry["license"] = new_project_settings.license  # type: ignore[index]
-    expected_poetry["authors"] = [  # type: ignore[index]
+    expected_project = expected_data["project"]  # type: ignore[index]
+    expected_project["name"] = new_project_settings.name  # type: ignore[index]
+    expected_project["version"] = "0.0.0"  # type: ignore[index]
+    expected_project["license"] = new_project_settings.license  # type: ignore[index]
+    expected_project["authors"] = [  # type: ignore[index]
         new_project_settings.organization.formatted_name_and_email()
     ]
-    expected_poetry["packages"][0]["include"] = (  # type: ignore[index]
-        new_project_settings.name
-    )
+    expected_hatch = expected_data["tool"]["hatch"]  # type: ignore[index]
+    expected_hatch["build"]["targets"]["wheel"]["packages"] = [  # type: ignore[index]
+        f"pypi_package/src/{new_project_settings.name}"
+    ]
 
     observed_new_pyproject_toml = get_pyproject_toml_data(project_root=tmp_project_path)
     assert observed_new_pyproject_toml == expected_data

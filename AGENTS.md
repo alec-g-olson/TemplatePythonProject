@@ -47,6 +47,7 @@ Read that file for the full list.  The most important ones for day-to-day work a
 | `make format` | Formats all Python files with Ruff. Run this before committing. |
 | `make lint` | Lints with safe fixes. |
 | `make type_checks` | Runs mypy across all packages. |
+| `make uv_lock` | Updates `uv.lock` in the dev container after changing dependencies. |
 | `make test_pypi` | Runs unit and feature tests for `pypi_package` only. Faster than `make test`. |
 | `make test_build_support` | Runs unit and feature tests for `build_support` only. |
 
@@ -61,21 +62,23 @@ handle the Docker plumbing automatically.
 
 ### The Three Environments
 
-**`build` (`template-python-project:build`)**
+**`build` (`template_python_project:build`)**
+
+(Image name comes from `[project] name` in pyproject.toml.)
 
 The CI/CD orchestration container.  This is what every `make` command uses internally.
 It installs only the `build` dependency group and puts only `build_support/src` on
 `PYTHONPATH`.  You never need to target this image directly; the Makefile does it for
 you.
 
-**`dev` (`template-python-project:dev`)**
+**`dev` (`template_python_project:dev`)**
 
 The development container.  It installs all dependency groups (`dev`, `build`, `pulumi`)
 and puts every `src` and `test` folder from every subproject on `PYTHONPATH`.  This is
 the container to use whenever you need to run a Python command manually — a one-off
 script, a REPL, a specific test file.
 
-**`prod` (`template-python-project:prod`)**
+**`prod` (`template_python_project:prod`)**
 
 The production container.  It installs only the main (non-optional) dependencies and
 puts only `pypi_package/src` on `PYTHONPATH`.  It represents exactly what ships.
@@ -97,7 +100,7 @@ docker run --rm \
   --workdir=/usr/dev \
   -v "$(pwd):/usr/dev" \
   -e PYTHONPATH=/usr/dev/pypi_package/src:/usr/dev/build_support/src:/usr/dev/infra/src:/usr/dev/pypi_package/test:/usr/dev/build_support/test \
-  template-python-project:dev \
+  template_python_project:dev \
   <command>
 ```
 
@@ -114,14 +117,42 @@ docker run --rm \
   --workdir=/usr/dev \
   -v "$(pwd):/usr/dev" \
   -e PYTHONPATH=/usr/dev/pypi_package/src \
-  template-python-project:prod \
+  template_python_project:prod \
   python pypi_package/src/template_python_project/main.py --input in.json --output out.json
 ```
 
-### Dependency Changes
+### Lock file / dependency updates
 
-Never run `poetry install` or `poetry lock` outside a container.
-`docker run ... <command>` is sufficient.
+A convenient way to update the lock file after changing dependencies in ``pyproject.toml``:
+
+```bash
+make uv_lock
+```
+
+That target builds the dev image if needed and runs ``uv lock`` in it, then you commit the
+updated ``uv.lock``.
+
+If you need to run the lock step without the Makefile (e.g. in a bad state), use the dev
+image directly:
+
+```bash
+docker run --rm -v "$(pwd):/usr/dev" -w /usr/dev template_python_project:dev uv lock
+```
+
+**If in a bad state**
+
+If ``pyproject.toml``, ``uv.lock``, and the Dockerfile are out of sync:
+
+#. Stash or discard your local changes to ``pyproject.toml`` and ``uv.lock``, then reset
+   them to the last known-good commit.
+#. Run ``make uv_lock`` (or ``make open_dev_docker_shell`` and run ``uv lock`` in the
+   shell).
+#. Commit the updated ``uv.lock``. The next Docker build will use it.
+
+### Dependency changes
+
+Never run ``uv sync`` or ``uv lock`` outside a container. Use ``make uv_lock`` or the
+dev image command above for lock file updates.
 
 ---
 

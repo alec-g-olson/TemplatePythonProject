@@ -13,7 +13,7 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 project = get_project_name(project_root=PROJECT_ROOT)
 author = ", ".join(
-    get_pyproject_toml_data(project_root=PROJECT_ROOT)["tool"]["poetry"]["authors"]
+    get_pyproject_toml_data(project_root=PROJECT_ROOT)["project"]["authors"]
 )
 release = get_project_version(project_root=PROJECT_ROOT)
 version = release

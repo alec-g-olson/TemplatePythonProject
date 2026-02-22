@@ -22,22 +22,37 @@ from build_support.new_project_setup.setup_license import get_new_license_conten
 from build_support.new_project_setup.setup_new_project import MakeProjectFromTemplate
 
 
+def _license_value(pyproject_license: str | dict) -> str:
+    """Normalize PEP 621 license (string or { text = '...' }) to a string.
+
+    Args:
+        pyproject_license (str | dict): Value of ``project.license`` from pyproject.toml.
+
+    Returns:
+        str: The license identifier (e.g. ``unlicense``, ``mit``).
+    """
+    if isinstance(pyproject_license, dict):
+        return pyproject_license["text"]
+    return pyproject_license
+
+
 def _check_pyproject_toml(
     pyproject_toml_path: Path, settings: ProjectSettings, version_reset: bool
 ) -> None:
     pyproject_toml_data = tomllib.loads(pyproject_toml_path.read_text())
-    assert pyproject_toml_data["tool"]["poetry"]["name"] == settings.name
+    assert pyproject_toml_data["project"]["name"] == settings.name
     assert (
-        pyproject_toml_data["tool"]["poetry"]["version"] == "0.0.0"
+        pyproject_toml_data["project"]["version"] == "0.0.0"
     ) == version_reset
-    assert pyproject_toml_data["tool"]["poetry"]["license"] == settings.license
-    assert pyproject_toml_data["tool"]["poetry"]["authors"] == [
+    assert _license_value(pyproject_toml_data["project"]["license"]) == settings.license
+    assert pyproject_toml_data["project"]["authors"] == [
         settings.organization.formatted_name_and_email()
     ]
-    assert len(pyproject_toml_data["tool"]["poetry"]["packages"]) == 1
-    assert (
-        pyproject_toml_data["tool"]["poetry"]["packages"][0]["include"] == settings.name
-    )
+    wheel_packages = pyproject_toml_data["tool"]["hatch"]["build"]["targets"]["wheel"][
+        "packages"
+    ]
+    assert len(wheel_packages) == 1
+    assert wheel_packages[0] == f"pypi_package/src/{settings.name}"
 
 
 def _check_readme(

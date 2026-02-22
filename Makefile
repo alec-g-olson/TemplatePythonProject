@@ -191,6 +191,14 @@ else
 endif
 	$(DUMP_RUN_INFO_COMMAND)
 
+.PHONY: uv_lock
+uv_lock: setup_dev_env
+	docker run --rm \
+	-v $(NON_DOCKER_ROOT):$(DOCKER_REMOTE_PROJECT_ROOT) \
+	-w $(DOCKER_REMOTE_PROJECT_ROOT) \
+	$(DOCKER_DEV_IMAGE) \
+	uv lock
+
 .PHONY: docker_prune_all
 docker_prune_all:
 	docker ps -q | xargs -r docker stop

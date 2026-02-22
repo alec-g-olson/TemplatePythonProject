@@ -24,14 +24,15 @@ def update_pyproject_toml(
     """
     path_to_pyproject_toml = get_pyproject_toml(project_root=project_root)
     pyproject_data: TOMLDocument = get_pyproject_toml_data(project_root=project_root)
-    poetry = pyproject_data["tool"]["poetry"]  # type: ignore[index]
-    poetry["name"] = new_project_settings.name  # type: ignore[index]
-    poetry["version"] = "0.0.0"  # type: ignore[index]
-    poetry["license"] = new_project_settings.license  # type: ignore[index]
-    poetry["authors"] = [  # type: ignore[index]
+    project = pyproject_data["project"]  # type: ignore[index]
+    project["name"] = new_project_settings.name  # type: ignore[index]
+    project["version"] = "0.0.0"  # type: ignore[index]
+    project["license"] = new_project_settings.license  # type: ignore[index]
+    project["authors"] = [  # type: ignore[index]
         new_project_settings.organization.formatted_name_and_email()
     ]
-    poetry["packages"][0]["include"] = (  # type: ignore[index]
-        new_project_settings.name
-    )
+    hatch = pyproject_data["tool"]["hatch"]  # type: ignore[index]
+    hatch["build"]["targets"]["wheel"]["packages"] = [  # type: ignore[index]
+        f"pypi_package/src/{new_project_settings.name}"
+    ]
     path_to_pyproject_toml.write_text(dumps(pyproject_data))

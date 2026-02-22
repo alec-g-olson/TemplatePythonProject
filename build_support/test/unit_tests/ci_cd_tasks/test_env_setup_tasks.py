@@ -93,7 +93,7 @@ def test_build_infra_env_requires(basic_task_info: BasicTaskInfo) -> None:
 
 
 @pytest.mark.usefixtures(
-    "mock_docker_pyproject_toml_file", "mock_docker_poetry_lock_file"
+    "mock_docker_pyproject_toml_file", "mock_docker_uv_lock_file"
 )
 def test_run_build_infra_env(basic_task_info: BasicTaskInfo) -> None:
     with patch(
@@ -194,7 +194,7 @@ def git_info_data_dict(mock_project_versions_list: list[str]) -> dict[Any, Any]:
         "tags": mock_project_versions_list,
         "modified_subprojects": ["build_support", "pypi_package"],
         "dockerfile_modified": False,
-        "poetry_lock_file_modified": False,
+        "uv_lock_file_modified": False,
     }
 
 
@@ -264,7 +264,7 @@ def test_get_ticket_id(branch_name: str, ticket_id: str | None) -> None:
                 "tags": ["some", "tags"],
                 "modified_subprojects": [],
                 "dockerfile_modified": False,
-                "poetry_lock_file_modified": False,
+                "uv_lock_file_modified": False,
             }
         ).get_ticket_id()
         == ticket_id
@@ -323,6 +323,6 @@ def test_run_get_git_info(basic_task_info: BasicTaskInfo) -> None:
             tags=tags,
             modified_subprojects=modified_subprojects,
             dockerfile_modified=False,
-            poetry_lock_file_modified=False,
+            uv_lock_file_modified=False,
         )
         assert observed_git_info == expected_git_info

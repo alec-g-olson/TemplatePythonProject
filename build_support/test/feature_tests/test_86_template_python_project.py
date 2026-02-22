@@ -45,7 +45,7 @@ from build_support.ci_cd_vars.build_paths import get_build_runtime_report_path
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
 from build_support.ci_cd_vars.project_structure import (
     get_dockerfile,
-    get_poetry_lock_file,
+    get_uv_lock_file,
 )
 from build_support.ci_cd_vars.subproject_structure import (
     PythonSubproject,
@@ -246,20 +246,20 @@ def test_run_all_tests_if_dockerfile_modified(
 
 
 @pytest.mark.usefixtures("mock_lightweight_project_with_unit_tests_and_feature_tests")
-def test_run_all_tests_if_poetry_lock_modified(
+def test_run_all_tests_if_uv_lock_modified(
     request: SubRequest,
     mock_project_root: Path,
     make_command_prefix: list[str],
     real_project_root_dir: Path,
 ) -> None:
-    """Verify all tests run when poetry.lock is modified.
+    """Verify all tests run when uv.lock is modified.
 
-    Appending a newline to ``poetry.lock`` should cause the build
+    Appending a newline to ``uv.lock`` should cause the build
     system to treat every subproject as affected and run all tests.
     """
-    poetry_lock_file = get_poetry_lock_file(project_root=mock_project_root)
-    poetry_lock_file_contents = poetry_lock_file.read_text()
-    poetry_lock_file.write_text(poetry_lock_file_contents + "\n")
+    uv_lock_file = get_uv_lock_file(project_root=mock_project_root)
+    uv_lock_file_contents = uv_lock_file.read_text()
+    uv_lock_file.write_text(uv_lock_file_contents + "\n")
     run_command_and_save_logs(
         args=[*make_command_prefix, "test"],
         cwd=mock_project_root,

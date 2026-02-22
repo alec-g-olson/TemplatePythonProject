@@ -8,9 +8,9 @@ machine specific environment variables (such as the directory location) and so w
 a Makefile to get these variables and pass them to the docker commands.  Because of this
 all of the standard commands are accessed via `make` commands.
 
-Everything runs in Docker with Python dependencies managed by Poetry. Running Poetry
-commands outside the intended context can leave the environment in a bad state. Follow
-the instructions below when changing dependencies.
+Everything runs in Docker with Python dependencies managed by uv. Running uv
+commands (e.g. :code:`uv lock`) outside the dev container can leave the environment
+out of sync. Follow the instructions below when changing dependencies.
 
 Standardized Developer Commands
 -------------------------------
@@ -60,6 +60,10 @@ a few important ones for people who are new to this repository.
    * - make setup_pulumi_env
      -
      - Builds the Docker image for the Pulumi environment.
+   * - make uv_lock
+     -
+     - Updates :code:`uv.lock` in the dev container after changing
+       :code:`pyproject.toml`. Builds the dev image if needed.
    * - make format
      - Yes
      - Runs code formatting for this repo.
@@ -120,29 +124,37 @@ a few important ones for people who are new to this repository.
      - Pushes the PyPI package artifact.
 
 
-Running Poetry Commands
------------------------
+Lock file / dependency updates
+------------------------------
 
-Docker, Poetry, and :code:`pyproject.toml` are set up so that any command that
-changes :code:`poetry.lock` (e.g. :code:`poetry lock`) must be run inside the dev
+Docker, uv, and :code:`pyproject.toml` are set up so that any command that
+changes :code:`uv.lock` (e.g. :code:`uv lock`) must be run inside the dev
 container.
 
-#. Run :code:`make open_dev_docker_shell` to start a dev shell.
-#. From that shell, run the Poetry commands that update :code:`poetry.lock`.
-#. Edit :code:`pyproject.toml` in your usual editor; the project is mounted into the
-   container, so changes are visible both inside and outside the shell.
-#. Exit the shell when done. New containers will use the updated
-   :code:`poetry.lock`.
+A convenient way to update the lock file after changing dependencies in
+:code:`pyproject.toml`:
 
-If In A Bad State
+.. code-block:: bash
+
+   make uv_lock
+
+That target builds the dev image if needed and runs :code:`uv lock` in it. Commit the
+updated :code:`uv.lock`.
+
+If you need to run the lock step without the Makefile (e.g. in a bad state), use the
+dev image directly:
+
+.. code-block:: bash
+
+   docker run --rm -v "$(pwd):/usr/dev" -w /usr/dev template_python_project:dev uv lock
+
+If in a bad state
 ~~~~~~~~~~~~~~~~~
 
-If :code:`pyproject.toml`, :code:`poetry.lock`, and the Dockerfile are out of sync:
+If :code:`pyproject.toml`, :code:`uv.lock`, and the Dockerfile are out of sync:
 
 #. Stash or discard your local changes to :code:`pyproject.toml` and
-   :code:`poetry.lock`, then reset them to the last known-good commit.
-#. Run :code:`make open_dev_docker_shell`.
-#. In the dev shell, restore the :code:`pyproject.toml` changes you want (from stash
-   or commits), then run the needed Poetry commands and finish with :code:`poetry lock`.
-#. Exit the shell. The next Docker build should install Poetry-managed packages
-   correctly.
+   :code:`uv.lock`, then reset them to the last known-good commit.
+#. Run :code:`make uv_lock` (or :code:`make open_dev_docker_shell` and run
+   :code:`uv lock` in the shell).
+#. Commit the updated :code:`uv.lock`. The next Docker build will use it.

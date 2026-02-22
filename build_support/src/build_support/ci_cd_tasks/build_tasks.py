@@ -104,7 +104,7 @@ class BuildPypi(TaskNode):
                         docker_project_root=self.docker_project_root,
                         target_image=DockerTarget.PROD,
                     ),
-                    "poetry",
+                    "uv",
                     "build",
                     "--output",
                     get_dist_dir(project_root=self.docker_project_root),

@@ -1,19 +1,13 @@
 FROM python:3.13.5 AS base
-# If python version changed here change in pyproject.toml
-# [tool.poetry.dependencies]
+# If python version changed here change in pyproject.toml [project] requires-python
 
-# make sure to update build.system.requries poetry version in pyproject.toml
-ENV POETRY_VERSION="2.1.3"
-ENV POETRY_VIRTUALENVS_CREATE=false
-ENV POETRY_NO_INTERACTION=1
-ENV POETRY_HOME="/opt/poetry"
+COPY --from=ghcr.io/astral-sh/uv:0.10.4 /uv /uvx /bin/
 
-ENV PATH="$POETRY_HOME/bin:$PATH"
+ENV UV_SYSTEM_PYTHON=1
 
-RUN pip install --upgrade pip==25.1.1
-RUN pip install poetry==$POETRY_VERSION
+RUN pip install --upgrade pip==26.0.1
 
-COPY poetry.lock poetry.lock
+COPY uv.lock uv.lock
 COPY README.md README.md
 COPY pyproject.toml pyproject.toml
 
@@ -66,15 +60,18 @@ RUN chown $CURRENT_USER_ID:$CURRENT_GROUP_ID $DOCKER_REMOTE_PROJECT_ROOT
 
 FROM git_enabled AS build
 
-RUN poetry install --no-root --with build
+RUN uv sync --frozen --no-install-project --extra build
+ENV PATH="/.venv/bin:$PATH"
 
 FROM docker_enabled AS dev
 
-RUN poetry install --no-root --with dev --with build --with pulumi
+RUN uv sync --frozen --no-install-project --extra build --extra dev --extra pulumi
+ENV PATH="/.venv/bin:$PATH"
 
 FROM base AS prod
 
-RUN poetry install --no-root
+RUN uv sync --frozen --no-install-project
+ENV PATH="/.venv/bin:$PATH"
 
 COPY pypi_package/src /usr/dev/pypi_package/src
 ENV PYTHONPATH=/usr/dev/pypi_package/src
@@ -82,9 +79,10 @@ WORKDIR /usr/dev
 
 FROM base AS pulumi
 
-RUN poetry install --no-root --with pulumi
+RUN uv sync --frozen --no-install-project --extra pulumi
+ENV PATH="/.venv/bin:$PATH"
 
-# make sure to update tool.poetry.group.pulumi.dependencies.pulumi in pyproject.toml
+# If changed here change [project.optional-dependencies] pulumi in pyproject.toml
 ARG PULUMI_VERSION=3.185.0
 
 ENV PULUMI_VERSION=$PULUMI_VERSION

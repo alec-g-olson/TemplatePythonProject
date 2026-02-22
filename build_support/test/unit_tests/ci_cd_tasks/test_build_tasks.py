@@ -67,14 +67,14 @@ def test_run_build_pypi(basic_task_info: BasicTaskInfo) -> None:
                 get_dist_dir(project_root=basic_task_info.docker_project_root),
             ]
         )
-        poetry_build_args = concatenate_args(
+        uv_build_args = concatenate_args(
             args=[
                 get_docker_command_for_image(
                     non_docker_project_root=basic_task_info.non_docker_project_root,
                     docker_project_root=basic_task_info.docker_project_root,
                     target_image=DockerTarget.PROD,
                 ),
-                "poetry",
+                "uv",
                 "build",
                 "--output",
                 get_dist_dir(project_root=basic_task_info.docker_project_root),
@@ -83,7 +83,7 @@ def test_run_build_pypi(basic_task_info: BasicTaskInfo) -> None:
         BuildPypi(basic_task_info=basic_task_info).run()
         expected_run_process_calls = [
             call(args=clean_dist_args),
-            call(args=poetry_build_args),
+            call(args=uv_build_args),
         ]
         assert run_process_mock.call_count == len(expected_run_process_calls)
         run_process_mock.assert_has_calls(calls=expected_run_process_calls)

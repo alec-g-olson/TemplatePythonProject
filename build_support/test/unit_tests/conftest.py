@@ -9,8 +9,8 @@ from tomlkit import TOMLDocument, document, table
 
 from build_support.ci_cd_tasks.task_node import BasicTaskInfo
 from build_support.ci_cd_vars.project_structure import (
-    get_poetry_lock_file,
     get_pyproject_toml,
+    get_uv_lock_file,
 )
 
 # Test parameterization constants
@@ -86,12 +86,12 @@ def basic_task_info(
 def pyproject_toml_data(project_version: str, project_name: str) -> TOMLDocument:
     """The TOMLDocument that would be read from the pyproject toml."""
     doc = document()
+    doc["project"] = table()  # type: ignore[index]
+    doc["project"]["name"] = project_name  # type: ignore[index]
+    doc["project"]["version"] = project_version  # type: ignore[index]
+
     doc["tool"] = table()
     tool = doc["tool"]
-    tool["poetry"] = table()  # type: ignore[index]
-    tool["poetry"]["name"] = project_name  # type: ignore[index]
-    tool["poetry"]["version"] = project_version  # type: ignore[index]
-
     tool["coverage"] = table()  # type: ignore[index]
     tool["coverage"]["run"] = table()  # type: ignore[index]
     tool["coverage"]["run"]["branch"] = True  # type: ignore[index]
@@ -113,7 +113,7 @@ def pyproject_toml_data(project_version: str, project_name: str) -> TOMLDocument
 @pytest.fixture
 def pyproject_toml_contents(project_version: str, project_name: str) -> str:
     """The contents of a pyproject toml to be used in testing."""
-    return f"""[tool.poetry]
+    return f"""[project]
 name = "{project_name}"
 version = "{project_version}"
 
@@ -160,8 +160,8 @@ def pulumi_version(request: SubRequest) -> str:
 
 
 @pytest.fixture
-def poetry_lock_contents(pulumi_version: str) -> str:
-    """The contents of a pyproject toml to be used in testing."""
+def uv_lock_contents(pulumi_version: str) -> str:
+    """The contents of a uv lock file to be used in testing."""
     return (
         other_package_info
         + f'[[package]]\nname = "pulumi"\nversion = "{pulumi_version}"'
@@ -169,20 +169,20 @@ def poetry_lock_contents(pulumi_version: str) -> str:
 
 
 @pytest.fixture
-def mock_local_poetry_lock_file(
-    poetry_lock_contents: str, mock_project_root: Path
+def mock_local_uv_lock_file(
+    uv_lock_contents: str, mock_project_root: Path
 ) -> Path:
-    """Creates a mock pyproject toml file for use in testing."""
-    mock_poetry_lock_file = get_poetry_lock_file(project_root=mock_project_root)
-    mock_poetry_lock_file.write_text(poetry_lock_contents)
-    return mock_poetry_lock_file
+    """Creates a mock uv lock file for use in testing."""
+    mock_uv_lock_file = get_uv_lock_file(project_root=mock_project_root)
+    mock_uv_lock_file.write_text(uv_lock_contents)
+    return mock_uv_lock_file
 
 
 @pytest.fixture
-def mock_docker_poetry_lock_file(
-    poetry_lock_contents: str, docker_project_root: Path
+def mock_docker_uv_lock_file(
+    uv_lock_contents: str, docker_project_root: Path
 ) -> Path:
-    """Creates a mock pyproject toml file for use in testing."""
-    mock_poetry_lock_file = get_poetry_lock_file(project_root=docker_project_root)
-    mock_poetry_lock_file.write_text(poetry_lock_contents)
-    return mock_poetry_lock_file
+    """Creates a mock uv lock file for use in testing."""
+    mock_uv_lock_file = get_uv_lock_file(project_root=docker_project_root)
+    mock_uv_lock_file.write_text(uv_lock_contents)
+    return mock_uv_lock_file

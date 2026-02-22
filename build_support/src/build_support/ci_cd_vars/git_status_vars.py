@@ -13,7 +13,7 @@ from git.diff import Diff
 
 from build_support.ci_cd_vars.project_structure import (
     get_dockerfile,
-    get_poetry_lock_file,
+    get_uv_lock_file,
 )
 from build_support.ci_cd_vars.subproject_structure import (
     SubprojectContext,
@@ -338,12 +338,12 @@ def dockerfile_was_modified(modified_files: Iterable[Path], project_root: Path) 
     return get_dockerfile(project_root=project_root) in modified_files
 
 
-def poetry_lock_file_was_modified(
+def uv_lock_file_was_modified(
     modified_files: Iterable[Path], project_root: Path
 ) -> bool:
-    """Checks if the poetry lock file was modified.
+    """Checks if the uv lock file was modified.
 
-    If the poetry lock file has been modified it implies that our environment is
+    If the uv lock file has been modified it implies that our environment is
     different, and we should cast a wide net when testing.
 
     Args:
@@ -352,6 +352,6 @@ def poetry_lock_file_was_modified(
         project_root (Path): The root of the project.
 
     Returns:
-        bool: Has the poetry lock file been modified since the last commit on main.
+        bool: Has the uv lock file been modified since the last commit on main.
     """
-    return get_poetry_lock_file(project_root=project_root) in modified_files
+    return get_uv_lock_file(project_root=project_root) in modified_files

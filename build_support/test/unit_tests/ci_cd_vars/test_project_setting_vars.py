@@ -14,8 +14,8 @@ from build_support.ci_cd_vars.project_setting_vars import (
     is_prod_project_version,
 )
 from build_support.ci_cd_vars.project_structure import (
-    get_poetry_lock_file,
     get_pyproject_toml,
+    get_uv_lock_file,
 )
 
 
@@ -24,9 +24,8 @@ def test_parse_real_pyproject_toml_file(real_project_root_dir: Path) -> None:
     get_pyproject_toml_data(project_root=real_project_root_dir)
 
 
-def test_parse_real_poetry_lock_file(real_project_root_dir: Path) -> None:
+def test_parse_real_uv_lock_file(real_project_root_dir: Path) -> None:
     # just test to make sure it is parseable, contents not checked
-    # replace with generic get_poetry_lock_data when needed
     get_pulumi_version(project_root=real_project_root_dir)
 
 
@@ -54,7 +53,7 @@ class TestPyprojectToml:
         mock_pyproject_toml_file = get_pyproject_toml(project_root=mock_project_root)
         invalid_version = "AN_INVALID_PROJECT_VERSION"
         mock_pyproject_toml_file.write_text(
-            f'[tool.poetry]\nname = "some_project_name"\nversion = "{invalid_version}"'
+            f'[project]\nname = "some_project_name"\nversion = "{invalid_version}"'
         )
         expected_message = (
             "Project version in pyproject.toml must match the regex "
@@ -78,22 +77,22 @@ class TestPyprojectToml:
         assert get_project_name(project_root=mock_project_root) == project_name
 
 
-class TestPoetryLock:
-    """A class to hold poetry lock tests and fixtures."""
+class TestUvLock:
+    """A class to hold uv lock tests and fixtures."""
 
-    @pytest.mark.usefixtures("mock_local_poetry_lock_file")
+    @pytest.mark.usefixtures("mock_local_uv_lock_file")
     def test_get_pulumi_version(
         self, mock_project_root: Path, pulumi_version: str
     ) -> None:
         assert get_pulumi_version(project_root=mock_project_root) == pulumi_version
 
     def test_get_pulumi_version_not_found(self, docker_project_root: Path) -> None:
-        mock_poetry_lock_file = get_poetry_lock_file(project_root=docker_project_root)
-        mock_poetry_lock_file.write_text(
+        mock_uv_lock_file = get_uv_lock_file(project_root=docker_project_root)
+        mock_uv_lock_file.write_text(
             '[[package]]\nname = "other_package"\nversion = "1.0.0"\n\n'
         )
         expected_message = (
-            "poetry.lock does not have a pulumi package installed, "
+            "uv.lock does not have a pulumi package installed, "
             "or is no longer a toml format."
         )
         with pytest.raises(ValueError, match=expected_message):

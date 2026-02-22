@@ -23,7 +23,7 @@ from build_support.ci_cd_vars.git_status_vars import (
     git_add_all,
     git_fetch,
     monkeypatch_git_python_execute_kwargs,
-    poetry_lock_file_was_modified,
+    uv_lock_file_was_modified,
     tag_current_commit_and_push,
 )
 from build_support.ci_cd_vars.subproject_structure import SubprojectContext
@@ -401,28 +401,28 @@ def test_dockerfile_was_modified(mock_project_root: Path) -> None:
     )
 
 
-def test_poetry_lock_file_was_modified(mock_project_root: Path) -> None:
-    # Create a poetry.lock file
-    poetry_lock = mock_project_root / "poetry.lock"
-    poetry_lock.write_text('[[package]]\nname = "test"')
+def test_uv_lock_file_was_modified(mock_project_root: Path) -> None:
+    # Create a uv.lock file
+    uv_lock = mock_project_root / "uv.lock"
+    uv_lock.write_text('[[package]]\nname = "test"')
 
-    # Test with poetry.lock in modified files
-    modified_files_with_poetry_lock = [
-        poetry_lock,
+    # Test with uv.lock in modified files
+    modified_files_with_uv_lock = [
+        uv_lock,
         mock_project_root / "other_file.txt",
     ]
     assert (
-        poetry_lock_file_was_modified(
-            modified_files_with_poetry_lock, mock_project_root
+        uv_lock_file_was_modified(
+            modified_files_with_uv_lock, mock_project_root
         )
         is True
     )
 
-    # Test without poetry.lock in modified files
-    modified_files_without_poetry_lock = [mock_project_root / "other_file.txt"]
+    # Test without uv.lock in modified files
+    modified_files_without_uv_lock = [mock_project_root / "other_file.txt"]
     assert (
-        poetry_lock_file_was_modified(
-            modified_files_without_poetry_lock, mock_project_root
+        uv_lock_file_was_modified(
+            modified_files_without_uv_lock, mock_project_root
         )
         is False
     )

@@ -381,7 +381,7 @@ def mock_git_info_yaml(
         tags=[],
         modified_subprojects=[subproject_context],
         dockerfile_modified=False,
-        poetry_lock_file_modified=False,
+        uv_lock_file_modified=False,
     )
 
     git_info_yaml_path.write_text(git_info.to_yaml())
@@ -1282,7 +1282,7 @@ def test_get_subprojects_to_test_dockerfile_modified(docker_project_root: Path) 
         tags=[],
         modified_subprojects=[SubprojectContext.PYPI],
         dockerfile_modified=True,
-        poetry_lock_file_modified=False,
+        uv_lock_file_modified=False,
     )
 
     git_info_yaml_path.write_text(git_info.to_yaml())
@@ -1291,20 +1291,20 @@ def test_get_subprojects_to_test_dockerfile_modified(docker_project_root: Path) 
     assert result == get_sorted_subproject_contexts()
 
 
-def test_get_subprojects_to_test_poetry_lock_modified(
+def test_get_subprojects_to_test_uv_lock_modified(
     docker_project_root: Path,
 ) -> None:
-    """Test get_subprojects_to_test when poetry.lock is modified."""
+    """Test get_subprojects_to_test when uv.lock is modified."""
     git_info_yaml_path = get_git_info_yaml(project_root=docker_project_root)
     git_info_yaml_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Create a GitInfo object with poetry lock modified
+    # Create a GitInfo object with uv lock modified
     git_info = GitInfo(
         branch="test-branch",
         tags=[],
         modified_subprojects=[SubprojectContext.PYPI],
         dockerfile_modified=False,
-        poetry_lock_file_modified=True,
+        uv_lock_file_modified=True,
     )
 
     git_info_yaml_path.write_text(git_info.to_yaml())
@@ -1327,7 +1327,7 @@ def test_get_subprojects_to_test_only_modified_subprojects(
         tags=[],
         modified_subprojects=modified_subprojects,
         dockerfile_modified=False,
-        poetry_lock_file_modified=False,
+        uv_lock_file_modified=False,
     )
 
     git_info_yaml_path.write_text(git_info.to_yaml())
@@ -1354,7 +1354,7 @@ def test_subproject_feature_tests_skips_when_not_in_test_list(
         tags=[],
         modified_subprojects=other_subprojects,
         dockerfile_modified=False,
-        poetry_lock_file_modified=False,
+        uv_lock_file_modified=False,
     )
 
     git_info_yaml_path.write_text(git_info.to_yaml())
@@ -1388,7 +1388,7 @@ def test_subproject_unit_tests_skips_when_not_in_test_list(
         tags=[],
         modified_subprojects=other_subprojects,
         dockerfile_modified=False,
-        poetry_lock_file_modified=False,
+        uv_lock_file_modified=False,
     )
 
     git_info_yaml_path.write_text(git_info.to_yaml())

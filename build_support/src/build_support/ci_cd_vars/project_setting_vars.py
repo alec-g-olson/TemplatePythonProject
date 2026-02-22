@@ -11,8 +11,8 @@ from pathlib import Path
 from tomlkit import TOMLDocument, parse
 
 from build_support.ci_cd_vars.project_structure import (
-    get_poetry_lock_file,
     get_pyproject_toml,
+    get_uv_lock_file,
 )
 
 ########################################
@@ -46,9 +46,7 @@ def get_project_version(project_root: Path) -> str:
     """
     pyproject_data = get_pyproject_toml_data(project_root=project_root)
     version_str: str
-    version_str = pyproject_data["tool"]["poetry"][  # type: ignore[index, assignment]
-        "version"
-    ]
+    version_str = pyproject_data["project"]["version"]  # type: ignore[index, assignment]
     if not ALLOWED_VERSION_REGEX.match(version_str):
         msg = (
             "Project version in pyproject.toml must match the regex "
@@ -92,30 +90,30 @@ def get_project_name(project_root: Path) -> str:
         str: The name of the project.
     """
     pyproject_data = get_pyproject_toml_data(project_root=project_root)
-    return pyproject_data["tool"]["poetry"]["name"]  # type: ignore[index, return-value]
+    return pyproject_data["project"]["name"]  # type: ignore[index, return-value]
 
 
 ########################################
-# Settings pulled from poetry.lock
+# Settings pulled from uv.lock
 ########################################
 
 
 def get_pulumi_version(project_root: Path) -> str:
-    """Get the infra version in the poetry lock file.
+    """Get the pulumi version in the uv lock file.
 
     Args:
         project_root (Path): Path to this project's root.
 
     Returns:
-        str: The infra version in the poetry lock file.
+        str: The pulumi version in the uv lock file.
     """
-    lock_file = get_poetry_lock_file(project_root=project_root)
+    lock_file = get_uv_lock_file(project_root=project_root)
     lock_data = tomllib.loads(lock_file.read_text())
     for package in lock_data["package"]:
         if package["name"] == "pulumi":
             return str(package["version"])
     msg = (
-        "poetry.lock does not have a pulumi package installed, "
+        "uv.lock does not have a pulumi package installed, "
         "or is no longer a toml format."
     )
     raise ValueError(msg)
