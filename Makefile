@@ -64,6 +64,13 @@ python build_support/src/build_support/dump_ci_cd_run_info.py \
 $(SHARED_BUILD_VARS) \
 $(CI_CD_FEATURE_TEST_MODE_FLAG)
 
+.PHONY: echo_image_tags
+echo_image_tags:
+	@echo "TAG_SUFFIX=$(TAG_SUFFIX)"
+	@echo "DOCKER_BUILD_IMAGE=$(DOCKER_BUILD_IMAGE)"
+	@echo "DOCKER_DEV_IMAGE=$(DOCKER_DEV_IMAGE)"
+	@echo "DOCKER_PROD_IMAGE=$(DOCKER_PROD_IMAGE)"
+
 .PHONY: push
 push: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) push

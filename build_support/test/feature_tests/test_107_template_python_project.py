@@ -10,6 +10,16 @@ from build_support.ci_cd_vars.git_status_vars import PRIMARY_BRANCH_NAME, get_ti
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
 
 
+def _parse_echo_image_tags_stdout(stdout: str) -> dict[str, str]:
+    """Parse stdout from make echo_image_tags into key-value pairs."""
+    result: dict[str, str] = {}
+    for line in stdout.strip().splitlines():
+        if "=" in line:
+            key, value = line.split("=", 1)
+            result[key.strip()] = value.strip()
+    return result
+
+
 def _expected_image_names(project_root: Path, tag_suffix: str) -> tuple[str, str, str]:
     """Build expected build/dev/prod image names for a tag suffix."""
     project_name = get_project_name(project_root=project_root)
@@ -53,83 +63,67 @@ def _create_and_checkout_branch(
     return repo.active_branch
 
 
-def test_make_setup_commands_build_unsuffixed_images_on_main(
+def test_make_echo_image_tags_on_main_shows_unsuffixed(
     mock_project_root: Path,
     mock_lightweight_project: Repo,
-    make_command_prefix: list[str],
+    make_command_prefix_without_tag_suffix: list[str],
     real_project_root_dir: Path,
 ) -> None:
-    """On main, setup commands should build unsuffixed image tags."""
+    """On main, echo_image_tags reports empty TAG_SUFFIX and unsuffixed image names."""
     mock_lightweight_project.git.checkout(PRIMARY_BRANCH_NAME)
-    setup_dev_return_code, _, _ = run_command_and_save_logs(
+    return_code, stdout, _ = run_command_and_save_logs(
         args=[
-            *make_command_prefix,
-            "TAG_SUFFIX=",
+            *make_command_prefix_without_tag_suffix,
             "CI_CD_FEATURE_TEST_MODE_FLAG=",
-            "setup_dev_env",
+            "echo_image_tags",
         ],
         cwd=mock_project_root,
-        test_name="test_make_setup_commands_build_unsuffixed_images_on_main_setup_dev_env",
+        test_name="test_make_echo_image_tags_on_main_shows_unsuffixed",
         real_project_root_dir=real_project_root_dir,
     )
-    assert setup_dev_return_code == 0
-    setup_prod_return_code, _, _ = run_command_and_save_logs(
-        args=[
-            *make_command_prefix,
-            "TAG_SUFFIX=",
-            "CI_CD_FEATURE_TEST_MODE_FLAG=",
-            "setup_prod_env",
-        ],
-        cwd=mock_project_root,
-        test_name="test_make_setup_commands_build_unsuffixed_images_on_main_setup_prod_env",
-        real_project_root_dir=real_project_root_dir,
+    assert return_code == 0
+    parsed = _parse_echo_image_tags_stdout(stdout)
+    assert parsed.get("TAG_SUFFIX") == "", (
+        f"On main TAG_SUFFIX should be empty, got {parsed.get('TAG_SUFFIX')!r}"
     )
-    assert setup_prod_return_code == 0
-    _assert_expected_images_exist(project_root=mock_project_root, tag_suffix="")
+    expected = _expected_image_names(project_root=mock_project_root, tag_suffix="")
+    assert parsed.get("DOCKER_BUILD_IMAGE") == expected[0]
+    assert parsed.get("DOCKER_DEV_IMAGE") == expected[1]
+    assert parsed.get("DOCKER_PROD_IMAGE") == expected[2]
 
 
-def test_make_setup_commands_build_ticket_scoped_images_on_non_main(
+def test_make_echo_image_tags_on_non_main_shows_ticket_suffix(
     mock_project_root: Path,
-    make_command_prefix: list[str],
+    make_command_prefix_without_tag_suffix: list[str],
     mock_new_branch: Head,
     current_ticket_id: str,
     real_project_root_dir: Path,
 ) -> None:
-    """On non-main branches, setup commands should build ``-<ticket_id>`` tags."""
+    """On non-main branches, reports ``-<ticket_id>`` and suffixed names."""
     assert mock_new_branch.name.startswith(current_ticket_id)
-    setup_dev_return_code, _, _ = run_command_and_save_logs(
+    return_code, stdout, _ = run_command_and_save_logs(
         args=[
-            *make_command_prefix,
-            "TAG_SUFFIX=",
+            *make_command_prefix_without_tag_suffix,
             "CI_CD_FEATURE_TEST_MODE_FLAG=",
-            "setup_dev_env",
+            "echo_image_tags",
         ],
         cwd=mock_project_root,
-        test_name=(
-            "test_make_setup_commands_build_ticket_scoped_images_on_non_main_"
-            "setup_dev_env"
-        ),
+        test_name="test_make_echo_image_tags_on_non_main_shows_ticket_suffix",
         real_project_root_dir=real_project_root_dir,
     )
-    assert setup_dev_return_code == 0
-    setup_prod_return_code, _, _ = run_command_and_save_logs(
-        args=[
-            *make_command_prefix,
-            "TAG_SUFFIX=",
-            "CI_CD_FEATURE_TEST_MODE_FLAG=",
-            "setup_prod_env",
-        ],
-        cwd=mock_project_root,
-        test_name=(
-            "test_make_setup_commands_build_ticket_scoped_images_on_non_main_"
-            "setup_prod_env"
-        ),
-        real_project_root_dir=real_project_root_dir,
+    assert return_code == 0
+    parsed = _parse_echo_image_tags_stdout(stdout)
+    expected_suffix = f"-{current_ticket_id}"
+    assert parsed.get("TAG_SUFFIX") == expected_suffix, (
+        f"On non-main TAG_SUFFIX should be {expected_suffix!r}, got "
+        f"{parsed.get('TAG_SUFFIX')!r}"
     )
-    assert setup_prod_return_code == 0
-    _assert_expected_images_exist(
-        project_root=mock_project_root, tag_suffix=f"-{current_ticket_id}"
+    expected = _expected_image_names(
+        project_root=mock_project_root, tag_suffix=expected_suffix
     )
+    assert parsed.get("DOCKER_BUILD_IMAGE") == expected[0]
+    assert parsed.get("DOCKER_DEV_IMAGE") == expected[1]
+    assert parsed.get("DOCKER_PROD_IMAGE") == expected[2]
 
 
 def test_different_ticket_branches_build_different_image_tags(
