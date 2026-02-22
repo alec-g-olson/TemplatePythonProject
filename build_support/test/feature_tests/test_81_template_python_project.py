@@ -13,13 +13,15 @@ def test_feature_tests_execute_faster_when_cached(
     mock_project_root: Path, make_command_prefix: list[str]
 ) -> None:
     cmd = Popen(
-        args=(*make_command_prefix, "test_pypi_features"), cwd=mock_project_root
+        args=(*make_command_prefix, "test_pypi_features"),
+        cwd=mock_project_root,
     )
     cmd.communicate()
     expected_report_yaml = get_build_runtime_report_path(project_root=mock_project_root)
     first_runtime_report = BuildRunReport.from_yaml(expected_report_yaml.read_text())
     cmd = Popen(
-        args=(*make_command_prefix, "test_pypi_features"), cwd=mock_project_root
+        args=(*make_command_prefix, "test_pypi_features"),
+        cwd=mock_project_root,
     )
     cmd.communicate()
     second_runtime_report = BuildRunReport.from_yaml(expected_report_yaml.read_text())

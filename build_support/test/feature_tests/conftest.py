@@ -48,6 +48,39 @@ def remove_dir_and_all_contents(path: Path) -> None:
     path.rmdir()
 
 
+def _build_make_command_prefix(
+    mock_project_root: Path, real_project_root_dir: Path, mock_remote_git_folder: Path
+) -> list[str]:
+    """Build shared ``make`` command tokens for nested feature-test runs.
+
+    Args:
+        mock_project_root (Path): Root of the mock project.
+        real_project_root_dir (Path): Root of the real project.
+        mock_remote_git_folder (Path): Path to the mock bare repo.
+
+    Returns:
+        list[str]: Command tokens for ``make`` with required overrides.
+    """
+    docker_project_root = real_project_root_dir
+    test_project_relative_root = mock_project_root.relative_to(docker_project_root)
+    remote_repo_relative_root = mock_remote_git_folder.relative_to(docker_project_root)
+    non_docker_project_root = Path(
+        yaml.safe_load(
+            get_local_info_yaml(project_root=real_project_root_dir).read_text()
+        )["non_docker_project_root"]
+    )
+    test_non_docker_root = non_docker_project_root.joinpath(test_project_relative_root)
+    remote_repo_non_docker_root = non_docker_project_root.joinpath(
+        remote_repo_relative_root
+    )
+    return [
+        "make",
+        f"NON_DOCKER_ROOT={test_non_docker_root}",
+        f"GIT_MOUNT=-v {remote_repo_non_docker_root}:{mock_remote_git_folder}",
+        "CI_CD_FEATURE_TEST_MODE_FLAG=--ci-cd-feature-test-mode",
+    ]
+
+
 @pytest.fixture
 def make_command_prefix(
     mock_project_root: Path,
@@ -73,26 +106,13 @@ def make_command_prefix(
     Returns:
         list[str]: Command tokens for ``make`` with overrides.
     """
-    docker_project_root = real_project_root_dir
-    test_project_relative_root = mock_project_root.relative_to(docker_project_root)
-    remote_repo_relative_root = mock_remote_git_folder.relative_to(docker_project_root)
-    non_docker_project_root = Path(
-        yaml.safe_load(
-            get_local_info_yaml(project_root=real_project_root_dir).read_text()
-        )["non_docker_project_root"]
-    )
-    test_non_docker_root = non_docker_project_root.joinpath(test_project_relative_root)
-    remote_repo_non_docker_root = non_docker_project_root.joinpath(
-        remote_repo_relative_root
-    )
     # Trigger image tag setup before any inner make invocations run.
     _ = tag_current_branch_images_for_test_names
-    return [
-        "make",
-        f"NON_DOCKER_ROOT={test_non_docker_root}",
-        f"GIT_MOUNT=-v {remote_repo_non_docker_root}:{mock_remote_git_folder}",
-        "CI_CD_FEATURE_TEST_MODE_FLAG=--ci-cd-feature-test-mode",
-    ]
+    return _build_make_command_prefix(
+        mock_project_root=mock_project_root,
+        real_project_root_dir=real_project_root_dir,
+        mock_remote_git_folder=mock_remote_git_folder,
+    )
 
 
 @pytest.fixture(scope="session")
@@ -229,6 +249,76 @@ def mock_lightweight_project(
     repo.create_tag(tag_name)
     repo.remote().push(tag_name)
     return repo
+
+
+@pytest.fixture
+def feature_test_branch_name(current_ticket_id: str) -> str:
+    """Build the default branch name used by feature tests.
+
+    Args:
+        current_ticket_id (str): Branch ticket id for feature tests.
+
+    Returns:
+        str: A non-main branch name that resolves docker tags to ``-<ticket_id>``.
+    """
+    return f"{current_ticket_id}-feature-tests"
+
+
+@pytest.fixture
+def mock_lightweight_project_on_feature_branch(
+    mock_remote_git_repo: Repo,
+    mock_lightweight_project: Repo,
+    feature_test_branch_name: str,
+) -> Head:
+    """Check out the mock project onto the default feature-test branch.
+
+    Args:
+        mock_remote_git_repo (Repo): The mock bare remote repo.
+        mock_lightweight_project (Repo): The mock project repo.
+        feature_test_branch_name (str): The branch name to create and check out.
+
+    Returns:
+        Head: The active branch after checkout.
+    """
+    mock_remote_git_repo.create_head(feature_test_branch_name)
+    mock_lightweight_project.remote().fetch()
+    mock_lightweight_project.git.checkout(feature_test_branch_name)
+    return mock_lightweight_project.active_branch
+
+
+@pytest.fixture
+def ticket_branch_make_command_prefix(
+    mock_project_root: Path,
+    real_project_root_dir: Path,
+    mock_remote_git_folder: Path,
+    tag_current_branch_images_for_test_names: None,
+    mock_lightweight_project_on_feature_branch: Head,
+) -> list[str]:
+    """Build ``make`` command tokens after switching to a feature-test branch.
+
+    This fixture ensures nested ``make`` calls resolve to ticket-scoped Docker
+    tags (for example ``build-107TEST``) by first checking out the mock project
+    on a non-main branch derived from ``current_ticket_id``.
+
+    Args:
+        mock_project_root (Path): Root of the mock project.
+        real_project_root_dir (Path): Root of the real project.
+        mock_remote_git_folder (Path): Path to the mock bare repo.
+        tag_current_branch_images_for_test_names (None): Ensures test-tag aliases
+            are available before nested ``make`` calls.
+        mock_lightweight_project_on_feature_branch (Head): Ensures branch checkout
+            happens before command execution.
+
+    Returns:
+        list[str]: Command tokens for ``make`` with overrides.
+    """
+    _ = tag_current_branch_images_for_test_names
+    _ = mock_lightweight_project_on_feature_branch
+    return _build_make_command_prefix(
+        mock_project_root=mock_project_root,
+        real_project_root_dir=real_project_root_dir,
+        mock_remote_git_folder=mock_remote_git_folder,
+    )
 
 
 @pytest.fixture

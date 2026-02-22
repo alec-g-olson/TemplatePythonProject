@@ -119,6 +119,10 @@ type_checks: setup_build_env
 type_check_build_support: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) type_check_build_support
 
+.PHONY: type_check_pypi
+type_check_pypi: setup_build_env
+	$(EXECUTE_BUILD_STEPS_COMMAND) type_check_pypi
+
 .PHONY: test_pypi_features
 test_pypi_features: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) test_pypi_features
