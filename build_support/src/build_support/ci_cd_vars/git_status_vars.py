@@ -4,6 +4,7 @@ Attributes:
     | PRIMARY_BRANCH_NAME: The name of the main branch for this repo.
     | GIT_BRANCH_NAME_REGEX: Regex used to parse ticket ids from branch names.
 """
+
 import re
 from collections.abc import Iterable
 from pathlib import Path

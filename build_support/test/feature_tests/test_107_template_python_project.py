@@ -115,11 +115,7 @@ def _run_report_build_var(project_root: Path, build_var: AllowedCliArgs) -> str:
     )
     stdout, stderr = command.communicate()
     if command.returncode != 0:
-        msg = (
-            "Unable to report build variable.\n"
-            f"stdout:\n{stdout}\n"
-            f"stderr:\n{stderr}"
-        )
+        msg = f"Unable to report build variable.\nstdout:\n{stdout}\nstderr:\n{stderr}"
         raise RuntimeError(msg)
     return stdout.strip()
 
@@ -220,16 +216,13 @@ def test_report_build_var_uses_ticket_scoped_dev_image_on_non_main(
     )
     project_name = get_project_name(project_root=mock_project_root)
     reported_command = _run_report_build_var(
-        project_root=mock_project_root,
-        build_var=AllowedCliArgs.DEV_DOCKER_INTERACTIVE,
+        project_root=mock_project_root, build_var=AllowedCliArgs.DEV_DOCKER_INTERACTIVE
     )
     assert f"{project_name}:dev-{current_ticket_id}" in reported_command
 
 
 def test_different_ticket_branches_generate_different_docker_image_tags(
-    mock_project_root: Path,
-    mock_lightweight_project: Repo,
-    mock_remote_git_repo: Repo,
+    mock_project_root: Path, mock_lightweight_project: Repo, mock_remote_git_repo: Repo
 ) -> None:
     """Ensure different ticket branches resolve to different Docker tags."""
     first_ticket_id = "TEST001"

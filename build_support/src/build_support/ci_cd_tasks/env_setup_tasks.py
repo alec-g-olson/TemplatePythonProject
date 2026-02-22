@@ -237,9 +237,7 @@ class GetGitInfo(TaskNode):
             GitInfo(
                 branch=get_current_branch_name(project_root=self.docker_project_root),
                 tags=get_local_tags(project_root=self.docker_project_root),
-                ticket_id=get_ticket_id(
-                    project_root=self.docker_project_root
-                ),
+                ticket_id=get_ticket_id(project_root=self.docker_project_root),
                 modified_subprojects=get_modified_subprojects(
                     modified_files=modified_files, project_root=self.docker_project_root
                 ),
