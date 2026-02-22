@@ -8,8 +8,7 @@ from build_support.ci_cd_vars.docker_vars import (
     get_docker_image_name,
     get_docker_tag_suffix,
 )
-from build_support.ci_cd_vars.git_status_vars import get_ticket_id, \
-    current_branch_is_main
+from build_support.ci_cd_vars.git_status_vars import get_ticket_id
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
 
 
@@ -60,7 +59,7 @@ def tag_current_branch_images_for_feature_test_ticket_id(
     Returns:
         None
     """
-    if current_branch_is_main(project_root=project_root):
+    if not ticket_id:
         return
     project_name = get_project_name(project_root=project_root)
     current_suffix = get_docker_tag_suffix(project_root=project_root)

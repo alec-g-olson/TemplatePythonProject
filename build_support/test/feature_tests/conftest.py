@@ -374,7 +374,7 @@ def current_ticket_id(real_project_root_dir: Path) -> str:
         real_project_root_dir (Path): Root of the real project.
 
     Returns:
-        str: A value that starts with ``f"{current_branch_name}TEST"``.
+        str: ``f"{ticket_id}TEST"`` on non-main branches, otherwise ``"TEST"``.
     """
     return get_feature_test_ticket_id(
         project_root=real_project_root_dir, test_ticket_id="TEST"
