@@ -3,7 +3,7 @@
 Attributes:
     | PRIMARY_BRANCH_NAME: The name of the main branch for this repo.
 """
-
+import re
 from collections.abc import Iterable
 from importlib import import_module
 from pathlib import Path
@@ -24,8 +24,9 @@ from build_support.ci_cd_vars.subproject_structure import (
     get_sorted_subproject_contexts,
 )
 
-if TYPE_CHECKING:
-    from build_support.ci_cd_tasks.env_setup_tasks import GitInfo
+
+PRIMARY_BRANCH_NAME = "main"
+GIT_BRANCH_NAME_REGEX = r"^([^-]+)-?.*$"
 
 
 def get_git_repo(project_root: Path) -> Repo:
@@ -64,9 +65,6 @@ def get_current_branch_name(project_root: Path) -> str:
     return get_git_head(project_root=project_root).name
 
 
-PRIMARY_BRANCH_NAME = "main"
-
-
 def current_branch_is_main(project_root: Path) -> bool:
     """Determines if the branch currently checked out is main.
 
@@ -79,7 +77,7 @@ def current_branch_is_main(project_root: Path) -> bool:
     return get_current_branch_name(project_root=project_root) == PRIMARY_BRANCH_NAME
 
 
-def get_current_branch_ticket_id(project_root: Path) -> str | None:
+def get_ticket_id(project_root: Path) -> str | None:
     """Gets the ticket id for the currently checked out branch.
 
     Args:
@@ -89,33 +87,12 @@ def get_current_branch_ticket_id(project_root: Path) -> str | None:
         str | None: Ticket id for non-primary branches, otherwise ``None``.
     """
     branch_name = get_current_branch_name(project_root=project_root)
-    if branch_name == PRIMARY_BRANCH_NAME:
-        return None
-    return branch_name.split("-", maxsplit=1)[0]
-
-
-def get_git_info(project_root: Path) -> "GitInfo":
-    """Loads this project's saved git info.
-
-    Args:
-        project_root (Path): Path to this project's root.
-
-    Returns:
-        GitInfo: The loaded git information for this project.
-
-    Raises:
-        RuntimeError: If no git info file exists for this project.
-    """
-    git_info_yaml_path = get_git_info_yaml(project_root=project_root)
-    if not git_info_yaml_path.is_file():
-        msg = f"No git info exists for project at {project_root}."
-        raise RuntimeError(msg)
-
-    git_info_module = cast(
-        Any, import_module("build_support.ci_cd_tasks.env_setup_tasks")
-    )
-    return cast(
-        "GitInfo", git_info_module.GitInfo.from_yaml(git_info_yaml_path.read_text())
+    match = re.search(pattern=GIT_BRANCH_NAME_REGEX, string=branch_name)
+    ticket_id = match.group(1) if match is not None else None
+    return (
+        ticket_id
+        if ticket_id is not None and ticket_id != PRIMARY_BRANCH_NAME
+        else None
     )
 
 

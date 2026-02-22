@@ -3,6 +3,7 @@
 Attributes:
     | GIT_BRANCH_NAME_REGEX: The regex used to validate branch names in ``GitInfo``.
 """
+
 from typing import override
 
 from pydantic import BaseModel, Field
@@ -12,10 +13,11 @@ from build_support.ci_cd_tasks.task_node import TaskNode
 from build_support.ci_cd_vars.build_paths import get_git_info_yaml
 from build_support.ci_cd_vars.docker_vars import DockerTarget, get_docker_build_command
 from build_support.ci_cd_vars.git_status_vars import (
+    GIT_BRANCH_NAME_REGEX,
     PRIMARY_BRANCH_NAME,
     dockerfile_was_modified,
     get_current_branch_name,
-    get_current_branch_ticket_id,
+    get_ticket_id,
     get_local_tags,
     get_modified_files,
     get_modified_subprojects,
@@ -165,9 +167,6 @@ class Clean(TaskNode):
         )
 
 
-GIT_BRANCH_NAME_REGEX = r"^([^-]+)-?.*$"
-
-
 class GitInfo(BaseModel):
     """An object containing the current git information."""
 
@@ -238,7 +237,7 @@ class GetGitInfo(TaskNode):
             GitInfo(
                 branch=get_current_branch_name(project_root=self.docker_project_root),
                 tags=get_local_tags(project_root=self.docker_project_root),
-                ticket_id=get_current_branch_ticket_id(
+                ticket_id=get_ticket_id(
                     project_root=self.docker_project_root
                 ),
                 modified_subprojects=get_modified_subprojects(

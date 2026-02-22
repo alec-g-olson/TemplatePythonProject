@@ -75,30 +75,24 @@ def test_get_docker_tag_suffix_when_git_info_is_missing(
     mock_project_root: Path,
 ) -> None:
     with patch(
-        "build_support.ci_cd_vars.docker_vars.get_current_branch_ticket_id"
-    ) as get_current_branch_ticket_id_mock:
-        get_current_branch_ticket_id_mock.side_effect = InvalidGitRepositoryError(
-            mock_project_root
-        )
+        "build_support.ci_cd_vars.docker_vars.get_ticket_id"
+    ) as get_ticket_id_mock:
+        get_ticket_id_mock.side_effect = InvalidGitRepositoryError(mock_project_root)
         with pytest.raises(InvalidGitRepositoryError):
             get_docker_tag_suffix(project_root=mock_project_root)
 
 
 @pytest.mark.parametrize(
     argnames=("ticket_id", "expected_suffix"),
-    argvalues=[
-        (None, ""),
-        ("TEST001", "-TEST001"),
-        ("101", "-101"),
-    ],
+    argvalues=[(None, ""), ("TEST001", "-TEST001"), ("101", "-101")],
 )
-def test_get_docker_tag_suffix_from_current_branch_ticket_id(
+def test_get_docker_tag_suffix_from_ticket_id(
     mock_project_root: Path, ticket_id: str | None, expected_suffix: str
 ) -> None:
     with patch(
-        "build_support.ci_cd_vars.docker_vars.get_current_branch_ticket_id"
-    ) as get_current_branch_ticket_id_mock:
-        get_current_branch_ticket_id_mock.return_value = ticket_id
+        "build_support.ci_cd_vars.docker_vars.get_ticket_id"
+    ) as get_ticket_id_mock:
+        get_ticket_id_mock.return_value = ticket_id
         assert get_docker_tag_suffix(project_root=mock_project_root) == expected_suffix
 
 

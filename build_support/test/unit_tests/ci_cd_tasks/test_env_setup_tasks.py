@@ -211,9 +211,7 @@ def test_load_git_info(
     assert git_info == GitInfo.model_validate(git_info_data_dict)
 
 
-def test_load_git_info_without_ticket_id(
-    git_info_data_dict: dict[Any, Any],
-) -> None:
+def test_load_git_info_without_ticket_id(git_info_data_dict: dict[Any, Any]) -> None:
     legacy_git_info_data_dict = copy(git_info_data_dict)
     legacy_git_info_data_dict.pop("ticket_id")
     git_info_yaml_str = yaml.dump(legacy_git_info_data_dict)
@@ -283,7 +281,7 @@ def test_run_get_git_info(basic_task_info: BasicTaskInfo) -> None:
             "build_support.ci_cd_tasks.env_setup_tasks.get_current_branch_name"
         ) as get_branch_mock,
         patch(
-            "build_support.ci_cd_tasks.env_setup_tasks.get_current_branch_ticket_id"
+            "build_support.ci_cd_tasks.env_setup_tasks.get_ticket_id"
         ) as get_ticket_id_mock,
         patch(
             "build_support.ci_cd_tasks.env_setup_tasks.get_local_tags"

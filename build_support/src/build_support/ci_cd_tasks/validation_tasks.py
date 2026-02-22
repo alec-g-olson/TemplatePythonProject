@@ -17,9 +17,10 @@ from tomlkit import TOMLDocument, document, dumps, table
 from build_support.ci_cd_tasks.env_setup_tasks import (
     GetGitInfo,
     SetupDevEnvironment,
-    SetupProdEnvironment,
+    SetupProdEnvironment, GitInfo,
 )
 from build_support.ci_cd_tasks.task_node import PerSubprojectTask, TaskNode
+from build_support.ci_cd_vars.build_paths import get_git_info_yaml
 from build_support.ci_cd_vars.docker_vars import (
     DockerTarget,
     get_base_docker_command_for_image,
@@ -358,7 +359,9 @@ def get_subprojects_to_test(project_root: Path) -> list[SubprojectContext]:
     Returns:
         list[SubprojectContext]: The list of subprojects that should be tested.
     """
-    git_info = get_git_info(project_root=project_root)
+    git_info = GitInfo.from_yaml(
+        get_git_info_yaml(project_root=project_root).read_text()
+    )
     if git_info.dockerfile_modified or git_info.poetry_lock_file_modified:
         return get_sorted_subproject_contexts()
     return git_info.modified_subprojects

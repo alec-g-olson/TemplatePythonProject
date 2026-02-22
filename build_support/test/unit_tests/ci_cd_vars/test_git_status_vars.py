@@ -15,7 +15,7 @@ from build_support.ci_cd_vars.git_status_vars import (
     current_branch_is_main,
     dockerfile_was_modified,
     get_current_branch_name,
-    get_current_branch_ticket_id,
+    get_ticket_id,
     get_git_diff,
     get_git_head,
     get_git_info,
@@ -92,17 +92,14 @@ def test_get_current_branch_name(
         ("101", "101"),
     ],
 )
-def test_get_current_branch_ticket_id(
+def test_get_ticket_id(
     mock_project_root: Path, branch_name: str, expected_ticket_id: str | None
 ) -> None:
     with patch(
         "build_support.ci_cd_vars.git_status_vars.get_current_branch_name"
     ) as get_current_branch_name_mock:
         get_current_branch_name_mock.return_value = branch_name
-        assert (
-            get_current_branch_ticket_id(project_root=mock_project_root)
-            == expected_ticket_id
-        )
+        assert get_ticket_id(project_root=mock_project_root) == expected_ticket_id
 
 
 def test_constants_not_changed_by_accident() -> None:
