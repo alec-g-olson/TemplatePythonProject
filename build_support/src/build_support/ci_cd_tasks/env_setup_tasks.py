@@ -1,14 +1,12 @@
 """Holds all tasks that setup environments during the build process.
 
 Attributes:
-    | GIT_BRANCH_NAME_REGEX:  The regex we use to extract the ticket ID from branch
-        names.
+    | GIT_BRANCH_NAME_REGEX: The regex used to validate branch names in ``GitInfo``.
 """
-
 import re
 from typing import override
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from yaml import safe_dump, safe_load
 
 from build_support.ci_cd_tasks.task_node import TaskNode
@@ -21,7 +19,7 @@ from build_support.ci_cd_vars.git_status_vars import (
     get_modified_files,
     get_modified_subprojects,
     git_fetch,
-    poetry_lock_file_was_modified,
+    poetry_lock_file_was_modified, PRIMARY_BRANCH_NAME,
 )
 from build_support.ci_cd_vars.project_setting_vars import get_pulumi_version
 from build_support.ci_cd_vars.project_structure import (
@@ -177,6 +175,37 @@ class GitInfo(BaseModel):
     modified_subprojects: list[SubprojectContext] = Field(default_factory=list)
     dockerfile_modified: bool
     poetry_lock_file_modified: bool
+    ticket_id: str | None = None
+
+    @staticmethod
+    def derive_ticket_id(branch_name: str) -> str | None:
+        """Derives the ticket id from a branch name.
+
+        Args:
+            branch_name (str): Branch name to inspect.
+
+        Returns:
+            Optional[str]: Ticket id on non-primary branches, else ``None``.
+        """
+        if branch_name == GitInfo.get_primary_branch_name():
+            return None
+        match = re.search(pattern=GIT_BRANCH_NAME_REGEX, string=branch_name)
+        ticket_id = match.group(1) if match is not None else None
+        return (
+            ticket_id
+            if ticket_id is not None and ticket_id != GitInfo.get_primary_branch_name()
+            else None
+        )
+
+    @model_validator(mode="after")
+    def validate_ticket_id(self) -> "GitInfo":
+        """Derive the ticket id from the branch name.
+
+        Returns:
+            GitInfo: This object with ``ticket_id`` synchronized to ``branch``.
+        """
+        self.ticket_id = self.derive_ticket_id(branch_name=self.branch)
+        return self
 
     @staticmethod
     def get_primary_branch_name() -> str:
@@ -185,7 +214,7 @@ class GitInfo(BaseModel):
         Returns:
             str: The primary branch name for this repo.
         """
-        return "main"
+        return PRIMARY_BRANCH_NAME
 
     def get_ticket_id(self) -> str | None:
         """Extracts the ticket id from the branch name.
@@ -194,13 +223,7 @@ class GitInfo(BaseModel):
             Optional[str]: The ticket id associated with the branch, or ``None``
                 when on the primary branch.
         """
-        match = re.search(pattern=GIT_BRANCH_NAME_REGEX, string=self.branch)
-        ticket_id = match.group(1) if match is not None else None
-        return (
-            ticket_id
-            if ticket_id is not None and ticket_id != self.get_primary_branch_name()
-            else None
-        )
+        return self.ticket_id
 
     @staticmethod
     def from_yaml(yaml_str: str) -> "GitInfo":

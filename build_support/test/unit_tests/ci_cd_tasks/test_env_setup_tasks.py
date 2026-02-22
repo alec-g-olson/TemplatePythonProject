@@ -195,6 +195,7 @@ def git_info_data_dict(mock_project_versions_list: list[str]) -> dict[Any, Any]:
         "modified_subprojects": ["build_support", "pypi_package"],
         "dockerfile_modified": False,
         "poetry_lock_file_modified": False,
+        "ticket_id": "some_branch_name",
     }
 
 
@@ -208,6 +209,16 @@ def test_load_git_info(
 ) -> None:
     git_info = GitInfo.from_yaml(git_info_yaml_str)
     assert git_info == GitInfo.model_validate(git_info_data_dict)
+
+
+def test_load_git_info_without_ticket_id(
+    git_info_data_dict: dict[Any, Any],
+) -> None:
+    legacy_git_info_data_dict = copy(git_info_data_dict)
+    legacy_git_info_data_dict.pop("ticket_id")
+    git_info_yaml_str = yaml.dump(legacy_git_info_data_dict)
+    observed_git_info = GitInfo.from_yaml(git_info_yaml_str)
+    assert observed_git_info.ticket_id == "some_branch_name"
 
 
 def test_load_git_info_bad_branch(git_info_data_dict: dict[Any, Any]) -> None:
@@ -257,18 +268,32 @@ def test_get_primary_branch_name() -> None:
     ],
 )
 def test_get_ticket_id(branch_name: str, ticket_id: str | None) -> None:
-    assert (
-        GitInfo.model_validate(
-            {
-                "branch": branch_name,
-                "tags": ["some", "tags"],
-                "modified_subprojects": [],
-                "dockerfile_modified": False,
-                "poetry_lock_file_modified": False,
-            }
-        ).get_ticket_id()
-        == ticket_id
+    git_info = GitInfo.model_validate(
+        {
+            "branch": branch_name,
+            "tags": ["some", "tags"],
+            "modified_subprojects": [],
+            "dockerfile_modified": False,
+            "poetry_lock_file_modified": False,
+        }
     )
+    assert git_info.ticket_id == ticket_id
+    assert git_info.get_ticket_id() == ticket_id
+
+
+def test_ticket_id_is_none_on_primary_branch_even_when_present_in_input() -> None:
+    git_info = GitInfo.model_validate(
+        {
+            "branch": GitInfo.get_primary_branch_name(),
+            "tags": ["some", "tags"],
+            "modified_subprojects": [],
+            "dockerfile_modified": False,
+            "poetry_lock_file_modified": False,
+            "ticket_id": "STALE001",
+        }
+    )
+    assert git_info.ticket_id is None
+    assert git_info.get_ticket_id() is None
 
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")

@@ -5,12 +5,15 @@ Attributes:
 """
 
 from collections.abc import Iterable
+from importlib import import_module
 from pathlib import Path
+from typing import TYPE_CHECKING, Any, cast
 
 from git import Commit, DiffIndex, FetchInfo, Head, Repo
 from git.cmd import execute_kwargs
 from git.diff import Diff
 
+from build_support.ci_cd_vars.build_paths import get_git_info_yaml
 from build_support.ci_cd_vars.project_structure import (
     get_dockerfile,
     get_poetry_lock_file,
@@ -20,6 +23,9 @@ from build_support.ci_cd_vars.subproject_structure import (
     get_python_subproject,
     get_sorted_subproject_contexts,
 )
+
+if TYPE_CHECKING:
+    from build_support.ci_cd_tasks.env_setup_tasks import GitInfo
 
 
 def get_git_repo(project_root: Path) -> Repo:
@@ -58,7 +64,7 @@ def get_current_branch_name(project_root: Path) -> str:
     return get_git_head(project_root=project_root).name
 
 
-MAIN_BRANCH_NAME = "main"
+PRIMARY_BRANCH_NAME = "main"
 
 
 def current_branch_is_main(project_root: Path) -> bool:
@@ -70,7 +76,32 @@ def current_branch_is_main(project_root: Path) -> bool:
     Returns:
         bool: Is the current branch the main branch.
     """
-    return get_current_branch_name(project_root=project_root) == MAIN_BRANCH_NAME
+    return get_current_branch_name(project_root=project_root) == PRIMARY_BRANCH_NAME
+
+
+def get_git_info(project_root: Path) -> "GitInfo":
+    """Loads this project's saved git info.
+
+    Args:
+        project_root (Path): Path to this project's root.
+
+    Returns:
+        GitInfo: The loaded git information for this project.
+
+    Raises:
+        RuntimeError: If no git info file exists for this project.
+    """
+    git_info_yaml_path = get_git_info_yaml(project_root=project_root)
+    if not git_info_yaml_path.is_file():
+        msg = f"No git info exists for project at {project_root}."
+        raise RuntimeError(msg)
+
+    git_info_module = cast(
+        Any, import_module("build_support.ci_cd_tasks.env_setup_tasks")
+    )
+    return cast(
+        "GitInfo", git_info_module.GitInfo.from_yaml(git_info_yaml_path.read_text())
+    )
 
 
 def monkeypatch_git_python_execute_kwargs() -> None:
@@ -178,7 +209,8 @@ def commit_changes_if_diff(
     if current_diff:
         if current_branch_is_main(project_root=project_root):
             msg = (
-                f"Attempting to push tags with unstaged changes to {MAIN_BRANCH_NAME}."
+                "Attempting to push tags with unstaged changes to "
+                f"{PRIMARY_BRANCH_NAME}."
             )
             raise RuntimeError(msg)
         repo = get_git_repo(project_root=project_root)
@@ -225,7 +257,7 @@ def get_most_recent_commit_on_main(repo: Repo) -> Commit:
     Returns:
         Commit: The most recent commit on the main branch.
     """
-    return repo.refs[f"origin/{MAIN_BRANCH_NAME}"].commit
+    return repo.refs[f"origin/{PRIMARY_BRANCH_NAME}"].commit
 
 
 def get_modified_files_between_commits(

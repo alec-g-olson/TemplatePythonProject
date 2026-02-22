@@ -9,6 +9,7 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_all_src_folders,
     get_all_test_folders,
 )
+from build_support.ci_cd_vars.git_status_vars import get_git_info
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
 from build_support.ci_cd_vars.project_structure import get_dockerfile
 from build_support.ci_cd_vars.subproject_structure import (
@@ -27,6 +28,19 @@ class DockerTarget(StrEnum):
     INFRA = "infra"
 
 
+def get_docker_tag_suffix(project_root: Path) -> str:
+    """Builds the branch-specific Docker tag suffix for this project.
+
+    Args:
+        project_root (Path): Path to this project's root.
+
+    Returns:
+        str: ``-<ticket_id>`` on non-primary branches, otherwise an empty string.
+    """
+    ticket_id = get_git_info(project_root=project_root).ticket_id
+    return f"-{ticket_id}" if ticket_id else ""
+
+
 def get_docker_image_name(project_root: Path, target_image: DockerTarget) -> str:
     """Gets the docker image name for a target.
 
@@ -38,7 +52,9 @@ def get_docker_image_name(project_root: Path, target_image: DockerTarget) -> str
     Returns:
         str: The name of the requested docker image.
     """
-    return ":".join([get_project_name(project_root=project_root), target_image.value])
+    image_name = get_project_name(project_root=project_root)
+    image_tag = target_image.value + get_docker_tag_suffix(project_root=project_root)
+    return f"{image_name}:{image_tag}"
 
 
 def get_python_path_for_target_image(

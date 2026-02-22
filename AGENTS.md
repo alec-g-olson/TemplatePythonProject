@@ -160,6 +160,12 @@ classes only when state genuinely needs to persist across calls.
 
 **Enums over strings and booleans.**  Fixed sets of values get an enum.
 
+**Git metadata convention.**  When build/process code needs the current ticket id,
+use `GitInfo.ticket_id` as the only source of truth. Do not add new branch-name parsing
+helpers that duplicate this logic. If loading from disk, parse `git_info.yaml` via
+`GitInfo.from_yaml(...)`; if deriving from branch text, construct/validate through
+`GitInfo` so ticket-id behavior stays centralized.
+
 Read the full guide for docstring requirements, naming conventions, CLI entrypoint
 structure, and the rules around suppression comments.
 

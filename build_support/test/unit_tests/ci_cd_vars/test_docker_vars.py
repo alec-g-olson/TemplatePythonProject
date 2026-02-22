@@ -1,15 +1,19 @@
 from pathlib import Path
 from typing import cast
+from unittest.mock import patch
 
 import pytest
 from _pytest.fixtures import SubRequest
 
+from build_support.ci_cd_tasks.env_setup_tasks import GitInfo
+from build_support.ci_cd_vars.build_paths import get_git_info_yaml
 from build_support.ci_cd_vars.docker_vars import (
     DockerTarget,
     get_base_docker_command_for_image,
     get_docker_build_command,
     get_docker_command_for_image,
     get_docker_image_name,
+    get_docker_tag_suffix,
     get_interactive_docker_command_for_image,
     get_mypy_path_env,
     get_mypy_path_for_target_image,
@@ -47,6 +51,57 @@ def test_get_docker_image_name(
         )
         == f"{project_name}:{docker_target.value}"
     )
+
+
+@pytest.mark.usefixtures("mock_local_pyproject_toml_file")
+def test_get_docker_image_name_with_branch_suffix(
+    mock_project_root: Path, project_name: str, docker_target: DockerTarget
+) -> None:
+    with patch(
+        "build_support.ci_cd_vars.docker_vars.get_docker_tag_suffix"
+    ) as get_docker_tag_suffix_mock:
+        get_docker_tag_suffix_mock.return_value = "-TEST001"
+        assert (
+            get_docker_image_name(
+                project_root=mock_project_root, target_image=docker_target
+            )
+            == f"{project_name}:{docker_target.value}-TEST001"
+        )
+        get_docker_tag_suffix_mock.assert_called_once_with(
+            project_root=mock_project_root
+        )
+
+
+def test_get_docker_tag_suffix_when_git_info_is_missing(
+    mock_project_root: Path,
+) -> None:
+    assert get_docker_tag_suffix(project_root=mock_project_root) == ""
+
+
+@pytest.mark.parametrize(
+    argnames=("branch_name", "expected_suffix"),
+    argvalues=[
+        (GitInfo.get_primary_branch_name(), ""),
+        ("TEST001", "-TEST001"),
+        ("TEST001-short-description", "-TEST001"),
+        ("101", "-101"),
+    ],
+)
+def test_get_docker_tag_suffix_from_git_info(
+    mock_project_root: Path, branch_name: str, expected_suffix: str
+) -> None:
+    git_info = GitInfo(
+        branch=branch_name,
+        tags=[],
+        modified_subprojects=[],
+        dockerfile_modified=False,
+        poetry_lock_file_modified=False,
+    )
+    git_info_yaml_path = get_git_info_yaml(project_root=mock_project_root)
+    git_info_yaml_path.parent.mkdir(parents=True, exist_ok=True)
+    git_info_yaml_path.write_text(git_info.to_yaml())
+
+    assert get_docker_tag_suffix(project_root=mock_project_root) == expected_suffix
 
 
 def test_get_python_path_for_target_image(
