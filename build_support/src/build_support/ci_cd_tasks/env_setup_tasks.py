@@ -17,10 +17,10 @@ from build_support.ci_cd_vars.git_status_vars import (
     PRIMARY_BRANCH_NAME,
     dockerfile_was_modified,
     get_current_branch_name,
-    get_ticket_id,
     get_local_tags,
     get_modified_files,
     get_modified_subprojects,
+    get_ticket_id,
     git_fetch,
     poetry_lock_file_was_modified,
 )

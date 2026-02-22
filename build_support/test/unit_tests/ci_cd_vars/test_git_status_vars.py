@@ -7,24 +7,21 @@ from _pytest.fixtures import SubRequest
 from git import Head, Repo, TagReference
 from git.cmd import execute_kwargs
 
-from build_support.ci_cd_tasks.env_setup_tasks import GitInfo
-from build_support.ci_cd_vars.build_paths import get_git_info_yaml
 from build_support.ci_cd_vars.git_status_vars import (
     PRIMARY_BRANCH_NAME,
     commit_changes_if_diff,
     current_branch_is_main,
     dockerfile_was_modified,
     get_current_branch_name,
-    get_ticket_id,
     get_git_diff,
     get_git_head,
-    get_git_info,
     get_git_repo,
     get_local_tags,
     get_modified_files,
     get_modified_files_between_commits,
     get_modified_subprojects,
     get_most_recent_commit_on_main,
+    get_ticket_id,
     git_add_all,
     git_fetch,
     monkeypatch_git_python_execute_kwargs,
@@ -104,28 +101,6 @@ def test_get_ticket_id(
 
 def test_constants_not_changed_by_accident() -> None:
     assert PRIMARY_BRANCH_NAME == "main"
-
-
-def test_get_git_info(mock_project_root: Path) -> None:
-    expected_git_info = GitInfo(
-        branch="some_branch_name",
-        tags=["0.0.1"],
-        modified_subprojects=[],
-        dockerfile_modified=False,
-        poetry_lock_file_modified=False,
-    )
-    git_info_path = get_git_info_yaml(project_root=mock_project_root)
-    git_info_path.parent.mkdir(parents=True, exist_ok=True)
-    git_info_path.write_text(expected_git_info.to_yaml())
-
-    observed_git_info = get_git_info(project_root=mock_project_root)
-    assert observed_git_info == expected_git_info
-
-
-def test_get_git_info_raises_error_if_missing(mock_project_root: Path) -> None:
-    expected_error_message = f"No git info exists for project at {mock_project_root}."
-    with pytest.raises(RuntimeError, match=expected_error_message):
-        get_git_info(project_root=mock_project_root)
 
 
 @pytest.mark.usefixtures("mock_git_repo")

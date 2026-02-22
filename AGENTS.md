@@ -61,21 +61,21 @@ handle the Docker plumbing automatically.
 
 ### The Three Environments
 
-**`build` (`template-python-project:build`)**
+**`build` (`template_python_project:build`)**
 
 The CI/CD orchestration container.  This is what every `make` command uses internally.
 It installs only the `build` dependency group and puts only `build_support/src` on
 `PYTHONPATH`.  You never need to target this image directly; the Makefile does it for
 you.
 
-**`dev` (`template-python-project:dev`)**
+**`dev` (`template_python_project:dev`)**
 
 The development container.  It installs all dependency groups (`dev`, `build`, `pulumi`)
 and puts every `src` and `test` folder from every subproject on `PYTHONPATH`.  This is
 the container to use whenever you need to run a Python command manually — a one-off
 script, a REPL, a specific test file.
 
-**`prod` (`template-python-project:prod`)**
+**`prod` (`template_python_project:prod`)**
 
 The production container.  It installs only the main (non-optional) dependencies and
 puts only `pypi_package/src` on `PYTHONPATH`.  It represents exactly what ships.

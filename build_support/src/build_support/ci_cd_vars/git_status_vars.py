@@ -2,18 +2,16 @@
 
 Attributes:
     | PRIMARY_BRANCH_NAME: The name of the main branch for this repo.
+    | GIT_BRANCH_NAME_REGEX: Regex used to parse ticket ids from branch names.
 """
 import re
 from collections.abc import Iterable
-from importlib import import_module
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
 
 from git import Commit, DiffIndex, FetchInfo, Head, Repo
 from git.cmd import execute_kwargs
 from git.diff import Diff
 
-from build_support.ci_cd_vars.build_paths import get_git_info_yaml
 from build_support.ci_cd_vars.project_structure import (
     get_dockerfile,
     get_poetry_lock_file,
@@ -23,7 +21,6 @@ from build_support.ci_cd_vars.subproject_structure import (
     get_python_subproject,
     get_sorted_subproject_contexts,
 )
-
 
 PRIMARY_BRANCH_NAME = "main"
 GIT_BRANCH_NAME_REGEX = r"^([^-]+)-?.*$"
@@ -84,7 +81,7 @@ def get_ticket_id(project_root: Path) -> str | None:
         project_root (Path): Path to this project's root.
 
     Returns:
-        str | None: Ticket id for non-primary branches, otherwise ``None``.
+        str: Ticket id for non-primary branches. Returns ``None`` on primary.
     """
     branch_name = get_current_branch_name(project_root=project_root)
     match = re.search(pattern=GIT_BRANCH_NAME_REGEX, string=branch_name)
