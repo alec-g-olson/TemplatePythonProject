@@ -1,9 +1,7 @@
-from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 from _pytest.fixtures import SubRequest
-from git import Head
 from test_utils.command_runner import run_command_and_save_logs
 
 from build_support.ci_cd_vars.subproject_structure import (
@@ -12,36 +10,33 @@ from build_support.ci_cd_vars.subproject_structure import (
 )
 
 
-@pytest.fixture
-def type_check_pypi_return_code(
-    request: SubRequest,
+@pytest.mark.usefixtures(
+    "mock_lightweight_project", "mock_lightweight_project_on_feature_branch"
+)
+def test_mypy_passes_no_issues(
     mock_project_root: Path,
-    mock_lightweight_project_on_feature_branch: Head,
     make_command_prefix_without_tag_suffix: list[str],
     real_project_root_dir: Path,
-) -> Callable[[], int]:
-    _ = mock_lightweight_project_on_feature_branch
-    def _run_type_check() -> int:
-        return_code, _, _ = run_command_and_save_logs(
-            args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
-            cwd=mock_project_root,
-            test_name=request.node.name,
-            real_project_root_dir=real_project_root_dir,
-        )
-        return return_code
-
-    return _run_type_check
-
-
-@pytest.mark.usefixtures("mock_lightweight_project")
-def test_mypy_passes_no_issues(type_check_pypi_return_code: Callable[[], int]) -> None:
+    request: SubRequest,
+) -> None:
     # Default state - should pass as long as style checks are passing for the repo
-    assert type_check_pypi_return_code() == 0
+    return_code, _, _ = run_command_and_save_logs(
+        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        cwd=mock_project_root,
+        test_name=request.node.name,
+        real_project_root_dir=real_project_root_dir,
+    )
+    assert return_code == 0
 
 
-@pytest.mark.usefixtures("mock_lightweight_project")
+@pytest.mark.usefixtures(
+    "mock_lightweight_project", "mock_lightweight_project_on_feature_branch"
+)
 def test_mypy_fails_type_arg(
-    mock_project_root: Path, type_check_pypi_return_code: Callable[[], int]
+    mock_project_root: Path,
+    make_command_prefix_without_tag_suffix: list[str],
+    real_project_root_dir: Path,
+    request: SubRequest,
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
@@ -52,12 +47,23 @@ def test_mypy_fails_type_arg(
     return items
 '''
     )
-    assert type_check_pypi_return_code() != 0
+    return_code, _, _ = run_command_and_save_logs(
+        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        cwd=mock_project_root,
+        test_name=request.node.name,
+        real_project_root_dir=real_project_root_dir,
+    )
+    assert return_code != 0
 
 
-@pytest.mark.usefixtures("mock_lightweight_project")
+@pytest.mark.usefixtures(
+    "mock_lightweight_project", "mock_lightweight_project_on_feature_branch"
+)
 def test_mypy_fails_no_untyped_def(
-    mock_project_root: Path, type_check_pypi_return_code: Callable[[], int]
+    mock_project_root: Path,
+    make_command_prefix_without_tag_suffix: list[str],
+    real_project_root_dir: Path,
+    request: SubRequest,
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
@@ -68,12 +74,23 @@ def test_mypy_fails_no_untyped_def(
     return items
 '''
     )
-    assert type_check_pypi_return_code() != 0
+    return_code, _, _ = run_command_and_save_logs(
+        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        cwd=mock_project_root,
+        test_name=request.node.name,
+        real_project_root_dir=real_project_root_dir,
+    )
+    assert return_code != 0
 
 
-@pytest.mark.usefixtures("mock_lightweight_project")
+@pytest.mark.usefixtures(
+    "mock_lightweight_project", "mock_lightweight_project_on_feature_branch"
+)
 def test_mypy_fails_redundant_cast(
-    mock_project_root: Path, type_check_pypi_return_code: Callable[[], int]
+    mock_project_root: Path,
+    make_command_prefix_without_tag_suffix: list[str],
+    real_project_root_dir: Path,
+    request: SubRequest,
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
@@ -84,12 +101,23 @@ def test_mypy_fails_redundant_cast(
     return cast(int, x)
 '''
     )
-    assert type_check_pypi_return_code() != 0
+    return_code, _, _ = run_command_and_save_logs(
+        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        cwd=mock_project_root,
+        test_name=request.node.name,
+        real_project_root_dir=real_project_root_dir,
+    )
+    assert return_code != 0
 
 
-@pytest.mark.usefixtures("mock_lightweight_project")
+@pytest.mark.usefixtures(
+    "mock_lightweight_project", "mock_lightweight_project_on_feature_branch"
+)
 def test_mypy_fails_redundant_self(
-    mock_project_root: Path, type_check_pypi_return_code: Callable[[], int]
+    mock_project_root: Path,
+    make_command_prefix_without_tag_suffix: list[str],
+    real_project_root_dir: Path,
+    request: SubRequest,
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
@@ -100,12 +128,23 @@ def test_mypy_fails_redundant_self(
     return type(self)()
 '''
     )
-    assert type_check_pypi_return_code() != 0
+    return_code, _, _ = run_command_and_save_logs(
+        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        cwd=mock_project_root,
+        test_name=request.node.name,
+        real_project_root_dir=real_project_root_dir,
+    )
+    assert return_code != 0
 
 
-@pytest.mark.usefixtures("mock_lightweight_project")
+@pytest.mark.usefixtures(
+    "mock_lightweight_project", "mock_lightweight_project_on_feature_branch"
+)
 def test_mypy_fails_comparison_overlap(
-    mock_project_root: Path, type_check_pypi_return_code: Callable[[], int]
+    mock_project_root: Path,
+    make_command_prefix_without_tag_suffix: list[str],
+    real_project_root_dir: Path,
+    request: SubRequest,
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
@@ -116,12 +155,23 @@ def test_mypy_fails_comparison_overlap(
     return x == 'magic'
 '''
     )
-    assert type_check_pypi_return_code() != 0
+    return_code, _, _ = run_command_and_save_logs(
+        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        cwd=mock_project_root,
+        test_name=request.node.name,
+        real_project_root_dir=real_project_root_dir,
+    )
+    assert return_code != 0
 
 
-@pytest.mark.usefixtures("mock_lightweight_project")
+@pytest.mark.usefixtures(
+    "mock_lightweight_project", "mock_lightweight_project_on_feature_branch"
+)
 def test_mypy_fails_no_untyped_call(
-    mock_project_root: Path, type_check_pypi_return_code: Callable[[], int]
+    mock_project_root: Path,
+    make_command_prefix_without_tag_suffix: list[str],
+    real_project_root_dir: Path,
+    request: SubRequest,
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
@@ -136,12 +186,23 @@ def bad():
     return
 '''
     )
-    assert type_check_pypi_return_code() != 0
+    return_code, _, _ = run_command_and_save_logs(
+        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        cwd=mock_project_root,
+        test_name=request.node.name,
+        real_project_root_dir=real_project_root_dir,
+    )
+    assert return_code != 0
 
 
-@pytest.mark.usefixtures("mock_lightweight_project")
+@pytest.mark.usefixtures(
+    "mock_lightweight_project", "mock_lightweight_project_on_feature_branch"
+)
 def test_mypy_fails_no_any_return(
-    mock_project_root: Path, type_check_pypi_return_code: Callable[[], int]
+    mock_project_root: Path,
+    make_command_prefix_without_tag_suffix: list[str],
+    real_project_root_dir: Path,
+    request: SubRequest,
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
@@ -152,12 +213,23 @@ def test_mypy_fails_no_any_return(
     return x['str']
 '''
     )
-    assert type_check_pypi_return_code() != 0
+    return_code, _, _ = run_command_and_save_logs(
+        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        cwd=mock_project_root,
+        test_name=request.node.name,
+        real_project_root_dir=real_project_root_dir,
+    )
+    assert return_code != 0
 
 
-@pytest.mark.usefixtures("mock_lightweight_project")
+@pytest.mark.usefixtures(
+    "mock_lightweight_project", "mock_lightweight_project_on_feature_branch"
+)
 def test_mypy_fails_no_any_unimported(
-    mock_project_root: Path, type_check_pypi_return_code: Callable[[], int]
+    mock_project_root: Path,
+    make_command_prefix_without_tag_suffix: list[str],
+    real_project_root_dir: Path,
+    request: SubRequest,
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
@@ -171,12 +243,23 @@ def feed(cat: Cat) -> None:
     return
 '''
     )
-    assert type_check_pypi_return_code() != 0
+    return_code, _, _ = run_command_and_save_logs(
+        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        cwd=mock_project_root,
+        test_name=request.node.name,
+        real_project_root_dir=real_project_root_dir,
+    )
+    assert return_code != 0
 
 
-@pytest.mark.usefixtures("mock_lightweight_project")
+@pytest.mark.usefixtures(
+    "mock_lightweight_project", "mock_lightweight_project_on_feature_branch"
+)
 def test_mypy_fails_redundant_expr(
-    mock_project_root: Path, type_check_pypi_return_code: Callable[[], int]
+    mock_project_root: Path,
+    make_command_prefix_without_tag_suffix: list[str],
+    real_project_root_dir: Path,
+    request: SubRequest,
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
@@ -190,12 +273,23 @@ def test_mypy_fails_redundant_expr(
         return 0
 '''
     )
-    assert type_check_pypi_return_code() != 0
+    return_code, _, _ = run_command_and_save_logs(
+        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        cwd=mock_project_root,
+        test_name=request.node.name,
+        real_project_root_dir=real_project_root_dir,
+    )
+    assert return_code != 0
 
 
-@pytest.mark.usefixtures("mock_lightweight_project")
+@pytest.mark.usefixtures(
+    "mock_lightweight_project", "mock_lightweight_project_on_feature_branch"
+)
 def test_mypy_fails_possibly_undefined(
-    mock_project_root: Path, type_check_pypi_return_code: Callable[[], int]
+    mock_project_root: Path,
+    make_command_prefix_without_tag_suffix: list[str],
+    real_project_root_dir: Path,
+    request: SubRequest,
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
@@ -208,12 +302,23 @@ def test_mypy_fails_possibly_undefined(
     return val + a
 '''
     )
-    assert type_check_pypi_return_code() != 0
+    return_code, _, _ = run_command_and_save_logs(
+        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        cwd=mock_project_root,
+        test_name=request.node.name,
+        real_project_root_dir=real_project_root_dir,
+    )
+    assert return_code != 0
 
 
-@pytest.mark.usefixtures("mock_lightweight_project")
+@pytest.mark.usefixtures(
+    "mock_lightweight_project", "mock_lightweight_project_on_feature_branch"
+)
 def test_mypy_fails_truthy_bool(
-    mock_project_root: Path, type_check_pypi_return_code: Callable[[], int]
+    mock_project_root: Path,
+    make_command_prefix_without_tag_suffix: list[str],
+    real_project_root_dir: Path,
+    request: SubRequest,
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
@@ -227,12 +332,23 @@ if foo:
     a = 0
 """
     )
-    assert type_check_pypi_return_code() != 0
+    return_code, _, _ = run_command_and_save_logs(
+        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        cwd=mock_project_root,
+        test_name=request.node.name,
+        real_project_root_dir=real_project_root_dir,
+    )
+    assert return_code != 0
 
 
-@pytest.mark.usefixtures("mock_lightweight_project")
+@pytest.mark.usefixtures(
+    "mock_lightweight_project", "mock_lightweight_project_on_feature_branch"
+)
 def test_mypy_fails_truthy_iterable(
-    mock_project_root: Path, type_check_pypi_return_code: Callable[[], int]
+    mock_project_root: Path,
+    make_command_prefix_without_tag_suffix: list[str],
+    real_project_root_dir: Path,
+    request: SubRequest,
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
@@ -247,12 +363,23 @@ def transform(items: Iterable[int]) -> list[int]:
     return [x + 1 for x in items]
 '''
     )
-    assert type_check_pypi_return_code() != 0
+    return_code, _, _ = run_command_and_save_logs(
+        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        cwd=mock_project_root,
+        test_name=request.node.name,
+        real_project_root_dir=real_project_root_dir,
+    )
+    assert return_code != 0
 
 
-@pytest.mark.usefixtures("mock_lightweight_project")
+@pytest.mark.usefixtures(
+    "mock_lightweight_project", "mock_lightweight_project_on_feature_branch"
+)
 def test_mypy_fails_ignore_without_code(
-    mock_project_root: Path, type_check_pypi_return_code: Callable[[], int]
+    mock_project_root: Path,
+    make_command_prefix_without_tag_suffix: list[str],
+    real_project_root_dir: Path,
+    request: SubRequest,
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
@@ -263,12 +390,23 @@ def test_mypy_fails_ignore_without_code(
     return items
 '''
     )
-    assert type_check_pypi_return_code() != 0
+    return_code, _, _ = run_command_and_save_logs(
+        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        cwd=mock_project_root,
+        test_name=request.node.name,
+        real_project_root_dir=real_project_root_dir,
+    )
+    assert return_code != 0
 
 
-@pytest.mark.usefixtures("mock_lightweight_project")
+@pytest.mark.usefixtures(
+    "mock_lightweight_project", "mock_lightweight_project_on_feature_branch"
+)
 def test_mypy_fails_unused_awaitable(
-    mock_project_root: Path, type_check_pypi_return_code: Callable[[], int]
+    mock_project_root: Path,
+    make_command_prefix_without_tag_suffix: list[str],
+    real_project_root_dir: Path,
+    request: SubRequest,
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
@@ -283,12 +421,23 @@ async def g() -> None:
     asyncio.create_task(f())
 """
     )
-    assert type_check_pypi_return_code() != 0
+    return_code, _, _ = run_command_and_save_logs(
+        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        cwd=mock_project_root,
+        test_name=request.node.name,
+        real_project_root_dir=real_project_root_dir,
+    )
+    assert return_code != 0
 
 
-@pytest.mark.usefixtures("mock_lightweight_project")
+@pytest.mark.usefixtures(
+    "mock_lightweight_project", "mock_lightweight_project_on_feature_branch"
+)
 def test_mypy_fails_unused_ignore(
-    mock_project_root: Path, type_check_pypi_return_code: Callable[[], int]
+    mock_project_root: Path,
+    make_command_prefix_without_tag_suffix: list[str],
+    real_project_root_dir: Path,
+    request: SubRequest,
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
@@ -299,12 +448,23 @@ def test_mypy_fails_unused_ignore(
     return a + b  # type: ignore[unused-awaitable]
 '''
     )
-    assert type_check_pypi_return_code() != 0
+    return_code, _, _ = run_command_and_save_logs(
+        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        cwd=mock_project_root,
+        test_name=request.node.name,
+        real_project_root_dir=real_project_root_dir,
+    )
+    assert return_code != 0
 
 
-@pytest.mark.usefixtures("mock_lightweight_project")
+@pytest.mark.usefixtures(
+    "mock_lightweight_project", "mock_lightweight_project_on_feature_branch"
+)
 def test_mypy_fails_explicit_override(
-    mock_project_root: Path, type_check_pypi_return_code: Callable[[], int]
+    mock_project_root: Path,
+    make_command_prefix_without_tag_suffix: list[str],
+    real_project_root_dir: Path,
+    request: SubRequest,
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
@@ -333,12 +493,23 @@ class Child(Parent):
         pass
 '''
     )
-    assert type_check_pypi_return_code() != 0
+    return_code, _, _ = run_command_and_save_logs(
+        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        cwd=mock_project_root,
+        test_name=request.node.name,
+        real_project_root_dir=real_project_root_dir,
+    )
+    assert return_code != 0
 
 
-@pytest.mark.usefixtures("mock_lightweight_project")
+@pytest.mark.usefixtures(
+    "mock_lightweight_project", "mock_lightweight_project_on_feature_branch"
+)
 def test_mypy_fails_mutable_override(
-    mock_project_root: Path, type_check_pypi_return_code: Callable[[], int]
+    mock_project_root: Path,
+    make_command_prefix_without_tag_suffix: list[str],
+    real_project_root_dir: Path,
+    request: SubRequest,
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
@@ -359,12 +530,23 @@ class D(C):
     z: Any  # OK
 """
     )
-    assert type_check_pypi_return_code() != 0
+    return_code, _, _ = run_command_and_save_logs(
+        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        cwd=mock_project_root,
+        test_name=request.node.name,
+        real_project_root_dir=real_project_root_dir,
+    )
+    assert return_code != 0
 
 
-@pytest.mark.usefixtures("mock_lightweight_project")
+@pytest.mark.usefixtures(
+    "mock_lightweight_project", "mock_lightweight_project_on_feature_branch"
+)
 def test_mypy_fails_unimported_reveal(
-    mock_project_root: Path, type_check_pypi_return_code: Callable[[], int]
+    mock_project_root: Path,
+    make_command_prefix_without_tag_suffix: list[str],
+    real_project_root_dir: Path,
+    request: SubRequest,
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
@@ -374,4 +556,10 @@ def test_mypy_fails_unimported_reveal(
 reveal_type(x)
 """
     )
-    assert type_check_pypi_return_code() != 0
+    return_code, _, _ = run_command_and_save_logs(
+        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        cwd=mock_project_root,
+        test_name=request.node.name,
+        real_project_root_dir=real_project_root_dir,
+    )
+    assert return_code != 0

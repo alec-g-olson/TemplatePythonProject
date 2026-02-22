@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 
 import pytest
+from _pytest.fixtures import SubRequest
 
 from build_support.ci_cd_vars.docker_vars import DockerTarget, get_docker_image_name
 from build_support.ci_cd_vars.project_structure import (
@@ -24,7 +25,7 @@ def prod_workdir() -> str:
 
 
 @pytest.fixture
-def pypi_feature_test_scratch_path(request: pytest.FixtureRequest) -> Path:
+def pypi_feature_test_scratch_path(request: SubRequest) -> Path:
     """Per-test scratch dir under test_scratch_folder for file I/O and prod -v mount.
 
     Uses test_scratch_folder/pypi_prod_scratch/<test_id> so the path is stable and

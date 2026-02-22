@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 import yaml
+from _pytest.fixtures import SubRequest
 from git import Head, Repo
 from test_utils.feature_test_branching import (
     get_feature_test_ticket_id,
@@ -99,8 +100,7 @@ def make_command_prefix_without_tag_suffix(
 
 @pytest.fixture
 def make_command_prefix(
-    make_command_prefix_without_tag_suffix: list[str],
-    real_project_root_dir: Path,
+    make_command_prefix_without_tag_suffix: list[str], real_project_root_dir: Path
 ) -> list[str]:
     """Build the ``make`` command prefix for running inner builds.
 
@@ -467,11 +467,11 @@ def tag_current_branch_images_for_test_names(
 @pytest.fixture(
     params=["", "branch-description"], ids=["id-only-branch", "described-branch"]
 )
-def current_branch_name(request: pytest.FixtureRequest, current_ticket_id: str) -> str:
+def current_branch_name(request: SubRequest, current_ticket_id: str) -> str:
     """Build a branch name from the current ticket id.
 
     Args:
-        request (pytest.FixtureRequest): Access to the requested fixture variant.
+        request (SubRequest): Access to the requested fixture variant.
         current_ticket_id (str): The ticket id to embed in the branch name.
 
     Returns:
