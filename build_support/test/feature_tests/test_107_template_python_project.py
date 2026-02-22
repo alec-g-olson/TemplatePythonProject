@@ -5,6 +5,7 @@ from subprocess import run
 
 from git import Head, Repo
 from test_utils.command_runner import run_command_and_save_logs
+from test_utils.feature_test_branching import get_feature_test_ticket_id
 
 from build_support.ci_cd_vars.git_status_vars import PRIMARY_BRANCH_NAME
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
@@ -62,14 +63,24 @@ def test_make_setup_commands_build_unsuffixed_images_on_main(
     """On main, setup commands should build unsuffixed image tags."""
     mock_lightweight_project.git.checkout(PRIMARY_BRANCH_NAME)
     setup_dev_return_code, _, _ = run_command_and_save_logs(
-        args=[*make_command_prefix, "CI_CD_FEATURE_TEST_MODE_FLAG=", "setup_dev_env"],
+        args=[
+            *make_command_prefix,
+            "TAG_SUFFIX=",
+            "CI_CD_FEATURE_TEST_MODE_FLAG=",
+            "setup_dev_env",
+        ],
         cwd=mock_project_root,
         test_name="test_make_setup_commands_build_unsuffixed_images_on_main_setup_dev_env",
         real_project_root_dir=real_project_root_dir,
     )
     assert setup_dev_return_code == 0
     setup_prod_return_code, _, _ = run_command_and_save_logs(
-        args=[*make_command_prefix, "CI_CD_FEATURE_TEST_MODE_FLAG=", "setup_prod_env"],
+        args=[
+            *make_command_prefix,
+            "TAG_SUFFIX=",
+            "CI_CD_FEATURE_TEST_MODE_FLAG=",
+            "setup_prod_env",
+        ],
         cwd=mock_project_root,
         test_name="test_make_setup_commands_build_unsuffixed_images_on_main_setup_prod_env",
         real_project_root_dir=real_project_root_dir,
@@ -88,7 +99,12 @@ def test_make_setup_commands_build_ticket_scoped_images_on_non_main(
     """On non-main branches, setup commands should build ``-<ticket_id>`` tags."""
     assert mock_new_branch.name.startswith(current_ticket_id)
     setup_dev_return_code, _, _ = run_command_and_save_logs(
-        args=[*make_command_prefix, "CI_CD_FEATURE_TEST_MODE_FLAG=", "setup_dev_env"],
+        args=[
+            *make_command_prefix,
+            "TAG_SUFFIX=",
+            "CI_CD_FEATURE_TEST_MODE_FLAG=",
+            "setup_dev_env",
+        ],
         cwd=mock_project_root,
         test_name=(
             "test_make_setup_commands_build_ticket_scoped_images_on_non_main_"
@@ -98,7 +114,12 @@ def test_make_setup_commands_build_ticket_scoped_images_on_non_main(
     )
     assert setup_dev_return_code == 0
     setup_prod_return_code, _, _ = run_command_and_save_logs(
-        args=[*make_command_prefix, "CI_CD_FEATURE_TEST_MODE_FLAG=", "setup_prod_env"],
+        args=[
+            *make_command_prefix,
+            "TAG_SUFFIX=",
+            "CI_CD_FEATURE_TEST_MODE_FLAG=",
+            "setup_prod_env",
+        ],
         cwd=mock_project_root,
         test_name=(
             "test_make_setup_commands_build_ticket_scoped_images_on_non_main_"
@@ -116,12 +137,12 @@ def test_different_ticket_branches_build_different_image_tags(
     mock_project_root: Path,
     mock_lightweight_project: Repo,
     mock_remote_git_repo: Repo,
-    make_command_prefix: list[str],
+    make_command_prefix_without_tag_suffix: list[str],
     real_project_root_dir: Path,
 ) -> None:
     """Different ticket branches should build different image tag names."""
-    first_ticket_id = "TEST001"
-    second_ticket_id = "TEST002"
+    first_ticket_id = get_feature_test_ticket_id(real_project_root_dir, "TEST001")
+    second_ticket_id = get_feature_test_ticket_id(real_project_root_dir, "TEST002")
 
     first_branch = _create_and_checkout_branch(
         repo=mock_lightweight_project,
@@ -130,7 +151,11 @@ def test_different_ticket_branches_build_different_image_tags(
     )
     assert first_branch.name.startswith(first_ticket_id)
     first_setup_build_return_code, _, _ = run_command_and_save_logs(
-        args=[*make_command_prefix, "CI_CD_FEATURE_TEST_MODE_FLAG=", "setup_build_env"],
+        args=[
+            *make_command_prefix_without_tag_suffix,
+            "CI_CD_FEATURE_TEST_MODE_FLAG=",
+            "setup_build_env",
+        ],
         cwd=mock_project_root,
         test_name="test_different_ticket_branches_build_different_image_tags_first",
         real_project_root_dir=real_project_root_dir,
@@ -144,7 +169,11 @@ def test_different_ticket_branches_build_different_image_tags(
     )
     assert second_branch.name.startswith(second_ticket_id)
     second_setup_build_return_code, _, _ = run_command_and_save_logs(
-        args=[*make_command_prefix, "CI_CD_FEATURE_TEST_MODE_FLAG=", "setup_build_env"],
+        args=[
+            *make_command_prefix_without_tag_suffix,
+            "CI_CD_FEATURE_TEST_MODE_FLAG=",
+            "setup_build_env",
+        ],
         cwd=mock_project_root,
         test_name="test_different_ticket_branches_build_different_image_tags_second",
         real_project_root_dir=real_project_root_dir,

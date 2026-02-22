@@ -17,6 +17,7 @@ from test_utils.feature_test_branching import (
 )
 
 from build_support.ci_cd_vars.build_paths import get_local_info_yaml
+from build_support.ci_cd_vars.docker_vars import get_docker_tag_suffix
 from build_support.ci_cd_vars.git_status_vars import (
     monkeypatch_git_python_execute_kwargs,
 )
@@ -48,19 +49,34 @@ def remove_dir_and_all_contents(path: Path) -> None:
     path.rmdir()
 
 
-def _build_make_command_prefix(
-    mock_project_root: Path, real_project_root_dir: Path, mock_remote_git_folder: Path
+@pytest.fixture
+def make_command_prefix_without_tag_suffix(
+    mock_project_root: Path,
+    real_project_root_dir: Path,
+    mock_remote_git_folder: Path,
+    tag_current_branch_images_for_test_names: None,
 ) -> list[str]:
-    """Build shared ``make`` command tokens for nested feature-test runs.
+    """Build the ``make`` command prefix without pinning ``TAG_SUFFIX``.
+
+    Constructs a ``make`` invocation that targets the mock project,
+    mounts the mock remote git repo, and enables ``--ci-cd-feature-test-mode``.
+    Does not set ``TAG_SUFFIX`` so the Makefile computes it from the mock
+    project's ``git/HEAD``. Use for tests that need the Makefile to derive
+    the tag suffix from the mock project's branch (e.g. cross-ticket
+    isolation tests that build new images).
 
     Args:
         mock_project_root (Path): Root of the mock project.
         real_project_root_dir (Path): Root of the real project.
         mock_remote_git_folder (Path): Path to the mock bare repo.
+        tag_current_branch_images_for_test_names (None): Ensures test-tag
+            aliases are created before any inner ``make`` calls.
 
     Returns:
-        list[str]: Command tokens for ``make`` with required overrides.
+        list[str]: Command tokens for ``make`` with overrides but without
+        a pinned ``TAG_SUFFIX``.
     """
+    _ = tag_current_branch_images_for_test_names
     docker_project_root = real_project_root_dir
     test_project_relative_root = mock_project_root.relative_to(docker_project_root)
     remote_repo_relative_root = mock_remote_git_folder.relative_to(docker_project_root)
@@ -83,36 +99,30 @@ def _build_make_command_prefix(
 
 @pytest.fixture
 def make_command_prefix(
-    mock_project_root: Path,
+    make_command_prefix_without_tag_suffix: list[str],
     real_project_root_dir: Path,
-    mock_remote_git_folder: Path,
-    tag_current_branch_images_for_test_names: None,
 ) -> list[str]:
     """Build the ``make`` command prefix for running inner builds.
 
     Constructs a ``make`` invocation that targets the mock project
     instead of the real project, mounts the mock remote git repo,
     and enables ``--ci-cd-feature-test-mode`` to skip Docker image
-    rebuilds inside the inner build.
+    rebuilds inside the inner build. Pins ``TAG_SUFFIX`` to the
+    real project's branch so inner make uses the current branch's
+    images (e.g. ``build-107`` on branch 107).
 
     Args:
-        mock_project_root (Path): Root of the mock project.
+        make_command_prefix_without_tag_suffix (list[str]): Base make
+            command tokens (ensures test image tags exist).
         real_project_root_dir (Path): Root of the real project.
-        mock_remote_git_folder (Path): Path to the mock bare repo.
-        tag_current_branch_images_for_test_names (None): Ensures test-tag aliases
-            are created for current-branch Docker images before running inner
-            ``make`` calls.
 
     Returns:
         list[str]: Command tokens for ``make`` with overrides.
     """
-    # Trigger image tag setup before any inner make invocations run.
-    _ = tag_current_branch_images_for_test_names
-    return _build_make_command_prefix(
-        mock_project_root=mock_project_root,
-        real_project_root_dir=real_project_root_dir,
-        mock_remote_git_folder=mock_remote_git_folder,
-    )
+    return [
+        *make_command_prefix_without_tag_suffix,
+        f"TAG_SUFFIX={get_docker_tag_suffix(project_root=real_project_root_dir)}",
+    ]
 
 
 @pytest.fixture(scope="session")
@@ -284,41 +294,6 @@ def mock_lightweight_project_on_feature_branch(
     mock_lightweight_project.remote().fetch()
     mock_lightweight_project.git.checkout(feature_test_branch_name)
     return mock_lightweight_project.active_branch
-
-
-@pytest.fixture
-def ticket_branch_make_command_prefix(
-    mock_project_root: Path,
-    real_project_root_dir: Path,
-    mock_remote_git_folder: Path,
-    tag_current_branch_images_for_test_names: None,
-    mock_lightweight_project_on_feature_branch: Head,
-) -> list[str]:
-    """Build ``make`` command tokens after switching to a feature-test branch.
-
-    This fixture ensures nested ``make`` calls resolve to ticket-scoped Docker
-    tags (for example ``build-107TEST``) by first checking out the mock project
-    on a non-main branch derived from ``current_ticket_id``.
-
-    Args:
-        mock_project_root (Path): Root of the mock project.
-        real_project_root_dir (Path): Root of the real project.
-        mock_remote_git_folder (Path): Path to the mock bare repo.
-        tag_current_branch_images_for_test_names (None): Ensures test-tag aliases
-            are available before nested ``make`` calls.
-        mock_lightweight_project_on_feature_branch (Head): Ensures branch checkout
-            happens before command execution.
-
-    Returns:
-        list[str]: Command tokens for ``make`` with overrides.
-    """
-    _ = tag_current_branch_images_for_test_names
-    _ = mock_lightweight_project_on_feature_branch
-    return _build_make_command_prefix(
-        mock_project_root=mock_project_root,
-        real_project_root_dir=real_project_root_dir,
-        mock_remote_git_folder=mock_remote_git_folder,
-    )
 
 
 @pytest.fixture

@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 from _pytest.fixtures import SubRequest
+from git import Head
 from test_utils.command_runner import run_command_and_save_logs
 
 from build_support.ci_cd_vars.subproject_structure import (
@@ -15,12 +16,14 @@ from build_support.ci_cd_vars.subproject_structure import (
 def type_check_pypi_return_code(
     request: SubRequest,
     mock_project_root: Path,
-    ticket_branch_make_command_prefix: list[str],
+    mock_lightweight_project_on_feature_branch: Head,
+    make_command_prefix_without_tag_suffix: list[str],
     real_project_root_dir: Path,
 ) -> Callable[[], int]:
+    _ = mock_lightweight_project_on_feature_branch
     def _run_type_check() -> int:
         return_code, _, _ = run_command_and_save_logs(
-            args=[*ticket_branch_make_command_prefix, "type_check_pypi"],
+            args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
             cwd=mock_project_root,
             test_name=request.node.name,
             real_project_root_dir=real_project_root_dir,
@@ -42,8 +45,7 @@ def test_mypy_fails_type_arg(
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
-        project_root=mock_project_root,
-        subproject_context=SubprojectContext.PYPI,
+        project_root=mock_project_root, subproject_context=SubprojectContext.PYPI
     ).get_test_dir().joinpath("test_mypy_fails_type_arg.py").write_text(
         '''def some_function(items: list) -> list:
     """func docstring"""
@@ -59,8 +61,7 @@ def test_mypy_fails_no_untyped_def(
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
-        project_root=mock_project_root,
-        subproject_context=SubprojectContext.PYPI,
+        project_root=mock_project_root, subproject_context=SubprojectContext.PYPI
     ).get_test_dir().joinpath("test_mypy_fails_no_untyped_def.py").write_text(
         '''def some_function(items) -> list:
     """func docstring"""
@@ -76,8 +77,7 @@ def test_mypy_fails_redundant_cast(
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
-        project_root=mock_project_root,
-        subproject_context=SubprojectContext.PYPI,
+        project_root=mock_project_root, subproject_context=SubprojectContext.PYPI
     ).get_test_dir().joinpath("test_mypy_fails_redundant_cast.py").write_text(
         '''def example(x: Count) -> int:
     """func docstring"""
@@ -93,8 +93,7 @@ def test_mypy_fails_redundant_self(
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
-        project_root=mock_project_root,
-        subproject_context=SubprojectContext.PYPI,
+        project_root=mock_project_root, subproject_context=SubprojectContext.PYPI
     ).get_test_dir().joinpath("test_mypy_fails_redundant_self.py").write_text(
         '''def copy(self: Self) -> Self:
     """func docstring"""
@@ -110,8 +109,7 @@ def test_mypy_fails_comparison_overlap(
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
-        project_root=mock_project_root,
-        subproject_context=SubprojectContext.PYPI,
+        project_root=mock_project_root, subproject_context=SubprojectContext.PYPI
     ).get_test_dir().joinpath("test_mypy_fails_comparison_overlap.py").write_text(
         '''def is_magic(x: bytes) -> bool:
     """func docstring"""
@@ -127,8 +125,7 @@ def test_mypy_fails_no_untyped_call(
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
-        project_root=mock_project_root,
-        subproject_context=SubprojectContext.PYPI,
+        project_root=mock_project_root, subproject_context=SubprojectContext.PYPI
     ).get_test_dir().joinpath("test_mypy_fails_no_untyped_call.py").write_text(
         '''def do_it() -> None:
     """func docstring"""
@@ -148,8 +145,7 @@ def test_mypy_fails_no_any_return(
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
-        project_root=mock_project_root,
-        subproject_context=SubprojectContext.PYPI,
+        project_root=mock_project_root, subproject_context=SubprojectContext.PYPI
     ).get_test_dir().joinpath("test_mypy_fails_no_any_return.py").write_text(
         '''def some_function(x: dict[str, Any]) -> str:
     """func docstring"""
@@ -165,8 +161,7 @@ def test_mypy_fails_no_any_unimported(
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
-        project_root=mock_project_root,
-        subproject_context=SubprojectContext.PYPI,
+        project_root=mock_project_root, subproject_context=SubprojectContext.PYPI
     ).get_test_dir().joinpath("test_mypy_fails_no_any_unimported.py").write_text(
         '''from animals import Cat
 
@@ -185,8 +180,7 @@ def test_mypy_fails_redundant_expr(
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
-        project_root=mock_project_root,
-        subproject_context=SubprojectContext.PYPI,
+        project_root=mock_project_root, subproject_context=SubprojectContext.PYPI
     ).get_test_dir().joinpath("test_mypy_fails_redundant_expr.py").write_text(
         '''def example(x: int) -> int:
     """func docstring"""
@@ -205,8 +199,7 @@ def test_mypy_fails_possibly_undefined(
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
-        project_root=mock_project_root,
-        subproject_context=SubprojectContext.PYPI,
+        project_root=mock_project_root, subproject_context=SubprojectContext.PYPI
     ).get_test_dir().joinpath("test_mypy_fails_possibly_undefined.py").write_text(
         '''def some_function(val: int, flag: bool) -> int:
     """func docstring"""
@@ -224,8 +217,7 @@ def test_mypy_fails_truthy_bool(
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
-        project_root=mock_project_root,
-        subproject_context=SubprojectContext.PYPI,
+        project_root=mock_project_root, subproject_context=SubprojectContext.PYPI
     ).get_test_dir().joinpath("test_mypy_fails_truthy_bool.py").write_text(
         """class Foo:
     pass
@@ -244,8 +236,7 @@ def test_mypy_fails_truthy_iterable(
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
-        project_root=mock_project_root,
-        subproject_context=SubprojectContext.PYPI,
+        project_root=mock_project_root, subproject_context=SubprojectContext.PYPI
     ).get_test_dir().joinpath("test_mypy_fails_truthy_iterable.py").write_text(
         '''from typing import Iterable
 
@@ -265,8 +256,7 @@ def test_mypy_fails_ignore_without_code(
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
-        project_root=mock_project_root,
-        subproject_context=SubprojectContext.PYPI,
+        project_root=mock_project_root, subproject_context=SubprojectContext.PYPI
     ).get_test_dir().joinpath("test_mypy_fails_ignore_without_code.py").write_text(
         '''def some_function(items: list) -> list:  # type: ignore
     """func docstring"""
@@ -282,8 +272,7 @@ def test_mypy_fails_unused_awaitable(
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
-        project_root=mock_project_root,
-        subproject_context=SubprojectContext.PYPI,
+        project_root=mock_project_root, subproject_context=SubprojectContext.PYPI
     ).get_test_dir().joinpath("test_mypy_fails_unused_awaitable.py").write_text(
         """import asyncio
 
@@ -303,8 +292,7 @@ def test_mypy_fails_unused_ignore(
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
-        project_root=mock_project_root,
-        subproject_context=SubprojectContext.PYPI,
+        project_root=mock_project_root, subproject_context=SubprojectContext.PYPI
     ).get_test_dir().joinpath("test_mypy_fails_unused_ignore.py").write_text(
         '''def add(a: int, b: int) -> int:
     """func docstring"""
@@ -320,8 +308,7 @@ def test_mypy_fails_explicit_override(
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
-        project_root=mock_project_root,
-        subproject_context=SubprojectContext.PYPI,
+        project_root=mock_project_root, subproject_context=SubprojectContext.PYPI
     ).get_test_dir().joinpath("test_mypy_fails_explicit_override.py").write_text(
         '''from typing import override
 
@@ -355,8 +342,7 @@ def test_mypy_fails_mutable_override(
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
-        project_root=mock_project_root,
-        subproject_context=SubprojectContext.PYPI,
+        project_root=mock_project_root, subproject_context=SubprojectContext.PYPI
     ).get_test_dir().joinpath("test_mypy_fails_mutable_override.py").write_text(
         """from typing import Any
 
@@ -382,8 +368,7 @@ def test_mypy_fails_unimported_reveal(
 ) -> None:
     # Putting "bad" file in test avoids additional src style enforcement
     get_python_subproject(
-        project_root=mock_project_root,
-        subproject_context=SubprojectContext.PYPI,
+        project_root=mock_project_root, subproject_context=SubprojectContext.PYPI
     ).get_test_dir().joinpath("test_mypy_fails_unimported_reveal.py").write_text(
         """x = 1
 reveal_type(x)

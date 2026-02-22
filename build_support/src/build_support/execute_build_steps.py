@@ -98,8 +98,7 @@ CLI_ARG_TO_TASK: dict[str, CliTaskInfo] = {
         subproject_context=SubprojectContext.BUILD_SUPPORT,
     ),
     "type_check_pypi": CliTaskInfo(
-        task_node=ValidateStaticTypeChecking,
-        subproject_context=SubprojectContext.PYPI,
+        task_node=ValidateStaticTypeChecking, subproject_context=SubprojectContext.PYPI
     ),
     "type_checks": CliTaskInfo(task_node=AllSubprojectStaticTypeChecking),
     "security_checks": CliTaskInfo(task_node=AllSubprojectSecurityChecks),
