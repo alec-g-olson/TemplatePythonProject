@@ -34,25 +34,23 @@ def run_command_and_save_logs(
     stdout, stderr = cmd.communicate()
     return_code = cmd.returncode
 
-    # Write logs to file
-    with log_file.open("w", encoding="utf-8") as f:
-        f.write("=" * 80 + "\n")
-        f.write(f"Test: {test_name}\n")
-        f.write(f"Command: {' '.join(args)}\n")
-        f.write(f"Working Directory: {cwd}\n")
-        f.write(f"Return Code: {return_code}\n")
-        f.write("=" * 80 + "\n\n")
-        f.write("STDOUT:\n")
-        f.write("-" * 80 + "\n")
-        f.write(stdout)
-        f.write("\n\n")
-        f.write("STDERR:\n")
-        f.write("-" * 80 + "\n")
-        f.write(stderr)
-        f.write("\n")
+    log_content = (
+        "=" * 80 + "\n"
+        f"Test: {test_name}\n"
+        f"Command: {' '.join(args)}\n"
+        f"Working Directory: {cwd}\n"
+        f"Return Code: {return_code}\n"
+        "=" * 80 + "\n\n"
+        "STDOUT:\n"
+        "-" * 80 + "\n"
+        f"{stdout}\n\n"
+        "STDERR:\n"
+        "-" * 80 + "\n"
+        f"{stderr}\n"
+    )
+    log_file.write_text(log_content, encoding="utf-8")
 
     if (return_code != 0) and not expect_failure:
-        print(f"Command failed: {' '.join(args)}", flush=True)  # noqa: T201
-        print(stderr, flush=True)  # noqa: T201
+        print(log_content, flush=True)  # noqa: T201
 
     return return_code, stdout, stderr
