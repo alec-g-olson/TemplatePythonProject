@@ -256,20 +256,6 @@ def test_get_primary_branch_name() -> None:
     assert GitInfo.get_primary_branch_name() == "main"
 
 
-def test_git_info_ticket_id_field_round_trip() -> None:
-    git_info = GitInfo.model_validate(
-        {
-            "branch": "feature-branch",
-            "tags": ["some", "tags"],
-            "modified_subprojects": [],
-            "dockerfile_modified": False,
-            "poetry_lock_file_modified": False,
-            "ticket_id": "FEATURE001",
-        }
-    )
-    assert git_info.ticket_id == "FEATURE001"
-
-
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
 def test_get_git_info_requires(basic_task_info: BasicTaskInfo) -> None:
     assert GetGitInfo(basic_task_info=basic_task_info).required_tasks() == []

@@ -53,9 +53,7 @@ def make_command_prefix(
     Constructs a ``make`` invocation that targets the mock project
     instead of the real project, mounts the mock remote git repo,
     and enables ``--ci-cd-feature-test-mode`` to skip Docker image
-    rebuilds inside the inner build. It also forces ``TAG_SUFFIX``
-    to empty so inner tests reuse the prebuilt local build image.
-
+    rebuilds inside the inner build.
     Args:
         mock_project_root (Path): Root of the mock project.
         real_project_root_dir (Path): Root of the real project.
@@ -81,7 +79,6 @@ def make_command_prefix(
         f"NON_DOCKER_ROOT={test_non_docker_root}",
         f"GIT_MOUNT=-v {remote_repo_non_docker_root}:{mock_remote_git_folder}",
         "CI_CD_FEATURE_TEST_MODE_FLAG=--ci-cd-feature-test-mode",
-        "TAG_SUFFIX=",
     ]
 
 
