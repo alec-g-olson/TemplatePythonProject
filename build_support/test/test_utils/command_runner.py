@@ -21,7 +21,7 @@ def run_command_and_save_logs(
         test_name (str): Name of the test (used for log file naming).
         real_project_root_dir (Path): Real project root directory.
         expect_failure (bool): If True, a non-zero return code will not trigger
-            printing of failure message and stderr to stdout. Default False.
+            printing of the log content to stdout. Default False.
 
     Returns:
         tuple[int, str, str]: Return code, stdout, and stderr.
@@ -34,18 +34,21 @@ def run_command_and_save_logs(
     stdout, stderr = cmd.communicate()
     return_code = cmd.returncode
 
+    line_break_strong = "=" * 80
+    line_break_weak = "-" * 80
+
     log_content = (
-        "=" * 80 + "\n"
+        f"{line_break_strong}\n"
         f"Test: {test_name}\n"
         f"Command: {' '.join(args)}\n"
         f"Working Directory: {cwd}\n"
         f"Return Code: {return_code}\n"
-        "=" * 80 + "\n\n"
+        f"{line_break_strong}\n\n"
         "STDOUT:\n"
-        "-" * 80 + "\n"
+        f"{line_break_weak}\n\n"
         f"{stdout}\n\n"
         "STDERR:\n"
-        "-" * 80 + "\n"
+        f"{line_break_weak}\n\n"
         f"{stderr}\n"
     )
     log_file.write_text(log_content, encoding="utf-8")

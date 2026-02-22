@@ -1,6 +1,7 @@
 """A place to hold tasks and variable used for launching docker."""
 
 from enum import StrEnum
+from os import environ
 from pathlib import Path
 from typing import Any
 
@@ -9,7 +10,6 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_all_src_folders,
     get_all_test_folders,
 )
-from build_support.ci_cd_vars.git_status_vars import get_ticket_id
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
 from build_support.ci_cd_vars.project_structure import get_dockerfile
 from build_support.ci_cd_vars.subproject_structure import (
@@ -28,17 +28,16 @@ class DockerTarget(StrEnum):
     INFRA = "infra"
 
 
-def get_docker_tag_suffix(project_root: Path) -> str:
-    """Builds the branch-specific Docker tag suffix for this project.
+def get_docker_tag_suffix() -> str:
+    """Returns the Docker tag suffix from the TAG_SUFFIX environment variable.
 
-    Args:
-        project_root (Path): Path to this project's root.
+    The Makefile sets TAG_SUFFIX (e.g. ``-107`` on ticket branches, empty on
+    main) and passes it into the build container so image names are consistent.
 
     Returns:
-        str: ``-<ticket_id>`` on non-primary branches, otherwise an empty string.
+        str: Value of TAG_SUFFIX when set, otherwise an empty string.
     """
-    ticket_id = get_ticket_id(project_root=project_root)
-    return f"-{ticket_id}" if ticket_id else ""
+    return environ.get("TAG_SUFFIX", "")
 
 
 def get_docker_image_name(project_root: Path, target_image: DockerTarget) -> str:
@@ -53,7 +52,7 @@ def get_docker_image_name(project_root: Path, target_image: DockerTarget) -> str
         str: The name of the requested docker image.
     """
     image_name = get_project_name(project_root=project_root)
-    image_tag = target_image.value + get_docker_tag_suffix(project_root=project_root)
+    image_tag = target_image.value + get_docker_tag_suffix()
     return f"{image_name}:{image_tag}"
 
 

@@ -68,11 +68,10 @@ def local_user_env(local_uid: int, local_gid: int) -> dict[str, str] | None:
 
 @pytest.fixture(autouse=True)
 def mock_current_branch_ticket_id_for_unit_tests() -> Iterator[None]:
-    """Use main-branch-equivalent ticket lookup for unit tests by default."""
-    with patch(
-        "build_support.ci_cd_vars.docker_vars.get_ticket_id"
-    ) as get_ticket_id_mock:
-        get_ticket_id_mock.return_value = None
+    """Use main-branch-equivalent Docker tag suffix for unit tests by default."""
+    with patch.dict(
+        "build_support.ci_cd_vars.docker_vars.environ", {"TAG_SUFFIX": ""}, clear=False
+    ):
         yield
 
 

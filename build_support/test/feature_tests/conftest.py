@@ -12,14 +12,11 @@ import pytest
 import yaml
 from _pytest.fixtures import SubRequest
 from git import Head, Repo
-from test_utils.feature_test_branching import (
-    get_feature_test_ticket_id,
-    tag_current_branch_images_for_feature_test_ticket_id,
-)
 
 from build_support.ci_cd_vars.build_paths import get_local_info_yaml
 from build_support.ci_cd_vars.docker_vars import get_docker_tag_suffix
 from build_support.ci_cd_vars.git_status_vars import (
+    get_ticket_id,
     monkeypatch_git_python_execute_kwargs,
 )
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
@@ -52,10 +49,7 @@ def remove_dir_and_all_contents(path: Path) -> None:
 
 @pytest.fixture
 def make_command_prefix_without_tag_suffix(
-    mock_project_root: Path,
-    real_project_root_dir: Path,
-    mock_remote_git_folder: Path,
-    tag_current_branch_images_for_test_names: None,
+    mock_project_root: Path, real_project_root_dir: Path, mock_remote_git_folder: Path
 ) -> list[str]:
     """Build the ``make`` command prefix without pinning ``TAG_SUFFIX``.
 
@@ -70,14 +64,11 @@ def make_command_prefix_without_tag_suffix(
         mock_project_root (Path): Root of the mock project.
         real_project_root_dir (Path): Root of the real project.
         mock_remote_git_folder (Path): Path to the mock bare repo.
-        tag_current_branch_images_for_test_names (None): Ensures test-tag
-            aliases are created before any inner ``make`` calls.
 
     Returns:
         list[str]: Command tokens for ``make`` with overrides but without
         a pinned ``TAG_SUFFIX``.
     """
-    _ = tag_current_branch_images_for_test_names
     docker_project_root = real_project_root_dir
     test_project_relative_root = mock_project_root.relative_to(docker_project_root)
     remote_repo_relative_root = mock_remote_git_folder.relative_to(docker_project_root)
@@ -99,9 +90,7 @@ def make_command_prefix_without_tag_suffix(
 
 
 @pytest.fixture
-def make_command_prefix(
-    make_command_prefix_without_tag_suffix: list[str], real_project_root_dir: Path
-) -> list[str]:
+def make_command_prefix(make_command_prefix_without_tag_suffix: list[str]) -> list[str]:
     """Build the ``make`` command prefix for running inner builds.
 
     Constructs a ``make`` invocation that targets the mock project
@@ -114,15 +103,12 @@ def make_command_prefix(
     Args:
         make_command_prefix_without_tag_suffix (list[str]): Base make
             command tokens (ensures test image tags exist).
-        real_project_root_dir (Path): Root of the real project.
 
     Returns:
         list[str]: Command tokens for ``make`` with overrides.
     """
-    return [
-        *make_command_prefix_without_tag_suffix,
-        f"TAG_SUFFIX={get_docker_tag_suffix(project_root=real_project_root_dir)}",
-    ]
+    tag_suffix = get_docker_tag_suffix()
+    return [*make_command_prefix_without_tag_suffix, f"TAG_SUFFIX={tag_suffix}"]
 
 
 @pytest.fixture(scope="session")
@@ -441,27 +427,8 @@ def current_ticket_id(real_project_root_dir: Path) -> str:
     Returns:
         str: ``f"{ticket_id}TEST"`` on non-main branches, otherwise ``"TEST"``.
     """
-    return get_feature_test_ticket_id(
-        project_root=real_project_root_dir, test_ticket_id="TEST"
-    )
-
-
-@pytest.fixture
-def tag_current_branch_images_for_test_names(
-    real_project_root_dir: Path, current_ticket_id: str
-) -> None:
-    """Tag current-branch Docker images with test-branch image names.
-
-    Args:
-        real_project_root_dir (Path): Root of the real project.
-        current_ticket_id (str): Ticket id used by the test branch names.
-
-    Returns:
-        None
-    """
-    tag_current_branch_images_for_feature_test_ticket_id(
-        project_root=real_project_root_dir, ticket_id=current_ticket_id
-    )
+    tid = get_ticket_id(project_root=real_project_root_dir)
+    return f"{tid}TEST" if tid else "TEST"
 
 
 @pytest.fixture(

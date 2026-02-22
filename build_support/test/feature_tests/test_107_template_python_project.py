@@ -5,9 +5,8 @@ from subprocess import run
 
 from git import Head, Repo
 from test_utils.command_runner import run_command_and_save_logs
-from test_utils.feature_test_branching import get_feature_test_ticket_id
 
-from build_support.ci_cd_vars.git_status_vars import PRIMARY_BRANCH_NAME
+from build_support.ci_cd_vars.git_status_vars import PRIMARY_BRANCH_NAME, get_ticket_id
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
 
 
@@ -141,8 +140,9 @@ def test_different_ticket_branches_build_different_image_tags(
     real_project_root_dir: Path,
 ) -> None:
     """Different ticket branches should build different image tag names."""
-    first_ticket_id = get_feature_test_ticket_id(real_project_root_dir, "TEST001")
-    second_ticket_id = get_feature_test_ticket_id(real_project_root_dir, "TEST002")
+    tid = get_ticket_id(project_root=real_project_root_dir)
+    first_ticket_id = f"{tid}TEST001" if tid else "TEST001"
+    second_ticket_id = f"{tid}TEST002" if tid else "TEST002"
 
     first_branch = _create_and_checkout_branch(
         repo=mock_lightweight_project,
