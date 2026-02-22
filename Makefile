@@ -2,10 +2,14 @@ MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 DOCKERFILE = $(MAKEFILE_DIR)Dockerfile
 PYPROJECT_TOML = $(MAKEFILE_DIR)pyproject.toml
 PROJECT_NAME = $(shell awk -F'[ ="]+' '$$1 == "name" { print $$2 }' $(PYPROJECT_TOML))
-DOCKER_BUILD_IMAGE = $(PROJECT_NAME):build
-DOCKER_DEV_IMAGE = $(PROJECT_NAME):dev
-DOCKER_PROD_IMAGE = $(PROJECT_NAME):prod
-DOCKER_PULUMI_IMAGE = $(PROJECT_NAME):pulumi
+PRIMARY_BRANCH_NAME = main
+CURRENT_BRANCH = $(strip $(shell sed -n 's/^ref: refs\/heads\///p' $(MAKEFILE_DIR).git/HEAD 2>/dev/null))
+CURRENT_TICKET_ID = $(firstword $(subst -, ,$(CURRENT_BRANCH)))
+TAG_SUFFIX ?= $(if $(and $(CURRENT_BRANCH),$(filter-out $(PRIMARY_BRANCH_NAME),$(CURRENT_BRANCH))),-$(CURRENT_TICKET_ID),)
+DOCKER_BUILD_IMAGE = $(PROJECT_NAME):build$(TAG_SUFFIX)
+DOCKER_DEV_IMAGE = $(PROJECT_NAME):dev$(TAG_SUFFIX)
+DOCKER_PROD_IMAGE = $(PROJECT_NAME):prod$(TAG_SUFFIX)
+DOCKER_PULUMI_IMAGE = $(PROJECT_NAME):pulumi$(TAG_SUFFIX)
 DOCKER_REMOTE_PROJECT_ROOT = /usr/dev
 USER_ID = $(shell id -u)
 GROUP_ID = $(shell id -g)
@@ -114,6 +118,10 @@ type_checks: setup_build_env
 .PHONY: type_check_build_support
 type_check_build_support: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) type_check_build_support
+
+.PHONY: type_check_pypi
+type_check_pypi: setup_build_env
+	$(EXECUTE_BUILD_STEPS_COMMAND) type_check_pypi
 
 .PHONY: test_pypi_features
 test_pypi_features: setup_build_env

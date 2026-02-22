@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import cast
+from unittest.mock import patch
 
 import pytest
 from _pytest.fixtures import SubRequest
@@ -7,7 +8,7 @@ from git import Head, Repo, TagReference
 from git.cmd import execute_kwargs
 
 from build_support.ci_cd_vars.git_status_vars import (
-    MAIN_BRANCH_NAME,
+    PRIMARY_BRANCH_NAME,
     commit_changes_if_diff,
     current_branch_is_main,
     dockerfile_was_modified,
@@ -20,6 +21,7 @@ from build_support.ci_cd_vars.git_status_vars import (
     get_modified_files_between_commits,
     get_modified_subprojects,
     get_most_recent_commit_on_main,
+    get_ticket_id,
     git_add_all,
     git_fetch,
     monkeypatch_git_python_execute_kwargs,
@@ -78,8 +80,27 @@ def test_get_current_branch_name(
     )
 
 
+@pytest.mark.parametrize(
+    argnames=("branch_name", "expected_ticket_id"),
+    argvalues=[
+        (PRIMARY_BRANCH_NAME, None),
+        ("TEST001", "TEST001"),
+        ("TEST001-short-description", "TEST001"),
+        ("101", "101"),
+    ],
+)
+def test_get_ticket_id(
+    mock_project_root: Path, branch_name: str, expected_ticket_id: str | None
+) -> None:
+    with patch(
+        "build_support.ci_cd_vars.git_status_vars.get_current_branch_name"
+    ) as get_current_branch_name_mock:
+        get_current_branch_name_mock.return_value = branch_name
+        assert get_ticket_id(project_root=mock_project_root) == expected_ticket_id
+
+
 def test_constants_not_changed_by_accident() -> None:
-    assert MAIN_BRANCH_NAME == "main"
+    assert PRIMARY_BRANCH_NAME == "main"
 
 
 @pytest.mark.usefixtures("mock_git_repo")
@@ -151,7 +172,7 @@ def test_commit_changes_with_diff_on_main(
     main_branch = mock_git_repo.active_branch
     initial_commit_sha = main_branch.commit.binsha
     expected_message = (
-        f"Attempting to push tags with unstaged changes to {MAIN_BRANCH_NAME}."
+        f"Attempting to push tags with unstaged changes to {PRIMARY_BRANCH_NAME}."
     )
     with pytest.raises(RuntimeError, match=expected_message):
         commit_changes_if_diff(

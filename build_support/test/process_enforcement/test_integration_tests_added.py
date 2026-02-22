@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from build_support.ci_cd_tasks.env_setup_tasks import GitInfo
+from build_support.ci_cd_vars.git_status_vars import get_ticket_id
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
 from build_support.ci_cd_vars.subproject_structure import (
     PythonSubproject,
@@ -9,11 +9,11 @@ from build_support.ci_cd_vars.subproject_structure import (
 
 
 def test_feature_tests_exist_for_ticket(
-    is_on_main: bool, real_git_info: GitInfo, real_project_root_dir: Path
+    is_on_main: bool, real_project_root_dir: Path
 ) -> None:
     if not is_on_main:  # pragma: no cov might be on main
         project_name = get_project_name(project_root=real_project_root_dir)
-        ticket_id = real_git_info.get_ticket_id()
+        ticket_id = get_ticket_id(project_root=real_project_root_dir)
         test_name = f"test_{ticket_id}_{project_name}.py"
         test_file = next(
             (

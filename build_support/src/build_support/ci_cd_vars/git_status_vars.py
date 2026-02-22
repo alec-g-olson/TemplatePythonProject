@@ -1,9 +1,11 @@
 """Collection of all functions and variable that report git information.
 
 Attributes:
-    | MAIN_BRANCH_NAME: The name of the main branch for this repo.
+    | PRIMARY_BRANCH_NAME: The name of the main branch for this repo.
+    | GIT_BRANCH_NAME_REGEX: Regex used to parse ticket ids from branch names.
 """
 
+import re
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -20,6 +22,9 @@ from build_support.ci_cd_vars.subproject_structure import (
     get_python_subproject,
     get_sorted_subproject_contexts,
 )
+
+PRIMARY_BRANCH_NAME = "main"
+GIT_BRANCH_NAME_REGEX = r"^([^-]+)-?.*$"
 
 
 def get_git_repo(project_root: Path) -> Repo:
@@ -58,9 +63,6 @@ def get_current_branch_name(project_root: Path) -> str:
     return get_git_head(project_root=project_root).name
 
 
-MAIN_BRANCH_NAME = "main"
-
-
 def current_branch_is_main(project_root: Path) -> bool:
     """Determines if the branch currently checked out is main.
 
@@ -70,7 +72,26 @@ def current_branch_is_main(project_root: Path) -> bool:
     Returns:
         bool: Is the current branch the main branch.
     """
-    return get_current_branch_name(project_root=project_root) == MAIN_BRANCH_NAME
+    return get_current_branch_name(project_root=project_root) == PRIMARY_BRANCH_NAME
+
+
+def get_ticket_id(project_root: Path) -> str | None:
+    """Gets the ticket id for the currently checked out branch.
+
+    Args:
+        project_root (Path): Path to this project's root.
+
+    Returns:
+        str: Ticket id for non-primary branches. Returns ``None`` on primary.
+    """
+    branch_name = get_current_branch_name(project_root=project_root)
+    match = re.search(pattern=GIT_BRANCH_NAME_REGEX, string=branch_name)
+    ticket_id = match.group(1) if match is not None else None
+    return (
+        ticket_id
+        if ticket_id is not None and ticket_id != PRIMARY_BRANCH_NAME
+        else None
+    )
 
 
 def monkeypatch_git_python_execute_kwargs() -> None:
@@ -178,7 +199,8 @@ def commit_changes_if_diff(
     if current_diff:
         if current_branch_is_main(project_root=project_root):
             msg = (
-                f"Attempting to push tags with unstaged changes to {MAIN_BRANCH_NAME}."
+                "Attempting to push tags with unstaged changes to "
+                f"{PRIMARY_BRANCH_NAME}."
             )
             raise RuntimeError(msg)
         repo = get_git_repo(project_root=project_root)
@@ -225,7 +247,7 @@ def get_most_recent_commit_on_main(repo: Repo) -> Commit:
     Returns:
         Commit: The most recent commit on the main branch.
     """
-    return repo.refs[f"origin/{MAIN_BRANCH_NAME}"].commit
+    return repo.refs[f"origin/{PRIMARY_BRANCH_NAME}"].commit
 
 
 def get_modified_files_between_commits(
