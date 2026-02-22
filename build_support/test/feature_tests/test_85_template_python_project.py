@@ -52,6 +52,7 @@ def test_mypy_fails_type_arg(
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
+        expect_failure=True,
     )
     assert return_code != 0
 
@@ -79,6 +80,7 @@ def test_mypy_fails_no_untyped_def(
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
+        expect_failure=True,
     )
     assert return_code != 0
 
@@ -106,6 +108,7 @@ def test_mypy_fails_redundant_cast(
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
+        expect_failure=True,
     )
     assert return_code != 0
 
@@ -133,6 +136,7 @@ def test_mypy_fails_redundant_self(
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
+        expect_failure=True,
     )
     assert return_code != 0
 
@@ -160,6 +164,7 @@ def test_mypy_fails_comparison_overlap(
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
+        expect_failure=True,
     )
     assert return_code != 0
 
@@ -191,6 +196,7 @@ def bad():
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
+        expect_failure=True,
     )
     assert return_code != 0
 
@@ -218,6 +224,7 @@ def test_mypy_fails_no_any_return(
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
+        expect_failure=True,
     )
     assert return_code != 0
 
@@ -248,6 +255,7 @@ def feed(cat: Cat) -> None:
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
+        expect_failure=True,
     )
     assert return_code != 0
 
@@ -278,6 +286,7 @@ def test_mypy_fails_redundant_expr(
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
+        expect_failure=True,
     )
     assert return_code != 0
 
@@ -307,6 +316,7 @@ def test_mypy_fails_possibly_undefined(
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
+        expect_failure=True,
     )
     assert return_code != 0
 
@@ -337,6 +347,7 @@ if foo:
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
+        expect_failure=True,
     )
     assert return_code != 0
 
@@ -368,6 +379,7 @@ def transform(items: Iterable[int]) -> list[int]:
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
+        expect_failure=True,
     )
     assert return_code != 0
 
@@ -395,6 +407,7 @@ def test_mypy_fails_ignore_without_code(
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
+        expect_failure=True,
     )
     assert return_code != 0
 
@@ -426,6 +439,7 @@ async def g() -> None:
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
+        expect_failure=True,
     )
     assert return_code != 0
 
@@ -453,6 +467,7 @@ def test_mypy_fails_unused_ignore(
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
+        expect_failure=True,
     )
     assert return_code != 0
 
@@ -498,6 +513,7 @@ class Child(Parent):
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
+        expect_failure=True,
     )
     assert return_code != 0
 
@@ -535,6 +551,7 @@ class D(C):
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
+        expect_failure=True,
     )
     assert return_code != 0
 
@@ -561,5 +578,6 @@ reveal_type(x)
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
+        expect_failure=True,
     )
     assert return_code != 0

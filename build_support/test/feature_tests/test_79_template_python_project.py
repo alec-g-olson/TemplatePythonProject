@@ -51,6 +51,7 @@ def test_fail_check_feature_test_not_added_to_branch(
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
+        expect_failure=True,
     )
     assert return_code != 0
 

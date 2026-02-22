@@ -25,6 +25,7 @@ def test_process_checks_fail_without_ticket_file_for_feature_branch(
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
+        expect_failure=True,
     )
     assert return_code != 0
 
