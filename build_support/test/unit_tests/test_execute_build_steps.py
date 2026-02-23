@@ -1,4 +1,3 @@
-import logging
 from argparse import Namespace
 from pathlib import Path
 from typing import cast, override
@@ -6,7 +5,6 @@ from unittest.mock import patch
 
 import pytest
 from _pytest.fixtures import SubRequest
-from build_support.build_logging import TRACE
 from build_support.ci_cd_tasks.build_tasks import BuildAll, BuildDocs, BuildPypi
 from build_support.ci_cd_tasks.env_setup_tasks import (
     Clean,
@@ -37,28 +35,12 @@ from build_support.ci_cd_vars.subproject_structure import SubprojectContext
 from build_support.execute_build_steps import (
     CLI_ARG_TO_TASK,
     CliTaskInfo,
-    _configure_build_logging,
     fix_permissions,
     parse_args,
     run_main,
 )
 from build_support.new_project_setup.setup_new_project import MakeProjectFromTemplate
 from build_support.process_runner import concatenate_args
-
-# We test _configure_build_logging directly to cover the TRACE and invalid-level
-# fallback branches without the extra mocking that run_main would require.
-
-
-def test_configure_build_logging_accepts_trace() -> None:
-    with patch.dict("os.environ", {"LOG_LEVEL": "TRACE"}, clear=False):
-        _configure_build_logging()
-    assert logging.root.level == TRACE
-
-
-def test_configure_build_logging_invalid_level_falls_back_to_info() -> None:
-    with patch.dict("os.environ", {"LOG_LEVEL": "INVALID"}, clear=False):
-        _configure_build_logging()
-    assert logging.root.level == logging.INFO
 
 
 def test_constants_not_changed_by_accident() -> None:

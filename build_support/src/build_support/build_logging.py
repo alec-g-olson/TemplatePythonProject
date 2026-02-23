@@ -10,6 +10,8 @@ Attributes:
 """
 
 import logging
+import os
+import sys
 
 # Below DEBUG (10); used for task stdout/stderr so they can be suppressed at DEBUG.
 TRACE = 5
@@ -26,3 +28,22 @@ def register_trace_level() -> None:
         None
     """
     logging.addLevelName(TRACE, "TRACE")
+
+
+def _configure_build_logging() -> None:
+    """Configure build logging from LOG_LEVEL.
+
+    Default is INFO (steps only). DEBUG adds commands. TRACE adds stdout/stderr.
+    Invalid or unset values fall back to INFO.
+
+    Returns:
+        None
+    """
+    register_trace_level()
+    level_name = os.environ.get("LOG_LEVEL", "INFO").upper()
+    level = getattr(logging, level_name, None)
+    if not isinstance(level, int):
+        level = TRACE if level_name == "TRACE" else logging.INFO
+    logging.basicConfig(
+        level=level, format="%(message)s", stream=sys.stdout, force=True
+    )

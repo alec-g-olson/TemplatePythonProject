@@ -6,13 +6,11 @@ Attributes:
 """
 
 import logging
-import os
-import sys
 from argparse import ArgumentParser, Namespace
 from dataclasses import dataclass
 from pathlib import Path
 
-from build_support.build_logging import TRACE, register_trace_level
+from build_support.build_logging import _configure_build_logging
 from build_support.ci_cd_tasks.build_tasks import BuildAll, BuildDocs, BuildPypi
 from build_support.ci_cd_tasks.env_setup_tasks import (
     Clean,
@@ -193,22 +191,6 @@ def parse_args(args: list[str] | None = None) -> Namespace:
         "when launching docker containers.",
     )
     return parser.parse_args(args=args)
-
-
-def _configure_build_logging() -> None:
-    """Configure build logging from LOG_LEVEL.
-
-    Default is INFO (steps only). DEBUG adds commands. TRACE adds stdout/stderr.
-    Invalid or unset values fall back to INFO.
-    """
-    register_trace_level()
-    level_name = os.environ.get("LOG_LEVEL", "INFO").upper()
-    level = getattr(logging, level_name, None)
-    if not isinstance(level, int):
-        level = TRACE if level_name == "TRACE" else logging.INFO
-    logging.basicConfig(
-        level=level, format="%(message)s", stream=sys.stdout, force=True
-    )
 
 
 def run_main(args: Namespace) -> None:
