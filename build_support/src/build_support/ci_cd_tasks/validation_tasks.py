@@ -27,7 +27,7 @@ from build_support.ci_cd_vars.docker_vars import (
     get_base_docker_command_for_image,
     get_docker_command_for_image,
     get_docker_image_name,
-    get_mypy_path_env,
+    get_ty_extra_search_path_args,
 )
 from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_all_non_test_folders,
@@ -184,17 +184,16 @@ class ValidateStaticTypeChecking(PerSubprojectTask):
                         docker_project_root=self.docker_project_root,
                         target_image=DockerTarget.DEV,
                     ),
-                    "-e",
-                    get_mypy_path_env(
-                        docker_project_root=self.docker_project_root,
-                        target_image=DockerTarget.DEV,
-                    ),
                     get_docker_image_name(
                         project_root=self.docker_project_root,
                         target_image=DockerTarget.DEV,
                     ),
-                    "mypy",
-                    "--explicit-package-bases",
+                    "ty",
+                    "check",
+                    get_ty_extra_search_path_args(
+                        docker_project_root=self.docker_project_root,
+                        target_image=DockerTarget.DEV,
+                    ),
                     self.subproject.get_root_dir(),
                 ]
             )

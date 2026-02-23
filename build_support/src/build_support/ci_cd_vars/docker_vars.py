@@ -118,23 +118,23 @@ def get_python_path_env(docker_project_root: Path, target_image: DockerTarget) -
     )
 
 
-def get_mypy_path_for_target_image(
+def get_ty_extra_search_paths_for_target_image(
     docker_project_root: Path, target_image: DockerTarget
-) -> str:
-    """Gets the mypy path to use with this project.
+) -> list[Path]:
+    """Gets ty extra search paths for this project.
 
     Args:
         docker_project_root (Path): Path to this project's root when running in docker
             containers.
         target_image (DockerTarget): An enum specifying which type of docker image we
-            are requesting the mypy path for.
+            are requesting extra search paths for.
 
     Returns:
-        str: The MYPYPATH for the specified docker image.
+        list[Path]: Extra search paths for ty for the specified docker image.
     """
     match target_image:
         case DockerTarget.BUILD:
-            python_folders = [
+            search_paths = [
                 get_python_subproject(
                     subproject_context=SubprojectContext.BUILD_SUPPORT,
                     project_root=docker_project_root,
@@ -143,16 +143,16 @@ def get_mypy_path_for_target_image(
         case DockerTarget.DEV:
             src_folders = get_all_src_folders(project_root=docker_project_root)
             test_folders = get_all_test_folders(project_root=docker_project_root)
-            python_folders = src_folders + test_folders
+            search_paths = src_folders + test_folders
         case DockerTarget.PROD:
-            python_folders = [
+            search_paths = [
                 get_python_subproject(
                     subproject_context=SubprojectContext.PYPI,
                     project_root=docker_project_root,
                 ).get_src_dir()
             ]
         case DockerTarget.INFRA:
-            python_folders = [
+            search_paths = [
                 get_python_subproject(
                     subproject_context=SubprojectContext.INFRA,
                     project_root=docker_project_root,
@@ -161,25 +161,29 @@ def get_mypy_path_for_target_image(
         case _:  # pragma: no cov - can't hit if all enums are implemented
             msg = f"{target_image!r} is not a valid enum of DockerType."
             raise ValueError(msg)
-    return ":".join(concatenate_args(args=[python_folders]))
+    return search_paths
 
 
-def get_mypy_path_env(docker_project_root: Path, target_image: DockerTarget) -> str:
-    """Gets the mypy path ENV to use with this project.
+def get_ty_extra_search_path_args(
+    docker_project_root: Path, target_image: DockerTarget
+) -> list[str]:
+    """Gets CLI args for ty extra search paths.
 
     Args:
         docker_project_root (Path): Path to this project's root when running in docker
             containers.
         target_image (DockerTarget): An enum specifying which type of docker image we
-            are requesting the mypy path for.
+            are requesting extra search path args for.
 
     Returns:
-        str: The MYPYPATH for the specified docker image in the form on an ENV variable
-            that can be used on the command line.
+        list[str]: Flattened ``--extra-search-path`` arguments for ty.
     """
-    return "MYPYPATH=" + get_mypy_path_for_target_image(
+    extra_search_args: list[Path | str] = []
+    for search_path in get_ty_extra_search_paths_for_target_image(
         docker_project_root=docker_project_root, target_image=target_image
-    )
+    ):
+        extra_search_args.extend(["--extra-search-path", search_path])
+    return concatenate_args(args=extra_search_args)
 
 
 def get_base_docker_command_for_image(

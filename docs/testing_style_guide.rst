@@ -399,5 +399,5 @@ Type Annotations
 ~~~~~~~~~~~~~~~~~
 
 All test functions and fixtures must have complete type annotations, consistent with the
-mypy configuration used for source code.  This makes fixture dependency chains
+ty configuration used for source code.  This makes fixture dependency chains
 self-documenting and catches errors in test setup early.

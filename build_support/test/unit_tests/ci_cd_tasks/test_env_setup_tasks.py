@@ -142,8 +142,8 @@ def test_run_clean(basic_task_info: BasicTaskInfo) -> None:
             new_folder.mkdir()
             new_folder.joinpath("some_folder_contents.txt").touch()
 
-    mypy_cache = basic_task_info.docker_project_root.joinpath(".mypy_cache")
-    _add_some_folders_and_files_to_folder(current_folder=mypy_cache)
+    ty_cache = basic_task_info.docker_project_root.joinpath(".ty_cache")
+    _add_some_folders_and_files_to_folder(current_folder=ty_cache)
 
     pytest_cache = basic_task_info.docker_project_root.joinpath(".pytest_cache")
     _add_some_folders_and_files_to_folder(current_folder=pytest_cache)
@@ -160,7 +160,7 @@ def test_run_clean(basic_task_info: BasicTaskInfo) -> None:
     _add_some_folders_and_files_to_folder(current_folder=test_scratch_folder)
 
     folders_that_will_be_completely_removed = [
-        mypy_cache,
+        ty_cache,
         pytest_cache,
         ruff_cache,
         build_dir,

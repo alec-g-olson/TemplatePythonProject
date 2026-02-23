@@ -153,7 +153,7 @@ class Clean(TaskNode):
             ]
         )
         run_process(
-            args=["rm", "-rf", self.docker_project_root.joinpath(".mypy_cache")]
+            args=["rm", "-rf", self.docker_project_root.joinpath(".ty_cache")]
         )
         run_process(
             args=["rm", "-rf", self.docker_project_root.joinpath(".pytest_cache")]

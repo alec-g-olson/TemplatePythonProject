@@ -76,7 +76,7 @@ def get_test_utils_dirs(project_root: Path) -> list[Path]:
 
     The test_utils folder contains utility Python source files that are used by
     test files but are not test files themselves. These directories need to be in
-    MYPYPATH so mypy can resolve imports from test files.
+    ty extra search paths so imports from test files can be resolved.
 
     Args:
         project_root (Path): Path to this project's root.

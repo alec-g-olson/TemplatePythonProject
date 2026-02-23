@@ -46,7 +46,7 @@ Read that file for the full list.  The most important ones for day-to-day work a
 | `make test` | Runs the full pipeline: unit tests, feature tests, style, type checks, security. Run this before marking work complete. |
 | `make format` | Formats all Python files with Ruff. Run this before committing. |
 | `make lint` | Lints with safe fixes. |
-| `make type_checks` | Runs mypy across all packages. |
+| `make type_checks` | Runs ty type checks across all packages. |
 | `make test_pypi` | Runs unit and feature tests for `pypi_package` only. Faster than `make test`. |
 | `make test_build_support` | Runs unit and feature tests for `build_support` only. |
 

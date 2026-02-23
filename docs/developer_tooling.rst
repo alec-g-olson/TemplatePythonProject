@@ -109,10 +109,10 @@ a few important ones for people who are new to this repository.
      - Runs process-enforcement tests for this repo.
    * - make type_checks
      -
-     - Runs mypy for this repo.
+     - Runs ty type checks for this repo.
    * - make type_check_build_support
      -
-     - Runs mypy for the :code:`build_support` subproject only.
+     - Runs ty type checks for the :code:`build_support` subproject only.
    * - make security_checks
      -
      - Runs Bandit security checks for this repo.
