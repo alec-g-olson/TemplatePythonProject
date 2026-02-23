@@ -9,6 +9,7 @@ SubPackages:
         project that is not part of the standard pipeline.
 
 Modules:
+    | build_logging: TRACE log level and registration for the build pipeline.
     | dag_engine: Contains the logic for resolving task dependencies and running
         tasks in a coherent order.
     | dump_ci_cd_run_info: A "main" that records project level variables for the CI/CD

@@ -1,5 +1,10 @@
-"""Logic for building a DAG of tasks and running them in order."""
+"""Logic for building a DAG of tasks and running them in order.
 
+Attributes:
+    | logger: Module-level logger for task execution and report output.
+"""
+
+import logging
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -8,6 +13,8 @@ from yaml import safe_dump, safe_load
 
 from build_support.ci_cd_tasks.task_node import TaskNode
 from build_support.ci_cd_vars.build_paths import get_build_runtime_report_path
+
+logger = logging.getLogger(__name__)
 
 
 def _add_tasks_to_list_with_dfs(
@@ -90,11 +97,11 @@ def run_tasks(tasks: list[TaskNode], project_root: Path) -> None:
     """
     run_report = BuildRunReport()
     task_execution_order = get_task_execution_order(requested_tasks=tasks)
-    print("Will execute the following tasks:", flush=True)  # noqa: T201
+    logger.info("Will execute the following tasks:")
     for task in task_execution_order:
-        print(f"  - {task.task_label()}", flush=True)  # noqa: T201
+        logger.info("  - %s", task.task_label())
     for task in task_execution_order:
-        print(f"Starting: {task.task_label()}", flush=True)  # noqa: T201
+        logger.info("Starting: %s", task.task_label())
         start = datetime.now(tz=UTC)
         task.run()
         duration = datetime.now(tz=UTC) - start
@@ -102,5 +109,5 @@ def run_tasks(tasks: list[TaskNode], project_root: Path) -> None:
             TaskRunReport(task_name=task.task_label(), duration=duration)
         )
     report_content = run_report.to_yaml()
-    print(report_content)  # noqa: T201
+    logger.info("%s", report_content)
     get_build_runtime_report_path(project_root=project_root).write_text(report_content)

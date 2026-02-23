@@ -38,6 +38,7 @@ BASE_DOCKER_BUILD_ENV_COMMAND = docker run --rm \
 --workdir=$(DOCKER_REMOTE_PROJECT_ROOT) \
 -e PYTHONPATH=/usr/dev/build_support/src \
 -e TAG_SUFFIX=$(TAG_SUFFIX) \
+-e LOG_LEVEL=$(LOG_LEVEL) \
 $(GIT_MOUNT) \
 -v /var/run/docker.sock:/var/run/docker.sock \
 -v $(NON_DOCKER_ROOT):$(DOCKER_REMOTE_PROJECT_ROOT)

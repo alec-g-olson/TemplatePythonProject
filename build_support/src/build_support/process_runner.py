@@ -1,30 +1,35 @@
-"""Module for running processes."""
+"""Module for running processes.
+
+Three verbosity levels: INFO = steps only; DEBUG = + command line;
+TRACE = + stdout/stderr. On failure, command + return code + stdout + stderr
+are always logged at ERROR.
+
+Attributes:
+    | logger: Module-level logger for subprocess command and output.
+"""
 
 import itertools
+import logging
 import sys
-from enum import StrEnum
 
 # The purpose of this module is to make subprocess calls
 from subprocess import PIPE, Popen  # nosec: B404
 from typing import IO, Any
 
+from build_support.build_logging import TRACE
 
-class ProcessVerbosity(StrEnum):
-    """Enum for process verbosity to avoid boolean trap."""
-
-    SILENT = "SILENT"
-    ALL = "ALL"
+logger = logging.getLogger(__name__)
 
 
-def run_piped_processes(
-    processes: list[list[Any]], verbosity: ProcessVerbosity = ProcessVerbosity.ALL
-) -> None:
+def run_piped_processes(processes: list[list[Any]]) -> None:
     """Runs piped processes as they would be on the command line.
+
+    Command line at DEBUG (level 2); stdout/stderr at TRACE (level 3).
+    On failure all are logged at ERROR.
 
     Args:
         processes (list[list[Any]]): The list of process arguments that will be run
             sequentially.
-        verbosity (ProcessVerbosity): Should the process be run silently.
 
     Returns:
         None
@@ -32,8 +37,7 @@ def run_piped_processes(
     args_list = [get_str_args(args=args) for args in processes]
     process_strs = [" ".join(args) for args in args_list]
     command_as_str = " | ".join(process_strs)
-    if verbosity != ProcessVerbosity.SILENT:
-        print(command_as_str, flush=True)  # noqa: T201
+    logger.debug("%s", command_as_str)
     p1 = build_popen(args=args_list[0])
     popen_processes = [p1]
     for args in args_list[1:]:
@@ -47,42 +51,37 @@ def run_piped_processes(
         output=output,
         error=error,
         return_code=return_code,
-        verbosity=verbosity,
     )
 
 
-def get_output_of_process(
-    args: list[Any], verbosity: ProcessVerbosity = ProcessVerbosity.ALL
-) -> str:
+def get_output_of_process(args: list[Any]) -> str:
     """Runs a process and gets the output.
 
     Args:
         args (list[Any]): A list of arguments that could be run on the command line.
-        verbosity (ProcessVerbosity): Should the process be run silently.
 
     Returns:
         str: The stdout from the subprocess that was run.
     """
-    output = run_process(args=args, verbosity=verbosity)
+    output = run_process(args=args)
     return output.decode("utf-8").strip()
 
 
-def run_process(
-    args: list[Any], verbosity: ProcessVerbosity = ProcessVerbosity.ALL
-) -> bytes:
+def run_process(args: list[Any]) -> bytes:
     """Runs a process.
+
+    Command line at DEBUG (level 2); stdout/stderr at TRACE (level 3).
+    On failure all are logged at ERROR.
 
     Args:
         args (list[Any]): A list of arguments that could be run on the command line.
-        verbosity (ProcessVerbosity): Should the process be run silently.
 
     Returns:
         bytes: The stdout from the subprocess that was run.
     """
     str_args = get_str_args(args=args)
     command_as_str = " ".join(str_args)
-    if verbosity != ProcessVerbosity.SILENT:
-        print(command_as_str, flush=True)  # noqa: T201
+    logger.debug("%s", command_as_str)
     p = build_popen(args=str_args)
     output, error = p.communicate()
     return_code = p.returncode
@@ -91,7 +90,6 @@ def run_process(
         output=output,
         error=error,
         return_code=return_code,
-        verbosity=verbosity,
     )
     return output
 
@@ -101,7 +99,7 @@ def build_popen(args: list[str], stdin: IO[bytes] | int | None = None) -> Popen[
 
     Args:
         args (list[str]): The args to pass to the new process.
-        stdin (IO | int | None): The stdin to use with the new process.
+        stdin (IO[bytes] | int | None): The stdin to use with the new process.
 
     Returns:
         Popen: A Popen instance with parameters set by the inputs to this function.
@@ -113,36 +111,33 @@ def build_popen(args: list[str], stdin: IO[bytes] | int | None = None) -> Popen[
 
 
 def resolve_process_results(
-    command_as_str: str,
-    output: bytes,
-    error: bytes,
-    return_code: int,
-    verbosity: ProcessVerbosity = ProcessVerbosity.ALL,
+    command_as_str: str, output: bytes, error: bytes, return_code: int
 ) -> None:
-    """Prints outputs and errors and exits as appropriate when a command exits.
+    """Logs outputs and errors and exits as appropriate when a command exits.
+
+    On success: stdout/stderr at TRACE (level 3). On failure: command, return code,
+    stdout and stderr are all logged at ERROR so they are visible at any LOG_LEVEL.
 
     Args:
         command_as_str (str): The command run as it would appear on the command line.
         output (bytes): The stdout from the subprocess that was run.
         error (bytes): The stderr from the subprocess that was run.
         return_code (int): The return code from the subprocess that was run.
-        verbosity (ProcessVerbosity): Was the subprocess intended to run silently.
 
     Returns:
         None
     """
-    if output and verbosity != ProcessVerbosity.SILENT:
-        print(output.decode("utf-8"), flush=True, end="")  # noqa: T201
-    if error:
-        print(error.decode("utf-8"), flush=True, end="", file=sys.stderr)  # noqa: T201
     if return_code != 0:
-        if verbosity == ProcessVerbosity.SILENT:
-            print(  # noqa: T201
-                f"{command_as_str}\nFailed with code: {return_code}",
-                flush=True,
-                file=sys.stderr,
-            )
+        logger.error("%s\nFailed with code: %s", command_as_str, return_code)
+        if output:
+            logger.error("stdout:\n%s", output.decode("utf-8"))
+        if error:
+            logger.error("stderr:\n%s", error.decode("utf-8"))
         sys.exit(return_code)
+    if output:
+        logger.log(TRACE, "stdout:\n%s", output.decode("utf-8"), stack_info=False)
+    if error:
+        logger.log(TRACE, "stderr:\n%s", error.decode("utf-8"), stack_info=False)
 
 
 def concatenate_args(args: list[Any | list[Any]]) -> list[str]:
