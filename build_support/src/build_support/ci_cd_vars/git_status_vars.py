@@ -13,10 +13,7 @@ from git import Commit, DiffIndex, FetchInfo, Head, Repo
 from git.cmd import execute_kwargs
 from git.diff import Diff
 
-from build_support.ci_cd_vars.project_structure import (
-    get_dockerfile,
-    get_uv_lock_file,
-)
+from build_support.ci_cd_vars.project_structure import get_dockerfile, get_uv_lock_file
 from build_support.ci_cd_vars.subproject_structure import (
     SubprojectContext,
     get_python_subproject,

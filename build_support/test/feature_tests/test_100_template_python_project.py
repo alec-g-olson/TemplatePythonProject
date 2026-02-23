@@ -7,6 +7,7 @@ from test_utils.command_runner import run_command_and_save_logs
 
 from build_support.ci_cd_tasks.env_setup_tasks import GitInfo
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
+from git import Repo
 
 
 @pytest.mark.usefixtures("mock_new_branch", "dummy_feature_test")

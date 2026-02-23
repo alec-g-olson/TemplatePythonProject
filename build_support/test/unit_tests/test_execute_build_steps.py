@@ -5,7 +5,6 @@ from unittest.mock import patch
 
 import pytest
 from _pytest.fixtures import SubRequest
-
 from build_support.ci_cd_tasks.build_tasks import BuildAll, BuildDocs, BuildPypi
 from build_support.ci_cd_tasks.env_setup_tasks import (
     Clean,

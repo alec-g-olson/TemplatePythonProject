@@ -1,22 +1,20 @@
 """The logic for caching the state of files.
 
-This module provides functionality to track file changes and determine which tests need
-to be run.
-It implements the following requirements:
-1. Unit tests should be run if:
-   - The source file has been updated since the test last passed
-   - The test file has been updated since it last passed
-   - Any conftest files the test relies on have been updated
-   - Any files in the test's resource directory have been updated
+This module tracks file changes and determines which tests need to be rerun.
 
-2. Feature tests should be run if:
-   - Any source files in the subproject have been updated
-   - Any conftest files the feature test relies on have been updated
-   - Any files in the test's resource directory have been updated
+Unit tests should be rerun when:
+- The source file has been updated since the test last passed.
+- The test file has been updated since it last passed.
+- Any conftest files the test relies on have been updated.
+- Any files in the test's resource directory have been updated.
+
+Feature tests should be rerun when:
+- Any source files in the subproject have been updated.
+- Any conftest files the feature test relies on have been updated.
+- Any files in the test's resource directory have been updated.
 
 Attributes:
     | CONFTEST_NAME: The file name of conftest files.
-
 """
 
 from datetime import UTC, datetime

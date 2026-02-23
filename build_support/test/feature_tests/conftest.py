@@ -11,8 +11,6 @@ from pathlib import Path
 import pytest
 import yaml
 from _pytest.fixtures import SubRequest
-from git import Head, Repo
-
 from build_support.ci_cd_vars.build_paths import get_local_info_yaml
 from build_support.ci_cd_vars.docker_vars import get_docker_tag_suffix
 from build_support.ci_cd_vars.git_status_vars import (
@@ -31,6 +29,7 @@ from build_support.ci_cd_vars.subproject_structure import (
     get_all_python_subprojects_dict,
     get_python_subproject,
 )
+from git import Head, Repo
 
 
 def remove_dir_and_all_contents(path: Path) -> None:

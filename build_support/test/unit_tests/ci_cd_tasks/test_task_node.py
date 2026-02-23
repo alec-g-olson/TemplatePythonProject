@@ -6,8 +6,6 @@ from unittest.mock import Mock
 import pytest
 import yaml
 from _pytest.fixtures import SubRequest
-from pydantic import ValidationError
-
 from build_support.ci_cd_tasks.task_node import (
     BasicTaskInfo,
     PerSubprojectTask,
@@ -17,6 +15,7 @@ from build_support.ci_cd_vars.subproject_structure import (
     SubprojectContext,
     get_python_subproject,
 )
+from pydantic import ValidationError
 
 
 @pytest.fixture(

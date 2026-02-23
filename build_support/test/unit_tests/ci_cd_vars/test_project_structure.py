@@ -8,11 +8,11 @@ from build_support.ci_cd_vars.project_structure import (
     get_feature_test_scratch_folder,
     get_license_file,
     get_new_project_settings,
-    get_uv_lock_file,
     get_pyproject_toml,
     get_readme,
     get_sphinx_conf_dir,
     get_test_resource_dir,
+    get_uv_lock_file,
     maybe_build_dir,
 )
 

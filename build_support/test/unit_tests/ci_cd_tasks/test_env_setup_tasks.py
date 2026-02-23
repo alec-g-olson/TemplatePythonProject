@@ -5,8 +5,6 @@ from unittest.mock import patch
 
 import pytest
 import yaml
-from pydantic import ValidationError
-
 from build_support.ci_cd_tasks.env_setup_tasks import (
     Clean,
     GetGitInfo,
@@ -24,6 +22,7 @@ from build_support.ci_cd_vars.project_structure import (
     get_feature_test_scratch_folder,
 )
 from build_support.ci_cd_vars.subproject_structure import SubprojectContext
+from pydantic import ValidationError
 
 
 def test_build_dev_env_requires(basic_task_info: BasicTaskInfo) -> None:
@@ -92,9 +91,7 @@ def test_build_infra_env_requires(basic_task_info: BasicTaskInfo) -> None:
     assert SetupInfraEnvironment(basic_task_info=basic_task_info).required_tasks() == []
 
 
-@pytest.mark.usefixtures(
-    "mock_docker_pyproject_toml_file", "mock_docker_uv_lock_file"
-)
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_docker_uv_lock_file")
 def test_run_build_infra_env(basic_task_info: BasicTaskInfo) -> None:
     with patch(
         "build_support.ci_cd_tasks.env_setup_tasks.run_process"

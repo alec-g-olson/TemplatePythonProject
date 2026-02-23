@@ -2,9 +2,8 @@ from typing import Any
 
 import pytest
 import yaml
-from pydantic import ValidationError
-
 from build_support.new_project_setup.new_project_data_models import ProjectSettings
+from pydantic import ValidationError
 
 
 @pytest.fixture

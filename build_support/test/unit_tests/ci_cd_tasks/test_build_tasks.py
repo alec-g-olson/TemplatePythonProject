@@ -1,8 +1,6 @@
 from unittest.mock import call, patch
 
 import pytest
-from test_utils.empty_function_check import is_an_empty_function
-
 from build_support.ci_cd_tasks.build_tasks import BuildAll, BuildDocs, BuildPypi
 from build_support.ci_cd_tasks.env_setup_tasks import SetupProdEnvironment
 from build_support.ci_cd_tasks.task_node import BasicTaskInfo
@@ -29,6 +27,7 @@ from build_support.ci_cd_vars.subproject_structure import (
     get_python_subproject,
 )
 from build_support.process_runner import concatenate_args
+from test_utils.empty_function_check import is_an_empty_function
 
 
 def test_build_all_requires(basic_task_info: BasicTaskInfo) -> None:

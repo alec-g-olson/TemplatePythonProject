@@ -32,7 +32,7 @@ def test_update_pyproject_toml(tmp_path: Path, real_project_root_dir: Path) -> N
         project_root=tmp_project_path, new_project_settings=new_project_settings
     )
 
-    expected_project = expected_data["project"]  # type: ignore[index]
+    expected_project = expected_data["project"]
     expected_project["name"] = new_project_settings.name  # type: ignore[index]
     expected_project["version"] = "0.0.0"  # type: ignore[index]
     expected_project["license"] = new_project_settings.license  # type: ignore[index]

@@ -46,7 +46,7 @@ def get_project_version(project_root: Path) -> str:
     """
     pyproject_data = get_pyproject_toml_data(project_root=project_root)
     version_str: str
-    version_str = pyproject_data["project"]["version"]  # type: ignore[index, assignment]
+    version_str = str(pyproject_data["project"]["version"])  # type: ignore[index]
     if not ALLOWED_VERSION_REGEX.match(version_str):
         msg = (
             "Project version in pyproject.toml must match the regex "
@@ -90,7 +90,7 @@ def get_project_name(project_root: Path) -> str:
         str: The name of the project.
     """
     pyproject_data = get_pyproject_toml_data(project_root=project_root)
-    return pyproject_data["project"]["name"]  # type: ignore[index, return-value]
+    return str(pyproject_data["project"]["name"])  # type: ignore[index]
 
 
 ########################################

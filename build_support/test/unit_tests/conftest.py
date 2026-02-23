@@ -5,13 +5,12 @@ from typing import cast
 
 import pytest
 from _pytest.fixtures import SubRequest
-from tomlkit import TOMLDocument, document, table
-
 from build_support.ci_cd_tasks.task_node import BasicTaskInfo
 from build_support.ci_cd_vars.project_structure import (
     get_pyproject_toml,
     get_uv_lock_file,
 )
+from tomlkit import TOMLDocument, document, table
 
 # Test parameterization constants
 mock_project_versions = ["0.0.0", "0.0.1", "0.1.0", "1.0.0", "1.0.0-dev.1"]
@@ -86,7 +85,7 @@ def basic_task_info(
 def pyproject_toml_data(project_version: str, project_name: str) -> TOMLDocument:
     """The TOMLDocument that would be read from the pyproject toml."""
     doc = document()
-    doc["project"] = table()  # type: ignore[index]
+    doc["project"] = table()
     doc["project"]["name"] = project_name  # type: ignore[index]
     doc["project"]["version"] = project_version  # type: ignore[index]
 
@@ -169,9 +168,7 @@ def uv_lock_contents(pulumi_version: str) -> str:
 
 
 @pytest.fixture
-def mock_local_uv_lock_file(
-    uv_lock_contents: str, mock_project_root: Path
-) -> Path:
+def mock_local_uv_lock_file(uv_lock_contents: str, mock_project_root: Path) -> Path:
     """Creates a mock uv lock file for use in testing."""
     mock_uv_lock_file = get_uv_lock_file(project_root=mock_project_root)
     mock_uv_lock_file.write_text(uv_lock_contents)
@@ -179,9 +176,7 @@ def mock_local_uv_lock_file(
 
 
 @pytest.fixture
-def mock_docker_uv_lock_file(
-    uv_lock_contents: str, docker_project_root: Path
-) -> Path:
+def mock_docker_uv_lock_file(uv_lock_contents: str, docker_project_root: Path) -> Path:
     """Creates a mock uv lock file for use in testing."""
     mock_uv_lock_file = get_uv_lock_file(project_root=docker_project_root)
     mock_uv_lock_file.write_text(uv_lock_contents)

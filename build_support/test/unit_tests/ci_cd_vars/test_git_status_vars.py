@@ -4,9 +4,6 @@ from unittest.mock import patch
 
 import pytest
 from _pytest.fixtures import SubRequest
-from git import Head, Repo, TagReference
-from git.cmd import execute_kwargs
-
 from build_support.ci_cd_vars.git_status_vars import (
     PRIMARY_BRANCH_NAME,
     commit_changes_if_diff,
@@ -25,10 +22,12 @@ from build_support.ci_cd_vars.git_status_vars import (
     git_add_all,
     git_fetch,
     monkeypatch_git_python_execute_kwargs,
-    uv_lock_file_was_modified,
     tag_current_commit_and_push,
+    uv_lock_file_was_modified,
 )
 from build_support.ci_cd_vars.subproject_structure import SubprojectContext
+from git import Head, Repo, TagReference
+from git.cmd import execute_kwargs
 
 
 @pytest.fixture
@@ -428,23 +427,16 @@ def test_uv_lock_file_was_modified(mock_project_root: Path) -> None:
     uv_lock.write_text('[[package]]\nname = "test"')
 
     # Test with uv.lock in modified files
-    modified_files_with_uv_lock = [
-        uv_lock,
-        mock_project_root / "other_file.txt",
-    ]
+    modified_files_with_uv_lock = [uv_lock, mock_project_root / "other_file.txt"]
     assert (
-        uv_lock_file_was_modified(
-            modified_files_with_uv_lock, mock_project_root
-        )
+        uv_lock_file_was_modified(modified_files_with_uv_lock, mock_project_root)
         is True
     )
 
     # Test without uv.lock in modified files
     modified_files_without_uv_lock = [mock_project_root / "other_file.txt"]
     assert (
-        uv_lock_file_was_modified(
-            modified_files_without_uv_lock, mock_project_root
-        )
+        uv_lock_file_was_modified(modified_files_without_uv_lock, mock_project_root)
         is False
     )
 

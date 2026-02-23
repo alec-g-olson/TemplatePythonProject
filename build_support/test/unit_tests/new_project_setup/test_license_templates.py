@@ -2,7 +2,6 @@ from copy import copy
 from pathlib import Path
 
 import pytest
-
 from build_support.new_project_setup.license_templates import (
     ALL_RIGHTS_RESERVED_KEY,
     ALL_RIGHTS_RESERVED_TEMPLATE,

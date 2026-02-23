@@ -1,5 +1,5 @@
 Template Python Project Tickets
-==============================
+===============================
 
 .. toctree::
    :maxdepth: 1

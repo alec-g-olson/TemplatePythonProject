@@ -8,14 +8,12 @@ from pathlib import Path
 from subprocess import run
 
 import pytest
-
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
 
 
 @pytest.mark.usefixtures("mock_lightweight_project_with_unit_tests_and_feature_tests")
 def test_dev_container_has_uv_not_poetry(
-    mock_project_root: Path,
-    make_command_prefix: list[str],
+    mock_project_root: Path, make_command_prefix: list[str]
 ) -> None:
     """Verify poetry is not available and uv is available in the dev container.
 
@@ -36,19 +34,11 @@ def test_dev_container_has_uv_not_poetry(
     project_name = get_project_name(project_root=mock_project_root)
     image = f"{project_name}:dev"
     mount = f"{mock_project_root.resolve()}:/usr/dev"
-    docker_run = [
-        "docker",
-        "run",
-        "--rm",
-        "-v",
-        mount,
-        "-w",
-        "/usr/dev",
-        image,
-    ]
+    docker_run = ["docker", "run", "--rm", "-v", mount, "-w", "/usr/dev", image]
 
     poetry_result = run(
         [*docker_run, "poetry", "--version"],
+        check=False,
         capture_output=True,
         text=True,
         cwd=mock_project_root,
@@ -57,18 +47,21 @@ def test_dev_container_has_uv_not_poetry(
         "poetry should not be available in the dev container; "
         f"stderr: {poetry_result.stderr!r}"
     )
-    assert "not found" in poetry_result.stderr.lower() or "no such file" in poetry_result.stderr.lower(), (
+    assert (
+        "not found" in poetry_result.stderr.lower()
+        or "no such file" in poetry_result.stderr.lower()
+    ), (
         "Expected command-not-found style error from poetry; "
         f"stderr: {poetry_result.stderr!r}"
     )
 
     uv_result = run(
         [*docker_run, "uv", "--version"],
+        check=False,
         capture_output=True,
         text=True,
         cwd=mock_project_root,
     )
     assert uv_result.returncode == 0, (
-        "uv must be available in the dev container; "
-        f"stderr: {uv_result.stderr!r}"
+        f"uv must be available in the dev container; stderr: {uv_result.stderr!r}"
     )

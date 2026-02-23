@@ -35,24 +35,20 @@ from pathlib import Path
 
 import pytest
 from _pytest.fixtures import SubRequest
-from test_utils.command_runner import run_command_and_save_logs
-
 from build_support.ci_cd_tasks.validation_tasks import (
     SubprojectFeatureTests,
     SubprojectUnitTests,
 )
 from build_support.ci_cd_vars.build_paths import get_build_runtime_report_path
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
-from build_support.ci_cd_vars.project_structure import (
-    get_dockerfile,
-    get_uv_lock_file,
-)
+from build_support.ci_cd_vars.project_structure import get_dockerfile, get_uv_lock_file
 from build_support.ci_cd_vars.subproject_structure import (
     PythonSubproject,
     SubprojectContext,
     get_python_subproject,
 )
 from build_support.dag_engine import BuildRunReport
+from test_utils.command_runner import run_command_and_save_logs
 
 
 @pytest.mark.usefixtures("mock_lightweight_project_with_unit_tests_and_feature_tests")

@@ -1,5 +1,6 @@
 import shutil
 import tomllib
+from collections.abc import Mapping
 from pathlib import Path
 
 from build_support.ci_cd_tasks.env_setup_tasks import Clean
@@ -22,18 +23,42 @@ from build_support.new_project_setup.setup_license import get_new_license_conten
 from build_support.new_project_setup.setup_new_project import MakeProjectFromTemplate
 
 
-def _license_value(pyproject_license: str | dict) -> str:
+def _license_value(pyproject_license: str | Mapping[str, str]) -> str:
     """Normalize PEP 621 license (string or { text = '...' }) to a string.
 
     Args:
-        pyproject_license (str | dict): Value of ``project.license`` from pyproject.toml.
+        pyproject_license (str | dict): Value of ``project.license`` from
+            ``pyproject.toml``.
 
     Returns:
         str: The license identifier (e.g. ``unlicense``, ``mit``).
     """
-    if isinstance(pyproject_license, dict):
+    if isinstance(pyproject_license, Mapping):
         return pyproject_license["text"]
     return pyproject_license
+
+
+def _should_skip_project_root_entry(
+    entry_name: str, build_folder_name: str, feature_scratch_name: str
+) -> bool:
+    """Whether a project-root entry should be skipped when cloning a test fixture.
+
+    Args:
+        entry_name (str): Name of the root entry.
+        build_folder_name (str): Build folder name for this project.
+        feature_scratch_name (str): Feature-test scratch folder name for this project.
+
+    Returns:
+        bool: True if the entry should be skipped.
+    """
+    always_skipped = {
+        ".git",
+        ".idea",
+        ".pytest_cache",
+        build_folder_name,
+        feature_scratch_name,
+    }
+    return entry_name in always_skipped or entry_name.startswith(".coverage")
 
 
 def _check_pyproject_toml(
@@ -41,9 +66,7 @@ def _check_pyproject_toml(
 ) -> None:
     pyproject_toml_data = tomllib.loads(pyproject_toml_path.read_text())
     assert pyproject_toml_data["project"]["name"] == settings.name
-    assert (
-        pyproject_toml_data["project"]["version"] == "0.0.0"
-    ) == version_reset
+    assert (pyproject_toml_data["project"]["version"] == "0.0.0") == version_reset
     assert _license_value(pyproject_toml_data["project"]["license"]) == settings.license
     assert pyproject_toml_data["project"]["authors"] == [
         settings.organization.formatted_name_and_email()
@@ -114,18 +137,17 @@ def test_make_new_project(tmp_path: Path, real_project_root_dir: Path) -> None:
     tmp_project_path.mkdir(parents=True, exist_ok=True)
     for file_or_folder in real_project_root_dir.glob("*"):
         name = file_or_folder.name
-        if name not in [
-            ".git",
-            ".idea",
-            build_folder_name,
-            feature_scratch_name,
-            ".pytest_cache",
-        ]:
-            dest = tmp_project_path.joinpath(name)
-            if file_or_folder.is_dir():
-                shutil.copytree(src=file_or_folder, dst=dest)
-            else:
-                shutil.copy(src=file_or_folder, dst=dest)
+        if _should_skip_project_root_entry(
+            entry_name=name,
+            build_folder_name=build_folder_name,
+            feature_scratch_name=feature_scratch_name,
+        ):
+            continue
+        dest = tmp_project_path.joinpath(name)
+        if file_or_folder.is_dir():
+            shutil.copytree(src=file_or_folder, dst=dest)
+        else:
+            shutil.copy(src=file_or_folder, dst=dest)
 
     project_settings_path = get_new_project_settings(project_root=tmp_project_path)
     original_project_settings = ProjectSettings.from_yaml(

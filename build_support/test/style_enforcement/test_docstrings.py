@@ -11,7 +11,6 @@ from typing import Any, override
 
 import pytest
 from _pytest.fixtures import SubRequest
-
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
 from build_support.ci_cd_vars.subproject_structure import (
     SubprojectContext,
@@ -89,7 +88,7 @@ def get_list_of_imported_names(module_source_text: str) -> set[str]:
     for node in ast.iter_child_nodes(parsed_module):
         if isinstance(node, (ast.Import, ast.ImportFrom)):
             for name in node.names:
-                names_imported.add(name.asname if name.asname else name.name)
+                names_imported.add(name.asname or name.name)
     return names_imported
 
 

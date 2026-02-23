@@ -2,8 +2,6 @@ import re
 from pathlib import Path
 
 import pytest
-from tomlkit import TOMLDocument
-
 from build_support.ci_cd_vars.project_setting_vars import (
     ALLOWED_VERSION_REGEX,
     get_project_name,
@@ -17,6 +15,7 @@ from build_support.ci_cd_vars.project_structure import (
     get_pyproject_toml,
     get_uv_lock_file,
 )
+from tomlkit import TOMLDocument
 
 
 def test_parse_real_pyproject_toml_file(real_project_root_dir: Path) -> None:

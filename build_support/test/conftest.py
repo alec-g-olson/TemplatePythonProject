@@ -3,8 +3,6 @@ from typing import cast
 
 import pytest
 from _pytest.fixtures import SubRequest
-from git import Repo
-
 from build_support.ci_cd_tasks.env_setup_tasks import GitInfo
 from build_support.ci_cd_vars.build_paths import get_git_info_yaml
 from build_support.ci_cd_vars.git_status_vars import PRIMARY_BRANCH_NAME
@@ -19,6 +17,7 @@ from build_support.ci_cd_vars.subproject_structure import (
     get_python_subproject,
     get_sorted_subproject_contexts,
 )
+from git import Repo
 
 
 @pytest.fixture(scope="session")

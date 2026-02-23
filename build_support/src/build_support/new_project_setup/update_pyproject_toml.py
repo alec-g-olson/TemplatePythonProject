@@ -24,7 +24,7 @@ def update_pyproject_toml(
     """
     path_to_pyproject_toml = get_pyproject_toml(project_root=project_root)
     pyproject_data: TOMLDocument = get_pyproject_toml_data(project_root=project_root)
-    project = pyproject_data["project"]  # type: ignore[index]
+    project = pyproject_data["project"]
     project["name"] = new_project_settings.name  # type: ignore[index]
     project["version"] = "0.0.0"  # type: ignore[index]
     project["license"] = new_project_settings.license  # type: ignore[index]

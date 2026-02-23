@@ -10,10 +10,6 @@ from unittest.mock import call, patch
 
 import pytest
 from _pytest.fixtures import SubRequest
-from junitparser import JUnitXml, TestCase, TestSuite
-from test_utils.empty_function_check import is_an_empty_function
-from tomlkit import TOMLDocument, parse
-
 from build_support.ci_cd_tasks.env_setup_tasks import (
     GetGitInfo,
     GitInfo,
@@ -63,6 +59,9 @@ from build_support.ci_cd_vars.subproject_structure import (
 )
 from build_support.file_caching import CONFTEST_NAME, FileCacheEngine
 from build_support.process_runner import concatenate_args
+from junitparser import JUnitXml, TestCase, TestSuite
+from test_utils.empty_function_check import is_an_empty_function
+from tomlkit import TOMLDocument, parse
 
 
 def test_validate_all_requires(basic_task_info: BasicTaskInfo) -> None:
@@ -1291,9 +1290,7 @@ def test_get_subprojects_to_test_dockerfile_modified(docker_project_root: Path) 
     assert result == get_sorted_subproject_contexts()
 
 
-def test_get_subprojects_to_test_uv_lock_modified(
-    docker_project_root: Path,
-) -> None:
+def test_get_subprojects_to_test_uv_lock_modified(docker_project_root: Path) -> None:
     """Test get_subprojects_to_test when uv.lock is modified."""
     git_info_yaml_path = get_git_info_yaml(project_root=docker_project_root)
     git_info_yaml_path.parent.mkdir(parents=True, exist_ok=True)
