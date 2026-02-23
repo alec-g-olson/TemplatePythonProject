@@ -3,11 +3,10 @@
 from pathlib import Path
 from subprocess import run
 
-from git import Head, Repo
-from test_utils.command_runner import run_command_and_save_logs
-
 from build_support.ci_cd_vars.git_status_vars import PRIMARY_BRANCH_NAME, get_ticket_id
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
+from git import Head, Repo
+from test_utils.command_runner import run_command_and_save_logs
 
 
 def _parse_echo_image_tags_stdout(stdout: str) -> dict[str, str]:

@@ -271,8 +271,9 @@ def test_get_ticket_id(branch_name: str, ticket_id: str | None) -> None:
                 "modified_subprojects": [],
                 "dockerfile_modified": False,
                 "uv_lock_file_modified": False,
+                "ticket_id": ticket_id,
             }
-        ).get_ticket_id()
+        ).ticket_id
         == ticket_id
     )
 

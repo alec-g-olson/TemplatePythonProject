@@ -2,12 +2,11 @@ from pathlib import Path
 
 import pytest
 from _pytest.fixtures import SubRequest
-from test_utils.command_runner import run_command_and_save_logs
-
 from build_support.ci_cd_vars.subproject_structure import (
     SubprojectContext,
     get_python_subproject,
 )
+from test_utils.command_runner import run_command_and_save_logs
 
 
 @pytest.mark.usefixtures(
