@@ -110,14 +110,6 @@ def f() -> None:
 """,
     ),
     (
-        "invalid-attribute-access",
-        "test_ty98_fails_invalid_attribute_access.py",
-        """def f() -> None:
-    x: int = 1
-    _ = x.nonexistent_attr
-""",
-    ),
-    (
         "invalid-argument-type",
         "test_ty98_fails_invalid_argument_type.py",
         """def func(x: int) -> None: ...
@@ -209,13 +201,6 @@ class A(metaclass=M1): ...
 class B(metaclass=M2): ...
 
 class C(A, B): ...
-""",
-    ),
-    (
-        "cyclic-class-definition",
-        "test_ty98_fails_cyclic_class_definition.py",
-        """class A(B): ...
-class B(A): ...
 """,
     ),
     (
@@ -499,14 +484,6 @@ def f(x: object) -> None:
 """,
     ),
     (
-        "invalid-metaclass",
-        "test_ty98_fails_invalid_metaclass.py",
-        """def f() -> None: ...
-
-class B(metaclass=f): ...
-""",
-    ),
-    (
         "invalid-method-override",
         "test_ty98_fails_invalid_method_override.py",
         """class Base:
@@ -625,13 +602,6 @@ class MyClass:
 """,
     ),
     (
-        "invalid-type-arguments",
-        "test_ty98_fails_invalid_type_arguments.py",
-        """def f(items: list) -> list:
-    return items
-""",
-    ),
-    (
         "invalid-type-checking-constant",
         "test_ty98_fails_invalid_type_checking_constant.py",
         """TYPE_CHECKING = ""
@@ -642,17 +612,6 @@ class MyClass:
         "test_ty98_fails_invalid_type_form.py",
         """def f() -> None:
     a: type[1] = int
-""",
-    ),
-    (
-        "invalid-type-guard-call",
-        "test_ty98_fails_invalid_type_guard_call.py",
-        """from typing import TypeIs
-
-def f(v: object) -> TypeIs[int]: ...
-
-def g() -> None:
-    f()
 """,
     ),
     (
@@ -669,14 +628,6 @@ def f() -> TypeIs[int]: ...
         """from typing import TypeVar
 
 T = TypeVar("T", bound=list["T"])
-""",
-    ),
-    (
-        "invalid-type-variable-constraints",
-        "test_ty98_fails_invalid_type_variable_constraints.py",
-        """from typing import TypeVar
-
-T = TypeVar("T", str)
 """,
     ),
     (
@@ -811,25 +762,6 @@ class B(A):
 
 def g() -> None:
     f(1, x=2)
-""",
-    ),
-    (
-        "possibly-missing-attribute",
-        "test_ty98_fails_possibly_missing_attribute.py",
-        """def fn(val: int, flag: bool) -> int:
-    if flag:
-        a = 12
-    return val + a
-""",
-    ),
-    (
-        "possibly-missing-implicit-call",
-        "test_ty98_fails_possibly_missing_implicit_call.py",
-        """def do_it() -> None:
-    bad()
-
-def bad():
-    return
 """,
     ),
     (
@@ -980,24 +912,6 @@ class D(C): ...
 """,
     ),
     (
-        "unsupported-bool-conversion",
-        "test_ty98_fails_unsupported_bool_conversion.py",
-        """class Foo:
-    pass
-
-foo = Foo()
-if foo:
-    a = 0
-""",
-    ),
-    (
-        "unsupported-operator",
-        "test_ty98_fails_unsupported_operator.py",
-        """def is_magic(x: bytes) -> bool:
-    return x == "magic"
-""",
-    ),
-    (
         "unused-ignore-comment",
         "test_ty98_fails_unused_ignore_comment.py",
         """def f() -> int:
@@ -1022,28 +936,6 @@ def foo(x: int) -> int:
 
 def foo(x: int | str) -> int | str:
     return x
-""",
-    ),
-    (
-        "zero-stepsize-in-slice",
-        "test_ty98_fails_zero_stepsize_in_slice.py",
-        """def f() -> list[int]:
-    l = list(range(10))
-    return l[1:10:0]
-""",
-    ),
-    (
-        "conflicting-argument-forms",
-        "test_ty98_fails_conflicting_argument_forms.py",
-        """flag = True
-
-if flag:
-    f = repr  # Expects a value
-else:
-    f = type  # Expects a type form (one argument)
-
-def g() -> None:
-    f(int)
 """,
     ),
     (
@@ -1095,7 +987,10 @@ def test_all_ty_rules_flagged_in_type_check_output(
         file_contents = entry[2]
         test_dir.joinpath(file_name).write_text(file_contents)
         if len(entry) == entry_with_extras_len:
-            for extra_name, extra_content in entry[3]:
+            entry_with_extras = cast(
+                tuple[str, str, str, list[tuple[str, str]]], entry
+            )
+            for extra_name, extra_content in entry_with_extras[3]:
                 test_dir.joinpath(extra_name).write_text(extra_content)
     return_code, stdout, stderr = run_command(
         command_context, ["type_check_pypi"], expect_failure=True

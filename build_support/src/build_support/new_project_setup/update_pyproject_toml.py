@@ -1,6 +1,7 @@
 """Module exists to conceptually organize all changes to the pyproject.toml file."""
 
 from pathlib import Path
+from typing import cast
 
 from tomlkit import TOMLDocument, dumps
 
@@ -24,13 +25,15 @@ def update_pyproject_toml(
     """
     path_to_pyproject_toml = get_pyproject_toml(project_root=project_root)
     pyproject_data: TOMLDocument = get_pyproject_toml_data(project_root=project_root)
-    project = pyproject_data["project"]
+    project = cast(TOMLDocument, pyproject_data["project"])
     project["name"] = new_project_settings.name
     project["version"] = "0.0.0"
     project["license"] = new_project_settings.license
     project["authors"] = [new_project_settings.organization.as_pyproject_author()]
-    hatch = pyproject_data["tool"]["hatch"]
-    hatch["build"]["targets"]["wheel"]["packages"] = [
-        f"pypi_package/src/{new_project_settings.name}"
-    ]
+    tool = cast(TOMLDocument, pyproject_data["tool"])
+    hatch = cast(TOMLDocument, tool["hatch"])
+    hatch_build = cast(TOMLDocument, hatch["build"])
+    targets = cast(TOMLDocument, hatch_build["targets"])
+    wheel = cast(TOMLDocument, targets["wheel"])
+    wheel["packages"] = [f"pypi_package/src/{new_project_settings.name}"]
     path_to_pyproject_toml.write_text(dumps(pyproject_data))

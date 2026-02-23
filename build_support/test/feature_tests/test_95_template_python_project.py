@@ -67,9 +67,9 @@ def test_failure_visible_at_default_log_level(
         project_root=command_context.mock_project_root,
         subproject_context=SubprojectContext.BUILD_SUPPORT,
     ).get_test_dir().joinpath("test_type_error_for_logging_test.py").write_text(
-        """def some_function(items) -> list:
+        """def some_function() -> None:
     \"\"\"func docstring\"\"\"
-    return items
+    x: int = "not an int"
 """
     )
     return_code, stdout, stderr = run_command(

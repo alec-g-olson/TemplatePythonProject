@@ -7,6 +7,7 @@ Attributes:
 import re
 import tomllib
 from pathlib import Path
+from typing import cast
 
 from tomlkit import TOMLDocument, parse
 
@@ -46,7 +47,7 @@ def get_project_version(project_root: Path) -> str:
     """
     pyproject_data = get_pyproject_toml_data(project_root=project_root)
     version_str: str
-    version_str = str(pyproject_data["project"]["version"])
+    version_str = str(cast(TOMLDocument, pyproject_data["project"])["version"])
     if not ALLOWED_VERSION_REGEX.match(version_str):
         msg = (
             "Project version in pyproject.toml must match the regex "
@@ -90,7 +91,7 @@ def get_project_name(project_root: Path) -> str:
         str: The name of the project.
     """
     pyproject_data = get_pyproject_toml_data(project_root=project_root)
-    return str(pyproject_data["project"]["name"])
+    return str(cast(TOMLDocument, pyproject_data["project"])["name"])
 
 
 ########################################

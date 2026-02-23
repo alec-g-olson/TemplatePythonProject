@@ -159,6 +159,11 @@ class Clean(TaskNode):
         run_process(
             args=["rm", "-rf", self.docker_project_root.joinpath(".ruff_cache")]
         )
+        run_process(
+            args=["rm", "-rf", str(self.docker_project_root.joinpath(".coverage"))]
+        )
+        for path in self.docker_project_root.glob(".coverage.*"):
+            run_process(args=["rm", "-rf", str(path)])
 
 
 class GitInfo(BaseModel):

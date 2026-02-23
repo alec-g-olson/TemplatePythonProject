@@ -9,7 +9,7 @@ from collections.abc import Iterator
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import override
+from typing import cast, override
 
 from junitparser import JUnitXml
 from tomlkit import TOMLDocument, document, dumps, table
@@ -413,7 +413,8 @@ class SubprojectUnitTests(PerSubprojectTask):
                 TOMLDocument.
         """
         pyproject_data = get_pyproject_toml_data(project_root=self.docker_project_root)
-        return pyproject_data["tool"]["coverage"]
+        tool = cast(TOMLDocument, pyproject_data["tool"])
+        return cast(TOMLDocument, tool["coverage"])
 
     def build_omit_list(self, unit_test_info: UnitTestInfo) -> list[str]:
         """Builds the list of omit patterns for a coverage config file.
@@ -474,9 +475,10 @@ class SubprojectUnitTests(PerSubprojectTask):
         coverage_config = deepcopy(coverage_settings)
         if "run" not in coverage_config:
             coverage_config["run"] = table()
-        existing_omit = coverage_config["run"].get("omit", [])
+        run_table = cast(TOMLDocument, coverage_config["run"])
+        existing_omit = run_table.get("omit", [])
         merged_omit = list(dict.fromkeys(list(existing_omit) + new_omit_list))
-        coverage_config["run"]["omit"] = merged_omit
+        run_table["omit"] = merged_omit
 
         # Write TOML file
         config_doc = document()

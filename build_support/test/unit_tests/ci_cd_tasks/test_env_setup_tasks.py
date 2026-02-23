@@ -123,6 +123,30 @@ def test_clean_requires(basic_task_info: BasicTaskInfo) -> None:
     assert Clean(basic_task_info=basic_task_info).required_tasks() == []
 
 
+def _create_coverage_files(project_root: Path) -> list[Path]:
+    """Create .coverage and .coverage.* files; return list of created paths."""
+    coverage_file = project_root.joinpath(".coverage")
+    coverage_file.touch()
+    worker_1 = project_root.joinpath(".coverage.worker-1")
+    worker_1.touch()
+    worker_2 = project_root.joinpath(".coverage.worker-2")
+    worker_2.touch()
+    return [coverage_file, worker_1, worker_2]
+
+
+def _assert_folder_exists_with_content(folder: Path) -> None:
+    """Assert folder exists, is a dir, and has subfolders and files."""
+    assert folder.exists()
+    assert folder.is_dir()
+    sub_folder_count = sum(1 for p in folder.glob("*") if p.is_dir())
+    folder_file_count = sum(1 for p in folder.glob("*") if p.is_file())
+    assert sub_folder_count > 0
+    assert folder_file_count > 0
+    for path in folder.glob("*"):
+        if path.is_dir():
+            assert len(list(path.glob("*"))) > 0
+
+
 def test_run_clean(basic_task_info: BasicTaskInfo) -> None:
     def _add_some_folders_and_files_to_folder(
         current_folder: Path, required_file_names: list[str] | None = None
@@ -156,6 +180,10 @@ def test_run_clean(basic_task_info: BasicTaskInfo) -> None:
     )
     _add_some_folders_and_files_to_folder(current_folder=test_scratch_folder)
 
+    files_that_will_be_removed = _create_coverage_files(
+        basic_task_info.docker_project_root
+    )
+
     folders_that_will_be_completely_removed = [
         ty_cache,
         pytest_cache,
@@ -164,23 +192,17 @@ def test_run_clean(basic_task_info: BasicTaskInfo) -> None:
         test_scratch_folder,
     ]
 
+    for path in files_that_will_be_removed:
+        assert path.exists()
+
     for folder in folders_that_will_be_completely_removed:
-        assert folder.exists()
-        assert folder.is_dir()
-        sub_folder_count = 0
-        folder_file_count = 0
-        for path in folder.glob("*"):
-            if path.is_dir():
-                sub_folder_count += 1
-                assert len(list(path.glob("*"))) > 0
-            else:
-                folder_file_count += 1
-        assert sub_folder_count > 0
-        assert folder_file_count > 0
+        _assert_folder_exists_with_content(folder)
 
     Clean(basic_task_info=basic_task_info).run()
     for folder in folders_that_will_be_completely_removed:
         assert not folder.exists()
+    for path in files_that_will_be_removed:
+        assert not path.exists()
 
 
 @pytest.fixture
