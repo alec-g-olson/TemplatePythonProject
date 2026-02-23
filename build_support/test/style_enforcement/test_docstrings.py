@@ -1,9 +1,9 @@
 import ast
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from inspect import getmembers, isclass, isfunction, ismodule, signature, unwrap
 from pathlib import Path
-from re import Pattern
+from re import Match, Pattern
 from re import compile as re_compile
 from textwrap import dedent
 from types import FunctionType, ModuleType
@@ -532,6 +532,26 @@ ENFORCED_GOOGLE_ARGS_REGEX = re_compile(r"^\s*(\w+)\s*(\(.*\))\s*:\n?\s*(.+)")
 GOOGLE_RESULT_REGEX = re_compile(r"^\s*(([\w\[\],\s|]+)\s*:\s*(.+)|None)")
 
 
+RESULT_REGEX_TYPE_GROUP = 2
+
+
+def _valid_returns_type_match(match: Match[str]) -> bool:
+    """Return False if the Returns type part is malformed (leading/trailing | or ||).
+
+    The regex allows | in the type for union types (e.g. str | None). This validator
+    rejects nonsensical type strings like ``| str``, ``str |``, or ``str || None``.
+    """
+    type_part = match.group(RESULT_REGEX_TYPE_GROUP)
+    if type_part is None:
+        return True
+    stripped = type_part.strip()
+    if not stripped:
+        return False
+    if stripped.startswith("|") or stripped.endswith("|"):
+        return False
+    return "||" not in stripped
+
+
 @dataclass
 class SectionElementData:
     possible_section_names: list[str]
@@ -625,7 +645,9 @@ def check_for_section_with_elements_in_contexts(
 
 
 def check_section_context_has_single_element_with_pattern(
-    context: SectionContext, enforced_element_regex: Pattern[str]
+    context: SectionContext,
+    enforced_element_regex: Pattern[str],
+    match_validator: Callable[[Match[str]], bool] | None = None,
 ) -> bool:
     element_docs = []
     for line in context.following_lines:
@@ -635,13 +657,19 @@ def check_section_context_has_single_element_with_pattern(
             element_docs[-1] += line
     if len(element_docs) != 1:  # pragma: no cov if all pass
         return False
-    return bool(enforced_element_regex.match(element_docs[0]))
+    match = enforced_element_regex.match(element_docs[0])
+    if match is None:
+        return False
+    return (
+        match_validator is None or match_validator(match)
+    )
 
 
 def check_for_section_with_single_element_in_contexts(
     contexts: dict[str, SectionContext],
     docstring_data: GenericDocstringData,
     section_name: str,
+    match_validator: Callable[[Match[str]], bool] | None = None,
 ) -> bool:
     section_element_data = docstring_data.sections[section_name]
     section_group_to_check_for = section_element_data.possible_section_names
@@ -654,6 +682,7 @@ def check_for_section_with_single_element_in_contexts(
         return check_section_context_has_single_element_with_pattern(
             context=contexts[sections_founds[0]],
             enforced_element_regex=section_element_data.enforced_element_regex,
+            match_validator=match_validator,
         )
     else:  # pragma: no cov if all pass
         docstring_data.clashing_sections.append("|".join(sections_founds))
@@ -797,9 +826,13 @@ def get_error_in_function_results_section_info(
     contexts: dict[str, SectionContext],
     docstring_data: GenericDocstringData,
     section_name: str,
+    match_validator: Callable[[Match[str]], bool] | None = None,
 ) -> bool:
     return not check_for_section_with_single_element_in_contexts(
-        contexts=contexts, docstring_data=docstring_data, section_name=section_name
+        contexts=contexts,
+        docstring_data=docstring_data,
+        section_name=section_name,
+        match_validator=match_validator,
     )
 
 
@@ -855,8 +888,84 @@ def test_all_function_docstrings(all_function_info: list[FunctionInfo]) -> None:
                 contexts=contexts,
                 docstring_data=function_docstring_data,
                 section_name="results",
+                match_validator=_valid_returns_type_match,
             )
         )
         if function_docstring_data.has_issues():  # pragma: no cov if all pass
             functions_with_issues_in_docstrings.append(function_docstring_data)
     assert functions_with_issues_in_docstrings == []
+
+
+@pytest.mark.parametrize(
+    ("returns_line", "regex_should_match", "validator_should_pass"),
+    [
+        ("str | None: Ticket id or None.", True, True),
+        ("None", True, True),
+        ("str: Single type.", True, True),
+        ("list[str] | None: Optional list.", True, True),
+        ("| str: Leading pipe.", True, False),
+        ("str |: Trailing pipe.", True, False),
+        ("str || None: Double pipe.", True, False),
+        ("  tuple[str, int] | None: Optional tuple.", True, True),
+        ("int | str | None: Union of three.", True, True),
+        ("   : Whitespace-only type.", True, False),
+    ],
+    ids=[
+        "union_str_none",
+        "literal_none",
+        "single_type",
+        "generic_union",
+        "leading_pipe_rejected",
+        "trailing_pipe_rejected",
+        "double_pipe_rejected",
+        "generic_union_indented",
+        "three_way_union",
+        "whitespace_type_rejected",
+    ],
+)
+def test_returns_regex_and_validator(
+    returns_line: str,
+    regex_should_match: bool,
+    validator_should_pass: bool,
+) -> None:
+    """Returns regex and validator accept valid Returns lines only."""
+    match = GOOGLE_RESULT_REGEX.match(returns_line)
+    assert (match is not None) == regex_should_match
+    if match is not None and validator_should_pass:
+        assert _valid_returns_type_match(match) is True
+    if match is not None and not validator_should_pass:
+        assert _valid_returns_type_match(match) is False
+
+
+def test_single_element_pattern_without_validator() -> None:
+    """When match_validator is None, helper accepts any regex match (coverage)."""
+    context = SectionContext(
+        section_name="Returns",
+        previous_line="",
+        line="Returns",
+        following_lines=["str: A value.\n"],
+        original_index=0,
+        is_last_section=True,
+    )
+    assert check_section_context_has_single_element_with_pattern(
+        context=context,
+        enforced_element_regex=GOOGLE_RESULT_REGEX,
+        match_validator=None,
+    )
+
+
+def test_single_element_pattern_no_match_returns_false() -> None:
+    """When the single element does not match the regex, helper returns False."""
+    context = SectionContext(
+        section_name="Returns",
+        previous_line="",
+        line="Returns",
+        following_lines=["no colon so no match\n"],
+        original_index=0,
+        is_last_section=True,
+    )
+    assert not check_section_context_has_single_element_with_pattern(
+        context=context,
+        enforced_element_regex=GOOGLE_RESULT_REGEX,
+        match_validator=None,
+    )
