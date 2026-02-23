@@ -7,7 +7,7 @@ from build_support.ci_cd_tasks.build_tasks import BuildPypi
 from build_support.ci_cd_tasks.push_tasks import PushAll, PushPypi, PushTags
 from build_support.ci_cd_tasks.task_node import BasicTaskInfo
 from build_support.ci_cd_tasks.validation_tasks import ValidateAll
-from build_support.ci_cd_vars.git_status_vars import MAIN_BRANCH_NAME
+from build_support.ci_cd_vars.git_status_vars import PRIMARY_BRANCH_NAME
 
 
 def test_push_all_requires(basic_task_info: BasicTaskInfo) -> None:
@@ -29,7 +29,7 @@ def test_push_tags_requires(basic_task_info: BasicTaskInfo) -> None:
 
 @pytest.mark.parametrize(
     ("branch_name", "current_version"),
-    [(MAIN_BRANCH_NAME, "0.0.1-dev.1"), ("not_" + MAIN_BRANCH_NAME, "0.0.1")],
+    [(PRIMARY_BRANCH_NAME, "0.0.1-dev.1"), ("not_" + PRIMARY_BRANCH_NAME, "0.0.1")],
 )
 def test_run_push_tags_not_allowed(
     basic_task_info: BasicTaskInfo, branch_name: str, current_version: str
@@ -48,7 +48,7 @@ def test_run_push_tags_not_allowed(
             "build_support.ci_cd_tasks.push_tasks.commit_changes_if_diff"
         ) as commit_changes_mock,
     ):
-        is_on_main_mock.return_value = branch_name == MAIN_BRANCH_NAME
+        is_on_main_mock.return_value = branch_name == PRIMARY_BRANCH_NAME
         get_branch_mock.return_value = branch_name
         get_version_mock.return_value = current_version
         expected_message = (
@@ -61,7 +61,7 @@ def test_run_push_tags_not_allowed(
 
 @pytest.mark.parametrize(
     ("branch_name", "current_version"),
-    [(MAIN_BRANCH_NAME, "0.0.1"), ("not_" + MAIN_BRANCH_NAME, "0.0.1-dev.1")],
+    [(PRIMARY_BRANCH_NAME, "0.0.1"), ("not_" + PRIMARY_BRANCH_NAME, "0.0.1-dev.1")],
 )
 def test_run_push_tags_allowed(
     basic_task_info: BasicTaskInfo, branch_name: str, current_version: str
@@ -80,7 +80,7 @@ def test_run_push_tags_allowed(
             "build_support.ci_cd_tasks.push_tasks.get_project_version"
         ) as get_version_mock,
     ):
-        is_on_main_mock.return_value = branch_name == MAIN_BRANCH_NAME
+        is_on_main_mock.return_value = branch_name == PRIMARY_BRANCH_NAME
         get_version_mock.return_value = current_version
         PushTags(basic_task_info=basic_task_info).run()
         commit_changes_mock.assert_called_once_with(

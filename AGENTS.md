@@ -83,6 +83,12 @@ script, a REPL, a specific test file.
 The production container.  It installs only the main (non-optional) dependencies and
 puts only `pypi_package/src` on `PYTHONPATH`.  It represents exactly what ships.
 
+On non-main branches, image tags are suffixed with the branch ticket ID (e.g.
+`template_python_project:build-107`, `template_python_project:dev-107`) so parallel
+branch work does not collide.  On `main`, tags are unsuffixed.  See
+[developer_tooling.rst](docs/developer_tooling.rst) for details and for running
+Docker commands manually with the correct tag.
+
 ### When `make` is overkill
 
 If you need to run a specific command, use the dev image.

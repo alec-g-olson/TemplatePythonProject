@@ -1,5 +1,7 @@
+from os import environ
 from pathlib import Path
 from typing import cast
+from unittest.mock import patch
 
 import pytest
 from _pytest.fixtures import SubRequest
@@ -10,6 +12,7 @@ from build_support.ci_cd_vars.docker_vars import (
     get_docker_build_command,
     get_docker_command_for_image,
     get_docker_image_name,
+    get_docker_tag_suffix,
     get_interactive_docker_command_for_image,
     get_mypy_path_env,
     get_mypy_path_for_target_image,
@@ -37,16 +40,63 @@ def docker_target(request: SubRequest) -> DockerTarget:
     return cast(DockerTarget, request.param)
 
 
+def _environ_without_tag_suffix() -> dict[str, str]:
+    """Environ dict with TAG_SUFFIX removed so get_docker_tag_suffix returns ''."""
+    return {k: v for k, v in environ.items() if k != "TAG_SUFFIX"}
+
+
 @pytest.mark.usefixtures("mock_local_pyproject_toml_file")
 def test_get_docker_image_name(
     mock_project_root: Path, project_name: str, docker_target: DockerTarget
 ) -> None:
-    assert (
-        get_docker_image_name(
-            project_root=mock_project_root, target_image=docker_target
+    with patch.dict(
+        "build_support.ci_cd_vars.docker_vars.environ",
+        _environ_without_tag_suffix(),
+        clear=True,
+    ):
+        assert (
+            get_docker_image_name(
+                project_root=mock_project_root, target_image=docker_target
+            )
+            == f"{project_name}:{docker_target.value}"
         )
-        == f"{project_name}:{docker_target.value}"
-    )
+
+
+@pytest.mark.usefixtures("mock_local_pyproject_toml_file")
+def test_get_docker_image_name_with_branch_suffix(
+    mock_project_root: Path, project_name: str, docker_target: DockerTarget
+) -> None:
+    with patch(
+        "build_support.ci_cd_vars.docker_vars.get_docker_tag_suffix"
+    ) as get_docker_tag_suffix_mock:
+        get_docker_tag_suffix_mock.return_value = "-TEST001"
+        assert (
+            get_docker_image_name(
+                project_root=mock_project_root, target_image=docker_target
+            )
+            == f"{project_name}:{docker_target.value}-TEST001"
+        )
+        get_docker_tag_suffix_mock.assert_called_once_with()
+
+
+def test_get_docker_tag_suffix_when_env_unset() -> None:
+    """When TAG_SUFFIX is not set, returns empty string."""
+    with patch.dict(
+        "build_support.ci_cd_vars.docker_vars.environ",
+        _environ_without_tag_suffix(),
+        clear=True,
+    ):
+        assert get_docker_tag_suffix() == ""
+
+
+def test_get_docker_tag_suffix_uses_env_when_set() -> None:
+    """When TAG_SUFFIX is set, that value is returned."""
+    with patch.dict(
+        "build_support.ci_cd_vars.docker_vars.environ",
+        {"TAG_SUFFIX": "-107"},
+        clear=False,
+    ):
+        assert get_docker_tag_suffix() == "-107"
 
 
 def test_get_python_path_for_target_image(
@@ -189,6 +239,8 @@ def test_get_base_docker_command_for_image(
             get_python_path_env(
                 docker_project_root=docker_project_root, target_image=docker_target
             ),
+            "-e",
+            f"TAG_SUFFIX={get_docker_tag_suffix()}",
             "-e",
             f"NON_DOCKER_PROJECT_ROOT={mock_project_root.absolute()}",
             "-e",

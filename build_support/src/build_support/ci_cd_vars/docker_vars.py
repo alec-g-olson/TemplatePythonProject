@@ -1,6 +1,7 @@
 """A place to hold tasks and variable used for launching docker."""
 
 from enum import StrEnum
+from os import environ
 from pathlib import Path
 from typing import Any
 
@@ -27,6 +28,18 @@ class DockerTarget(StrEnum):
     INFRA = "infra"
 
 
+def get_docker_tag_suffix() -> str:
+    """Returns the Docker tag suffix from the TAG_SUFFIX environment variable.
+
+    The Makefile sets TAG_SUFFIX (e.g. ``-107`` on ticket branches, empty on
+    main) and passes it into the build container so image names are consistent.
+
+    Returns:
+        str: Value of TAG_SUFFIX when set, otherwise an empty string.
+    """
+    return environ.get("TAG_SUFFIX", "")
+
+
 def get_docker_image_name(project_root: Path, target_image: DockerTarget) -> str:
     """Gets the docker image name for a target.
 
@@ -38,7 +51,9 @@ def get_docker_image_name(project_root: Path, target_image: DockerTarget) -> str
     Returns:
         str: The name of the requested docker image.
     """
-    return ":".join([get_project_name(project_root=project_root), target_image.value])
+    image_name = get_project_name(project_root=project_root)
+    image_tag = target_image.value + get_docker_tag_suffix()
+    return f"{image_name}:{image_tag}"
 
 
 def get_python_path_for_target_image(
@@ -206,6 +221,8 @@ def get_base_docker_command_for_image(
             get_python_path_env(
                 docker_project_root=docker_project_root, target_image=target_image
             ),
+            "-e",
+            f"TAG_SUFFIX={get_docker_tag_suffix()}",
             "-e",
             f"NON_DOCKER_PROJECT_ROOT={non_docker_project_root.absolute()}",
             "-e",
