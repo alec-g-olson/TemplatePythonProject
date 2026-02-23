@@ -1,9 +1,7 @@
-from collections.abc import Iterator
 from os import environ
 from pathlib import Path
 from pwd import getpwuid
 from typing import cast
-from unittest.mock import patch
 
 import pytest
 from _pytest.fixtures import SubRequest
@@ -64,15 +62,6 @@ def local_user_env(local_uid: int, local_gid: int) -> dict[str, str] | None:
         env["HOME"] = f"/home/{getpwuid(local_uid).pw_name}/"
         return env
     return None
-
-
-@pytest.fixture(autouse=True)
-def mock_current_branch_ticket_id_for_unit_tests() -> Iterator[None]:
-    """Use main-branch-equivalent Docker tag suffix for unit tests by default."""
-    with patch.dict(
-        "build_support.ci_cd_vars.docker_vars.environ", {"TAG_SUFFIX": ""}, clear=False
-    ):
-        yield
 
 
 @pytest.fixture
