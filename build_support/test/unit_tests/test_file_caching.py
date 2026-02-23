@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from pathlib import Path
 from time import sleep
-from typing import Any
+from typing import Any, cast
 from unittest.mock import patch
 
 import pytest
@@ -34,12 +34,12 @@ def test_file_info_serialize_deserialize(file_info: TestFileInfo) -> None:
 
 def test_file_info_serialize_deserialize_bad_file_path() -> None:
     with pytest.raises(ValidationError):
-        TestFileInfo(file_path=4, tests_passed=None)
+        TestFileInfo(file_path=cast(Any, 4), tests_passed=None)
 
 
 def test_file_info_serialize_deserialize_bad_datetime() -> None:
     with pytest.raises(ValidationError):
-        TestFileInfo(file_path=Path("some/file"), tests_passed="5/1/2025")
+        TestFileInfo(file_path=Path("some/file"), tests_passed=cast(Any, "5/1/2025"))
 
 
 @pytest.fixture

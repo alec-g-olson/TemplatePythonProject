@@ -963,9 +963,9 @@ def run_feature_test_side_effect(args: list[Any]) -> None:
             case = TestCase(name=test_file_name)
             suite_name = f"suite_{test_file_name}"
             # allow for untyped calls to library
-            suite = TestSuite(name=suite_name)  # type: ignore[no-untyped-call]
+            suite = TestSuite(name=suite_name)
             suite.add_testcase(case)
-            xml = JUnitXml()  # type: ignore[no-untyped-call]
+            xml = JUnitXml()
             xml.add_testsuite(suite)
             xml.write(str(path))
             break

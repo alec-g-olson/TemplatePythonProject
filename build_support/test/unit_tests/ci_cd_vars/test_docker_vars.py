@@ -13,10 +13,10 @@ from build_support.ci_cd_vars.docker_vars import (
     get_docker_image_name,
     get_docker_tag_suffix,
     get_interactive_docker_command_for_image,
-    get_ty_extra_search_path_args,
-    get_ty_extra_search_paths_for_target_image,
     get_python_path_env,
     get_python_path_for_target_image,
+    get_ty_extra_search_path_args,
+    get_ty_extra_search_paths_for_target_image,
 )
 from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_all_python_folders,

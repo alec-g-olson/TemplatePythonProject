@@ -3,7 +3,7 @@
 from enum import StrEnum
 from os import environ
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_all_python_folders,
@@ -178,12 +178,12 @@ def get_ty_extra_search_path_args(
     Returns:
         list[str]: Flattened ``--extra-search-path`` arguments for ty.
     """
-    extra_search_args: list[Path | str] = []
+    extra_search_args: list[str] = []
     for search_path in get_ty_extra_search_paths_for_target_image(
         docker_project_root=docker_project_root, target_image=target_image
     ):
-        extra_search_args.extend(["--extra-search-path", search_path])
-    return concatenate_args(args=extra_search_args)
+        extra_search_args.extend(["--extra-search-path", str(search_path)])
+    return concatenate_args(args=cast(list[Any | list[Any]], extra_search_args))
 
 
 def get_base_docker_command_for_image(

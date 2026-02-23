@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 
 def empty_function() -> None:  # pragma: no cov, exists only for return bytecode
@@ -22,4 +22,4 @@ ALL_EMPTY_FUNCTION_BYTECODES = [
 
 
 def is_an_empty_function(func: Callable[..., Any]) -> bool:
-    return func.__code__.co_code in ALL_EMPTY_FUNCTION_BYTECODES
+    return cast(Any, func).__code__.co_code in ALL_EMPTY_FUNCTION_BYTECODES

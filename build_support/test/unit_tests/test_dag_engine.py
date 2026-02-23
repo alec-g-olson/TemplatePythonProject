@@ -15,7 +15,7 @@ def build_mock_basic_task(
 ) -> TaskNode:
     """Builds a mock task for testing task interactions."""
 
-    return type(  # type: ignore[no-any-return]
+    return type(
         task_name,
         (TaskNode,),
         {"required_tasks": Mock(return_value=required_mock_tasks), "run": Mock()},
@@ -149,7 +149,7 @@ def test_run_tasks(
             else:
                 assert task_run.run.call_count == 0
         else:  # pragma: no cov - will only hit if setup incorrectly
-            pytest.fail("This test was setup incorrectly, task.run should be a mock.")
+            pytest.fail("This test was setup incorrectly, task.run should be a mock.")  # type: ignore[invalid-argument-type]
     parsed_report = BuildRunReport.from_yaml(
         get_build_runtime_report_path(project_root=mock_project_root).read_text()
     )

@@ -33,10 +33,12 @@ def _write_build_support_test_file(
 def test_ty_passes_no_issues(
     mock_project_root: Path, make_command_prefix: list[str]
 ) -> None:
-    assert _run_type_check_build_support(
-        mock_project_root=mock_project_root,
-        make_command_prefix=make_command_prefix,
-    ) == 0
+    assert (
+        _run_type_check_build_support(
+            mock_project_root=mock_project_root, make_command_prefix=make_command_prefix
+        )
+        == 0
+    )
 
 
 @pytest.mark.usefixtures("mock_lightweight_project")
@@ -78,8 +80,7 @@ def test_ty_fails_for_type_errors(
     )
     assert (
         _run_type_check_build_support(
-            mock_project_root=mock_project_root,
-            make_command_prefix=make_command_prefix,
+            mock_project_root=mock_project_root, make_command_prefix=make_command_prefix
         )
         != 0
     )

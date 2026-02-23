@@ -152,9 +152,7 @@ class Clean(TaskNode):
                 get_feature_test_scratch_folder(project_root=self.docker_project_root),
             ]
         )
-        run_process(
-            args=["rm", "-rf", self.docker_project_root.joinpath(".ty_cache")]
-        )
+        run_process(args=["rm", "-rf", self.docker_project_root.joinpath(".ty_cache")])
         run_process(
             args=["rm", "-rf", self.docker_project_root.joinpath(".pytest_cache")]
         )
