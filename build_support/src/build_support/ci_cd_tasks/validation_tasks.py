@@ -37,7 +37,7 @@ from build_support.ci_cd_vars.machine_introspection_vars import THREADS_AVAILABL
 from build_support.ci_cd_vars.project_setting_vars import get_pyproject_toml_data
 from build_support.ci_cd_vars.project_structure import (
     get_feature_test_scratch_folder,
-    get_test_resource_dir,
+    get_resource_dir,
 )
 from build_support.ci_cd_vars.subproject_structure import (
     PythonSubproject,
@@ -361,7 +361,7 @@ def get_subprojects_to_test(project_root: Path) -> list[SubprojectContext]:
     git_info = GitInfo.from_yaml(
         get_git_info_yaml(project_root=project_root).read_text()
     )
-    if git_info.dockerfile_modified or git_info.poetry_lock_file_modified:
+    if git_info.dockerfile_modified or git_info.uv_lock_file_modified:
         return get_sorted_subproject_contexts()
     return git_info.modified_subprojects
 
@@ -523,10 +523,16 @@ class SubprojectUnitTests(PerSubprojectTask):
                 src_file_updated = FileCacheEngine.get_last_modified_time(
                     file_path=src_file
                 )
+                src_resource_dir = get_resource_dir(file_path=src_file)
+                most_recent_src_resource_update = (
+                    FileCacheEngine.get_most_recent_file_update_in_dir(
+                        directory=src_resource_dir
+                    )
+                )
                 test_file_updated = FileCacheEngine.get_last_modified_time(
                     file_path=test_file
                 )
-                resource_dir = get_test_resource_dir(test_file=test_file)
+                resource_dir = get_resource_dir(file_path=test_file)
                 most_recent_resource_update = (
                     FileCacheEngine.get_most_recent_file_update_in_dir(
                         directory=resource_dir
@@ -536,6 +542,7 @@ class SubprojectUnitTests(PerSubprojectTask):
                 if (
                     test_file_info.tests_passed is None
                     or test_file_info.tests_passed < src_file_updated
+                    or test_file_info.tests_passed < most_recent_src_resource_update
                     or test_file_info.tests_passed < test_file_updated
                     or test_file_info.tests_passed < most_recent_conftest_update
                     or test_file_info.tests_passed < most_recent_resource_update
@@ -729,7 +736,7 @@ class SubprojectFeatureTests(PerSubprojectTask):
         ]
 
         for test_file in test_files:
-            resource_dir = get_test_resource_dir(test_file=test_file)
+            resource_dir = get_resource_dir(file_path=test_file)
             most_recent_resource_update = (
                 FileCacheEngine.get_most_recent_file_update_in_dir(
                     directory=resource_dir

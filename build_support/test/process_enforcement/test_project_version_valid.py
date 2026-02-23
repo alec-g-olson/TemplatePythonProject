@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import pytest
-
 from build_support.ci_cd_tasks.env_setup_tasks import GitInfo
 from build_support.ci_cd_vars.project_setting_vars import (
     ALLOWED_VERSION_REGEX,

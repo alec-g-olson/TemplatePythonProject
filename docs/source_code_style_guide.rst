@@ -537,22 +537,23 @@ Static Resources
 ----------------
 
 Data files that are distributed as part of the package (lookup tables, default
-configurations, reference data) live in a ``resources/`` subdirectory of the
-subpackage that owns them:
+configurations, reference data) live in a directory named after the source file
+that loads them, with ``_resources`` appended.  The resource directory is a
+sibling of that source file:
 
 .. code-block:: text
 
     pricing/
-        resources/
+        rate_table_loader.py
+        rate_table_loader_resources/
             rate_tables/
                 us.yaml
                 eu.yaml
-        resource_loader.py   ← the only module that reads these files
 
-The resource loader module is the sole consumer of the files in ``resources/``.  No
-other module in the subpackage reads from disk; they call the resource loader instead.
-This isolates I/O from business logic and makes it possible to test the business logic
-without touching the file system.
+The loader module is the sole consumer of files in its corresponding
+``{module_stem}_resources/`` directory.  No other module in the subpackage reads
+from disk; they call the loader module instead. This isolates I/O from business logic
+and makes it possible to test the business logic without touching the file system.
 
 Automated Enforcement
 ---------------------

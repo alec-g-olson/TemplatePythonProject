@@ -307,6 +307,11 @@ When a module loads static resource files at runtime (YAML tables, embedded data
 lookup tables), two tests are required to guard against accidental edits and to enforce
 that the code stays in sync with the filesystem.
 
+For unit tests, apply this to the source file that the test is associated with. If
+``test_{module_name}.py`` corresponds to a source module that uses
+``{module_name}_resources/``, that test file should include checksum and file-count
+checks for those source resources.
+
 **Pattern:**
 
 Define an enum whose members each pair a resource identifier with its expected SHA256
@@ -326,7 +331,7 @@ files actually present in the resource directory.
 
 
     def _resource_dir() -> Path:
-        return Path(resource_loader.__file__).parent / "resources"
+        return Path(resource_loader.__file__).parent / "some_loader_file_resources"
 
 
     def _hash_file(name: str) -> str:

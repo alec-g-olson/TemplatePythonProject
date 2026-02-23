@@ -10,10 +10,6 @@ from unittest.mock import call, patch
 
 import pytest
 from _pytest.fixtures import SubRequest
-from junitparser import JUnitXml, TestCase, TestSuite
-from test_utils.empty_function_check import is_an_empty_function
-from tomlkit import TOMLDocument, parse
-
 from build_support.ci_cd_tasks.env_setup_tasks import (
     GetGitInfo,
     GitInfo,
@@ -52,7 +48,7 @@ from build_support.ci_cd_vars.file_and_dir_path_vars import (
 from build_support.ci_cd_vars.machine_introspection_vars import THREADS_AVAILABLE
 from build_support.ci_cd_vars.project_structure import (
     get_feature_test_scratch_folder,
-    get_test_resource_dir,
+    get_resource_dir,
 )
 from build_support.ci_cd_vars.subproject_structure import (
     PythonSubproject,
@@ -63,6 +59,9 @@ from build_support.ci_cd_vars.subproject_structure import (
 )
 from build_support.file_caching import CONFTEST_NAME, FileCacheEngine
 from build_support.process_runner import concatenate_args
+from junitparser import JUnitXml, TestCase, TestSuite
+from test_utils.empty_function_check import is_an_empty_function
+from tomlkit import TOMLDocument, parse
 
 
 def test_validate_all_requires(basic_task_info: BasicTaskInfo) -> None:
@@ -380,7 +379,7 @@ def mock_git_info_yaml(
         tags=[],
         modified_subprojects=[subproject_context],
         dockerfile_modified=False,
-        poetry_lock_file_modified=False,
+        uv_lock_file_modified=False,
     )
 
     git_info_yaml_path.write_text(git_info.to_yaml())
@@ -600,7 +599,7 @@ def test_run_subproject_unit_tests_all_cached_but_resource_updated(
     for _, test_file in islice(
         mock_docker_subproject.get_src_unit_test_file_pairs(), resource_dirs_updated
     ):
-        resource_dir = get_test_resource_dir(test_file=test_file)
+        resource_dir = get_resource_dir(file_path=test_file)
         resource_dir.mkdir(parents=True, exist_ok=True)
         resource_dir.joinpath("data.txt").write_text("resource data")
     with patch(
@@ -617,6 +616,93 @@ def test_run_subproject_unit_tests_all_cached_but_resource_updated(
         expected_run_process_calls = []
         for src_file, test_file in islice(
             mock_docker_subproject.get_src_unit_test_file_pairs(), resource_dirs_updated
+        ):
+            src_module = SubprojectUnitTests.get_module_from_path(
+                src_file_path=src_file, subproject=mock_docker_subproject
+            )
+            test_file_parent = test_file.parent
+            test_file_name = test_file.stem
+            coverage_config_path = mock_docker_subproject.get_build_dir().joinpath(
+                f"coverage_config_{test_file_name}.toml"
+            )
+            expected_run_process_calls.append(
+                call(
+                    args=concatenate_args(
+                        args=[
+                            docker_command,
+                            "pytest",
+                            "-n",
+                            THREADS_AVAILABLE,
+                            "--cov-report",
+                            "term-missing",
+                            f"--cov={src_module}",
+                            f"--cov={test_file_parent}",
+                            f"--cov-config={coverage_config_path}",
+                            test_file,
+                        ]
+                    )
+                )
+            )
+        expected_run_process_calls.append(
+            call(
+                args=concatenate_args(
+                    args=[
+                        docker_command,
+                        "pytest",
+                        "-n",
+                        THREADS_AVAILABLE,
+                        mock_docker_subproject.get_pytest_whole_test_suite_report_args(
+                            test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+                        ),
+                        mock_docker_subproject.get_src_dir(),
+                        mock_docker_subproject.get_test_suite_dir(
+                            test_suite=PythonSubproject.TestSuite.UNIT_TESTS
+                        ),
+                    ]
+                )
+            )
+        )
+        assert run_process_mock.mock_calls == expected_run_process_calls
+
+
+@pytest.mark.usefixtures(
+    "mock_docker_pyproject_toml_file", "mock_entire_subproject", "mock_git_info_yaml"
+)
+def test_run_subproject_unit_tests_all_cached_but_src_resource_updated(
+    basic_task_info: BasicTaskInfo,
+    subproject_context: SubprojectContext,
+    mock_docker_subproject: PythonSubproject,
+) -> None:
+    cache_engine = FileCacheEngine(
+        subproject_context=subproject_context,
+        project_root=basic_task_info.docker_project_root,
+    )
+    for _, test_file in mock_docker_subproject.get_src_unit_test_file_pairs():
+        cache_engine.update_test_pass_timestamp(file_path=test_file)
+    cache_engine.write_text()
+    sleep(1 / 1000)
+    src_resource_dirs_updated = 10
+    for src_file, _ in islice(
+        mock_docker_subproject.get_src_unit_test_file_pairs(), src_resource_dirs_updated
+    ):
+        src_resource_dir = get_resource_dir(file_path=src_file)
+        src_resource_dir.mkdir(parents=True, exist_ok=True)
+        src_resource_dir.joinpath("data.txt").write_text("resource data")
+    with patch(
+        "build_support.ci_cd_tasks.validation_tasks.run_process"
+    ) as run_process_mock:
+        SubprojectUnitTests(
+            basic_task_info=basic_task_info, subproject_context=subproject_context
+        ).run()
+        docker_command = get_docker_command_for_image(
+            non_docker_project_root=basic_task_info.non_docker_project_root,
+            docker_project_root=basic_task_info.docker_project_root,
+            target_image=DockerTarget.DEV,
+        )
+        expected_run_process_calls = []
+        for src_file, test_file in islice(
+            mock_docker_subproject.get_src_unit_test_file_pairs(),
+            src_resource_dirs_updated,
         ):
             src_module = SubprojectUnitTests.get_module_from_path(
                 src_file_path=src_file, subproject=mock_docker_subproject
@@ -773,7 +859,7 @@ def test_run_subproject_unit_tests_some_cached(
         elif mod_ten == cache_resource:
             # Tests ran, but a resource file was updated
             file_cache.update_test_pass_timestamp(file_path=test_file)
-            resource_dir = get_test_resource_dir(test_file=test_file)
+            resource_dir = get_resource_dir(file_path=test_file)
             resource_dirs_to_create.append(resource_dir)
             expected_run_process_calls.append(run_process_call)
         else:
@@ -1106,7 +1192,7 @@ def test_run_subproject_feature_tests_all_cached_but_resource_updated(
     sleep(1 / 1000)
     # Create a resource file for each feature test
     for test_file in test_files:
-        resource_dir = get_test_resource_dir(test_file=test_file)
+        resource_dir = get_resource_dir(file_path=test_file)
         resource_dir.mkdir(parents=True, exist_ok=True)
         resource_dir.joinpath("data.txt").write_text("resource data")
     with patch(
@@ -1270,6 +1356,70 @@ def test_run_subproject_feature_tests_one_src_updated(
             run_process_mock.assert_not_called()
 
 
+@pytest.mark.usefixtures(
+    "mock_docker_pyproject_toml_file", "mock_entire_subproject", "mock_git_info_yaml"
+)
+def test_run_subproject_feature_tests_one_src_resource_updated(
+    basic_task_info: BasicTaskInfo,
+    subproject_context: SubprojectContext,
+    mock_docker_subproject: PythonSubproject,
+) -> None:
+    file_cache = FileCacheEngine(
+        subproject_context=subproject_context,
+        project_root=basic_task_info.docker_project_root,
+    )
+    test_files = [
+        file
+        for file in mock_docker_subproject.get_test_suite_dir(
+            test_suite=PythonSubproject.TestSuite.FEATURE_TESTS
+        ).glob("*")
+        if FEATURE_TEST_FILE_NAME_REGEX.match(file.name)
+    ]
+    for test_file in test_files:
+        file_cache.update_test_pass_timestamp(file_path=test_file)
+    file_cache.write_text()
+    sleep(1 / 1000)
+    src_file = next(mock_docker_subproject.get_all_testable_src_files())
+    src_resource_dir = get_resource_dir(file_path=src_file)
+    src_resource_dir.mkdir(parents=True, exist_ok=True)
+    src_resource_dir.joinpath("data.txt").write_text("resource data")
+
+    with patch(
+        "build_support.ci_cd_tasks.validation_tasks.run_process",
+        side_effect=run_feature_test_side_effect,
+    ) as run_process_mock:
+        SubprojectFeatureTests(
+            basic_task_info=basic_task_info, subproject_context=subproject_context
+        ).run()
+        docker_project_root = basic_task_info.docker_project_root
+        non_docker_project_root = basic_task_info.non_docker_project_root
+        expected_calls = [
+            call(
+                args=concatenate_args(
+                    args=[
+                        get_docker_command_for_image(
+                            non_docker_project_root=non_docker_project_root,
+                            docker_project_root=docker_project_root,
+                            target_image=DockerTarget.DEV,
+                        ),
+                        "pytest",
+                        "--basetemp",
+                        get_feature_test_scratch_folder(
+                            project_root=docker_project_root
+                        ),
+                        mock_docker_subproject.get_pytest_feature_test_report_args(),
+                        test_file,
+                    ]
+                )
+            )
+            for test_file in test_files
+        ]
+        if len(expected_calls) > 0:
+            run_process_mock.assert_has_calls(calls=expected_calls)
+        else:  # pragma: no cov - might only have cases that require calls
+            run_process_mock.assert_not_called()
+
+
 def test_get_subprojects_to_test_dockerfile_modified(docker_project_root: Path) -> None:
     """Test get_subprojects_to_test when dockerfile is modified."""
     git_info_yaml_path = get_git_info_yaml(project_root=docker_project_root)
@@ -1281,7 +1431,7 @@ def test_get_subprojects_to_test_dockerfile_modified(docker_project_root: Path) 
         tags=[],
         modified_subprojects=[SubprojectContext.PYPI],
         dockerfile_modified=True,
-        poetry_lock_file_modified=False,
+        uv_lock_file_modified=False,
     )
 
     git_info_yaml_path.write_text(git_info.to_yaml())
@@ -1290,20 +1440,18 @@ def test_get_subprojects_to_test_dockerfile_modified(docker_project_root: Path) 
     assert result == get_sorted_subproject_contexts()
 
 
-def test_get_subprojects_to_test_poetry_lock_modified(
-    docker_project_root: Path,
-) -> None:
-    """Test get_subprojects_to_test when poetry.lock is modified."""
+def test_get_subprojects_to_test_uv_lock_modified(docker_project_root: Path) -> None:
+    """Test get_subprojects_to_test when uv.lock is modified."""
     git_info_yaml_path = get_git_info_yaml(project_root=docker_project_root)
     git_info_yaml_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Create a GitInfo object with poetry lock modified
+    # Create a GitInfo object with uv lock modified
     git_info = GitInfo(
         branch="test-branch",
         tags=[],
         modified_subprojects=[SubprojectContext.PYPI],
         dockerfile_modified=False,
-        poetry_lock_file_modified=True,
+        uv_lock_file_modified=True,
     )
 
     git_info_yaml_path.write_text(git_info.to_yaml())
@@ -1326,7 +1474,7 @@ def test_get_subprojects_to_test_only_modified_subprojects(
         tags=[],
         modified_subprojects=modified_subprojects,
         dockerfile_modified=False,
-        poetry_lock_file_modified=False,
+        uv_lock_file_modified=False,
     )
 
     git_info_yaml_path.write_text(git_info.to_yaml())
@@ -1353,7 +1501,7 @@ def test_subproject_feature_tests_skips_when_not_in_test_list(
         tags=[],
         modified_subprojects=other_subprojects,
         dockerfile_modified=False,
-        poetry_lock_file_modified=False,
+        uv_lock_file_modified=False,
     )
 
     git_info_yaml_path.write_text(git_info.to_yaml())
@@ -1387,7 +1535,7 @@ def test_subproject_unit_tests_skips_when_not_in_test_list(
         tags=[],
         modified_subprojects=other_subprojects,
         dockerfile_modified=False,
-        poetry_lock_file_modified=False,
+        uv_lock_file_modified=False,
     )
 
     git_info_yaml_path.write_text(git_info.to_yaml())
@@ -1429,7 +1577,7 @@ def create_full_unit_test_info(
     coverage_config_path = subproject.get_build_dir().joinpath(
         f"coverage_config_{test_file_path.stem}.toml"
     )
-    test_resource_dir = get_test_resource_dir(test_file=test_file_path)
+    test_resource_dir = get_resource_dir(file_path=test_file_path)
     test_resource_dir_path = test_resource_dir if test_resource_dir.exists() else None
 
     return FullUnitTestInfo(

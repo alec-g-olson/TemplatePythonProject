@@ -5,8 +5,6 @@ from unittest.mock import patch
 
 import pytest
 import yaml
-from pydantic import ValidationError
-
 from build_support.ci_cd_tasks.env_setup_tasks import (
     Clean,
     GetGitInfo,
@@ -24,6 +22,7 @@ from build_support.ci_cd_vars.project_structure import (
     get_feature_test_scratch_folder,
 )
 from build_support.ci_cd_vars.subproject_structure import SubprojectContext
+from pydantic import ValidationError
 
 
 def test_build_dev_env_requires(basic_task_info: BasicTaskInfo) -> None:
@@ -92,9 +91,7 @@ def test_build_infra_env_requires(basic_task_info: BasicTaskInfo) -> None:
     assert SetupInfraEnvironment(basic_task_info=basic_task_info).required_tasks() == []
 
 
-@pytest.mark.usefixtures(
-    "mock_docker_pyproject_toml_file", "mock_docker_poetry_lock_file"
-)
+@pytest.mark.usefixtures("mock_docker_pyproject_toml_file", "mock_docker_uv_lock_file")
 def test_run_build_infra_env(basic_task_info: BasicTaskInfo) -> None:
     with patch(
         "build_support.ci_cd_tasks.env_setup_tasks.run_process"
@@ -194,7 +191,7 @@ def git_info_data_dict(mock_project_versions_list: list[str]) -> dict[Any, Any]:
         "tags": mock_project_versions_list,
         "modified_subprojects": ["build_support", "pypi_package"],
         "dockerfile_modified": False,
-        "poetry_lock_file_modified": False,
+        "uv_lock_file_modified": False,
         "ticket_id": "some_branch_name",
     }
 
@@ -254,6 +251,31 @@ def test_dump_git_info(
 
 def test_get_primary_branch_name() -> None:
     assert GitInfo.get_primary_branch_name() == "main"
+
+
+@pytest.mark.parametrize(
+    argnames=("branch_name", "ticket_id"),
+    argvalues=[
+        ("main", None),
+        ("branch", "branch"),
+        ("42-branch-name", "42"),
+        ("INFRA001-an-infra-ticket", "INFRA001"),
+    ],
+)
+def test_get_ticket_id(branch_name: str, ticket_id: str | None) -> None:
+    assert (
+        GitInfo.model_validate(
+            {
+                "branch": branch_name,
+                "tags": ["some", "tags"],
+                "modified_subprojects": [],
+                "dockerfile_modified": False,
+                "uv_lock_file_modified": False,
+                "ticket_id": ticket_id,
+            }
+        ).ticket_id
+        == ticket_id
+    )
 
 
 @pytest.mark.usefixtures("mock_docker_pyproject_toml_file")
@@ -316,7 +338,7 @@ def test_run_get_git_info(basic_task_info: BasicTaskInfo) -> None:
             tags=tags,
             modified_subprojects=modified_subprojects,
             dockerfile_modified=False,
-            poetry_lock_file_modified=False,
+            uv_lock_file_modified=False,
             ticket_id=ticket_id,
         )
         assert observed_git_info == expected_git_info

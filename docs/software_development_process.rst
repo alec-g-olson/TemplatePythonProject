@@ -371,11 +371,11 @@ a command can be sent to the local machine's docker daemon and executed outside 
 :code:`build` container in another container.  The docker container that is chosen to
 execute the commands is coded into the :doc:`build_support`'s code.
 
-We use `Poetry <https://python-poetry.org>`_ to manage Python dependencies.  Declared
+We use `uv <https://docs.astral.sh/uv/>`_ to manage Python dependencies.  Declared
 dependencies live in the root :code:`pyproject.toml`; the exact versions used in the
-build are pinned in :code:`poetry.lock`.  We allow loose version constraints in
-:code:`pyproject.toml` (e.g. :code:`^2.11`); the lock file is the source of truth when
-Docker images are built, and we do not update the lock file during test, build, or
+build are pinned in :code:`uv.lock`.  We allow loose version constraints in
+:code:`pyproject.toml` (e.g. :code:`>=2.11,<3`); the lock file is the source of truth
+when Docker images are built, and we do not update the lock file during test, build, or
 deployment.  Each Docker image installs a clean set of dependencies from the lock file
 so that we avoid untracked or drifting dependencies.
 

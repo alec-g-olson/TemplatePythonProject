@@ -5,7 +5,6 @@ from pathlib import Path
 
 import pytest
 import requests
-
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
 from build_support.ci_cd_vars.project_structure import get_docs_dir
 from build_support.ci_cd_vars.subproject_structure import (

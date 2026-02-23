@@ -4,7 +4,6 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-
 from build_support.new_project_setup.license_templates import (
     ALL_RIGHTS_RESERVED_KEY,
     get_licenses_with_templates,

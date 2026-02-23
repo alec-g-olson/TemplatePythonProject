@@ -19,6 +19,19 @@ from build_support.new_project_setup.update_folder_names import (
 )
 
 
+def _should_skip_project_root_entry(
+    entry_name: str, build_folder_name: str, feature_scratch_name: str
+) -> bool:
+    """Whether a project-root entry should be skipped when cloning a test fixture."""
+    return entry_name in {
+        ".git",
+        ".idea",
+        build_folder_name,
+        feature_scratch_name,
+        ".pytest_cache",
+    } or entry_name.startswith(".coverage")
+
+
 def test_update_folders_in_project(tmp_path: Path, real_project_root_dir: Path) -> None:
     tmp_project_path = tmp_path.joinpath("template_python_project")
     # Exclude build artifacts to avoid recursive directory structures and long paths
@@ -31,18 +44,17 @@ def test_update_folders_in_project(tmp_path: Path, real_project_root_dir: Path) 
     tmp_project_path.mkdir(parents=True, exist_ok=True)
     for file_or_folder in real_project_root_dir.glob("*"):
         name = file_or_folder.name
-        if name not in [
-            ".git",
-            ".idea",
-            build_folder_name,
-            feature_scratch_name,
-            ".pytest_cache",
-        ]:
-            dest = tmp_project_path.joinpath(name)
-            if file_or_folder.is_dir():
-                shutil.copytree(src=file_or_folder, dst=dest)
-            else:
-                shutil.copy(src=file_or_folder, dst=dest)
+        if _should_skip_project_root_entry(
+            entry_name=name,
+            build_folder_name=build_folder_name,
+            feature_scratch_name=feature_scratch_name,
+        ):
+            continue
+        dest = tmp_project_path.joinpath(name)
+        if file_or_folder.is_dir():
+            shutil.copytree(src=file_or_folder, dst=dest)
+        else:
+            shutil.copy(src=file_or_folder, dst=dest)
 
     expected_relative_path_strs = set()
 

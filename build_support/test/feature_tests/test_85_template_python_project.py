@@ -7,6 +7,7 @@ from build_support.ci_cd_vars.subproject_structure import (
     SubprojectContext,
     get_python_subproject,
 )
+from test_utils.command_runner import run_command_and_save_logs
 
 
 def _run_type_check_build_support(

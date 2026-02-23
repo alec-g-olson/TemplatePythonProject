@@ -5,7 +5,6 @@ from unittest.mock import patch
 
 import pytest
 from _pytest.fixtures import SubRequest
-
 from build_support.ci_cd_vars.docker_vars import (
     DockerTarget,
     get_base_docker_command_for_image,
