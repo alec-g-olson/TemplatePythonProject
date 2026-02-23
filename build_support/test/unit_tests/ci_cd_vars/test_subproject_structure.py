@@ -3,7 +3,6 @@ from typing import cast
 
 import pytest
 from _pytest.fixtures import SubRequest
-
 from build_support.ci_cd_vars.project_setting_vars import (
     get_project_name,
     get_project_version,

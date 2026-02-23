@@ -50,16 +50,16 @@ def get_license_file(project_root: Path) -> Path:
     return project_root.joinpath("LICENSE")
 
 
-def get_poetry_lock_file(project_root: Path) -> Path:
-    """Get a path to the poetry lock file in a project.
+def get_uv_lock_file(project_root: Path) -> Path:
+    """Get a path to the uv lock file in a project.
 
     Args:
         project_root (Path): Path to this project's root.
 
     Returns:
-        Path: Path to the poetry lock file in this project.
+        Path: Path to the uv lock file in this project.
     """
-    return project_root.joinpath("poetry.lock")
+    return project_root.joinpath("uv.lock")
 
 
 def get_build_dir(project_root: Path) -> Path:

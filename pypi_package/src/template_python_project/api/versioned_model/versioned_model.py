@@ -34,8 +34,9 @@ class VersionedModel(BaseModel, ABC):
     added in newer schema versions so that old payloads validate successfully.
 
     Serialization defaults are changed from Pydantic's built-ins:
-    ``model_dump`` defaults to ``mode="json"`` and ``serialize_as_any=True``,
-    and ``model_dump_json`` defaults to ``serialize_as_any=True``.
+    ``model_dump`` defaults to ``mode="json"`` while preserving Pydantic's
+    standard ``serialize_as_any=False`` behavior, and ``model_dump_json`` does
+    the same.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -43,7 +44,7 @@ class VersionedModel(BaseModel, ABC):
     current_version: ClassVar[Version]
     lowest_supported_version: ClassVar[Version] = Version(major=1, minor=0, patch=0)
 
-    data_model_version: PydanticSemVer = Field(default=None, validate_default=True)  # type: ignore[assignment]
+    data_model_version: PydanticSemVer = Field(default=None, validate_default=True)
 
     @field_validator("data_model_version", mode="before")
     @classmethod
@@ -136,16 +137,18 @@ class VersionedModel(BaseModel, ABC):
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
+        exclude_computed_fields: bool = False,
         round_trip: bool = False,
         warnings: bool | Literal["none", "warn", "error"] = True,
         fallback: Callable[[Any], Any] | None = None,
-        serialize_as_any: bool = True,
+        serialize_as_any: bool = False,
     ) -> dict[str, Any]:
         """Serialize the model to a dict, defaulting to JSON mode with duck-typing.
 
         Overrides Pydantic's ``model_dump`` so that ``mode`` defaults to ``"json"``
-        and ``serialize_as_any`` defaults to ``True``.  All other parameters are
-        forwarded unchanged; see the Pydantic docs for their full descriptions.
+        while preserving Pydantic's default ``serialize_as_any=False`` behavior.
+        All other parameters are forwarded unchanged; see the Pydantic docs for
+        their full descriptions.
 
         Args:
             mode (str): Serialization mode passed through to Pydantic.
@@ -156,6 +159,7 @@ class VersionedModel(BaseModel, ABC):
             exclude_unset (bool): Whether to exclude unset fields.
             exclude_defaults (bool): Whether to exclude default-valued fields.
             exclude_none (bool): Whether to exclude ``None`` fields.
+            exclude_computed_fields (bool): Whether to exclude computed fields.
             round_trip (bool): Whether to preserve values for round-tripping.
             warnings (bool | Literal["none", "warn", "error"]): Warning handling mode.
             fallback (Callable[[Any], Any] | None): Fallback serializer callback.
@@ -173,6 +177,7 @@ class VersionedModel(BaseModel, ABC):
             exclude_unset=exclude_unset,
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
+            exclude_computed_fields=exclude_computed_fields,
             round_trip=round_trip,
             warnings=warnings,
             fallback=fallback,
@@ -184,6 +189,7 @@ class VersionedModel(BaseModel, ABC):
         self,
         *,
         indent: int | None = None,
+        ensure_ascii: bool = False,
         include: IncEx | None = None,
         exclude: IncEx | None = None,
         context: Any | None = None,
@@ -191,19 +197,21 @@ class VersionedModel(BaseModel, ABC):
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
+        exclude_computed_fields: bool = False,
         round_trip: bool = False,
         warnings: bool | Literal["none", "warn", "error"] = True,
         fallback: Callable[[Any], Any] | None = None,
-        serialize_as_any: bool = True,
+        serialize_as_any: bool = False,
     ) -> str:
         """Serialize the model to a JSON string, defaulting to duck-typing.
 
-        Overrides Pydantic's ``model_dump_json`` so that ``serialize_as_any``
-        defaults to ``True``.  All other parameters are forwarded unchanged;
-        see the Pydantic docs for their full descriptions.
+        Overrides Pydantic's ``model_dump_json`` while preserving Pydantic's
+        default ``serialize_as_any=False`` behavior.  All other parameters are
+        forwarded unchanged; see the Pydantic docs for their full descriptions.
 
         Args:
             indent (int | None): Pretty-print indentation level.
+            ensure_ascii (bool): Whether to escape non-ASCII characters.
             include (IncEx | None): Fields to include.
             exclude (IncEx | None): Fields to exclude.
             context (Any | None): Serialization context object.
@@ -211,6 +219,7 @@ class VersionedModel(BaseModel, ABC):
             exclude_unset (bool): Whether to exclude unset fields.
             exclude_defaults (bool): Whether to exclude default-valued fields.
             exclude_none (bool): Whether to exclude ``None`` fields.
+            exclude_computed_fields (bool): Whether to exclude computed fields.
             round_trip (bool): Whether to preserve values for round-tripping.
             warnings (bool | Literal["none", "warn", "error"]): Warning handling mode.
             fallback (Callable[[Any], Any] | None): Fallback serializer callback.
@@ -221,6 +230,7 @@ class VersionedModel(BaseModel, ABC):
         """
         return super().model_dump_json(
             indent=indent,
+            ensure_ascii=ensure_ascii,
             include=include,
             exclude=exclude,
             context=context,
@@ -228,6 +238,7 @@ class VersionedModel(BaseModel, ABC):
             exclude_unset=exclude_unset,
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
+            exclude_computed_fields=exclude_computed_fields,
             round_trip=round_trip,
             warnings=warnings,
             fallback=fallback,

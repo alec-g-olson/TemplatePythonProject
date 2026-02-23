@@ -2,10 +2,9 @@ from pathlib import Path
 
 import pytest
 from _pytest.fixtures import SubRequest
-from test_utils.command_runner import run_command_and_save_logs
-
 from build_support.ci_cd_vars.build_paths import get_build_runtime_report_path
 from build_support.dag_engine import BuildRunReport
+from test_utils.command_runner import run_command_and_save_logs
 
 
 @pytest.mark.usefixtures(

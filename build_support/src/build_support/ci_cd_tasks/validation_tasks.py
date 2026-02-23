@@ -362,7 +362,7 @@ def get_subprojects_to_test(project_root: Path) -> list[SubprojectContext]:
     git_info = GitInfo.from_yaml(
         get_git_info_yaml(project_root=project_root).read_text()
     )
-    if git_info.dockerfile_modified or git_info.poetry_lock_file_modified:
+    if git_info.dockerfile_modified or git_info.uv_lock_file_modified:
         return get_sorted_subproject_contexts()
     return git_info.modified_subprojects
 

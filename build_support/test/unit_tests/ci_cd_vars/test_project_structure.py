@@ -8,11 +8,11 @@ from build_support.ci_cd_vars.project_structure import (
     get_feature_test_scratch_folder,
     get_license_file,
     get_new_project_settings,
-    get_poetry_lock_file,
     get_pyproject_toml,
     get_readme,
     get_resource_dir,
     get_sphinx_conf_dir,
+    get_uv_lock_file,
     maybe_build_dir,
 )
 
@@ -42,10 +42,10 @@ def test_get_license_file(mock_project_root: Path) -> None:
     ) == mock_project_root.joinpath("LICENSE")
 
 
-def test_get_poetry_lock_file(mock_project_root: Path) -> None:
-    assert get_poetry_lock_file(
+def test_get_uv_lock_file(mock_project_root: Path) -> None:
+    assert get_uv_lock_file(
         project_root=mock_project_root
-    ) == mock_project_root.joinpath("poetry.lock")
+    ) == mock_project_root.joinpath("uv.lock")
 
 
 def test_get_build_dir(mock_project_root: Path) -> None:

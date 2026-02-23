@@ -2,14 +2,13 @@ from pathlib import Path
 
 import pytest
 from _pytest.fixtures import SubRequest
-from test_utils.command_runner import run_command_and_save_logs
-
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
 from build_support.ci_cd_vars.subproject_structure import (
     PythonSubproject,
     SubprojectContext,
     get_python_subproject,
 )
+from test_utils.command_runner import run_command_and_save_logs
 
 
 @pytest.mark.usefixtures("mock_new_branch", "ticket_for_current_branch")

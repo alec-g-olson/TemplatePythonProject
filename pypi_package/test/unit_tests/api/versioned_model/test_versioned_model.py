@@ -134,7 +134,7 @@ def test_model_dump_uses_json_mode_and_serializes_version() -> None:
 
 
 def test_model_dump_json_serializes_to_string_and_round_trips() -> None:
-    """model_dump_json uses serialize_as_any=True and supports round trip."""
+    """model_dump_json serializes version fields to strings and round-trips."""
     model = SimpleVersionedModel(name="json-test")
     json_str = model.model_dump_json()
     # Expect a JSON object with data_model_version rendered as a string

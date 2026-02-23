@@ -36,6 +36,18 @@ def _parse_version(value: str) -> Version:
         raise PydanticCustomError(err_type, err_msg, {"msg": str(e)}) from e
 
 
+def _serialize_version(value: Version) -> str:
+    """Serialize a semver ``Version`` object to its string representation.
+
+    Args:
+        value (Version): The version to serialize.
+
+    Returns:
+        str: The semantic version string.
+    """
+    return str(value)
+
+
 class _SemVerPydanticAnnotation:
     """Annotation that teaches Pydantic how to validate and serialize semver Version."""
 
@@ -66,7 +78,7 @@ class _SemVerPydanticAnnotation:
                 [core_schema.is_instance_schema(Version), from_str_schema]
             ),
             serialization=core_schema.plain_serializer_function_ser_schema(
-                lambda v: str(v)
+                _serialize_version
             ),
         )
 

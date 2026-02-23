@@ -18,7 +18,7 @@ from build_support.ci_cd_vars.git_status_vars import (
     get_modified_subprojects,
     get_ticket_id,
     git_fetch,
-    poetry_lock_file_was_modified,
+    uv_lock_file_was_modified,
 )
 from build_support.ci_cd_vars.project_setting_vars import get_pulumi_version
 from build_support.ci_cd_vars.project_structure import (
@@ -171,7 +171,7 @@ class GitInfo(BaseModel):
     ticket_id: str | None = None
     modified_subprojects: list[SubprojectContext] = Field(default_factory=list)
     dockerfile_modified: bool
-    poetry_lock_file_modified: bool
+    uv_lock_file_modified: bool
 
     @staticmethod
     def get_primary_branch_name() -> str:
@@ -240,7 +240,7 @@ class GetGitInfo(TaskNode):
                 dockerfile_modified=dockerfile_was_modified(
                     modified_files=modified_files, project_root=self.docker_project_root
                 ),
-                poetry_lock_file_modified=poetry_lock_file_was_modified(
+                uv_lock_file_modified=uv_lock_file_was_modified(
                     modified_files=modified_files, project_root=self.docker_project_root
                 ),
             ).to_yaml()

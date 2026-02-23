@@ -18,7 +18,6 @@ It implements the following requirements:
 
 Attributes:
     | CONFTEST_NAME: The file name of conftest files.
-
 """
 
 from datetime import UTC, datetime

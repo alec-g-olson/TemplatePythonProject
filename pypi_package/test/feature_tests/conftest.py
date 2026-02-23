@@ -5,7 +5,6 @@ from pathlib import Path
 
 import pytest
 from _pytest.fixtures import SubRequest
-
 from build_support.ci_cd_vars.docker_vars import DockerTarget, get_docker_image_name
 from build_support.ci_cd_vars.project_structure import (
     get_feature_test_scratch_folder,

@@ -1,13 +1,12 @@
 from unittest.mock import patch
 
 import pytest
-from test_utils.empty_function_check import is_an_empty_function
-
 from build_support.ci_cd_tasks.build_tasks import BuildPypi
 from build_support.ci_cd_tasks.push_tasks import PushAll, PushPypi, PushTags
 from build_support.ci_cd_tasks.task_node import BasicTaskInfo
 from build_support.ci_cd_tasks.validation_tasks import ValidateAll
 from build_support.ci_cd_vars.git_status_vars import PRIMARY_BRANCH_NAME
+from test_utils.empty_function_check import is_an_empty_function
 
 
 def test_push_all_requires(basic_task_info: BasicTaskInfo) -> None:
