@@ -249,7 +249,7 @@ class FileCacheEngine:
             return datetime.min.replace(tzinfo=UTC)
         return max(
             (
-                datetime.fromtimestamp(timestamp=path.stat().st_mtime, tz=UTC)
+                FileCacheEngine.get_last_modified_time(file_path=path)
                 for path in chain((directory,), directory.rglob("*"))
                 if path.is_file() or path.is_dir()
             ),
@@ -258,13 +258,13 @@ class FileCacheEngine:
 
     @staticmethod
     def get_last_modified_time(file_path: Path) -> datetime:
-        """Gets the ISO 8601 timestamp that the file was last modified.
+        """Gets the timestamp that the file or directory was last modified.
 
         Args:
-            file_path (Path): The path to the file.
+            file_path (Path): The path to the file or directory.
 
         Returns:
-            datetime: The timestamp that the file was last modified.
+            datetime: The last modification time (UTC).
         """
         return datetime.fromtimestamp(timestamp=file_path.stat().st_mtime, tz=UTC)
 
