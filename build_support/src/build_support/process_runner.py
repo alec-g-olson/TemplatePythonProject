@@ -101,7 +101,7 @@ def build_popen(args: list[str], stdin: IO[bytes] | int | None = None) -> Popen[
 
     Args:
         args (list[str]): The args to pass to the new process.
-        stdin (IO | int | None): The stdin to use with the new process.
+        stdin (IO[bytes] | int | None): The stdin to use with the new process.
 
     Returns:
         Popen: A Popen instance with parameters set by the inputs to this function.

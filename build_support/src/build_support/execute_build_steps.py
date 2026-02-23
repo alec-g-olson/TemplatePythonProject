@@ -224,6 +224,9 @@ def run_main(args: Namespace) -> None:
 
     Returns:
         None
+
+    Raises:
+        Exception: Re-raised after logging if any task or setup fails.
     """
     _configure_build_logging()
     local_info_yaml = get_local_info_yaml(project_root=args.docker_project_root)

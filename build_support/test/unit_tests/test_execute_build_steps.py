@@ -42,6 +42,10 @@ from build_support.execute_build_steps import (
     parse_args,
     run_main,
 )
+
+
+# We test _configure_build_logging directly to cover TRACE and invalid-level
+# fallback without running full run_main (which would require more mocking).
 from build_support.new_project_setup.setup_new_project import MakeProjectFromTemplate
 from build_support.process_runner import concatenate_args
 
