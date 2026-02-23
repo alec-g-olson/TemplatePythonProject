@@ -52,6 +52,14 @@ class Organization(BaseModel):
         """
         return f"{self.name} <{self.contact_email}>"
 
+    def as_pyproject_author(self) -> dict[str, str]:
+        """Returns the organization as a PEP 621 author inline table entry.
+
+        Returns:
+            dict[str, str]: A dict with 'name' and 'email' for project.authors.
+        """
+        return {"name": self.name, "email": self.contact_email}
+
 
 class ProjectSettings(BaseModel):
     """An object containing the project settings for this project."""

@@ -29,7 +29,7 @@ def update_pyproject_toml(
     project["version"] = "0.0.0"  # type: ignore[index]
     project["license"] = new_project_settings.license  # type: ignore[index]
     project["authors"] = [  # type: ignore[index]
-        new_project_settings.organization.formatted_name_and_email()
+        new_project_settings.organization.as_pyproject_author()
     ]
     hatch = pyproject_data["tool"]["hatch"]  # type: ignore[index]
     hatch["build"]["targets"]["wheel"]["packages"] = [  # type: ignore[index]

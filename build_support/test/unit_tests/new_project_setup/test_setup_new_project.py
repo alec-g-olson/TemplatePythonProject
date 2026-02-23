@@ -69,7 +69,7 @@ def _check_pyproject_toml(
     assert (pyproject_toml_data["project"]["version"] == "0.0.0") == version_reset
     assert _license_value(pyproject_toml_data["project"]["license"]) == settings.license
     assert pyproject_toml_data["project"]["authors"] == [
-        settings.organization.formatted_name_and_email()
+        settings.organization.as_pyproject_author()
     ]
     wheel_packages = pyproject_toml_data["tool"]["hatch"]["build"]["targets"]["wheel"][
         "packages"
