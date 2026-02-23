@@ -8,6 +8,19 @@ machine specific environment variables (such as the directory location) and so w
 a Makefile to get these variables and pass them to the docker commands.  Because of this
 all of the standard commands are accessed via `make` commands.
 
+Build output verbosity is controlled by the :code:`LOG_LEVEL` environment variable.
+Pass it to :code:`make` (e.g. :code:`make test LOG_LEVEL=DEBUG`) to change how much the
+build prints. Three levels apply to successful runs:
+
+* **INFO** (default): Workflow only — task list, "Starting:", run report. No command
+  lines or task output.
+* **DEBUG**: Level 1 plus the command line before each subprocess (e.g. the
+  :code:`docker run` invocation for each task).
+* **TRACE**: Level 2 plus task stdout and stderr with "stdout:" and "stderr:" labels.
+
+On task failure, the failing command, return code, and that command's stdout and
+stderr are always logged at ERROR, so they are visible at any :code:`LOG_LEVEL`.
+
 Everything runs in Docker with Python dependencies managed by uv. Running uv
 commands (e.g. :code:`uv lock`) outside the dev container can leave the environment
 out of sync. Follow the instructions below when changing dependencies.

@@ -75,7 +75,7 @@ def test_run_build_pypi(basic_task_info: BasicTaskInfo) -> None:
                 ),
                 "uv",
                 "build",
-                "--output",
+                "--out-dir",
                 get_dist_dir(project_root=basic_task_info.docker_project_root),
             ]
         )

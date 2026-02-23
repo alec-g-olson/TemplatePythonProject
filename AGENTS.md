@@ -53,6 +53,12 @@ Read that file for the full list.  The most important ones for day-to-day work a
 
 Always run `make test` before considering any ticket complete.
 
+When running `make` commands, use the default (low) verbosity. Increase output only
+when needed: :code:`LOG_LEVEL=DEBUG` shows command lines; :code:`LOG_LEVEL=TRACE`
+shows task stdout/stderr (e.g. :code:`make test LOG_LEVEL=DEBUG`). Failures always
+log the failing command, return code, and that command's stdout and stderr at ERROR,
+so they are visible at any level.
+
 ---
 
 ## 3. Running Commands in Docker

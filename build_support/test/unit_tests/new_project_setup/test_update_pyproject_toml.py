@@ -37,7 +37,7 @@ def test_update_pyproject_toml(tmp_path: Path, real_project_root_dir: Path) -> N
     expected_project["version"] = "0.0.0"  # type: ignore[index]
     expected_project["license"] = new_project_settings.license  # type: ignore[index]
     expected_project["authors"] = [  # type: ignore[index]
-        new_project_settings.organization.formatted_name_and_email()
+        new_project_settings.organization.as_pyproject_author()
     ]
     expected_hatch = expected_data["tool"]["hatch"]  # type: ignore[index]
     expected_hatch["build"]["targets"]["wheel"]["packages"] = [  # type: ignore[index]

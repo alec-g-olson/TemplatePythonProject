@@ -106,7 +106,7 @@ class BuildPypi(TaskNode):
                     ),
                     "uv",
                     "build",
-                    "--output",
+                    "--out-dir",
                     get_dist_dir(project_root=self.docker_project_root),
                 ]
             )

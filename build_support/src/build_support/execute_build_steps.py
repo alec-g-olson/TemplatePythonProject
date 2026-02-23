@@ -2,12 +2,15 @@
 
 Attributes:
     | CLI_ARG_TO_TASK: A dictionary of the CLI arg to the corresponding task to run.
+    | logger: Module-level logger for build failure and diagnostics.
 """
 
+import logging
 from argparse import ArgumentParser, Namespace
 from dataclasses import dataclass
 from pathlib import Path
 
+from build_support.build_logging import _configure_build_logging
 from build_support.ci_cd_tasks.build_tasks import BuildAll, BuildDocs, BuildPypi
 from build_support.ci_cd_tasks.env_setup_tasks import (
     Clean,
@@ -36,7 +39,9 @@ from build_support.ci_cd_vars.build_paths import get_local_info_yaml
 from build_support.ci_cd_vars.subproject_structure import SubprojectContext
 from build_support.dag_engine import run_tasks
 from build_support.new_project_setup.setup_new_project import MakeProjectFromTemplate
-from build_support.process_runner import ProcessVerbosity, concatenate_args, run_process
+from build_support.process_runner import concatenate_args, run_process
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -152,8 +157,7 @@ def fix_permissions(local_user_uid: int, local_user_gid: int) -> None:
                     if path.name not in [".git", "test_scratch_folder"]
                 ],
             ]
-        ),
-        verbosity=ProcessVerbosity.SILENT,
+        )
     )
 
 
@@ -197,7 +201,11 @@ def run_main(args: Namespace) -> None:
 
     Returns:
         None
+
+    Raises:
+        Exception: Re-raised after logging if any task or setup fails.
     """
+    _configure_build_logging()
     local_info_yaml = get_local_info_yaml(project_root=args.docker_project_root)
     basic_task_info = BasicTaskInfo.from_yaml(local_info_yaml.read_text())
     requested_tasks = [
@@ -208,8 +216,11 @@ def run_main(args: Namespace) -> None:
         run_tasks(
             tasks=requested_tasks, project_root=basic_task_info.docker_project_root
         )
-    except Exception as e:  # noqa: BLE001
-        print(e)  # noqa: T201
+    except Exception:
+        # logger.exception() logs at ERROR and automatically includes the exception
+        # message and full traceback (equivalent to exc_info=True).
+        logger.exception("Build failed")
+        raise
     finally:
         fix_permissions(
             local_user_uid=basic_task_info.local_uid,

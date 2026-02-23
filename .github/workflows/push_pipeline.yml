@@ -15,4 +15,4 @@ jobs:
         fetch-depth: 0
 
     - name: Push artifact
-      run: make push
+      run: make push LOG_LEVEL=TRACE
