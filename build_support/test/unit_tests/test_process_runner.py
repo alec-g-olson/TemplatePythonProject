@@ -218,7 +218,11 @@ def test_run_piped_processes(caplog: pytest.LogCaptureFixture) -> None:
         assert command_as_str in caplog.text
 
 
-def test_run_piped_processes_silent() -> None:
+def test_run_piped_processes_at_info_level_hides_command(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """At INFO level the command line is not logged (it requires DEBUG)."""
+    caplog.set_level(logging.INFO, logger="build_support.process_runner")
     with (
         patch("build_support.process_runner.Popen") as mock_popen,
         patch(
@@ -234,28 +238,13 @@ def test_run_piped_processes_silent() -> None:
             processes=[["command", 0, 1.5, Path("/usr/dev")], ["second_command", 1337]]
         )
         command_as_str = "command 0 1.5 /usr/dev | second_command 1337"
-        expected_popen_calls = [
-            call(
-                args=["command", "0", "1.5", "/usr/dev"],
-                stdin=None,
-                stdout=PIPE,
-                stderr=PIPE,
-            ),
-            call(
-                args=["second_command", "1337"],
-                stdin=process_mock.stdout,
-                stdout=PIPE,
-                stderr=PIPE,
-            ),
-        ]
-        assert mock_popen.call_count == len(expected_popen_calls)
-        mock_popen.assert_has_calls(calls=expected_popen_calls)
         mock_resolve_process_results.assert_called_once_with(
             command_as_str=command_as_str,
             output=b"output",
             error=b"error",
             return_code=0,
         )
+        assert command_as_str not in caplog.text
 
 
 def test_run_piped_processes_one_process(caplog: pytest.LogCaptureFixture) -> None:
@@ -288,7 +277,11 @@ def test_run_piped_processes_one_process(caplog: pytest.LogCaptureFixture) -> No
         assert command_as_str in caplog.text
 
 
-def test_run_piped_processes_one_process_silent() -> None:
+def test_run_piped_processes_one_process_at_info_level_hides_command(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """At INFO level the command line is not logged (it requires DEBUG)."""
+    caplog.set_level(logging.INFO, logger="build_support.process_runner")
     with (
         patch("build_support.process_runner.Popen") as mock_popen,
         patch(
@@ -302,15 +295,10 @@ def test_run_piped_processes_one_process_silent() -> None:
         mock_popen.return_value = process_mock
         run_piped_processes(processes=[["command", 0, 1.5, Path("/usr/dev")]])
         command_as_str = "command 0 1.5 /usr/dev"
-        mock_popen.assert_called_once_with(
-            args=["command", "0", "1.5", "/usr/dev"],
-            stdin=None,
-            stdout=PIPE,
-            stderr=PIPE,
-        )
         mock_resolve_process_results.assert_called_once_with(
             command_as_str=command_as_str,
             output=b"output",
             error=b"error",
             return_code=0,
         )
+        assert command_as_str not in caplog.text

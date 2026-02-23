@@ -1,5 +1,6 @@
 """The entry point into running build tools."""
 
+import sys
 from argparse import ArgumentParser, Namespace
 from enum import StrEnum
 from pathlib import Path
@@ -90,7 +91,8 @@ def run_main(args: Namespace) -> None:
         case _:  # pragma: no cov - can't hit if all enums are implemented
             msg = f"{command!r} is not a supported enum of AllowedCliArgs."
             raise ValueError(msg)
-    print(" ".join(values))  # noqa: T201
+    # Stdout is consumed by the Makefile; use write instead of logging.
+    sys.stdout.write(" ".join(values) + "\n")
 
 
 if __name__ == "__main__":  # pragma: no cov - main

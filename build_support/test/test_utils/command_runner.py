@@ -1,9 +1,12 @@
 """Utility for running commands and saving logs during tests."""
 
+import logging
 from pathlib import Path
 from subprocess import PIPE, Popen
 
 from build_support.ci_cd_vars.project_structure import get_feature_test_log_name
+
+logger = logging.getLogger(__name__)
 
 
 def run_command_and_save_logs(
@@ -21,7 +24,7 @@ def run_command_and_save_logs(
         test_name (str): Name of the test (used for log file naming).
         real_project_root_dir (Path): Real project root directory.
         expect_failure (bool): If True, a non-zero return code will not trigger
-            printing of the log content to stdout. Default False.
+            logging of the log content at ERROR level. Default False.
 
     Returns:
         tuple[int, str, str]: Return code, stdout, and stderr.
@@ -54,6 +57,6 @@ def run_command_and_save_logs(
     log_file.write_text(log_content, encoding="utf-8")
 
     if (return_code != 0) and not expect_failure:
-        print(log_content, flush=True)  # noqa: T201
+        logger.error("%s", log_content)
 
     return return_code, stdout, stderr
