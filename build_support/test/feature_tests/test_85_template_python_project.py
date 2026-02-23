@@ -15,13 +15,13 @@ from build_support.ci_cd_vars.subproject_structure import (
 )
 def test_mypy_passes_no_issues(
     mock_project_root: Path,
-    make_command_prefix_without_tag_suffix: list[str],
+    make_command_prefix: list[str],
     real_project_root_dir: Path,
     request: SubRequest,
 ) -> None:
     # Default state - should pass as long as style checks are passing for the repo
     return_code, _, _ = run_command_and_save_logs(
-        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        args=[*make_command_prefix, "type_check_pypi"],
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
@@ -34,7 +34,7 @@ def test_mypy_passes_no_issues(
 )
 def test_mypy_fails_type_arg(
     mock_project_root: Path,
-    make_command_prefix_without_tag_suffix: list[str],
+    make_command_prefix: list[str],
     real_project_root_dir: Path,
     request: SubRequest,
 ) -> None:
@@ -48,7 +48,7 @@ def test_mypy_fails_type_arg(
 '''
     )
     return_code, _, _ = run_command_and_save_logs(
-        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        args=[*make_command_prefix, "type_check_pypi"],
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
@@ -62,7 +62,7 @@ def test_mypy_fails_type_arg(
 )
 def test_mypy_fails_no_untyped_def(
     mock_project_root: Path,
-    make_command_prefix_without_tag_suffix: list[str],
+    make_command_prefix: list[str],
     real_project_root_dir: Path,
     request: SubRequest,
 ) -> None:
@@ -76,7 +76,7 @@ def test_mypy_fails_no_untyped_def(
 '''
     )
     return_code, _, _ = run_command_and_save_logs(
-        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        args=[*make_command_prefix, "type_check_pypi"],
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
@@ -90,7 +90,7 @@ def test_mypy_fails_no_untyped_def(
 )
 def test_mypy_fails_redundant_cast(
     mock_project_root: Path,
-    make_command_prefix_without_tag_suffix: list[str],
+    make_command_prefix: list[str],
     real_project_root_dir: Path,
     request: SubRequest,
 ) -> None:
@@ -104,7 +104,7 @@ def test_mypy_fails_redundant_cast(
 '''
     )
     return_code, _, _ = run_command_and_save_logs(
-        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        args=[*make_command_prefix, "type_check_pypi"],
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
@@ -118,7 +118,7 @@ def test_mypy_fails_redundant_cast(
 )
 def test_mypy_fails_redundant_self(
     mock_project_root: Path,
-    make_command_prefix_without_tag_suffix: list[str],
+    make_command_prefix: list[str],
     real_project_root_dir: Path,
     request: SubRequest,
 ) -> None:
@@ -132,7 +132,7 @@ def test_mypy_fails_redundant_self(
 '''
     )
     return_code, _, _ = run_command_and_save_logs(
-        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        args=[*make_command_prefix, "type_check_pypi"],
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
@@ -146,7 +146,7 @@ def test_mypy_fails_redundant_self(
 )
 def test_mypy_fails_comparison_overlap(
     mock_project_root: Path,
-    make_command_prefix_without_tag_suffix: list[str],
+    make_command_prefix: list[str],
     real_project_root_dir: Path,
     request: SubRequest,
 ) -> None:
@@ -160,7 +160,7 @@ def test_mypy_fails_comparison_overlap(
 '''
     )
     return_code, _, _ = run_command_and_save_logs(
-        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        args=[*make_command_prefix, "type_check_pypi"],
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
@@ -174,7 +174,7 @@ def test_mypy_fails_comparison_overlap(
 )
 def test_mypy_fails_no_untyped_call(
     mock_project_root: Path,
-    make_command_prefix_without_tag_suffix: list[str],
+    make_command_prefix: list[str],
     real_project_root_dir: Path,
     request: SubRequest,
 ) -> None:
@@ -192,7 +192,7 @@ def bad():
 '''
     )
     return_code, _, _ = run_command_and_save_logs(
-        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        args=[*make_command_prefix, "type_check_pypi"],
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
@@ -206,7 +206,7 @@ def bad():
 )
 def test_mypy_fails_no_any_return(
     mock_project_root: Path,
-    make_command_prefix_without_tag_suffix: list[str],
+    make_command_prefix: list[str],
     real_project_root_dir: Path,
     request: SubRequest,
 ) -> None:
@@ -220,7 +220,7 @@ def test_mypy_fails_no_any_return(
 '''
     )
     return_code, _, _ = run_command_and_save_logs(
-        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        args=[*make_command_prefix, "type_check_pypi"],
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
@@ -234,7 +234,7 @@ def test_mypy_fails_no_any_return(
 )
 def test_mypy_fails_no_any_unimported(
     mock_project_root: Path,
-    make_command_prefix_without_tag_suffix: list[str],
+    make_command_prefix: list[str],
     real_project_root_dir: Path,
     request: SubRequest,
 ) -> None:
@@ -251,7 +251,7 @@ def feed(cat: Cat) -> None:
 '''
     )
     return_code, _, _ = run_command_and_save_logs(
-        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        args=[*make_command_prefix, "type_check_pypi"],
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
@@ -265,7 +265,7 @@ def feed(cat: Cat) -> None:
 )
 def test_mypy_fails_redundant_expr(
     mock_project_root: Path,
-    make_command_prefix_without_tag_suffix: list[str],
+    make_command_prefix: list[str],
     real_project_root_dir: Path,
     request: SubRequest,
 ) -> None:
@@ -282,7 +282,7 @@ def test_mypy_fails_redundant_expr(
 '''
     )
     return_code, _, _ = run_command_and_save_logs(
-        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        args=[*make_command_prefix, "type_check_pypi"],
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
@@ -296,7 +296,7 @@ def test_mypy_fails_redundant_expr(
 )
 def test_mypy_fails_possibly_undefined(
     mock_project_root: Path,
-    make_command_prefix_without_tag_suffix: list[str],
+    make_command_prefix: list[str],
     real_project_root_dir: Path,
     request: SubRequest,
 ) -> None:
@@ -312,7 +312,7 @@ def test_mypy_fails_possibly_undefined(
 '''
     )
     return_code, _, _ = run_command_and_save_logs(
-        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        args=[*make_command_prefix, "type_check_pypi"],
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
@@ -326,7 +326,7 @@ def test_mypy_fails_possibly_undefined(
 )
 def test_mypy_fails_truthy_bool(
     mock_project_root: Path,
-    make_command_prefix_without_tag_suffix: list[str],
+    make_command_prefix: list[str],
     real_project_root_dir: Path,
     request: SubRequest,
 ) -> None:
@@ -343,7 +343,7 @@ if foo:
 """
     )
     return_code, _, _ = run_command_and_save_logs(
-        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        args=[*make_command_prefix, "type_check_pypi"],
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
@@ -357,7 +357,7 @@ if foo:
 )
 def test_mypy_fails_truthy_iterable(
     mock_project_root: Path,
-    make_command_prefix_without_tag_suffix: list[str],
+    make_command_prefix: list[str],
     real_project_root_dir: Path,
     request: SubRequest,
 ) -> None:
@@ -375,7 +375,7 @@ def transform(items: Iterable[int]) -> list[int]:
 '''
     )
     return_code, _, _ = run_command_and_save_logs(
-        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        args=[*make_command_prefix, "type_check_pypi"],
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
@@ -389,7 +389,7 @@ def transform(items: Iterable[int]) -> list[int]:
 )
 def test_mypy_fails_ignore_without_code(
     mock_project_root: Path,
-    make_command_prefix_without_tag_suffix: list[str],
+    make_command_prefix: list[str],
     real_project_root_dir: Path,
     request: SubRequest,
 ) -> None:
@@ -403,7 +403,7 @@ def test_mypy_fails_ignore_without_code(
 '''
     )
     return_code, _, _ = run_command_and_save_logs(
-        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        args=[*make_command_prefix, "type_check_pypi"],
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
@@ -417,7 +417,7 @@ def test_mypy_fails_ignore_without_code(
 )
 def test_mypy_fails_unused_awaitable(
     mock_project_root: Path,
-    make_command_prefix_without_tag_suffix: list[str],
+    make_command_prefix: list[str],
     real_project_root_dir: Path,
     request: SubRequest,
 ) -> None:
@@ -435,7 +435,7 @@ async def g() -> None:
 """
     )
     return_code, _, _ = run_command_and_save_logs(
-        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        args=[*make_command_prefix, "type_check_pypi"],
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
@@ -449,7 +449,7 @@ async def g() -> None:
 )
 def test_mypy_fails_unused_ignore(
     mock_project_root: Path,
-    make_command_prefix_without_tag_suffix: list[str],
+    make_command_prefix: list[str],
     real_project_root_dir: Path,
     request: SubRequest,
 ) -> None:
@@ -463,7 +463,7 @@ def test_mypy_fails_unused_ignore(
 '''
     )
     return_code, _, _ = run_command_and_save_logs(
-        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        args=[*make_command_prefix, "type_check_pypi"],
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
@@ -477,7 +477,7 @@ def test_mypy_fails_unused_ignore(
 )
 def test_mypy_fails_explicit_override(
     mock_project_root: Path,
-    make_command_prefix_without_tag_suffix: list[str],
+    make_command_prefix: list[str],
     real_project_root_dir: Path,
     request: SubRequest,
 ) -> None:
@@ -509,7 +509,7 @@ class Child(Parent):
 '''
     )
     return_code, _, _ = run_command_and_save_logs(
-        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        args=[*make_command_prefix, "type_check_pypi"],
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
@@ -523,7 +523,7 @@ class Child(Parent):
 )
 def test_mypy_fails_mutable_override(
     mock_project_root: Path,
-    make_command_prefix_without_tag_suffix: list[str],
+    make_command_prefix: list[str],
     real_project_root_dir: Path,
     request: SubRequest,
 ) -> None:
@@ -547,7 +547,7 @@ class D(C):
 """
     )
     return_code, _, _ = run_command_and_save_logs(
-        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        args=[*make_command_prefix, "type_check_pypi"],
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,
@@ -561,7 +561,7 @@ class D(C):
 )
 def test_mypy_fails_unimported_reveal(
     mock_project_root: Path,
-    make_command_prefix_without_tag_suffix: list[str],
+    make_command_prefix: list[str],
     real_project_root_dir: Path,
     request: SubRequest,
 ) -> None:
@@ -574,7 +574,7 @@ reveal_type(x)
 """
     )
     return_code, _, _ = run_command_and_save_logs(
-        args=[*make_command_prefix_without_tag_suffix, "type_check_pypi"],
+        args=[*make_command_prefix, "type_check_pypi"],
         cwd=mock_project_root,
         test_name=request.node.name,
         real_project_root_dir=real_project_root_dir,

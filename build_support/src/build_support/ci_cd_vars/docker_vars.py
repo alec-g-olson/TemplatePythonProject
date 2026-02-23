@@ -222,6 +222,8 @@ def get_base_docker_command_for_image(
                 docker_project_root=docker_project_root, target_image=target_image
             ),
             "-e",
+            f"TAG_SUFFIX={get_docker_tag_suffix()}",
+            "-e",
             f"NON_DOCKER_PROJECT_ROOT={non_docker_project_root.absolute()}",
             "-e",
             f"DOCKER_REMOTE_PROJECT_ROOT={docker_project_root.absolute()}",

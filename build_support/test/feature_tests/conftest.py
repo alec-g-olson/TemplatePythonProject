@@ -53,12 +53,13 @@ def make_command_prefix_without_tag_suffix(
 ) -> list[str]:
     """Build the ``make`` command prefix without pinning ``TAG_SUFFIX``.
 
-    Constructs a ``make`` invocation that targets the mock project,
-    mounts the mock remote git repo, and enables ``--ci-cd-feature-test-mode``.
-    Does not set ``TAG_SUFFIX`` so the Makefile computes it from the mock
-    project's ``git/HEAD``. Use for tests that need the Makefile to derive
-    the tag suffix from the mock project's branch (e.g. cross-ticket
-    isolation tests that build new images).
+    Constructs an ``env -u TAG_SUFFIX make`` invocation that targets the mock
+    project, mounts the mock remote git repo, and enables
+    ``--ci-cd-feature-test-mode``. This explicitly unsets inherited
+    ``TAG_SUFFIX`` so the Makefile computes it from the mock project's
+    ``git/HEAD``. Use for tests that need the Makefile to derive the tag
+    suffix from the mock project's branch (e.g. cross-ticket isolation tests
+    that build new images).
 
     Args:
         mock_project_root (Path): Root of the mock project.
@@ -82,6 +83,9 @@ def make_command_prefix_without_tag_suffix(
         remote_repo_relative_root
     )
     return [
+        "env",
+        "-u",
+        "TAG_SUFFIX",
         "make",
         f"NON_DOCKER_ROOT={test_non_docker_root}",
         f"GIT_MOUNT=-v {remote_repo_non_docker_root}:{mock_remote_git_folder}",
