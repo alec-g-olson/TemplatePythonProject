@@ -7,8 +7,7 @@ MakeProjectFromTemplate task in the setup_new_project module.
 
 SubPackages:
     | license_templates_resources: Resource directory containing committed license
-        template
-        files (not a Python package).
+        template files (not a Python package).
 
 Modules:
     | new_project_data_models: Contains the data models that can parse
