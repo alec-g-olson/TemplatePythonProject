@@ -7,7 +7,7 @@ a corresponding test file next to it.
 
 from pathlib import Path
 
-from build_support.ci_cd_vars.project_structure import get_test_resource_dir
+from build_support.ci_cd_vars.project_structure import get_resource_dir
 from build_support.ci_cd_vars.subproject_structure import (
     PythonSubproject,
     get_all_python_subprojects_with_test,
@@ -64,7 +64,7 @@ def test_all_non_package_dirs_follow_resource_naming(
     2. The corresponding test file (``{name_without_resources}.py``)
        must exist in the same parent directory.
     3. The directory name must equal
-       ``get_test_resource_dir(test_file).name`` for that test file.
+       ``get_resource_dir(file_path=test_file).name`` for that test file.
     """
     violations: list[str] = []
     for subproject in get_all_python_subprojects_with_test(
@@ -89,13 +89,11 @@ def test_all_non_package_dirs_follow_resource_naming(
                         f"file {expected_test_file}."
                     )
                     continue
-                expected_resource_dir = get_test_resource_dir(
-                    test_file=expected_test_file
-                )
+                expected_resource_dir = get_resource_dir(file_path=expected_test_file)
                 if non_pkg_dir != expected_resource_dir:  # pragma: no cov
                     violations.append(
                         f"{non_pkg_dir} does not match "
-                        f"get_test_resource_dir() output "
+                        f"get_resource_dir() output "
                         f"{expected_resource_dir}."
                     )
     assert not violations, "\n".join(violations)

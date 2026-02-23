@@ -11,8 +11,8 @@ from build_support.ci_cd_vars.project_structure import (
     get_poetry_lock_file,
     get_pyproject_toml,
     get_readme,
+    get_resource_dir,
     get_sphinx_conf_dir,
-    get_test_resource_dir,
     maybe_build_dir,
 )
 
@@ -115,13 +115,25 @@ def test_get_new_project_settings(mock_project_root: Path) -> None:
     ) == mock_project_root.joinpath("new_project_settings.yaml")
 
 
-def test_get_test_resource_dir() -> None:
+def test_get_resource_dir_for_test_file() -> None:
     test_file = Path("/a/b/test_foo.py")
-    assert get_test_resource_dir(test_file=test_file) == Path("/a/b/test_foo_resources")
+    assert get_resource_dir(file_path=test_file) == Path("/a/b/test_foo_resources")
 
 
-def test_get_test_resource_dir_nested() -> None:
+def test_get_resource_dir_for_nested_test_file() -> None:
     test_file = Path("/project/tests/unit/test_bar.py")
-    assert get_test_resource_dir(test_file=test_file) == Path(
+    assert get_resource_dir(file_path=test_file) == Path(
         "/project/tests/unit/test_bar_resources"
+    )
+
+
+def test_get_resource_dir_for_src_file() -> None:
+    src_file = Path("/a/b/foo.py")
+    assert get_resource_dir(file_path=src_file) == Path("/a/b/foo_resources")
+
+
+def test_get_resource_dir_for_nested_src_file() -> None:
+    src_file = Path("/project/src/pkg/bar.py")
+    assert get_resource_dir(file_path=src_file) == Path(
+        "/project/src/pkg/bar_resources"
     )

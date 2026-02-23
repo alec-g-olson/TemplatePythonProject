@@ -5,12 +5,14 @@ to be run.
 It implements the following requirements:
 1. Unit tests should be run if:
    - The source file has been updated since the test last passed
+   - Any files in the source file's resource directory have been updated
    - The test file has been updated since it last passed
    - Any conftest files the test relies on have been updated
    - Any files in the test's resource directory have been updated
 
 2. Feature tests should be run if:
    - Any source files in the subproject have been updated
+   - Any files in source resource directories in the subproject have been updated
    - Any conftest files the feature test relies on have been updated
    - Any files in the test's resource directory have been updated
 
@@ -20,12 +22,14 @@ Attributes:
 """
 
 from datetime import UTC, datetime
+from itertools import chain
 from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, Field, field_serializer, field_validator
 from yaml import safe_dump, safe_load
 
+from build_support.ci_cd_vars.project_structure import get_resource_dir
 from build_support.ci_cd_vars.subproject_structure import (
     PythonSubproject,
     SubprojectContext,
@@ -186,15 +190,21 @@ class FileCacheEngine:
         return most_recent_update
 
     def most_recent_src_file_update(self) -> datetime:
-        """Gets the last time any of the src files were updated.
+        """Gets the last time any src file or src resource was updated.
 
         Returns:
-            datetime: The last time any of the src files were updated.
+            datetime: The last time any src file or src resource was updated.
         """
         return max(
             (
-                self.get_last_modified_time(file_path=src_file)
+                most_recent_update
                 for src_file, _ in self.subproject.get_src_unit_test_file_pairs()
+                for most_recent_update in (
+                    self.get_last_modified_time(file_path=src_file),
+                    self.get_most_recent_file_update_in_dir(
+                        directory=get_resource_dir(file_path=src_file)
+                    ),
+                )
             ),
             default=datetime.min.replace(tzinfo=UTC),
         )
@@ -224,10 +234,10 @@ class FileCacheEngine:
 
     @staticmethod
     def get_most_recent_file_update_in_dir(directory: Path) -> datetime:
-        """Return the most recent mtime of any file in a directory tree.
+        """Return the most recent mtime of any file or directory in a tree.
 
         Returns ``datetime.min`` (UTC) if the directory does not exist or
-        contains no files.
+        has no entries.
 
         Args:
             directory (Path): The directory to scan recursively.
@@ -239,9 +249,9 @@ class FileCacheEngine:
             return datetime.min.replace(tzinfo=UTC)
         return max(
             (
-                FileCacheEngine.get_last_modified_time(file_path=f)
-                for f in directory.rglob("*")
-                if f.is_file()
+                datetime.fromtimestamp(timestamp=path.stat().st_mtime, tz=UTC)
+                for path in chain((directory,), directory.rglob("*"))
+                if path.is_file() or path.is_dir()
             ),
             default=datetime.min.replace(tzinfo=UTC),
         )

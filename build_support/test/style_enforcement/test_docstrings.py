@@ -112,7 +112,9 @@ def parse_package_info(imported_package: ModuleType) -> PackageInfo:
                 msg = f"{imported_module.__name__} is not a module."
                 raise ValueError(msg)
             modules[module_name] = imported_module
-        if package_file_or_folder.is_dir():
+        if package_file_or_folder.is_dir() and package_file_or_folder.joinpath(
+            "__init__.py"
+        ).exists():
             sub_packages.append(file_or_folder_name)
     if imported_package.__doc__ is None:  # pragma: no cov
         imported_package.__doc__ = ""

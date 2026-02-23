@@ -6,7 +6,8 @@ available in the new_project_settings.yaml, and the work should all be managed b
 MakeProjectFromTemplate task in the setup_new_project module.
 
 SubPackages:
-    | license_templates: Resource directory containing committed license template
+    | license_templates_resources: Resource directory containing committed license
+        template
         files (not a Python package).
 
 Modules:

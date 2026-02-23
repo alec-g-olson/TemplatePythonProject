@@ -1,5 +1,8 @@
+import hashlib
 from copy import copy
+from enum import Enum
 from pathlib import Path
+from typing import NamedTuple
 
 import pytest
 
@@ -11,6 +14,71 @@ from build_support.new_project_setup.license_templates import (
     get_template_for_license,
     is_valid_license_template,
 )
+
+
+class _ResourceChecksum(NamedTuple):
+    filename: str
+    expected_sha256: str
+
+
+class KnownLicenseResource(Enum):
+    AGPL_3_0 = _ResourceChecksum(
+        "agpl-3.0",
+        "8486a10c4393cee1c25392769ddd3b2d6c242d6ec7928e1414efff7dfb2f07ef",
+    )
+    APACHE_2_0 = _ResourceChecksum(
+        "apache-2.0",
+        "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    )
+    BSD_2_CLAUSE = _ResourceChecksum(
+        "bsd-2-clause",
+        "8116e572e44a918ea5f1b589024fbc673ccddde7a53b3bf95b4eafab0fdcd41e",
+    )
+    BSD_3_CLAUSE = _ResourceChecksum(
+        "bsd-3-clause",
+        "f24d1328dbfffe7bf66aa877957db75e60629358357d8c366ccab616fef487ab",
+    )
+    BSL_1_0 = _ResourceChecksum(
+        "bsl-1.0",
+        "c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566",
+    )
+    CC0_1_0 = _ResourceChecksum(
+        "cc0-1.0",
+        "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499",
+    )
+    EPL_2_0 = _ResourceChecksum(
+        "epl-2.0",
+        "8c349f80764d0648e645f41ef23772a70c995a0924b5235f735f4a3d09df127c",
+    )
+    GPL_2_0 = _ResourceChecksum(
+        "gpl-2.0",
+        "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643",
+    )
+    GPL_3_0 = _ResourceChecksum(
+        "gpl-3.0",
+        "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+    )
+    LGPL_2_1 = _ResourceChecksum(
+        "lgpl-2.1",
+        "20c17d8b8c48a600800dfd14f95d5cb9ff47066a9641ddeab48dc54aec96e331",
+    )
+    MIT = _ResourceChecksum(
+        "mit",
+        "002c2696d92b5c8cf956c11072baa58eaf9f6ade995c031ea635c6a1ee342ad1",
+    )
+    MPL_2_0 = _ResourceChecksum(
+        "mpl-2.0",
+        "3f3d9e0024b1921b067d6f7f88deb4a60cbe7a78e76c64e3f1d7fc3b779b9d04",
+    )
+    UNLICENSE = _ResourceChecksum(
+        "unlicense",
+        "6b0382b16279f26ff69014300541967a356a666eb0b91b422f6862f6b7dad17e",
+    )
+
+
+def _hash_template_file(name: str) -> str:
+    text = (LICENSE_TEMPLATES_DIR / name).read_text().replace("\r\n", "\n")
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def test_constants_not_changed_by_accident() -> None:
@@ -33,7 +101,7 @@ def test_constants_not_changed_by_accident() -> None:
         / "src"
         / "build_support"
         / "new_project_setup"
-        / "license_templates"
+        / "license_templates_resources"
     )
 
 
@@ -116,6 +184,22 @@ def test_get_template_bad_value() -> None:
 )
 def test_is_valid_license_template(template_key: str, is_valid: bool) -> None:
     assert is_valid_license_template(template_key=template_key) == is_valid
+
+
+@pytest.mark.parametrize(
+    "resource", list(KnownLicenseResource), ids=lambda resource: resource.name
+)
+def test_license_template_resource_file_matches_expected_checksum(
+    resource: KnownLicenseResource,
+) -> None:
+    assert _hash_template_file(
+        resource.value.filename
+    ) == resource.value.expected_sha256
+
+
+def test_license_template_resource_enum_matches_file_count() -> None:
+    resource_files = [f for f in LICENSE_TEMPLATES_DIR.iterdir() if f.is_file()]
+    assert len(resource_files) == len(KnownLicenseResource)
 
 
 def test_all_resource_files_are_readable() -> None:
