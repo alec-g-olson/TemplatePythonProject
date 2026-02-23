@@ -30,16 +30,6 @@ def _expected_image_names(project_root: Path, tag_suffix: str) -> tuple[str, str
     )
 
 
-def _assert_expected_images_exist(project_root: Path, tag_suffix: str) -> None:
-    """Assert that build/dev/prod images exist for the expected tag suffix."""
-    for image_name in _expected_image_names(
-        project_root=project_root, tag_suffix=tag_suffix
-    ):
-        assert _docker_image_exists(image_name=image_name), (
-            f"Expected docker image {image_name!r} to exist."
-        )
-
-
 def _docker_image_exists(image_name: str) -> bool:
     """Determine whether a Docker image exists locally."""
     return (

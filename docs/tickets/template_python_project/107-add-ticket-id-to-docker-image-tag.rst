@@ -19,9 +19,9 @@ User Flow
 3. A developer runs the same workflows from a non-main ticket branch such as
    ``100-short-description-of-branch``.
 4. The workflows build/use ticket-scoped tags by appending ``-100`` to each base tag.
-3. A developer runs the same workflows from a non-main ticket branch such as
+5. A developer runs the same workflows from a non-main ticket branch such as
    ``101``.
-4. The workflows build/use ticket-scoped tags by appending ``-101`` to each base tag.
+6. The workflows build/use ticket-scoped tags by appending ``-101`` to each base tag.
 
 Functional Requirements
 ~~~~~~~~~~~~~~~~~~~~~~~

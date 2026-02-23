@@ -82,7 +82,7 @@ def get_ticket_id(project_root: Path) -> str | None:
         project_root (Path): Path to this project's root.
 
     Returns:
-        str: Ticket id for non-primary branches. Returns ``None`` on primary.
+        str | None: Ticket id for non-primary branches; ``None`` on primary.
     """
     branch_name = get_current_branch_name(project_root=project_root)
     match = re.search(pattern=GIT_BRANCH_NAME_REGEX, string=branch_name)
