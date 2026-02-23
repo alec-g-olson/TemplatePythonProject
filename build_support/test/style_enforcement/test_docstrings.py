@@ -529,7 +529,7 @@ ENFORCED_SUB_PACKAGE_REGEX = re_compile(r"^\s*\|\s([^\s:]+)\s*:\n?\s*(.+)")
 ENFORCED_MODULE_REGEX = re_compile(r"^\s*\|\s([^\s:]+)\s*:\n?\s*(.+)")
 ENFORCED_ATTRIBUTE_REGEX = re_compile(r"^\s*\|\s([^\s:]+)\s*:\n?\s*(.+)")
 ENFORCED_GOOGLE_ARGS_REGEX = re_compile(r"^\s*(\w+)\s*(\(.*\))\s*:\n?\s*(.+)")
-GOOGLE_RESULT_REGEX = re_compile(r"^\s*(([\w\[\],\s]+)\s*:\s*(.+)|None)")
+GOOGLE_RESULT_REGEX = re_compile(r"^\s*(([\w\[\],\s|]+)\s*:\s*(.+)|None)")
 
 
 @dataclass
