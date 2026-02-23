@@ -83,7 +83,7 @@ RUN uv sync --frozen --no-install-project --extra pulumi
 ENV PATH="/.venv/bin:$PATH"
 
 # If changed here change [project.optional-dependencies] pulumi in pyproject.toml
-ARG PULUMI_VERSION=3.185.0
+ARG PULUMI_VERSION=3.223.0
 
 ENV PULUMI_VERSION=$PULUMI_VERSION
 ENV PULUMI_HOME="/root/.pulumi/"

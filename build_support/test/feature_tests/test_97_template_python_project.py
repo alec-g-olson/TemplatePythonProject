@@ -8,12 +8,12 @@ from pathlib import Path
 from subprocess import run
 
 import pytest
-from build_support.ci_cd_vars.project_setting_vars import get_project_name
+from build_support.ci_cd_vars.docker_vars import DockerTarget, get_docker_image_name
 
 
 @pytest.mark.usefixtures("mock_lightweight_project_with_unit_tests_and_feature_tests")
 def test_dev_container_has_uv_not_poetry(
-    mock_project_root: Path, make_command_prefix: list[str]
+    mock_project_root: Path, make_command_prefix: list[str], real_project_root_dir: Path
 ) -> None:
     """Verify poetry is not available and uv is available in the dev container.
 
@@ -24,6 +24,7 @@ def test_dev_container_has_uv_not_poetry(
     Args:
         mock_project_root (Path): Root of the mock project (dev image context).
         make_command_prefix (list[str]): Make command prefix for running setup_dev_env.
+        real_project_root_dir (Path): Root of the real project for image name lookup.
     """
     run(
         [*make_command_prefix, "setup_dev_env"],
@@ -31,8 +32,9 @@ def test_dev_container_has_uv_not_poetry(
         check=True,
         capture_output=True,
     )
-    project_name = get_project_name(project_root=mock_project_root)
-    image = f"{project_name}:dev"
+    image = get_docker_image_name(
+        project_root=real_project_root_dir, target_image=DockerTarget.DEV
+    )
     mount = f"{mock_project_root.resolve()}:/usr/dev"
     docker_run = ["docker", "run", "--rm", "-v", mount, "-w", "/usr/dev", image]
 

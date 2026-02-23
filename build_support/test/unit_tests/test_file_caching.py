@@ -6,8 +6,6 @@ from unittest.mock import patch
 
 import pytest
 import yaml
-from pydantic import ValidationError
-
 from build_support.ci_cd_vars.project_structure import get_resource_dir
 from build_support.ci_cd_vars.subproject_structure import (
     PythonSubproject,
@@ -15,6 +13,7 @@ from build_support.ci_cd_vars.subproject_structure import (
     get_python_subproject,
 )
 from build_support.file_caching import FileCacheEngine, FileCacheInfo, TestFileInfo
+from pydantic import ValidationError
 
 
 @pytest.mark.parametrize(
