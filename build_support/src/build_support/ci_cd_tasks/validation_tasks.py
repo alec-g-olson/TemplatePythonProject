@@ -37,7 +37,7 @@ from build_support.ci_cd_vars.machine_introspection_vars import THREADS_AVAILABL
 from build_support.ci_cd_vars.project_setting_vars import get_pyproject_toml_data
 from build_support.ci_cd_vars.project_structure import (
     get_feature_test_scratch_folder,
-    get_test_resource_dir,
+    get_resource_dir,
 )
 from build_support.ci_cd_vars.subproject_structure import (
     PythonSubproject,
@@ -524,10 +524,16 @@ class SubprojectUnitTests(PerSubprojectTask):
                 src_file_updated = FileCacheEngine.get_last_modified_time(
                     file_path=src_file
                 )
+                src_resource_dir = get_resource_dir(file_path=src_file)
+                most_recent_src_resource_update = (
+                    FileCacheEngine.get_most_recent_file_update_in_dir(
+                        directory=src_resource_dir
+                    )
+                )
                 test_file_updated = FileCacheEngine.get_last_modified_time(
                     file_path=test_file
                 )
-                resource_dir = get_test_resource_dir(test_file=test_file)
+                resource_dir = get_resource_dir(file_path=test_file)
                 most_recent_resource_update = (
                     FileCacheEngine.get_most_recent_file_update_in_dir(
                         directory=resource_dir
@@ -537,6 +543,7 @@ class SubprojectUnitTests(PerSubprojectTask):
                 if (
                     test_file_info.tests_passed is None
                     or test_file_info.tests_passed < src_file_updated
+                    or test_file_info.tests_passed < most_recent_src_resource_update
                     or test_file_info.tests_passed < test_file_updated
                     or test_file_info.tests_passed < most_recent_conftest_update
                     or test_file_info.tests_passed < most_recent_resource_update
@@ -730,7 +737,7 @@ class SubprojectFeatureTests(PerSubprojectTask):
         ]
 
         for test_file in test_files:
-            resource_dir = get_test_resource_dir(test_file=test_file)
+            resource_dir = get_resource_dir(file_path=test_file)
             most_recent_resource_update = (
                 FileCacheEngine.get_most_recent_file_update_in_dir(
                     directory=resource_dir

@@ -6,13 +6,15 @@ from unittest.mock import patch
 
 import pytest
 import yaml
+from pydantic import ValidationError
+
+from build_support.ci_cd_vars.project_structure import get_resource_dir
 from build_support.ci_cd_vars.subproject_structure import (
     PythonSubproject,
     SubprojectContext,
     get_python_subproject,
 )
 from build_support.file_caching import FileCacheEngine, FileCacheInfo, TestFileInfo
-from pydantic import ValidationError
 
 
 @pytest.mark.parametrize(
@@ -243,6 +245,23 @@ def test_most_recent_src_file_update(file_cache_engine: FileCacheEngine) -> None
     assert file_added_datetime > files_exist_datetime
 
 
+def test_most_recent_src_file_update_src_resource_updated(
+    file_cache_engine: FileCacheEngine,
+) -> None:
+    src_file = file_cache_engine.subproject.get_python_package_dir().joinpath(
+        "file_1.py"
+    )
+    src_file.parent.mkdir(parents=True, exist_ok=True)
+    src_file.touch()
+    files_exist_datetime = file_cache_engine.most_recent_src_file_update()
+    sleep(0.001)
+    src_resource_dir = get_resource_dir(file_path=src_file)
+    src_resource_dir.mkdir(parents=True, exist_ok=True)
+    src_resource_dir.joinpath("data.txt").write_text("resource")
+    resource_added_datetime = file_cache_engine.most_recent_src_file_update()
+    assert resource_added_datetime > files_exist_datetime
+
+
 def test_update_test_pass_timestamp(file_cache_engine: FileCacheEngine) -> None:
     test_file = file_cache_engine.subproject.get_test_suite_dir(
         test_suite=PythonSubproject.TestSuite.UNIT_TESTS
@@ -271,7 +290,8 @@ def test_get_most_recent_file_update_in_dir_empty(tmp_path: Path) -> None:
     empty_dir = tmp_path / "empty"
     empty_dir.mkdir()
     result = FileCacheEngine.get_most_recent_file_update_in_dir(directory=empty_dir)
-    assert result == datetime.min.replace(tzinfo=UTC)
+    expected = datetime.fromtimestamp(timestamp=empty_dir.stat().st_mtime, tz=UTC)
+    assert result == expected
 
 
 def test_get_most_recent_file_update_in_dir_with_files(tmp_path: Path) -> None:
@@ -300,3 +320,21 @@ def test_get_most_recent_file_update_in_dir_nested(tmp_path: Path) -> None:
     result = FileCacheEngine.get_most_recent_file_update_in_dir(directory=resource_dir)
     expected = FileCacheEngine.get_last_modified_time(file_path=nested_file)
     assert result == expected
+
+
+def test_get_most_recent_file_update_in_dir_detects_deleted_file(
+    tmp_path: Path,
+) -> None:
+    resource_dir = tmp_path / "resources"
+    resource_dir.mkdir()
+    deleted_file = resource_dir / "to_delete.txt"
+    deleted_file.write_text("delete me")
+    before_delete = FileCacheEngine.get_most_recent_file_update_in_dir(
+        directory=resource_dir
+    )
+    sleep(0.001)
+    deleted_file.unlink()
+    after_delete = FileCacheEngine.get_most_recent_file_update_in_dir(
+        directory=resource_dir
+    )
+    assert after_delete > before_delete

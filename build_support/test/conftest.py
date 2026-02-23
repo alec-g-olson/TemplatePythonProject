@@ -8,7 +8,7 @@ from build_support.ci_cd_vars.build_paths import get_git_info_yaml
 from build_support.ci_cd_vars.git_status_vars import PRIMARY_BRANCH_NAME
 from build_support.ci_cd_vars.project_structure import (
     get_build_dir,
-    get_test_resource_dir,
+    get_resource_dir,
     maybe_build_dir,
 )
 from build_support.ci_cd_vars.subproject_structure import (
@@ -117,4 +117,4 @@ def test_resource_dir(request: SubRequest) -> Path:
     Returns:
         Path: Path to the test file's resource directory.
     """
-    return get_test_resource_dir(test_file=request.path)
+    return get_resource_dir(file_path=request.path)
