@@ -2,7 +2,6 @@
 
 Attributes:
     | CLI_ARG_TO_TASK: A dictionary of the CLI arg to the corresponding task to run.
-    | TRACE_LOG_LEVEL: Numeric log level (5) for most verbose build output.
     | logger: Module-level logger for build failure and diagnostics.
 """
 
@@ -13,6 +12,7 @@ from argparse import ArgumentParser, Namespace
 from dataclasses import dataclass
 from pathlib import Path
 
+from build_support.build_logging import TRACE, register_trace_level
 from build_support.ci_cd_tasks.build_tasks import BuildAll, BuildDocs, BuildPypi
 from build_support.ci_cd_tasks.env_setup_tasks import (
     Clean,
@@ -195,22 +195,17 @@ def parse_args(args: list[str] | None = None) -> Namespace:
     return parser.parse_args(args=args)
 
 
-# Custom level for most verbose logging (steps + commands + stdout/stderr).
-# Must match the value used in process_runner for TRACE.
-TRACE_LOG_LEVEL = 5
-
-
 def _configure_build_logging() -> None:
     """Configure build logging from LOG_LEVEL.
 
     Default is INFO (steps only). DEBUG adds commands. TRACE adds stdout/stderr.
     Invalid or unset values fall back to INFO.
     """
-    logging.addLevelName(TRACE_LOG_LEVEL, "TRACE")
+    register_trace_level()
     level_name = os.environ.get("LOG_LEVEL", "INFO").upper()
     level = getattr(logging, level_name, None)
     if not isinstance(level, int):
-        level = TRACE_LOG_LEVEL if level_name == "TRACE" else logging.INFO
+        level = TRACE if level_name == "TRACE" else logging.INFO
     logging.basicConfig(
         level=level, format="%(message)s", stream=sys.stdout, force=True
     )

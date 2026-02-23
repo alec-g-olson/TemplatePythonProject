@@ -5,7 +5,6 @@ TRACE = + stdout/stderr. On failure, command + return code + stdout + stderr
 are always logged at ERROR.
 
 Attributes:
-    | TRACE: Numeric log level (5) for task stdout/stderr.
     | logger: Module-level logger for subprocess command and output.
 """
 
@@ -17,8 +16,7 @@ import sys
 from subprocess import PIPE, Popen  # nosec: B404
 from typing import IO, Any
 
-# Must match TRACE_LOG_LEVEL in execute_build_steps (registered at startup).
-TRACE = 5
+from build_support.build_logging import TRACE
 
 logger = logging.getLogger(__name__)
 
