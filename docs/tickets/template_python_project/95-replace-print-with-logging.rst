@@ -94,11 +94,9 @@ Acceptance Criteria / Feature Tests
 
 Notes
 -----
-- Current ``print()`` locations: ``dag_engine.py`` (workflow + report),
-  ``process_runner.py`` (command, stdout, stderr, failure message),
-  ``execute_build_steps.py`` (exception), ``report_build_var.py`` (docker
-  command string). Decide whether ``report_build_var`` output is “data” (stdout
-  for consumption) vs “logging” and document.
+- ``report_build_var.py`` output is treated as data for Makefile consumption,
+  not logging. It is emitted directly to stdout via ``sys.stdout.write(...)``
+  so callers can capture the exact value without logging metadata.
 - Consider documenting the chosen env/Make variable (e.g. ``LOG_LEVEL``) in
   ``docs/developer_tooling.rst`` or similar so developers and agents know how
   to reduce or increase build output.
