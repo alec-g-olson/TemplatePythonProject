@@ -52,7 +52,7 @@ def test_calculation_request_is_frozen() -> None:
     """CalculationRequest is immutable after construction."""
     request = CalculationRequest(operation=CalculationType.ADD, value1=1.0, value2=2.0)
     with pytest.raises(AttributeError):
-        request.value1 = 99.0  # type: ignore[misc]
+        request.value1 = 99.0
 
 
 def test_calculation_request_equality() -> None:
@@ -81,7 +81,7 @@ def test_calculation_result_is_frozen() -> None:
     """CalculationResult is immutable after construction."""
     result = CalculationResult(result=1.0)
     with pytest.raises(AttributeError):
-        result.result = 99.0  # type: ignore[misc]
+        result.result = 99.0
 
 
 def test_calculation_result_equality() -> None:

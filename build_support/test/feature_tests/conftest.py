@@ -30,6 +30,7 @@ from build_support.ci_cd_vars.subproject_structure import (
     get_python_subproject,
 )
 from git import Head, Repo
+from test_utils.command_runner import FeatureTestCommandContext
 
 
 def remove_dir_and_all_contents(path: Path) -> None:
@@ -112,6 +113,22 @@ def make_command_prefix(make_command_prefix_without_tag_suffix: list[str]) -> li
     """
     tag_suffix = get_docker_tag_suffix()
     return [*make_command_prefix_without_tag_suffix, f"TAG_SUFFIX={tag_suffix}"]
+
+
+@pytest.fixture
+def command_context(
+    mock_project_root: Path,
+    make_command_prefix: list[str],
+    real_project_root_dir: Path,
+    request: SubRequest,
+) -> FeatureTestCommandContext:
+    """Bundle of paths and make prefix for running commands in feature tests."""
+    return FeatureTestCommandContext(
+        mock_project_root=mock_project_root,
+        make_command_prefix=make_command_prefix,
+        real_project_root_dir=real_project_root_dir,
+        test_name=request.node.name,
+    )
 
 
 @pytest.fixture(scope="session")

@@ -86,25 +86,20 @@ def pyproject_toml_data(project_version: str, project_name: str) -> TOMLDocument
     """The TOMLDocument that would be read from the pyproject toml."""
     doc = document()
     doc["project"] = table()
-    doc["project"]["name"] = project_name  # type: ignore[index]
-    doc["project"]["version"] = project_version  # type: ignore[index]
+    doc["project"]["name"] = project_name
+    doc["project"]["version"] = project_version
 
     doc["tool"] = table()
     tool = doc["tool"]
-    tool["coverage"] = table()  # type: ignore[index]
-    tool["coverage"]["run"] = table()  # type: ignore[index]
-    tool["coverage"]["run"]["branch"] = True  # type: ignore[index]
-    tool["coverage"]["run"]["parallel"] = True  # type: ignore[index]
-    tool["coverage"]["run"]["concurrency"] = [  # type: ignore[index]
-        "multiprocessing",
-        "thread",
-    ]
+    tool["coverage"] = table()
+    tool["coverage"]["run"] = table()
+    tool["coverage"]["run"]["branch"] = True
+    tool["coverage"]["run"]["parallel"] = True
+    tool["coverage"]["run"]["concurrency"] = ["multiprocessing", "thread"]
 
-    tool["coverage"]["report"] = table()  # type: ignore[index]
-    tool["coverage"]["report"]["fail_under"] = 100  # type: ignore[index]
-    tool["coverage"]["report"]["exclude_lines"] = [  # type: ignore[index]
-        "pragma: no cov"
-    ]
+    tool["coverage"]["report"] = table()
+    tool["coverage"]["report"]["fail_under"] = 100
+    tool["coverage"]["report"]["exclude_lines"] = ["pragma: no cov"]
 
     return doc
 

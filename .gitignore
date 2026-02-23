@@ -3,4 +3,5 @@
 .idea
 .coverage
 .claude
+.devcontainer
 *.pyc

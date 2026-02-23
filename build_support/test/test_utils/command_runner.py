@@ -1,12 +1,54 @@
 """Utility for running commands and saving logs during tests."""
 
 import logging
+from dataclasses import dataclass
 from pathlib import Path
 from subprocess import PIPE, Popen
 
 from build_support.ci_cd_vars.project_structure import get_feature_test_log_name
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class FeatureTestCommandContext:
+    """Bundles arguments needed to run a make command and save logs in feature tests."""
+
+    mock_project_root: Path
+    make_command_prefix: list[str]
+    real_project_root_dir: Path
+    test_name: str
+
+
+def run_command(
+    context: FeatureTestCommandContext,
+    args_suffix: list[str],
+    expect_failure: bool = False,
+    test_name_override: str | None = None,
+) -> tuple[int, str, str]:
+    """Runs a make-style command using context and saves stdout/stderr to a log file.
+
+    Args:
+        context: Bundled mock project root, make prefix, real project root, test name.
+        args_suffix: Extra arguments appended after context.make_command_prefix
+            (e.g. ["type_check_pypi"] or ["check_process"]).
+        expect_failure: If True, a non-zero return code will not trigger ERROR logging.
+        test_name_override: If set, used for the log file name instead of
+        context.test_name.
+
+    Returns:
+        tuple[int, str, str]: Return code, stdout, and stderr.
+    """
+    test_name = (
+        test_name_override if test_name_override is not None else context.test_name
+    )
+    return run_command_and_save_logs(
+        args=[*context.make_command_prefix, *args_suffix],
+        cwd=context.mock_project_root,
+        test_name=test_name,
+        real_project_root_dir=context.real_project_root_dir,
+        expect_failure=expect_failure,
+    )
 
 
 def run_command_and_save_logs(

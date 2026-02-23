@@ -70,9 +70,7 @@ def test_org_formatted_name_and_email(
     assert org.formatted_name_and_email() == "Someone Nice <someone@nice.com>"
 
 
-def test_org_as_pyproject_author(
-    project_settings_data_dict: dict[str, Any],
-) -> None:
+def test_org_as_pyproject_author(project_settings_data_dict: dict[str, Any]) -> None:
     project_setting = ProjectSettings.model_validate(project_settings_data_dict)
     org = project_setting.organization
     assert org.as_pyproject_author() == {

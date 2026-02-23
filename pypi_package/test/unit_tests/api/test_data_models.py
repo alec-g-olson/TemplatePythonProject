@@ -70,10 +70,7 @@ def test_calculator_input_rejects_extra_fields() -> None:
     """Extra fields are forbidden by VersionedModel's strict config."""
     with pytest.raises(ValidationError):
         CalculatorInput(
-            type_of_calc=CalculationType.ADD,
-            value1=1.0,
-            value2=2.0,
-            extra_field="bad",  # type: ignore[call-arg]
+            type_of_calc=CalculationType.ADD, value1=1.0, value2=2.0, extra_field="bad"
         )
 
 

@@ -34,9 +34,6 @@ line-ending = "auto"
 docstring-code-format = true
 docstring-code-line-length = "dynamic"
 
-[tool.ruff.lint.per-file-ignores]
-"process_and_style_enforcement/sphinx_conf/conf.py" = ["INP001"]
-
 [tool.ty.rules]
 all = "error"
 
@@ -75,7 +72,7 @@ dev = [
   "ruff==0.15.2",
   "sphinx>=9.1,<10",
   "sphinx-rtd-theme>=3.1,<4",
-  "ty>=0.0",
+  "ty==0.0.18",
   "types-requests>=2.32,<3",
 ]
 pulumi = [

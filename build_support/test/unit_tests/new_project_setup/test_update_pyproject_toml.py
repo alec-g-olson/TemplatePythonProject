@@ -33,14 +33,14 @@ def test_update_pyproject_toml(tmp_path: Path, real_project_root_dir: Path) -> N
     )
 
     expected_project = expected_data["project"]
-    expected_project["name"] = new_project_settings.name  # type: ignore[index]
-    expected_project["version"] = "0.0.0"  # type: ignore[index]
-    expected_project["license"] = new_project_settings.license  # type: ignore[index]
-    expected_project["authors"] = [  # type: ignore[index]
+    expected_project["name"] = new_project_settings.name
+    expected_project["version"] = "0.0.0"
+    expected_project["license"] = new_project_settings.license
+    expected_project["authors"] = [
         new_project_settings.organization.as_pyproject_author()
     ]
-    expected_hatch = expected_data["tool"]["hatch"]  # type: ignore[index]
-    expected_hatch["build"]["targets"]["wheel"]["packages"] = [  # type: ignore[index]
+    expected_hatch = expected_data["tool"]["hatch"]
+    expected_hatch["build"]["targets"]["wheel"]["packages"] = [
         f"pypi_package/src/{new_project_settings.name}"
     ]
 

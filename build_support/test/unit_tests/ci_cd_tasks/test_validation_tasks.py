@@ -1715,11 +1715,11 @@ def _assert_coverage_config_matches_expected(
     """
     actual = parse(actual_config_path.read_text())
     expected = parse(expected_config_path.read_text())
-    actual["tool"]["coverage"]["run"]["omit"] = sorted(  # type: ignore[index]
-        actual["tool"]["coverage"]["run"]["omit"]  # type: ignore[index, arg-type]
+    actual["tool"]["coverage"]["run"]["omit"] = sorted(
+        actual["tool"]["coverage"]["run"]["omit"]
     )
-    expected["tool"]["coverage"]["run"]["omit"] = sorted(  # type: ignore[index]
-        expected["tool"]["coverage"]["run"]["omit"]  # type: ignore[index, arg-type]
+    expected["tool"]["coverage"]["run"]["omit"] = sorted(
+        expected["tool"]["coverage"]["run"]["omit"]
     )
     assert actual == expected
 

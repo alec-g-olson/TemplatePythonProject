@@ -413,7 +413,7 @@ class SubprojectUnitTests(PerSubprojectTask):
                 TOMLDocument.
         """
         pyproject_data = get_pyproject_toml_data(project_root=self.docker_project_root)
-        return pyproject_data["tool"]["coverage"]  # type: ignore[index, return-value]
+        return pyproject_data["tool"]["coverage"]
 
     def build_omit_list(self, unit_test_info: UnitTestInfo) -> list[str]:
         """Builds the list of omit patterns for a coverage config file.
@@ -474,11 +474,9 @@ class SubprojectUnitTests(PerSubprojectTask):
         coverage_config = deepcopy(coverage_settings)
         if "run" not in coverage_config:
             coverage_config["run"] = table()
-        existing_omit = coverage_config["run"].get(  # type: ignore[union-attr]
-            "omit", []
-        )
+        existing_omit = coverage_config["run"].get("omit", [])
         merged_omit = list(dict.fromkeys(list(existing_omit) + new_omit_list))
-        coverage_config["run"]["omit"] = merged_omit  # type: ignore[index]
+        coverage_config["run"]["omit"] = merged_omit
 
         # Write TOML file
         config_doc = document()
