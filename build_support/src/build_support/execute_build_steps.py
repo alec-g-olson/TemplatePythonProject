@@ -2,8 +2,13 @@
 
 Attributes:
     | CLI_ARG_TO_TASK: A dictionary of the CLI arg to the corresponding task to run.
+    | TRACE_LOG_LEVEL: Numeric log level (5) for most verbose build output.
+    | logger: Module-level logger for build failure and diagnostics.
 """
 
+import logging
+import os
+import sys
 from argparse import ArgumentParser, Namespace
 from dataclasses import dataclass
 from pathlib import Path
@@ -36,7 +41,9 @@ from build_support.ci_cd_vars.build_paths import get_local_info_yaml
 from build_support.ci_cd_vars.subproject_structure import SubprojectContext
 from build_support.dag_engine import run_tasks
 from build_support.new_project_setup.setup_new_project import MakeProjectFromTemplate
-from build_support.process_runner import ProcessVerbosity, concatenate_args, run_process
+from build_support.process_runner import concatenate_args, run_process
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -152,8 +159,7 @@ def fix_permissions(local_user_uid: int, local_user_gid: int) -> None:
                     if path.name not in [".git", "test_scratch_folder"]
                 ],
             ]
-        ),
-        verbosity=ProcessVerbosity.SILENT,
+        )
     )
 
 
@@ -189,6 +195,27 @@ def parse_args(args: list[str] | None = None) -> Namespace:
     return parser.parse_args(args=args)
 
 
+# Custom level for most verbose logging (steps + commands + stdout/stderr).
+# Must match the value used in process_runner for TRACE.
+TRACE_LOG_LEVEL = 5
+
+
+def _configure_build_logging() -> None:
+    """Configure build logging from LOG_LEVEL.
+
+    Default is INFO (steps only). DEBUG adds commands. TRACE adds stdout/stderr.
+    Invalid or unset values fall back to INFO.
+    """
+    logging.addLevelName(TRACE_LOG_LEVEL, "TRACE")
+    level_name = os.environ.get("LOG_LEVEL", "INFO").upper()
+    level = getattr(logging, level_name, None)
+    if not isinstance(level, int):
+        level = TRACE_LOG_LEVEL if level_name == "TRACE" else logging.INFO
+    logging.basicConfig(
+        level=level, format="%(message)s", stream=sys.stdout, force=True
+    )
+
+
 def run_main(args: Namespace) -> None:
     """Runs the logic for the execute_build_steps main.
 
@@ -198,6 +225,7 @@ def run_main(args: Namespace) -> None:
     Returns:
         None
     """
+    _configure_build_logging()
     local_info_yaml = get_local_info_yaml(project_root=args.docker_project_root)
     basic_task_info = BasicTaskInfo.from_yaml(local_info_yaml.read_text())
     requested_tasks = [
@@ -208,8 +236,11 @@ def run_main(args: Namespace) -> None:
         run_tasks(
             tasks=requested_tasks, project_root=basic_task_info.docker_project_root
         )
-    except Exception as e:  # noqa: BLE001
-        print(e)  # noqa: T201
+    except Exception:
+        # logger.exception() logs at ERROR and automatically includes the exception
+        # message and full traceback (equivalent to exc_info=True).
+        logger.exception("Build failed")
+        raise
     finally:
         fix_permissions(
             local_user_uid=basic_task_info.local_uid,

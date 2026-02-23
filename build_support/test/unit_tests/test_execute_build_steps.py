@@ -1,3 +1,4 @@
+import logging
 from argparse import Namespace
 from pathlib import Path
 from typing import cast, override
@@ -34,13 +35,27 @@ from build_support.ci_cd_vars.project_structure import maybe_build_dir
 from build_support.ci_cd_vars.subproject_structure import SubprojectContext
 from build_support.execute_build_steps import (
     CLI_ARG_TO_TASK,
+    TRACE_LOG_LEVEL,
     CliTaskInfo,
+    _configure_build_logging,
     fix_permissions,
     parse_args,
     run_main,
 )
 from build_support.new_project_setup.setup_new_project import MakeProjectFromTemplate
-from build_support.process_runner import ProcessVerbosity, concatenate_args
+from build_support.process_runner import concatenate_args
+
+
+def test_configure_build_logging_accepts_trace() -> None:
+    with patch.dict("os.environ", {"LOG_LEVEL": "TRACE"}, clear=False):
+        _configure_build_logging()
+    assert logging.root.level == TRACE_LOG_LEVEL
+
+
+def test_configure_build_logging_invalid_level_falls_back_to_info() -> None:
+    with patch.dict("os.environ", {"LOG_LEVEL": "INVALID"}, clear=False):
+        _configure_build_logging()
+    assert logging.root.level == logging.INFO
 
 
 def test_constants_not_changed_by_accident() -> None:
@@ -104,9 +119,7 @@ def test_fix_permissions(real_project_root_dir: Path) -> None:
             ]
         )
         fix_permissions(local_user_uid=1337, local_user_gid=42)
-        run_process_mock.assert_called_once_with(
-            args=fix_permissions_args, verbosity=ProcessVerbosity.SILENT
-        )
+        run_process_mock.assert_called_once_with(args=fix_permissions_args)
 
 
 @pytest.fixture(params=[Path("usr/dev"), Path("user/dev")])
@@ -270,14 +283,15 @@ def test_run_main_exception(cli_arg_combo: BasicTaskInfo) -> None:
     )
     with (
         patch("build_support.execute_build_steps.run_tasks") as mock_run_tasks,
-        patch("builtins.print") as mock_print,
+        patch("build_support.execute_build_steps.logger") as mock_logger,
         patch(
             "build_support.execute_build_steps.fix_permissions"
         ) as mock_fix_permissions,
     ):
         error_to_raise = RuntimeError("error_message")
         mock_run_tasks.side_effect = error_to_raise
-        run_main(args)
+        with pytest.raises(RuntimeError, match="error_message"):
+            run_main(args)
         requested_tasks = [
             CLI_ARG_TO_TASK[arg].get_task_node(basic_task_info=cli_arg_combo)
             for arg in args.build_tasks
@@ -285,7 +299,7 @@ def test_run_main_exception(cli_arg_combo: BasicTaskInfo) -> None:
         mock_run_tasks.assert_called_once_with(
             tasks=requested_tasks, project_root=cli_arg_combo.docker_project_root
         )
-        mock_print.assert_called_once_with(error_to_raise)
+        mock_logger.exception.assert_called_once_with("Build failed")
         mock_fix_permissions.assert_called_once_with(
             local_user_uid=cli_arg_combo.local_uid,
             local_user_gid=cli_arg_combo.local_gid,
