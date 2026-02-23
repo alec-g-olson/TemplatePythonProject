@@ -68,7 +68,7 @@ packages = [{include = "template_python_project", from="pypi_package/src"}]
 description = "A project that can be used as a template to provide some CI/CD out of the box."
 readme = "README.md"
 license = { text = "unlicense" }
-authors = ["Alexander Olson <alec.g.olson@gmail.com>"]
+authors = [{ name = "Alexander Olson", email = "alec.g.olson@gmail.com" }]
 repository = "https://github.com/alec-g-olson/TemplatePythonProject"
 # If python version changed here change:
 # - base image in Dockerfile

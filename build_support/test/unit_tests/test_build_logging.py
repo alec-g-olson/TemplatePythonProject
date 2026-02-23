@@ -3,7 +3,11 @@
 import logging
 from unittest.mock import patch
 
-from build_support.build_logging import TRACE, _configure_build_logging, register_trace_level
+from build_support.build_logging import (
+    TRACE,
+    _configure_build_logging,
+    register_trace_level,
+)
 
 # Standard numeric level for TRACE (below logging.DEBUG).
 _TRACE_LEVEL_VALUE = 5
