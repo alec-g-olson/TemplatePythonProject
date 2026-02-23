@@ -31,7 +31,7 @@ ALL_RIGHTS_RESERVED_TEMPLATE = (
     "THE SOFTWARE.\n"
 )
 
-LICENSE_TEMPLATES_DIR = Path(__file__).parent / "license_templates"
+LICENSE_TEMPLATES_DIR = Path(__file__).parent / "license_templates_resources"
 
 
 def get_licenses_with_templates() -> list[str]:

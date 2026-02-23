@@ -112,7 +112,10 @@ def parse_package_info(imported_package: ModuleType) -> PackageInfo:
                 msg = f"{imported_module.__name__} is not a module."
                 raise ValueError(msg)
             modules[module_name] = imported_module
-        if package_file_or_folder.is_dir():
+        if (
+            package_file_or_folder.is_dir()
+            and package_file_or_folder.joinpath("__init__.py").exists()
+        ):
             sub_packages.append(file_or_folder_name)
     if imported_package.__doc__ is None:  # pragma: no cov
         imported_package.__doc__ = ""
@@ -660,9 +663,7 @@ def check_section_context_has_single_element_with_pattern(
     match = enforced_element_regex.match(element_docs[0])
     if match is None:
         return False
-    return (
-        match_validator is None or match_validator(match)
-    )
+    return match_validator is None or match_validator(match)
 
 
 def check_for_section_with_single_element_in_contexts(
@@ -924,9 +925,7 @@ def test_all_function_docstrings(all_function_info: list[FunctionInfo]) -> None:
     ],
 )
 def test_returns_regex_and_validator(
-    returns_line: str,
-    regex_should_match: bool,
-    validator_should_pass: bool,
+    returns_line: str, regex_should_match: bool, validator_should_pass: bool
 ) -> None:
     """Returns regex and validator accept valid Returns lines only."""
     match = GOOGLE_RESULT_REGEX.match(returns_line)
