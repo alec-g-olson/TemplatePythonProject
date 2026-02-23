@@ -12,6 +12,25 @@ Everything runs in Docker with Python dependencies managed by Poetry. Running Po
 commands outside the intended context can leave the environment in a bad state. Follow
 the instructions below when changing dependencies.
 
+Branch-Specific Docker Image Tags
+---------------------------------
+
+Docker image tags are branch-scoped to prevent collisions when multiple ticket branches
+run on the same machine.
+
+- On :code:`main`, image tags are unsuffixed (for example
+  :code:`template_python_project:build`, :code:`template_python_project:dev`,
+  :code:`template_python_project:prod`).
+- On non-main branches, image tags are suffixed with the branch ticket id (for example
+  branch :code:`107-add-ticket-id-to-docker-image-tag` uses
+  :code:`template_python_project:build-107`, :code:`template_python_project:dev-107`,
+  :code:`template_python_project:prod-107`).
+- The Makefile computes this via :code:`TAG_SUFFIX`, and standard :code:`make`
+  commands use the computed suffix consistently.
+
+If you run Docker commands manually, include the same suffix as your current branch or
+pass :code:`TAG_SUFFIX` explicitly so you target the correct local images.
+
 Standardized Developer Commands
 -------------------------------
 

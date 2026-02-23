@@ -40,9 +40,7 @@ def _check_pyproject_toml(
     )
 
 
-def _check_readme(
-    readme_path: Path, old_project_name: str | None
-) -> None:
+def _check_readme(readme_path: Path, old_project_name: str | None) -> None:
     """Verifies README does not contain old project name after a rename.
 
     Does not require the new project name to appear in the README; the template

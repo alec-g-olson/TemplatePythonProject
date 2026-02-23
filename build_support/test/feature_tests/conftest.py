@@ -10,10 +10,13 @@ from pathlib import Path
 
 import pytest
 import yaml
+from _pytest.fixtures import SubRequest
 from git import Head, Repo
 
 from build_support.ci_cd_vars.build_paths import get_local_info_yaml
+from build_support.ci_cd_vars.docker_vars import get_docker_tag_suffix
 from build_support.ci_cd_vars.git_status_vars import (
+    get_ticket_id,
     monkeypatch_git_python_execute_kwargs,
 )
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
@@ -45,15 +48,18 @@ def remove_dir_and_all_contents(path: Path) -> None:
 
 
 @pytest.fixture
-def make_command_prefix(
+def make_command_prefix_without_tag_suffix(
     mock_project_root: Path, real_project_root_dir: Path, mock_remote_git_folder: Path
 ) -> list[str]:
-    """Build the ``make`` command prefix for running inner builds.
+    """Build the ``make`` command prefix without pinning ``TAG_SUFFIX``.
 
-    Constructs a ``make`` invocation that targets the mock project
-    instead of the real project, mounts the mock remote git repo,
-    and enables ``--ci-cd-feature-test-mode`` to skip Docker image
-    rebuilds inside the inner build.
+    Constructs an ``env -u TAG_SUFFIX make`` invocation that targets the mock
+    project, mounts the mock remote git repo, and enables
+    ``--ci-cd-feature-test-mode``. This explicitly unsets inherited
+    ``TAG_SUFFIX`` so the Makefile computes it from the mock project's
+    ``git/HEAD``. Use for tests that need the Makefile to derive the tag
+    suffix from the mock project's branch (e.g. cross-ticket isolation tests
+    that build new images).
 
     Args:
         mock_project_root (Path): Root of the mock project.
@@ -61,7 +67,8 @@ def make_command_prefix(
         mock_remote_git_folder (Path): Path to the mock bare repo.
 
     Returns:
-        list[str]: Command tokens for ``make`` with overrides.
+        list[str]: Command tokens for ``make`` with overrides but without
+        a pinned ``TAG_SUFFIX``.
     """
     docker_project_root = real_project_root_dir
     test_project_relative_root = mock_project_root.relative_to(docker_project_root)
@@ -76,11 +83,36 @@ def make_command_prefix(
         remote_repo_relative_root
     )
     return [
+        "env",
+        "-u",
+        "TAG_SUFFIX",
         "make",
         f"NON_DOCKER_ROOT={test_non_docker_root}",
         f"GIT_MOUNT=-v {remote_repo_non_docker_root}:{mock_remote_git_folder}",
         "CI_CD_FEATURE_TEST_MODE_FLAG=--ci-cd-feature-test-mode",
     ]
+
+
+@pytest.fixture
+def make_command_prefix(make_command_prefix_without_tag_suffix: list[str]) -> list[str]:
+    """Build the ``make`` command prefix for running inner builds.
+
+    Constructs a ``make`` invocation that targets the mock project
+    instead of the real project, mounts the mock remote git repo,
+    and enables ``--ci-cd-feature-test-mode`` to skip Docker image
+    rebuilds inside the inner build. Pins ``TAG_SUFFIX`` to the
+    real project's branch so inner make uses the current branch's
+    images (e.g. ``build-107`` on branch 107).
+
+    Args:
+        make_command_prefix_without_tag_suffix (list[str]): Base make
+            command tokens (ensures test image tags exist).
+
+    Returns:
+        list[str]: Command tokens for ``make`` with overrides.
+    """
+    tag_suffix = get_docker_tag_suffix()
+    return [*make_command_prefix_without_tag_suffix, f"TAG_SUFFIX={tag_suffix}"]
 
 
 @pytest.fixture(scope="session")
@@ -220,6 +252,41 @@ def mock_lightweight_project(
 
 
 @pytest.fixture
+def feature_test_branch_name(current_ticket_id: str) -> str:
+    """Build the default branch name used by feature tests.
+
+    Args:
+        current_ticket_id (str): Branch ticket id for feature tests.
+
+    Returns:
+        str: A non-main branch name that resolves docker tags to ``-<ticket_id>``.
+    """
+    return f"{current_ticket_id}-feature-tests"
+
+
+@pytest.fixture
+def mock_lightweight_project_on_feature_branch(
+    mock_remote_git_repo: Repo,
+    mock_lightweight_project: Repo,
+    feature_test_branch_name: str,
+) -> Head:
+    """Check out the mock project onto the default feature-test branch.
+
+    Args:
+        mock_remote_git_repo (Repo): The mock bare remote repo.
+        mock_lightweight_project (Repo): The mock project repo.
+        feature_test_branch_name (str): The branch name to create and check out.
+
+    Returns:
+        Head: The active branch after checkout.
+    """
+    mock_remote_git_repo.create_head(feature_test_branch_name)
+    mock_lightweight_project.remote().fetch()
+    mock_lightweight_project.git.checkout(feature_test_branch_name)
+    return mock_lightweight_project.active_branch
+
+
+@pytest.fixture
 def mock_lightweight_project_with_single_feature_test(
     mock_lightweight_project: Repo, mock_project_root: Path
 ) -> Repo:
@@ -355,23 +422,27 @@ def test_something() -> None:
 
 
 @pytest.fixture
-def current_ticket_id() -> str:
-    """Return a fixed ticket id for mock branch creation.
+def current_ticket_id(real_project_root_dir: Path) -> str:
+    """Build a test ticket id prefixed by the current branch context.
+
+    Args:
+        real_project_root_dir (Path): Root of the real project.
 
     Returns:
-        str: The ticket id ``TEST001``.
+        str: ``f"{ticket_id}TEST"`` on non-main branches, otherwise ``"TEST"``.
     """
-    return "TEST001"
+    tid = get_ticket_id(project_root=real_project_root_dir)
+    return f"{tid}TEST" if tid else "TEST"
 
 
 @pytest.fixture(
     params=["", "branch-description"], ids=["id-only-branch", "described-branch"]
 )
-def current_branch_name(request: pytest.FixtureRequest, current_ticket_id: str) -> str:
+def current_branch_name(request: SubRequest, current_ticket_id: str) -> str:
     """Build a branch name from the current ticket id.
 
     Args:
-        request (pytest.FixtureRequest): Access to the requested fixture variant.
+        request (SubRequest): Access to the requested fixture variant.
         current_ticket_id (str): The ticket id to embed in the branch name.
 
     Returns:

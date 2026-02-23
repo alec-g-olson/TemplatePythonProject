@@ -1,11 +1,5 @@
-"""Holds all tasks that setup environments during the build process.
+"""Holds all tasks that setup environments during the build process."""
 
-Attributes:
-    | GIT_BRANCH_NAME_REGEX:  The regex we use to extract the ticket ID from branch
-        names.
-"""
-
-import re
 from typing import override
 
 from pydantic import BaseModel, Field
@@ -15,11 +9,14 @@ from build_support.ci_cd_tasks.task_node import TaskNode
 from build_support.ci_cd_vars.build_paths import get_git_info_yaml
 from build_support.ci_cd_vars.docker_vars import DockerTarget, get_docker_build_command
 from build_support.ci_cd_vars.git_status_vars import (
+    GIT_BRANCH_NAME_REGEX,
+    PRIMARY_BRANCH_NAME,
     dockerfile_was_modified,
     get_current_branch_name,
     get_local_tags,
     get_modified_files,
     get_modified_subprojects,
+    get_ticket_id,
     git_fetch,
     poetry_lock_file_was_modified,
 )
@@ -166,14 +163,12 @@ class Clean(TaskNode):
         )
 
 
-GIT_BRANCH_NAME_REGEX = r"^([^-]+)-?.*$"
-
-
 class GitInfo(BaseModel):
     """An object containing the current git information."""
 
     branch: str = Field(pattern=GIT_BRANCH_NAME_REGEX)
     tags: list[str]
+    ticket_id: str | None = None
     modified_subprojects: list[SubprojectContext] = Field(default_factory=list)
     dockerfile_modified: bool
     poetry_lock_file_modified: bool
@@ -185,22 +180,7 @@ class GitInfo(BaseModel):
         Returns:
             str: The primary branch name for this repo.
         """
-        return "main"
-
-    def get_ticket_id(self) -> str | None:
-        """Extracts the ticket id from the branch name.
-
-        Returns:
-            Optional[str]: The ticket id associated with the branch, or ``None``
-                when on the primary branch.
-        """
-        match = re.search(pattern=GIT_BRANCH_NAME_REGEX, string=self.branch)
-        ticket_id = match.group(1) if match is not None else None
-        return (
-            ticket_id
-            if ticket_id is not None and ticket_id != self.get_primary_branch_name()
-            else None
-        )
+        return PRIMARY_BRANCH_NAME
 
     @staticmethod
     def from_yaml(yaml_str: str) -> "GitInfo":
@@ -253,6 +233,7 @@ class GetGitInfo(TaskNode):
             GitInfo(
                 branch=get_current_branch_name(project_root=self.docker_project_root),
                 tags=get_local_tags(project_root=self.docker_project_root),
+                ticket_id=get_ticket_id(project_root=self.docker_project_root),
                 modified_subprojects=get_modified_subprojects(
                     modified_files=modified_files, project_root=self.docker_project_root
                 ),

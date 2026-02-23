@@ -7,7 +7,7 @@ from git import Repo
 
 from build_support.ci_cd_tasks.env_setup_tasks import GitInfo
 from build_support.ci_cd_vars.build_paths import get_git_info_yaml
-from build_support.ci_cd_vars.git_status_vars import MAIN_BRANCH_NAME
+from build_support.ci_cd_vars.git_status_vars import PRIMARY_BRANCH_NAME
 from build_support.ci_cd_vars.project_structure import (
     get_build_dir,
     get_test_resource_dir,
@@ -98,7 +98,7 @@ def mock_remote_git_folder(tmp_path: Path) -> Path:
 @pytest.fixture
 def mock_remote_git_repo(mock_remote_git_folder: Path) -> Repo:
     repo = Repo.init(
-        path=mock_remote_git_folder, bare=True, initial_branch=MAIN_BRANCH_NAME
+        path=mock_remote_git_folder, bare=True, initial_branch=PRIMARY_BRANCH_NAME
     )
     repo.index.commit("initial remote commit")
     return repo

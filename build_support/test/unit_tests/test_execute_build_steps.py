@@ -56,6 +56,10 @@ def test_constants_not_changed_by_accident() -> None:
             task_node=ValidateStaticTypeChecking,
             subproject_context=SubprojectContext.BUILD_SUPPORT,
         ),
+        "type_check_pypi": CliTaskInfo(
+            task_node=ValidateStaticTypeChecking,
+            subproject_context=SubprojectContext.PYPI,
+        ),
         "type_checks": CliTaskInfo(task_node=AllSubprojectStaticTypeChecking),
         "security_checks": CliTaskInfo(task_node=AllSubprojectSecurityChecks),
         "check_process": CliTaskInfo(task_node=EnforceProcess),

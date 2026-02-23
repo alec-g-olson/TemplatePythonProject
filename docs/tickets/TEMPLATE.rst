@@ -45,9 +45,13 @@ Provide a list of end-user facing acceptance tests in plain language that can be
 implemented to validate the requirements given.
 If possible provide concrete example cases.
 
-Notes
------
+Developer Notes
+---------------
 Anything useful for completing the work quickly:
 - Links, screenshots, prior tickets
 - Edge cases to watch
 - Known tradeoffs
+
+If providing implementation details, keep these notes extremely high level so that
+an agent reading them in the future isn't bound to an architecture that only made
+sense when you wrote this ticket.
