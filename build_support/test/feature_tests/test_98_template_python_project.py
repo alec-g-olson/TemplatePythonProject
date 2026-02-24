@@ -8,9 +8,11 @@ checker once, and parses the output to ensure every rule is flagged.
 
 import re
 from pathlib import Path
+from subprocess import run
 from typing import Any, cast
 
 import pytest
+from build_support.ci_cd_vars.docker_vars import DockerTarget, get_docker_image_name
 from build_support.ci_cd_vars.project_setting_vars import get_pyproject_toml_data
 from build_support.ci_cd_vars.subproject_structure import (
     SubprojectContext,
@@ -40,6 +42,63 @@ def test_pyproject_has_ty_config_and_no_mypy(real_project_root_dir: Path) -> Non
     assert "rules" in ty_config
     assert ty_config["rules"].get("all") == "error"
     assert "mypy" not in tool
+
+
+@pytest.mark.usefixtures("mock_lightweight_project_with_unit_tests_and_feature_tests")
+def test_dev_container_has_ty_not_mypy(
+    mock_project_root: Path, make_command_prefix: list[str], real_project_root_dir: Path
+) -> None:
+    """Verify mypy is not available and ty is available in the dev container.
+
+    Runs ``mypy --version`` and ``ty version`` in the development container.
+    Mypy must fail with a command-not-found style error; ty must succeed.
+
+    Args:
+        mock_project_root (Path): Root of the mock project (dev image context).
+        make_command_prefix (list[str]): Make command prefix for running setup_dev_env.
+        real_project_root_dir (Path): Root of the real project for image name lookup.
+    """
+    run(
+        [*make_command_prefix, "setup_dev_env"],
+        cwd=mock_project_root,
+        check=True,
+        capture_output=True,
+    )
+    image = get_docker_image_name(
+        project_root=real_project_root_dir, target_image=DockerTarget.DEV
+    )
+    mount = f"{mock_project_root.resolve()}:/usr/dev"
+    docker_run = ["docker", "run", "--rm", "-v", mount, "-w", "/usr/dev", image]
+
+    mypy_result = run(
+        [*docker_run, "mypy", "--version"],
+        check=False,
+        capture_output=True,
+        text=True,
+        cwd=mock_project_root,
+    )
+    assert mypy_result.returncode != 0, (
+        "mypy should not be available in the dev container; "
+        f"stderr: {mypy_result.stderr!r}"
+    )
+    assert (
+        "not found" in mypy_result.stderr.lower()
+        or "no such file" in mypy_result.stderr.lower()
+    ), (
+        "Expected command-not-found style error from mypy; "
+        f"stderr: {mypy_result.stderr!r}"
+    )
+
+    ty_result = run(
+        [*docker_run, "ty", "version"],
+        check=False,
+        capture_output=True,
+        text=True,
+        cwd=mock_project_root,
+    )
+    assert ty_result.returncode == 0, (
+        f"ty must be available in the dev container; stderr: {ty_result.stderr!r}"
+    )
 
 
 def _write_pypi_test_file(
@@ -987,9 +1046,7 @@ def test_all_ty_rules_flagged_in_type_check_output(
         file_contents = entry[2]
         test_dir.joinpath(file_name).write_text(file_contents)
         if len(entry) == entry_with_extras_len:
-            entry_with_extras = cast(
-                tuple[str, str, str, list[tuple[str, str]]], entry
-            )
+            entry_with_extras = cast(tuple[str, str, str, list[tuple[str, str]]], entry)
             for extra_name, extra_content in entry_with_extras[3]:
                 test_dir.joinpath(extra_name).write_text(extra_content)
     return_code, stdout, stderr = run_command(

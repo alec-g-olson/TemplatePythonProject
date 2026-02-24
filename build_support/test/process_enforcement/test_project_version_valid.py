@@ -22,12 +22,4 @@ def test_current_version_valid(current_version: str) -> None:
 def test_current_version_has_not_been_used(
     current_version: str, real_git_info: GitInfo
 ) -> None:
-    """Current pyproject version should not already be tagged (avoid re-release).
-
-    If the version is already tagged (e.g. post-release branch), the check is
-    relaxed so the pipeline can pass; the preferred workflow is to bump
-    version after releasing.
-    """
-    if current_version not in real_git_info.tags:
-        return  # pragma: no cov - only hit when version not yet released
-    # Version already tagged: allow so post-release branches and CI pass
+    assert current_version not in real_git_info.tags
