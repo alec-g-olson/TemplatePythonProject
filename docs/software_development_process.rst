@@ -510,16 +510,14 @@ so that all stable rules are run, and unstable rules are skipped.
 
 When running on test code we also turn off pydocstyle (D) and flake8-boolean-trap (FBT)
 rules, because they are onerous to enforce and provide very little benefit in test code.
-Static Type Checking - MyPy
-'''''''''''''''''''''''''''
+Static Type Checking - ty
+'''''''''''''''''''''''''
 
-We run :code:`mypy` on every package to ensure that typing is enforced.  The version
-and configuration live in :code:`pyproject.toml` under :code:`[tool.mypy]`.  We use the
-Pydantic plugin and enable a strict set of checks: disallow untyped defs and untyped
-calls, warn on redundant casts and return of :code:`Any`, disallow unimported
-:code:`Any`, and enable error codes such as redundant-self, possibly-undefined,
-truthy-bool, explicit-override, and others.  Any use of :code:`type: ignore` must be
-explained to the satisfaction of the pull request reviewer.
+We run :code:`ty check` on every package to ensure that typing is enforced.  The
+configuration lives in :code:`pyproject.toml` under :code:`[tool.ty.rules]` with
+:code:`all = "error"`, so every enabled ty check is enforced at error severity. Any
+use of :code:`type: ignore` must be explained to the satisfaction of the pull request
+reviewer.
 
 Bandit Security Tests
 '''''''''''''''''''''

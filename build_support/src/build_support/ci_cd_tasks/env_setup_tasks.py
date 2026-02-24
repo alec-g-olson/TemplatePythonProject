@@ -152,15 +152,18 @@ class Clean(TaskNode):
                 get_feature_test_scratch_folder(project_root=self.docker_project_root),
             ]
         )
-        run_process(
-            args=["rm", "-rf", self.docker_project_root.joinpath(".mypy_cache")]
-        )
+        run_process(args=["rm", "-rf", self.docker_project_root.joinpath(".ty_cache")])
         run_process(
             args=["rm", "-rf", self.docker_project_root.joinpath(".pytest_cache")]
         )
         run_process(
             args=["rm", "-rf", self.docker_project_root.joinpath(".ruff_cache")]
         )
+        run_process(
+            args=["rm", "-rf", str(self.docker_project_root.joinpath(".coverage"))]
+        )
+        for path in self.docker_project_root.glob(".coverage.*"):
+            run_process(args=["rm", "-rf", str(path)])
 
 
 class GitInfo(BaseModel):

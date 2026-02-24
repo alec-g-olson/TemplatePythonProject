@@ -190,6 +190,9 @@ setup_prod_env: setup_build_env
 setup_pulumi_env: setup_build_env
 	$(EXECUTE_BUILD_STEPS_COMMAND) setup_pulumi_env
 
+# Suppress initial docker build output unless LOG_LEVEL is TRACE
+DOCKER_BUILD_QUIET = $(if $(filter TRACE,$(LOG_LEVEL)), , > /dev/null 2>&1)
+
 .PHONY: setup_build_env
 setup_build_env:
 ifeq ($(CI_CD_FEATURE_TEST_MODE_FLAG), )
@@ -202,7 +205,7 @@ ifeq ($(CI_CD_FEATURE_TEST_MODE_FLAG), )
 -f $(DOCKERFILE) \
 --target build \
 --build-arg BUILDKIT_INLINE_CACHE=1 \
--t $(DOCKER_BUILD_IMAGE) $(MAKEFILE_DIR)
+-t $(DOCKER_BUILD_IMAGE) $(MAKEFILE_DIR)$(DOCKER_BUILD_QUIET)
 else
 	echo "Skipping building build docker image in CI/CD mode."
 endif

@@ -17,7 +17,7 @@ from build_support.ci_cd_vars.subproject_structure import (
     get_all_python_subprojects_with_src,
 )
 
-type ClassOrStaticMethod = classmethod | staticmethod  # type: ignore[type-arg]
+type ClassOrStaticMethod = classmethod | staticmethod
 type ImportedElement = ModuleType | FunctionType | ClassOrStaticMethod | type[Any]
 
 
@@ -67,7 +67,7 @@ def package_to_test(request: SubRequest) -> str:
     context_with_src = request.param.subproject_context
     if context_with_src == SubprojectContext.PYPI:
         return get_project_name(project_root=PROJECT_ROOT)
-    return context_with_src.value  # type: ignore[no-any-return]
+    return context_with_src.value
 
 
 def import_element(

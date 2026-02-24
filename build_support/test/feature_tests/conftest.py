@@ -30,6 +30,7 @@ from build_support.ci_cd_vars.subproject_structure import (
     get_python_subproject,
 )
 from git import Head, Repo
+from test_utils.command_runner import FeatureTestCommandContext
 
 
 def remove_dir_and_all_contents(path: Path) -> None:
@@ -112,6 +113,27 @@ def make_command_prefix(make_command_prefix_without_tag_suffix: list[str]) -> li
     """
     tag_suffix = get_docker_tag_suffix()
     return [*make_command_prefix_without_tag_suffix, f"TAG_SUFFIX={tag_suffix}"]
+
+
+@pytest.fixture
+def default_command_context(
+    mock_project_root: Path,
+    make_command_prefix: list[str],
+    real_project_root_dir: Path,
+    request: SubRequest,
+) -> FeatureTestCommandContext:
+    """Default feature test context for run_command_and_save_logs.
+
+    Tests call run_command_and_save_logs(context=..., command_args=...). Copy and
+    override fields when needed (e.g. expect_failure, log_name, args_prefix).
+    """
+    return FeatureTestCommandContext(
+        args_prefix=make_command_prefix,
+        mock_project_root=mock_project_root,
+        real_project_root_dir=real_project_root_dir,
+        test_name=request.node.name,
+        log_name=request.node.name,
+    )
 
 
 @pytest.fixture(scope="session")
@@ -347,7 +369,9 @@ def mock_lightweight_project_with_unit_tests_and_feature_tests(
         Repo: The updated mock project repository.
     """
     for subproject in [
-        get_python_subproject(SubprojectContext.PYPI, mock_project_root)
+        get_python_subproject(
+            subproject_context=SubprojectContext.PYPI, project_root=mock_project_root
+        )
     ]:
         subproject_pkg_dir = subproject.get_python_package_dir()
         subproject_pkg_init_file = subproject_pkg_dir.joinpath("__init__.py")

@@ -4,7 +4,7 @@ from build_support.ci_cd_vars.project_structure import (
     get_build_dir,
     get_dockerfile,
     get_docs_dir,
-    get_feature_test_log_name,
+    get_feature_test_log_file,
     get_feature_test_scratch_folder,
     get_license_file,
     get_new_project_settings,
@@ -86,14 +86,14 @@ def test_get_readme(mock_project_root: Path) -> None:
     )
 
 
-def test_get_feature_test_log_name(mock_project_root: Path) -> None:
-    test_name = "test_something[param1::param2]"
+def test_get_feature_test_log_file(mock_project_root: Path) -> None:
+    log_name = "test_something[param1::param2]"
     expected_log_path = get_feature_test_scratch_folder(
         project_root=mock_project_root
     ).joinpath("test_logs", "test_something_param1_param2.log")
     assert not expected_log_path.parent.exists()
-    result = get_feature_test_log_name(
-        project_root=mock_project_root, test_name=test_name
+    result = get_feature_test_log_file(
+        project_root=mock_project_root, log_name=log_name
     )
     assert result == expected_log_path
     assert expected_log_path.parent.exists()

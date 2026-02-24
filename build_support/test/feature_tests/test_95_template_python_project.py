@@ -4,26 +4,24 @@ Three levels: INFO = steps only; DEBUG = steps + commands; TRACE = steps + comma
 + task stdout/stderr. Failures always log command, code, stdout, and stderr at ERROR.
 """
 
-from pathlib import Path
-
 import pytest
 from build_support.ci_cd_vars.subproject_structure import (
     SubprojectContext,
     get_python_subproject,
 )
-from test_utils.command_runner import run_command_and_save_logs
+from test_utils.command_runner import (
+    FeatureTestCommandContext,
+    run_command_and_save_logs,
+)
 
 
 @pytest.mark.usefixtures("mock_lightweight_project")
 def test_default_log_level_shows_only_workflow(
-    mock_project_root: Path, make_command_prefix: list[str], real_project_root_dir: Path
+    default_command_context: FeatureTestCommandContext,
 ) -> None:
     """At default (INFO) level only workflow messages appear; no task output."""
     return_code, stdout, stderr = run_command_and_save_logs(
-        args=[*make_command_prefix, "format"],
-        cwd=mock_project_root,
-        test_name="test_default_log_level_shows_only_workflow",
-        real_project_root_dir=real_project_root_dir,
+        context=default_command_context, command_args=["format"]
     )
     combined = stdout + stderr
     assert return_code == 0
@@ -35,14 +33,11 @@ def test_default_log_level_shows_only_workflow(
 
 @pytest.mark.usefixtures("mock_lightweight_project")
 def test_trace_log_level_shows_task_output(
-    mock_project_root: Path, make_command_prefix: list[str], real_project_root_dir: Path
+    default_command_context: FeatureTestCommandContext,
 ) -> None:
     """At LOG_LEVEL=TRACE, task stdout/stderr (e.g. formatter output) is present."""
     return_code, stdout, stderr = run_command_and_save_logs(
-        args=[*make_command_prefix, "LOG_LEVEL=TRACE", "format"],
-        cwd=mock_project_root,
-        test_name="test_trace_log_level_shows_task_output",
-        real_project_root_dir=real_project_root_dir,
+        context=default_command_context, command_args=["LOG_LEVEL=TRACE", "format"]
     )
     combined = stdout + stderr
     assert return_code == 0
@@ -56,14 +51,11 @@ def test_trace_log_level_shows_task_output(
 
 @pytest.mark.usefixtures("mock_lightweight_project")
 def test_debug_log_level_shows_command_lines(
-    mock_project_root: Path, make_command_prefix: list[str], real_project_root_dir: Path
+    default_command_context: FeatureTestCommandContext,
 ) -> None:
     """At LOG_LEVEL=DEBUG, command lines are logged (inner docker run)."""
     return_code, stdout, stderr = run_command_and_save_logs(
-        args=[*make_command_prefix, "LOG_LEVEL=DEBUG", "format"],
-        cwd=mock_project_root,
-        test_name="test_debug_log_level_shows_command_lines",
-        real_project_root_dir=real_project_root_dir,
+        context=default_command_context, command_args=["LOG_LEVEL=DEBUG", "format"]
     )
     combined = stdout + stderr
     assert return_code == 0
@@ -73,24 +65,21 @@ def test_debug_log_level_shows_command_lines(
 
 @pytest.mark.usefixtures("mock_lightweight_project")
 def test_failure_visible_at_default_log_level(
-    mock_project_root: Path, make_command_prefix: list[str], real_project_root_dir: Path
+    default_command_context: FeatureTestCommandContext,
 ) -> None:
     """On task failure, the failure and failing command are visible at default level."""
     get_python_subproject(
-        project_root=mock_project_root,
+        project_root=default_command_context.mock_project_root,
         subproject_context=SubprojectContext.BUILD_SUPPORT,
     ).get_test_dir().joinpath("test_type_error_for_logging_test.py").write_text(
-        """def some_function(items) -> list:
+        """def some_function() -> None:
     \"\"\"func docstring\"\"\"
-    return items
+    x: int = "not an int"
 """
     )
+    default_command_context.expect_failure = True
     return_code, stdout, stderr = run_command_and_save_logs(
-        args=[*make_command_prefix, "type_check_build_support"],
-        cwd=mock_project_root,
-        test_name="test_failure_visible_at_default_log_level",
-        real_project_root_dir=real_project_root_dir,
-        expect_failure=True,
+        context=default_command_context, command_args=["type_check_build_support"]
     )
     combined = stdout + stderr
     assert return_code != 0

@@ -2,6 +2,7 @@ import shutil
 import tomllib
 from collections.abc import Mapping
 from pathlib import Path
+from typing import cast
 
 from build_support.ci_cd_tasks.env_setup_tasks import Clean
 from build_support.ci_cd_tasks.task_node import BasicTaskInfo
@@ -34,7 +35,7 @@ def _license_value(pyproject_license: str | Mapping[str, str]) -> str:
         str: The license identifier (e.g. ``unlicense``, ``mit``).
     """
     if isinstance(pyproject_license, Mapping):
-        return pyproject_license["text"]
+        return cast(dict[str, str], pyproject_license)["text"]
     return pyproject_license
 
 

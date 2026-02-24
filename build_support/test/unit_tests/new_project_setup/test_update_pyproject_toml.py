@@ -1,6 +1,7 @@
 import shutil
 from copy import deepcopy
 from pathlib import Path
+from typing import cast
 
 from build_support.ci_cd_vars.project_setting_vars import get_pyproject_toml_data
 from build_support.ci_cd_vars.project_structure import get_pyproject_toml
@@ -9,6 +10,7 @@ from build_support.new_project_setup.new_project_data_models import (
     ProjectSettings,
 )
 from build_support.new_project_setup.update_pyproject_toml import update_pyproject_toml
+from tomlkit import TOMLDocument
 
 
 def test_update_pyproject_toml(tmp_path: Path, real_project_root_dir: Path) -> None:
@@ -32,17 +34,19 @@ def test_update_pyproject_toml(tmp_path: Path, real_project_root_dir: Path) -> N
         project_root=tmp_project_path, new_project_settings=new_project_settings
     )
 
-    expected_project = expected_data["project"]
-    expected_project["name"] = new_project_settings.name  # type: ignore[index]
-    expected_project["version"] = "0.0.0"  # type: ignore[index]
-    expected_project["license"] = new_project_settings.license  # type: ignore[index]
-    expected_project["authors"] = [  # type: ignore[index]
+    expected_project = cast(TOMLDocument, expected_data["project"])
+    expected_project["name"] = new_project_settings.name
+    expected_project["version"] = "0.0.0"
+    expected_project["license"] = new_project_settings.license
+    expected_project["authors"] = [
         new_project_settings.organization.as_pyproject_author()
     ]
-    expected_hatch = expected_data["tool"]["hatch"]  # type: ignore[index]
-    expected_hatch["build"]["targets"]["wheel"]["packages"] = [  # type: ignore[index]
-        f"pypi_package/src/{new_project_settings.name}"
-    ]
+    expected_tool = cast(TOMLDocument, expected_data["tool"])
+    expected_hatch = cast(TOMLDocument, expected_tool["hatch"])
+    expected_hatch_build = cast(TOMLDocument, expected_hatch["build"])
+    expected_targets = cast(TOMLDocument, expected_hatch_build["targets"])
+    expected_wheel = cast(TOMLDocument, expected_targets["wheel"])
+    expected_wheel["packages"] = [f"pypi_package/src/{new_project_settings.name}"]
 
     observed_new_pyproject_toml = get_pyproject_toml_data(project_root=tmp_project_path)
     assert observed_new_pyproject_toml == expected_data

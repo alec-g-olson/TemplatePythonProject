@@ -9,7 +9,7 @@ from collections.abc import Iterator
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import override
+from typing import cast, override
 
 from junitparser import JUnitXml
 from tomlkit import TOMLDocument, document, dumps, table
@@ -27,7 +27,7 @@ from build_support.ci_cd_vars.docker_vars import (
     get_base_docker_command_for_image,
     get_docker_command_for_image,
     get_docker_image_name,
-    get_mypy_path_env,
+    get_ty_extra_search_path_args,
 )
 from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_all_non_test_folders,
@@ -184,17 +184,16 @@ class ValidateStaticTypeChecking(PerSubprojectTask):
                         docker_project_root=self.docker_project_root,
                         target_image=DockerTarget.DEV,
                     ),
-                    "-e",
-                    get_mypy_path_env(
-                        docker_project_root=self.docker_project_root,
-                        target_image=DockerTarget.DEV,
-                    ),
                     get_docker_image_name(
                         project_root=self.docker_project_root,
                         target_image=DockerTarget.DEV,
                     ),
-                    "mypy",
-                    "--explicit-package-bases",
+                    "ty",
+                    "check",
+                    get_ty_extra_search_path_args(
+                        docker_project_root=self.docker_project_root,
+                        target_image=DockerTarget.DEV,
+                    ),
                     self.subproject.get_root_dir(),
                 ]
             )
@@ -414,7 +413,8 @@ class SubprojectUnitTests(PerSubprojectTask):
                 TOMLDocument.
         """
         pyproject_data = get_pyproject_toml_data(project_root=self.docker_project_root)
-        return pyproject_data["tool"]["coverage"]  # type: ignore[index, return-value]
+        tool = cast(TOMLDocument, pyproject_data["tool"])
+        return cast(TOMLDocument, tool["coverage"])
 
     def build_omit_list(self, unit_test_info: UnitTestInfo) -> list[str]:
         """Builds the list of omit patterns for a coverage config file.
@@ -475,11 +475,10 @@ class SubprojectUnitTests(PerSubprojectTask):
         coverage_config = deepcopy(coverage_settings)
         if "run" not in coverage_config:
             coverage_config["run"] = table()
-        existing_omit = coverage_config["run"].get(  # type: ignore[union-attr]
-            "omit", []
-        )
+        run_table = cast(TOMLDocument, coverage_config["run"])
+        existing_omit = run_table.get("omit", [])
         merged_omit = list(dict.fromkeys(list(existing_omit) + new_omit_list))
-        coverage_config["run"]["omit"] = merged_omit  # type: ignore[index]
+        run_table["omit"] = merged_omit
 
         # Write TOML file
         config_doc = document()

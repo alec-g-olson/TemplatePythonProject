@@ -13,15 +13,15 @@ from build_support.ci_cd_vars.docker_vars import (
     get_docker_image_name,
     get_docker_tag_suffix,
     get_interactive_docker_command_for_image,
-    get_mypy_path_env,
-    get_mypy_path_for_target_image,
     get_python_path_env,
     get_python_path_for_target_image,
+    get_ty_extra_search_path_args,
+    get_ty_extra_search_paths_for_target_image,
 )
 from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_all_python_folders,
     get_all_src_folders,
-    get_test_utils_dirs,
+    get_all_test_folders,
 )
 from build_support.ci_cd_vars.project_structure import get_dockerfile
 from build_support.ci_cd_vars.subproject_structure import (
@@ -159,63 +159,61 @@ def test_get_python_path_env(
     )
 
 
-def test_get_mypy_path_for_target_image(
+def test_get_ty_extra_search_paths_for_target_image(
     docker_project_root: Path, docker_target: DockerTarget
 ) -> None:
-    observed_mypy_path = get_mypy_path_for_target_image(
+    observed_search_paths = get_ty_extra_search_paths_for_target_image(
         docker_project_root=docker_project_root, target_image=docker_target
     )
 
     if docker_target == DockerTarget.BUILD:
-        assert observed_mypy_path == ":".join(
-            concatenate_args(
-                args=[
-                    get_python_subproject(
-                        subproject_context=SubprojectContext.BUILD_SUPPORT,
-                        project_root=docker_project_root,
-                    ).get_src_dir()
-                ]
-            )
-        )
+        assert observed_search_paths == [
+            get_python_subproject(
+                subproject_context=SubprojectContext.BUILD_SUPPORT,
+                project_root=docker_project_root,
+            ).get_src_dir()
+        ]
     elif docker_target == DockerTarget.DEV:
         src_folders = get_all_src_folders(project_root=docker_project_root)
-        test_utils_dirs = get_test_utils_dirs(project_root=docker_project_root)
-        expected_folders = src_folders + test_utils_dirs
-        assert observed_mypy_path == ":".join(concatenate_args(args=[expected_folders]))
+        test_folders = get_all_test_folders(project_root=docker_project_root)
+        expected_folders = src_folders + test_folders
+        assert observed_search_paths == expected_folders
     elif docker_target == DockerTarget.PROD:
-        assert observed_mypy_path == ":".join(
-            concatenate_args(
-                args=[
-                    get_python_subproject(
-                        subproject_context=SubprojectContext.PYPI,
-                        project_root=docker_project_root,
-                    ).get_src_dir()
-                ]
-            )
-        )
+        assert observed_search_paths == [
+            get_python_subproject(
+                subproject_context=SubprojectContext.PYPI,
+                project_root=docker_project_root,
+            ).get_src_dir()
+        ]
     elif docker_target == DockerTarget.INFRA:
-        assert observed_mypy_path == ":".join(
-            concatenate_args(
-                args=[
-                    get_python_subproject(
-                        subproject_context=SubprojectContext.INFRA,
-                        project_root=docker_project_root,
-                    ).get_src_dir()
-                ]
-            )
-        )
+        assert observed_search_paths == [
+            get_python_subproject(
+                subproject_context=SubprojectContext.INFRA,
+                project_root=docker_project_root,
+            ).get_src_dir()
+        ]
     else:  # pragma: no cov - will only hit if enum not covered
         msg = f"{docker_target.__name__} is not a supported type."
         raise ValueError(msg)
 
 
-def test_get_mypy_path_env(
+def test_get_ty_extra_search_path_args(
     docker_project_root: Path, docker_target: DockerTarget
 ) -> None:
-    assert get_mypy_path_env(
-        docker_project_root=docker_project_root, target_image=docker_target
-    ) == "MYPYPATH=" + get_mypy_path_for_target_image(
-        docker_project_root=docker_project_root, target_image=docker_target
+    expected_args = concatenate_args(
+        args=[
+            arg
+            for search_path in get_ty_extra_search_paths_for_target_image(
+                docker_project_root=docker_project_root, target_image=docker_target
+            )
+            for arg in ("--extra-search-path", search_path)
+        ]
+    )
+    assert (
+        get_ty_extra_search_path_args(
+            docker_project_root=docker_project_root, target_image=docker_target
+        )
+        == expected_args
     )
 
 

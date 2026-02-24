@@ -15,7 +15,7 @@ def build_mock_basic_task(
 ) -> TaskNode:
     """Builds a mock task for testing task interactions."""
 
-    return type(  # type: ignore[no-any-return]
+    return type(
         task_name,
         (TaskNode,),
         {"required_tasks": Mock(return_value=required_mock_tasks), "run": Mock()},

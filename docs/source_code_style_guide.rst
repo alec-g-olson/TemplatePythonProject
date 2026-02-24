@@ -6,7 +6,7 @@ in this project.  It covers everything from how to divide a package into subpack
 to how to name a local variable.  When in doubt about any structural or stylistic
 decision, consult this document.
 
-The automated enforcement tools — Ruff, mypy, and Bandit — catch most surface-level
+The automated enforcement tools — Ruff, ty, and Bandit — catch most surface-level
 issues.  This guide addresses the design-level decisions that tools cannot check.
 
 Architecture
@@ -139,6 +139,30 @@ When a class is appropriate:
             timeout=params.timeout,
         )
         return _core_analysis(params=params, client=client)
+
+Prefer Keyword Arguments
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+When calling functions and constructors, prefer passing arguments by keyword rather than
+position.  Keyword arguments make call sites self-documenting, reduce mistakes when
+parameters are reordered, and make it easier to add or remove parameters over time.
+
+.. code-block:: python
+
+    # Good: intent is clear at the call site
+    result = compute_total(items=items, discount_rate=rate, currency=currency)
+
+    # Acceptable for a single argument where the name is obvious
+    path = Path(project_root)
+
+    # Prefer keyword form for two or more arguments
+    config = FeatureTestCommandContext(
+        args_prefix=prefix,
+        mock_project_root=cwd,
+        real_project_root_dir=project_root,
+        test_name=name,
+        log_name=log_name,
+    )
 
 Dependency Injection
 ~~~~~~~~~~~~~~~~~~~~
@@ -364,7 +388,7 @@ Type Annotations
 ----------------
 
 All functions and methods must have complete type annotations: every parameter and the
-return type.  This is enforced by mypy in strict mode.
+return type.  This is enforced by ty with all checks set to error level.
 
 Use the most specific type available.  Prefer ``Path`` over ``str`` for file paths;
 prefer a domain-specific ``Annotated`` type over its underlying primitive; prefer a
@@ -565,8 +589,8 @@ a pull request can be merged.  Their configuration lives in ``pyproject.toml``.
 only those that are genuinely inapplicable to this codebase.  Pydocstyle is configured
 to require Google-style docstrings.
 
-**mypy** — runs in strict mode.  All functions must be typed; ``Any`` is prohibited
-except where unavoidable; generic types must be parameterized.
+**ty** — all checks are configured at error level.  All functions must be typed;
+``Any`` is prohibited except where unavoidable; generic types must be parameterized.
 
 **Bandit** — scans source files for security issues.  Low-severity findings may be
 suppressed with a ``# nosec`` comment only if the exact rule ID is given and a

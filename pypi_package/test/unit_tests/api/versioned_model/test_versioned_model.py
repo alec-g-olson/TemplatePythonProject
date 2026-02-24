@@ -1,6 +1,6 @@
 """Tests for VersionedModel — version validation, serialization, and migration."""
 
-from typing import Any, ClassVar, override
+from typing import Any, ClassVar, cast, override
 
 import pytest
 from pydantic import ValidationError
@@ -56,7 +56,7 @@ class ChildModelB(SimpleVersionedModel):
 
     @classmethod
     @override
-    def _coerce_to_most_recent_version(cls, data: Any) -> Any:  # type: ignore[override]
+    def _coerce_to_most_recent_version(cls, data: Any) -> Any:
         """Backfill new_value_1 and new_value_2 for payloads from older versions."""
         version = cls._get_valid_version_if_any_from_raw_data(data=data)
         if (
@@ -90,7 +90,9 @@ def test_simple_versioned_model_accepts_versions_within_supported_range(
     data_model_version: Version | str,
 ) -> None:
     """SimpleVersionedModel accepts versions within [lowest_supported, current]."""
-    model = SimpleVersionedModel(name="ok", data_model_version=data_model_version)
+    model = SimpleVersionedModel(
+        name="ok", data_model_version=cast(Any, data_model_version)
+    )
     assert model.data_model_version == Version(major=50, minor=10, patch=0)
 
 
@@ -106,7 +108,7 @@ def test_simple_versioned_model_rejects_versions_outside_supported_range(
 ) -> None:
     """SimpleVersionedModel rejects versions outside the supported range."""
     with pytest.raises(ValidationError) as exc_info:
-        SimpleVersionedModel(name="bad", data_model_version=bad_version)
+        SimpleVersionedModel(name="bad", data_model_version=cast(Any, bad_version))
     msg = str(exc_info.value)
     assert "Model undefined for versions" in msg
 
@@ -153,14 +155,14 @@ def test_child_model_a_pins_single_supported_version() -> None:
     model = ChildModelA(name="child-a")
     assert model.data_model_version == Version(major=2, minor=1, patch=0)
 
-    # Explicit same version is accepted
-    explicit = ChildModelA(name="child-a", data_model_version="2.1.0")
+    # Explicit same version is accepted (Pydantic coerces str at runtime)
+    explicit = ChildModelA(name="child-a", data_model_version=cast(Any, "2.1.0"))
     assert explicit.data_model_version == Version(major=2, minor=1, patch=0)
 
     # Lower and higher versions are rejected
     for bad in ["2.0.9", "3.0.0"]:
         with pytest.raises(ValidationError):
-            ChildModelA(name="bad", data_model_version=bad)
+            ChildModelA(name="bad", data_model_version=cast(Any, bad))
 
 
 # ---------------------------------------------------------------------------

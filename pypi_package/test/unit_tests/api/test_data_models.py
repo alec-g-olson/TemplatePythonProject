@@ -73,7 +73,7 @@ def test_calculator_input_rejects_extra_fields() -> None:
             type_of_calc=CalculationType.ADD,
             value1=1.0,
             value2=2.0,
-            extra_field="bad",  # type: ignore[call-arg]
+            extra_field="bad",  # type: ignore[unknown-argument]
         )
 
 

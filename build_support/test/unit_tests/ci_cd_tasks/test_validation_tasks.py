@@ -39,7 +39,7 @@ from build_support.ci_cd_vars.docker_vars import (
     get_base_docker_command_for_image,
     get_docker_command_for_image,
     get_docker_image_name,
-    get_mypy_path_env,
+    get_ty_extra_search_path_args,
 )
 from build_support.ci_cd_vars.file_and_dir_path_vars import (
     get_all_non_test_folders,
@@ -170,17 +170,16 @@ def test_run_validate_static_type_checking(
                         docker_project_root=basic_task_info.docker_project_root,
                         target_image=DockerTarget.DEV,
                     ),
-                    "-e",
-                    get_mypy_path_env(
-                        docker_project_root=basic_task_info.docker_project_root,
-                        target_image=DockerTarget.DEV,
-                    ),
                     get_docker_image_name(
                         project_root=basic_task_info.docker_project_root,
                         target_image=DockerTarget.DEV,
                     ),
-                    "mypy",
-                    "--explicit-package-bases",
+                    "ty",
+                    "check",
+                    get_ty_extra_search_path_args(
+                        docker_project_root=basic_task_info.docker_project_root,
+                        target_image=DockerTarget.DEV,
+                    ),
                     mock_docker_subproject.get_root_dir(),
                 ]
             )
@@ -964,9 +963,9 @@ def run_feature_test_side_effect(args: list[Any]) -> None:
             case = TestCase(name=test_file_name)
             suite_name = f"suite_{test_file_name}"
             # allow for untyped calls to library
-            suite = TestSuite(name=suite_name)  # type: ignore[no-untyped-call]
+            suite = TestSuite(name=suite_name)
             suite.add_testcase(case)
-            xml = JUnitXml()  # type: ignore[no-untyped-call]
+            xml = JUnitXml()
             xml.add_testsuite(suite)
             xml.write(str(path))
             break
@@ -1716,12 +1715,14 @@ def _assert_coverage_config_matches_expected(
     """
     actual = parse(actual_config_path.read_text())
     expected = parse(expected_config_path.read_text())
-    actual["tool"]["coverage"]["run"]["omit"] = sorted(  # type: ignore[index]
-        actual["tool"]["coverage"]["run"]["omit"]  # type: ignore[index, arg-type]
-    )
-    expected["tool"]["coverage"]["run"]["omit"] = sorted(  # type: ignore[index]
-        expected["tool"]["coverage"]["run"]["omit"]  # type: ignore[index, arg-type]
-    )
+    actual_tool = cast(TOMLDocument, actual["tool"])
+    actual_coverage = cast(TOMLDocument, actual_tool["coverage"])
+    actual_run = cast(TOMLDocument, actual_coverage["run"])
+    actual_run["omit"] = sorted(cast(list[str], actual_run["omit"]))
+    expected_tool = cast(TOMLDocument, expected["tool"])
+    expected_coverage = cast(TOMLDocument, expected_tool["coverage"])
+    expected_run = cast(TOMLDocument, expected_coverage["run"])
+    expected_run["omit"] = sorted(cast(list[str], expected_run["omit"]))
     assert actual == expected
 
 

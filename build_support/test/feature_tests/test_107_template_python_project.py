@@ -1,12 +1,16 @@
 """Feature tests for branch-scoped Docker image tags."""
 
+import copy
 from pathlib import Path
 from subprocess import run
 
 from build_support.ci_cd_vars.git_status_vars import PRIMARY_BRANCH_NAME, get_ticket_id
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
 from git import Head, Repo
-from test_utils.command_runner import run_command_and_save_logs
+from test_utils.command_runner import (
+    FeatureTestCommandContext,
+    run_command_and_save_logs,
+)
 
 
 def _parse_echo_image_tags_stdout(stdout: str) -> dict[str, str]:
@@ -53,52 +57,46 @@ def _create_and_checkout_branch(
 
 
 def test_make_echo_image_tags_on_main_shows_unsuffixed(
-    mock_project_root: Path,
+    default_command_context: FeatureTestCommandContext,
     mock_lightweight_project: Repo,
     make_command_prefix_without_tag_suffix: list[str],
-    real_project_root_dir: Path,
 ) -> None:
     """On main, echo_image_tags reports empty TAG_SUFFIX and unsuffixed image names."""
     mock_lightweight_project.git.checkout(PRIMARY_BRANCH_NAME)
+    default_command_context.args_prefix = [
+        *make_command_prefix_without_tag_suffix,
+        "CI_CD_FEATURE_TEST_MODE_FLAG=",
+    ]
     return_code, stdout, _ = run_command_and_save_logs(
-        args=[
-            *make_command_prefix_without_tag_suffix,
-            "CI_CD_FEATURE_TEST_MODE_FLAG=",
-            "echo_image_tags",
-        ],
-        cwd=mock_project_root,
-        test_name="test_make_echo_image_tags_on_main_shows_unsuffixed",
-        real_project_root_dir=real_project_root_dir,
+        context=default_command_context, command_args=["echo_image_tags"]
     )
     assert return_code == 0
     parsed = _parse_echo_image_tags_stdout(stdout)
     assert parsed.get("TAG_SUFFIX") == "", (
         f"On main TAG_SUFFIX should be empty, got {parsed.get('TAG_SUFFIX')!r}"
     )
-    expected = _expected_image_names(project_root=mock_project_root, tag_suffix="")
+    expected = _expected_image_names(
+        project_root=default_command_context.mock_project_root, tag_suffix=""
+    )
     assert parsed.get("DOCKER_BUILD_IMAGE") == expected[0]
     assert parsed.get("DOCKER_DEV_IMAGE") == expected[1]
     assert parsed.get("DOCKER_PROD_IMAGE") == expected[2]
 
 
 def test_make_echo_image_tags_on_non_main_shows_ticket_suffix(
-    mock_project_root: Path,
+    default_command_context: FeatureTestCommandContext,
     make_command_prefix_without_tag_suffix: list[str],
     mock_new_branch: Head,
     current_ticket_id: str,
-    real_project_root_dir: Path,
 ) -> None:
     """On non-main branches, reports ``-<ticket_id>`` and suffixed names."""
     assert mock_new_branch.name.startswith(current_ticket_id)
+    default_command_context.args_prefix = [
+        *make_command_prefix_without_tag_suffix,
+        "CI_CD_FEATURE_TEST_MODE_FLAG=",
+    ]
     return_code, stdout, _ = run_command_and_save_logs(
-        args=[
-            *make_command_prefix_without_tag_suffix,
-            "CI_CD_FEATURE_TEST_MODE_FLAG=",
-            "echo_image_tags",
-        ],
-        cwd=mock_project_root,
-        test_name="test_make_echo_image_tags_on_non_main_shows_ticket_suffix",
-        real_project_root_dir=real_project_root_dir,
+        context=default_command_context, command_args=["echo_image_tags"]
     )
     assert return_code == 0
     parsed = _parse_echo_image_tags_stdout(stdout)
@@ -108,7 +106,8 @@ def test_make_echo_image_tags_on_non_main_shows_ticket_suffix(
         f"{parsed.get('TAG_SUFFIX')!r}"
     )
     expected = _expected_image_names(
-        project_root=mock_project_root, tag_suffix=expected_suffix
+        project_root=default_command_context.mock_project_root,
+        tag_suffix=expected_suffix,
     )
     assert parsed.get("DOCKER_BUILD_IMAGE") == expected[0]
     assert parsed.get("DOCKER_DEV_IMAGE") == expected[1]
@@ -116,14 +115,13 @@ def test_make_echo_image_tags_on_non_main_shows_ticket_suffix(
 
 
 def test_different_ticket_branches_build_different_image_tags(
-    mock_project_root: Path,
+    default_command_context: FeatureTestCommandContext,
     mock_lightweight_project: Repo,
     mock_remote_git_repo: Repo,
     make_command_prefix_without_tag_suffix: list[str],
-    real_project_root_dir: Path,
 ) -> None:
     """Different ticket branches should build different image tag names."""
-    tid = get_ticket_id(project_root=real_project_root_dir)
+    tid = get_ticket_id(project_root=default_command_context.real_project_root_dir)
     first_ticket_id = f"{tid}TEST001" if tid else "TEST001"
     second_ticket_id = f"{tid}TEST002" if tid else "TEST002"
 
@@ -133,15 +131,13 @@ def test_different_ticket_branches_build_different_image_tags(
         branch_name=f"{first_ticket_id}-first-branch",
     )
     assert first_branch.name.startswith(first_ticket_id)
+    default_command_context.args_prefix = [
+        *make_command_prefix_without_tag_suffix,
+        "CI_CD_FEATURE_TEST_MODE_FLAG=",
+    ]
+    default_command_context.log_name = f"{default_command_context.test_name}_first"
     first_setup_build_return_code, _, _ = run_command_and_save_logs(
-        args=[
-            *make_command_prefix_without_tag_suffix,
-            "CI_CD_FEATURE_TEST_MODE_FLAG=",
-            "setup_build_env",
-        ],
-        cwd=mock_project_root,
-        test_name="test_different_ticket_branches_build_different_image_tags_first",
-        real_project_root_dir=real_project_root_dir,
+        context=default_command_context, command_args=["setup_build_env"]
     )
     assert first_setup_build_return_code == 0
 
@@ -151,19 +147,16 @@ def test_different_ticket_branches_build_different_image_tags(
         branch_name=f"{second_ticket_id}-second-branch",
     )
     assert second_branch.name.startswith(second_ticket_id)
+    second_context = copy.copy(default_command_context)
+    second_context.log_name = f"{default_command_context.test_name}_second"
     second_setup_build_return_code, _, _ = run_command_and_save_logs(
-        args=[
-            *make_command_prefix_without_tag_suffix,
-            "CI_CD_FEATURE_TEST_MODE_FLAG=",
-            "setup_build_env",
-        ],
-        cwd=mock_project_root,
-        test_name="test_different_ticket_branches_build_different_image_tags_second",
-        real_project_root_dir=real_project_root_dir,
+        context=second_context, command_args=["setup_build_env"]
     )
     assert second_setup_build_return_code == 0
 
-    project_name = get_project_name(project_root=mock_project_root)
+    project_name = get_project_name(
+        project_root=default_command_context.mock_project_root
+    )
     first_image = f"{project_name}:build-{first_ticket_id}"
     second_image = f"{project_name}:build-{second_ticket_id}"
     assert first_image != second_image

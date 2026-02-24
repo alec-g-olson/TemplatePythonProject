@@ -10,6 +10,7 @@ from build_support.ci_cd_vars.project_structure import (
     get_feature_test_scratch_folder,
     maybe_build_dir,
 )
+from test_utils.command_runner import FeatureTestCommandContext
 
 
 def _sanitize_test_id(node_name: str) -> str:
@@ -73,3 +74,24 @@ def prod_docker_command_prefix(host_tmp_path: Path, prod_workdir: str) -> list[s
         prod_workdir,
         image,
     ]
+
+
+@pytest.fixture
+def default_command_context(
+    prod_docker_command_prefix: list[str],
+    pypi_feature_test_scratch_path: Path,
+    request: SubRequest,
+) -> FeatureTestCommandContext:
+    """Default feature test context for pypi prod CLI tests.
+
+    Runs commands via the prod Docker image with the scratch dir as cwd.
+    Copy and override fields when needed (e.g. expect_failure, log_name).
+    """
+    project_root = Path(os.environ.get("DOCKER_REMOTE_PROJECT_ROOT") or Path.cwd())
+    return FeatureTestCommandContext(
+        args_prefix=prod_docker_command_prefix,
+        mock_project_root=pypi_feature_test_scratch_path,
+        real_project_root_dir=project_root,
+        test_name=request.node.name,
+        log_name=request.node.name,
+    )
