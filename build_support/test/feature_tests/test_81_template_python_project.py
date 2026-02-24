@@ -1,29 +1,31 @@
+import copy
 from datetime import timedelta
 
 import pytest
 from build_support.ci_cd_vars.build_paths import get_build_runtime_report_path
 from build_support.dag_engine import BuildRunReport
-from test_utils.command_runner import FeatureTestCommandContext, run_command
+from test_utils.command_runner import (
+    FeatureTestCommandContext,
+    run_command_and_save_logs,
+)
 
 
 @pytest.mark.usefixtures("mock_lightweight_project_with_single_feature_test")
 def test_feature_tests_execute_faster_when_cached(
-    command_context: FeatureTestCommandContext,
+    default_command_context: FeatureTestCommandContext,
 ) -> None:
-    return_code, _, _ = run_command(
-        command_context,
-        ["test_pypi_features"],
-        test_name_override=f"{command_context.test_name}_first",
-    )
+    first_context = copy.copy(default_command_context)
+    first_context.log_name = f"{default_command_context.test_name}_first"
+    return_code, _, _ = run_command_and_save_logs(first_context, ["test_pypi_features"])
     assert return_code == 0
     expected_report_yaml = get_build_runtime_report_path(
-        project_root=command_context.mock_project_root
+        project_root=default_command_context.mock_project_root
     )
     first_runtime_report = BuildRunReport.from_yaml(expected_report_yaml.read_text())
-    return_code, _, _ = run_command(
-        command_context,
-        ["test_pypi_features"],
-        test_name_override=f"{command_context.test_name}_second",
+    second_context = copy.copy(default_command_context)
+    second_context.log_name = f"{default_command_context.test_name}_second"
+    return_code, _, _ = run_command_and_save_logs(
+        second_context, ["test_pypi_features"]
     )
     assert return_code == 0
     second_runtime_report = BuildRunReport.from_yaml(expected_report_yaml.read_text())

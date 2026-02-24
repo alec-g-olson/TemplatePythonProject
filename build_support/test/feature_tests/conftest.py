@@ -116,18 +116,23 @@ def make_command_prefix(make_command_prefix_without_tag_suffix: list[str]) -> li
 
 
 @pytest.fixture
-def command_context(
+def default_command_context(
     mock_project_root: Path,
     make_command_prefix: list[str],
     real_project_root_dir: Path,
     request: SubRequest,
 ) -> FeatureTestCommandContext:
-    """Bundle of paths and make prefix for running commands in feature tests."""
+    """Default feature test context for run_command_and_save_logs.
+
+    Tests call run_command_and_save_logs(context, command_args). Copy and
+    override fields when needed (e.g. expect_failure, log_name, args_prefix).
+    """
     return FeatureTestCommandContext(
+        args_prefix=make_command_prefix,
         mock_project_root=mock_project_root,
-        make_command_prefix=make_command_prefix,
         real_project_root_dir=real_project_root_dir,
         test_name=request.node.name,
+        log_name=request.node.name
     )
 
 

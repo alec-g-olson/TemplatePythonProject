@@ -6,6 +6,7 @@ writes a file per ty rule (each file violates that rule), runs the type
 checker once, and parses the output to ensure every rule is flagged.
 """
 
+import copy
 import re
 from pathlib import Path
 from subprocess import run
@@ -18,17 +19,22 @@ from build_support.ci_cd_vars.subproject_structure import (
     SubprojectContext,
     get_python_subproject,
 )
-from test_utils.command_runner import FeatureTestCommandContext, run_command
+from test_utils.command_runner import (
+    FeatureTestCommandContext,
+    run_command_and_save_logs,
+)
 
 
 @pytest.mark.usefixtures(
     "mock_lightweight_project", "mock_lightweight_project_on_feature_branch"
 )
 def test_type_checks_use_ty_and_succeed(
-    command_context: FeatureTestCommandContext,
+    default_command_context: FeatureTestCommandContext,
 ) -> None:
     """Running make type_checks uses ty and succeeds on the repository."""
-    return_code, _, _ = run_command(command_context, ["type_checks"])
+    return_code, _, _ = run_command_and_save_logs(
+        default_command_context, ["type_checks"]
+    )
     assert return_code == 0
 
 
@@ -1033,11 +1039,11 @@ if datetime.date.today().weekday() != 6:
     "mock_lightweight_project", "mock_lightweight_project_on_feature_branch"
 )
 def test_all_ty_rules_flagged_in_type_check_output(
-    command_context: FeatureTestCommandContext,
+    default_command_context: FeatureTestCommandContext,
 ) -> None:
     """Type check fails and each ty rule is reported in the output."""
     test_dir = get_python_subproject(
-        project_root=command_context.mock_project_root,
+        project_root=default_command_context.mock_project_root,
         subproject_context=SubprojectContext.PYPI,
     ).get_test_dir()
     entry_with_extras_len = 4  # (rule, file_name, file_contents, extra_files)
@@ -1049,8 +1055,10 @@ def test_all_ty_rules_flagged_in_type_check_output(
             entry_with_extras = cast(tuple[str, str, str, list[tuple[str, str]]], entry)
             for extra_name, extra_content in entry_with_extras[3]:
                 test_dir.joinpath(extra_name).write_text(extra_content)
-    return_code, stdout, stderr = run_command(
-        command_context, ["type_check_pypi"], expect_failure=True
+    failure_context = copy.copy(default_command_context)
+    failure_context.expect_failure = True
+    return_code, stdout, stderr = run_command_and_save_logs(
+        failure_context, ["type_check_pypi"]
     )
     assert return_code != 0, "type_check_pypi should fail when rules are violated"
     combined_output = stdout + stderr

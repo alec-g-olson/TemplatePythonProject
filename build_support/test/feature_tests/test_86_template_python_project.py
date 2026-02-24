@@ -46,12 +46,15 @@ from build_support.ci_cd_vars.subproject_structure import (
     get_python_subproject,
 )
 from build_support.dag_engine import BuildRunReport
-from test_utils.command_runner import FeatureTestCommandContext, run_command
+from test_utils.command_runner import (
+    FeatureTestCommandContext,
+    run_command_and_save_logs,
+)
 
 
 @pytest.mark.usefixtures("mock_lightweight_project_with_unit_tests_and_feature_tests")
 def test_do_not_run_tests_for_unmodified_projects(
-    command_context: FeatureTestCommandContext,
+    default_command_context: FeatureTestCommandContext,
 ) -> None:
     """Verify that unmodified subprojects have their tests skipped.
 
@@ -59,9 +62,9 @@ def test_do_not_run_tests_for_unmodified_projects(
     subproject test tasks should complete near-instantly (under 0.1s),
     indicating they were effectively skipped.
     """
-    run_command(command_context, ["test"])
+    run_command_and_save_logs(default_command_context, ["test"])
     expected_report_yaml = get_build_runtime_report_path(
-        project_root=command_context.mock_project_root
+        project_root=default_command_context.mock_project_root
     )
     runtime_report = BuildRunReport.from_yaml(expected_report_yaml.read_text())
 
@@ -75,7 +78,7 @@ def test_do_not_run_tests_for_unmodified_projects(
 
 @pytest.mark.usefixtures("mock_lightweight_project_with_unit_tests_and_feature_tests")
 def test_run_tests_for_single_modified_subproject(
-    command_context: FeatureTestCommandContext,
+    default_command_context: FeatureTestCommandContext,
 ) -> None:
     """Verify that only the modified subproject's tests are executed.
 
@@ -90,7 +93,7 @@ def test_run_tests_for_single_modified_subproject(
     """
     subproject = get_python_subproject(
         subproject_context=SubprojectContext.PYPI,
-        project_root=command_context.mock_project_root,
+        project_root=default_command_context.mock_project_root,
     )
     subproject_pkg_dir = subproject.get_python_package_dir()
     subproject_src_file = subproject_pkg_dir.joinpath("src_file.py")
@@ -132,7 +135,9 @@ def subtract_slow(a: int, b: int) -> int:
         test_suite=PythonSubproject.TestSuite.UNIT_TESTS
     )
     project_unit_test_file = project_unit_test_dir.joinpath("test_src_file.py")
-    project_name = get_project_name(project_root=command_context.mock_project_root)
+    project_name = get_project_name(
+        project_root=default_command_context.mock_project_root
+    )
     project_unit_test_file.write_text(
         f'''from {project_name}.src_file import add_slow, subtract_slow
 
@@ -170,9 +175,9 @@ def test_subtract_slow() -> None:
 
 '''
     )
-    run_command(command_context, ["test"])
+    run_command_and_save_logs(default_command_context, ["test"])
     expected_report_yaml = get_build_runtime_report_path(
-        project_root=command_context.mock_project_root
+        project_root=default_command_context.mock_project_root
     )
     runtime_report = BuildRunReport.from_yaml(expected_report_yaml.read_text())
 
@@ -198,19 +203,19 @@ def test_subtract_slow() -> None:
 
 @pytest.mark.usefixtures("mock_lightweight_project_with_unit_tests_and_feature_tests")
 def test_run_all_tests_if_dockerfile_modified(
-    command_context: FeatureTestCommandContext,
+    default_command_context: FeatureTestCommandContext,
 ) -> None:
     """Verify all tests run when the Dockerfile is modified.
 
     Appending a newline to the Dockerfile should cause the build
     system to treat every subproject as affected and run all tests.
     """
-    dockerfile = get_dockerfile(project_root=command_context.mock_project_root)
+    dockerfile = get_dockerfile(project_root=default_command_context.mock_project_root)
     dockerfile_contents = dockerfile.read_text()
     dockerfile.write_text(dockerfile_contents + "\n")
-    run_command(command_context, ["test"])
+    run_command_and_save_logs(default_command_context, ["test"])
     expected_report_yaml = get_build_runtime_report_path(
-        project_root=command_context.mock_project_root
+        project_root=default_command_context.mock_project_root
     )
     runtime_report = BuildRunReport.from_yaml(expected_report_yaml.read_text())
 
@@ -224,19 +229,21 @@ def test_run_all_tests_if_dockerfile_modified(
 
 @pytest.mark.usefixtures("mock_lightweight_project_with_unit_tests_and_feature_tests")
 def test_run_all_tests_if_uv_lock_modified(
-    command_context: FeatureTestCommandContext,
+    default_command_context: FeatureTestCommandContext,
 ) -> None:
     """Verify all tests run when uv.lock is modified.
 
     Appending a newline to ``uv.lock`` should cause the build
     system to treat every subproject as affected and run all tests.
     """
-    uv_lock_file = get_uv_lock_file(project_root=command_context.mock_project_root)
+    uv_lock_file = get_uv_lock_file(
+        project_root=default_command_context.mock_project_root
+    )
     uv_lock_file_contents = uv_lock_file.read_text()
     uv_lock_file.write_text(uv_lock_file_contents + "\n")
-    run_command(command_context, ["test"])
+    run_command_and_save_logs(default_command_context, ["test"])
     expected_report_yaml = get_build_runtime_report_path(
-        project_root=command_context.mock_project_root
+        project_root=default_command_context.mock_project_root
     )
     runtime_report = BuildRunReport.from_yaml(expected_report_yaml.read_text())
 

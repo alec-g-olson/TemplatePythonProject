@@ -17,7 +17,7 @@ from test_utils.command_runner import FeatureTestCommandContext
     "mock_lightweight_project", "mock_lightweight_project_on_feature_branch"
 )
 def test_85_placeholder_type_checking_ticket(
-    command_context: FeatureTestCommandContext,
+    default_command_context: FeatureTestCommandContext,
 ) -> None:
     """Placeholder test for ticket 85; type checking is now tested in test_98."""
-    assert command_context.mock_project_root is not None
+    assert default_command_context.mock_project_root is not None

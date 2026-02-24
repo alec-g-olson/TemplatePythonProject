@@ -4,20 +4,27 @@ Three levels: INFO = steps only; DEBUG = steps + commands; TRACE = steps + comma
 + task stdout/stderr. Failures always log command, code, stdout, and stderr at ERROR.
 """
 
+import copy
+
 import pytest
 from build_support.ci_cd_vars.subproject_structure import (
     SubprojectContext,
     get_python_subproject,
 )
-from test_utils.command_runner import FeatureTestCommandContext, run_command
+from test_utils.command_runner import (
+    FeatureTestCommandContext,
+    run_command_and_save_logs,
+)
 
 
 @pytest.mark.usefixtures("mock_lightweight_project")
 def test_default_log_level_shows_only_workflow(
-    command_context: FeatureTestCommandContext,
+    default_command_context: FeatureTestCommandContext,
 ) -> None:
     """At default (INFO) level only workflow messages appear; no task output."""
-    return_code, stdout, stderr = run_command(command_context, ["format"])
+    return_code, stdout, stderr = run_command_and_save_logs(
+        default_command_context, ["format"]
+    )
     combined = stdout + stderr
     assert return_code == 0
     assert "Will execute the following tasks:" in combined
@@ -28,11 +35,11 @@ def test_default_log_level_shows_only_workflow(
 
 @pytest.mark.usefixtures("mock_lightweight_project")
 def test_trace_log_level_shows_task_output(
-    command_context: FeatureTestCommandContext,
+    default_command_context: FeatureTestCommandContext,
 ) -> None:
     """At LOG_LEVEL=TRACE, task stdout/stderr (e.g. formatter output) is present."""
-    return_code, stdout, stderr = run_command(
-        command_context, ["LOG_LEVEL=TRACE", "format"]
+    return_code, stdout, stderr = run_command_and_save_logs(
+        default_command_context, ["LOG_LEVEL=TRACE", "format"]
     )
     combined = stdout + stderr
     assert return_code == 0
@@ -46,11 +53,11 @@ def test_trace_log_level_shows_task_output(
 
 @pytest.mark.usefixtures("mock_lightweight_project")
 def test_debug_log_level_shows_command_lines(
-    command_context: FeatureTestCommandContext,
+    default_command_context: FeatureTestCommandContext,
 ) -> None:
     """At LOG_LEVEL=DEBUG, command lines are logged (inner docker run)."""
-    return_code, stdout, stderr = run_command(
-        command_context, ["LOG_LEVEL=DEBUG", "format"]
+    return_code, stdout, stderr = run_command_and_save_logs(
+        default_command_context, ["LOG_LEVEL=DEBUG", "format"]
     )
     combined = stdout + stderr
     assert return_code == 0
@@ -60,11 +67,11 @@ def test_debug_log_level_shows_command_lines(
 
 @pytest.mark.usefixtures("mock_lightweight_project")
 def test_failure_visible_at_default_log_level(
-    command_context: FeatureTestCommandContext,
+    default_command_context: FeatureTestCommandContext,
 ) -> None:
     """On task failure, the failure and failing command are visible at default level."""
     get_python_subproject(
-        project_root=command_context.mock_project_root,
+        project_root=default_command_context.mock_project_root,
         subproject_context=SubprojectContext.BUILD_SUPPORT,
     ).get_test_dir().joinpath("test_type_error_for_logging_test.py").write_text(
         """def some_function() -> None:
@@ -72,8 +79,10 @@ def test_failure_visible_at_default_log_level(
     x: int = "not an int"
 """
     )
-    return_code, stdout, stderr = run_command(
-        command_context, ["type_check_build_support"], expect_failure=True
+    failure_context = copy.copy(default_command_context)
+    failure_context.expect_failure = True
+    return_code, stdout, stderr = run_command_and_save_logs(
+        failure_context, ["type_check_build_support"]
     )
     combined = stdout + stderr
     assert return_code != 0
