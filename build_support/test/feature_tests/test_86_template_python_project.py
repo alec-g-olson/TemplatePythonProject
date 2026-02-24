@@ -62,7 +62,7 @@ def test_do_not_run_tests_for_unmodified_projects(
     subproject test tasks should complete near-instantly (under 0.1s),
     indicating they were effectively skipped.
     """
-    run_command_and_save_logs(default_command_context, ["test"])
+    run_command_and_save_logs(context=default_command_context, command_args=["test"])
     expected_report_yaml = get_build_runtime_report_path(
         project_root=default_command_context.mock_project_root
     )
@@ -175,7 +175,7 @@ def test_subtract_slow() -> None:
 
 '''
     )
-    run_command_and_save_logs(default_command_context, ["test"])
+    run_command_and_save_logs(context=default_command_context, command_args=["test"])
     expected_report_yaml = get_build_runtime_report_path(
         project_root=default_command_context.mock_project_root
     )
@@ -213,7 +213,7 @@ def test_run_all_tests_if_dockerfile_modified(
     dockerfile = get_dockerfile(project_root=default_command_context.mock_project_root)
     dockerfile_contents = dockerfile.read_text()
     dockerfile.write_text(dockerfile_contents + "\n")
-    run_command_and_save_logs(default_command_context, ["test"])
+    run_command_and_save_logs(context=default_command_context, command_args=["test"])
     expected_report_yaml = get_build_runtime_report_path(
         project_root=default_command_context.mock_project_root
     )
@@ -241,7 +241,7 @@ def test_run_all_tests_if_uv_lock_modified(
     )
     uv_lock_file_contents = uv_lock_file.read_text()
     uv_lock_file.write_text(uv_lock_file_contents + "\n")
-    run_command_and_save_logs(default_command_context, ["test"])
+    run_command_and_save_logs(context=default_command_context, command_args=["test"])
     expected_report_yaml = get_build_runtime_report_path(
         project_root=default_command_context.mock_project_root
     )

@@ -16,7 +16,7 @@ def test_feature_tests_execute_faster_when_cached(
 ) -> None:
     default_command_context.log_name = f"{default_command_context.test_name}_first"
     return_code, _, _ = run_command_and_save_logs(
-        default_command_context, ["test_pypi_features"]
+        context=default_command_context, command_args=["test_pypi_features"]
     )
     assert return_code == 0
     expected_report_yaml = get_build_runtime_report_path(
@@ -26,7 +26,7 @@ def test_feature_tests_execute_faster_when_cached(
     second_context = copy.copy(default_command_context)
     second_context.log_name = f"{default_command_context.test_name}_second"
     return_code, _, _ = run_command_and_save_logs(
-        second_context, ["test_pypi_features"]
+        context=second_context, command_args=["test_pypi_features"]
     )
     assert return_code == 0
     second_runtime_report = BuildRunReport.from_yaml(expected_report_yaml.read_text())

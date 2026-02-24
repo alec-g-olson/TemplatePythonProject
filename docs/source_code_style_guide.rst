@@ -140,6 +140,30 @@ When a class is appropriate:
         )
         return _core_analysis(params=params, client=client)
 
+Prefer Keyword Arguments
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+When calling functions and constructors, prefer passing arguments by keyword rather than
+position.  Keyword arguments make call sites self-documenting, reduce mistakes when
+parameters are reordered, and make it easier to add or remove parameters over time.
+
+.. code-block:: python
+
+    # Good: intent is clear at the call site
+    result = compute_total(items=items, discount_rate=rate, currency=currency)
+
+    # Acceptable for a single argument where the name is obvious
+    path = Path(project_root)
+
+    # Prefer keyword form for two or more arguments
+    config = FeatureTestCommandContext(
+        args_prefix=prefix,
+        mock_project_root=cwd,
+        real_project_root_dir=project_root,
+        test_name=name,
+        log_name=log_name,
+    )
+
 Dependency Injection
 ~~~~~~~~~~~~~~~~~~~~
 

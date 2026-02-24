@@ -28,7 +28,7 @@ def test_check_feature_test_added(
         "def test_something() -> None:\n    assert True\n"
     )
     return_code, _, _ = run_command_and_save_logs(
-        default_command_context, ["check_process"]
+        context=default_command_context, command_args=["check_process"]
     )
     assert return_code == 0
 
@@ -39,7 +39,7 @@ def test_fail_check_feature_test_not_added_to_branch(
 ) -> None:
     default_command_context.expect_failure = True
     return_code, _, _ = run_command_and_save_logs(
-        default_command_context, ["check_process"]
+        context=default_command_context, command_args=["check_process"]
     )
     assert return_code != 0
 
@@ -49,6 +49,6 @@ def test_pass_check_feature_test_not_added_to_main(
     default_command_context: FeatureTestCommandContext,
 ) -> None:
     return_code, _, _ = run_command_and_save_logs(
-        default_command_context, ["check_process"]
+        context=default_command_context, command_args=["check_process"]
     )
     assert return_code == 0

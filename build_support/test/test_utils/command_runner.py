@@ -1,7 +1,7 @@
 """Utility for running commands and saving logs during feature tests.
 
 Feature tests run make (or other commands) via a single entry point:
-run_command_and_save_logs(context, command_args). The default context is
+run_command_and_save_logs(context=..., command_args=...). The default context is
 provided by the default_command_context fixture in conftest. Tests that need
 different behavior copy the context and override the desired fields;
 tests that need a different args prefix (e.g. test_107) override

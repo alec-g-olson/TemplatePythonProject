@@ -19,7 +19,7 @@ def test_process_checks_fail_without_ticket_file_for_feature_branch(
 
     default_command_context.expect_failure = True
     return_code, _, _ = run_command_and_save_logs(
-        default_command_context, ["check_process"]
+        context=default_command_context, command_args=["check_process"]
     )
     assert return_code != 0
 
@@ -31,7 +31,7 @@ def test_process_checks_pass_with_ticket_file_for_feature_branch(
     default_command_context: FeatureTestCommandContext,
 ) -> None:
     return_code, _, _ = run_command_and_save_logs(
-        default_command_context, ["check_process"]
+        context=default_command_context, command_args=["check_process"]
     )
     assert return_code == 0
 
@@ -51,7 +51,7 @@ def test_process_checks_pass_on_main_branch_without_ticket_file(
         main_ticket_path.unlink()
 
     return_code, _, _ = run_command_and_save_logs(
-        default_command_context, ["check_process"]
+        context=default_command_context, command_args=["check_process"]
     )
     assert return_code == 0
 
@@ -71,6 +71,6 @@ def test_process_checks_pass_on_main_branch_with_ticket_file(
     main_ticket_path.write_text("Main Ticket\n===========\n")
 
     return_code, _, _ = run_command_and_save_logs(
-        default_command_context, ["check_process"]
+        context=default_command_context, command_args=["check_process"]
     )
     assert return_code == 0

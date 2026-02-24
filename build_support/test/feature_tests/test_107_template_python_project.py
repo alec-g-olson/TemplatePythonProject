@@ -68,7 +68,7 @@ def test_make_echo_image_tags_on_main_shows_unsuffixed(
         "CI_CD_FEATURE_TEST_MODE_FLAG=",
     ]
     return_code, stdout, _ = run_command_and_save_logs(
-        default_command_context, ["echo_image_tags"]
+        context=default_command_context, command_args=["echo_image_tags"]
     )
     assert return_code == 0
     parsed = _parse_echo_image_tags_stdout(stdout)
@@ -96,7 +96,7 @@ def test_make_echo_image_tags_on_non_main_shows_ticket_suffix(
         "CI_CD_FEATURE_TEST_MODE_FLAG=",
     ]
     return_code, stdout, _ = run_command_and_save_logs(
-        default_command_context, ["echo_image_tags"]
+        context=default_command_context, command_args=["echo_image_tags"]
     )
     assert return_code == 0
     parsed = _parse_echo_image_tags_stdout(stdout)
@@ -137,7 +137,7 @@ def test_different_ticket_branches_build_different_image_tags(
     ]
     default_command_context.log_name = f"{default_command_context.test_name}_first"
     first_setup_build_return_code, _, _ = run_command_and_save_logs(
-        default_command_context, ["setup_build_env"]
+        context=default_command_context, command_args=["setup_build_env"]
     )
     assert first_setup_build_return_code == 0
 
@@ -150,7 +150,7 @@ def test_different_ticket_branches_build_different_image_tags(
     second_context = copy.copy(default_command_context)
     second_context.log_name = f"{default_command_context.test_name}_second"
     second_setup_build_return_code, _, _ = run_command_and_save_logs(
-        second_context, ["setup_build_env"]
+        context=second_context, command_args=["setup_build_env"]
     )
     assert second_setup_build_return_code == 0
 

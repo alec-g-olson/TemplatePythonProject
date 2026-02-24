@@ -21,7 +21,7 @@ def test_default_log_level_shows_only_workflow(
 ) -> None:
     """At default (INFO) level only workflow messages appear; no task output."""
     return_code, stdout, stderr = run_command_and_save_logs(
-        default_command_context, ["format"]
+        context=default_command_context, command_args=["format"]
     )
     combined = stdout + stderr
     assert return_code == 0
@@ -37,7 +37,7 @@ def test_trace_log_level_shows_task_output(
 ) -> None:
     """At LOG_LEVEL=TRACE, task stdout/stderr (e.g. formatter output) is present."""
     return_code, stdout, stderr = run_command_and_save_logs(
-        default_command_context, ["LOG_LEVEL=TRACE", "format"]
+        context=default_command_context, command_args=["LOG_LEVEL=TRACE", "format"]
     )
     combined = stdout + stderr
     assert return_code == 0
@@ -55,7 +55,7 @@ def test_debug_log_level_shows_command_lines(
 ) -> None:
     """At LOG_LEVEL=DEBUG, command lines are logged (inner docker run)."""
     return_code, stdout, stderr = run_command_and_save_logs(
-        default_command_context, ["LOG_LEVEL=DEBUG", "format"]
+        context=default_command_context, command_args=["LOG_LEVEL=DEBUG", "format"]
     )
     combined = stdout + stderr
     assert return_code == 0
@@ -79,7 +79,7 @@ def test_failure_visible_at_default_log_level(
     )
     default_command_context.expect_failure = True
     return_code, stdout, stderr = run_command_and_save_logs(
-        default_command_context, ["type_check_build_support"]
+        context=default_command_context, command_args=["type_check_build_support"]
     )
     combined = stdout + stderr
     assert return_code != 0

@@ -124,7 +124,7 @@ def default_command_context(
 ) -> FeatureTestCommandContext:
     """Default feature test context for run_command_and_save_logs.
 
-    Tests call run_command_and_save_logs(context, command_args). Copy and
+    Tests call run_command_and_save_logs(context=..., command_args=...). Copy and
     override fields when needed (e.g. expect_failure, log_name, args_prefix).
     """
     return FeatureTestCommandContext(
@@ -369,7 +369,9 @@ def mock_lightweight_project_with_unit_tests_and_feature_tests(
         Repo: The updated mock project repository.
     """
     for subproject in [
-        get_python_subproject(SubprojectContext.PYPI, mock_project_root)
+        get_python_subproject(
+            subproject_context=SubprojectContext.PYPI, project_root=mock_project_root
+        )
     ]:
         subproject_pkg_dir = subproject.get_python_package_dir()
         subproject_pkg_init_file = subproject_pkg_dir.joinpath("__init__.py")

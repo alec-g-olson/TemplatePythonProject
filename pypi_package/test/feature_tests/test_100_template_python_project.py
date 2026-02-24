@@ -59,7 +59,8 @@ def test_main_cli_writes_expected_output_for_each_calculation_type(
     output_file = cwd.joinpath(output_filename)
     input_file.write_text(calculator_input.model_dump_json())
     return_code, _, stderr = run_command_and_save_logs(
-        default_command_context, _cli_command_args(input_filename, output_filename)
+        context=default_command_context,
+        command_args=_cli_command_args(input_filename, output_filename),
     )
     assert return_code == 0, stderr
     observed_output = CalculatorOutput.model_validate_json(output_file.read_text())
@@ -80,7 +81,8 @@ def test_main_cli_fails_for_divide_by_zero(
     )
     input_file.write_text(divide_by_zero_input.model_dump_json())
     return_code, _, stderr = run_command_and_save_logs(
-        default_command_context, _cli_command_args(input_filename, output_filename)
+        context=default_command_context,
+        command_args=_cli_command_args(input_filename, output_filename),
     )
     assert return_code != 0
     assert "ZeroDivisionError" in stderr

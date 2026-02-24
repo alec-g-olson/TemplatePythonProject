@@ -32,7 +32,7 @@ def test_type_checks_use_ty_and_succeed(
 ) -> None:
     """Running make type_checks uses ty and succeeds on the repository."""
     return_code, _, _ = run_command_and_save_logs(
-        default_command_context, ["type_checks"]
+        context=default_command_context, command_args=["type_checks"]
     )
     assert return_code == 0
 
@@ -1056,7 +1056,7 @@ def test_all_ty_rules_flagged_in_type_check_output(
                 test_dir.joinpath(extra_name).write_text(extra_content)
     default_command_context.expect_failure = True
     return_code, stdout, stderr = run_command_and_save_logs(
-        default_command_context, ["type_check_pypi"]
+        context=default_command_context, command_args=["type_check_pypi"]
     )
     assert return_code != 0, "type_check_pypi should fail when rules are violated"
     combined_output = stdout + stderr
