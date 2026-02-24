@@ -1,4 +1,3 @@
-import copy
 from pathlib import Path
 
 import pytest
@@ -18,9 +17,10 @@ def test_process_checks_fail_without_ticket_file_for_feature_branch(
     if current_ticket_file.exists():
         current_ticket_file.unlink()
 
-    failure_context = copy.copy(default_command_context)
-    failure_context.expect_failure = True
-    return_code, _, _ = run_command_and_save_logs(failure_context, ["check_process"])
+    default_command_context.expect_failure = True
+    return_code, _, _ = run_command_and_save_logs(
+        default_command_context, ["check_process"]
+    )
     assert return_code != 0
 
 

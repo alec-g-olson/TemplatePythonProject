@@ -14,9 +14,10 @@ from test_utils.command_runner import (
 def test_feature_tests_execute_faster_when_cached(
     default_command_context: FeatureTestCommandContext,
 ) -> None:
-    first_context = copy.copy(default_command_context)
-    first_context.log_name = f"{default_command_context.test_name}_first"
-    return_code, _, _ = run_command_and_save_logs(first_context, ["test_pypi_features"])
+    default_command_context.log_name = f"{default_command_context.test_name}_first"
+    return_code, _, _ = run_command_and_save_logs(
+        default_command_context, ["test_pypi_features"]
+    )
     assert return_code == 0
     expected_report_yaml = get_build_runtime_report_path(
         project_root=default_command_context.mock_project_root

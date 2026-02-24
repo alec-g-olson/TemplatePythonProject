@@ -18,6 +18,43 @@ def docs_dir(real_project_root_dir: Path) -> Path:
     return get_docs_dir(project_root=real_project_root_dir)
 
 
+def _makefile_phony_targets(makefile_path: Path) -> set[str]:
+    """Extract all .PHONY target names from the root Makefile."""
+    text = makefile_path.read_text()
+    targets: set[str] = set()
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith(".PHONY:"):
+            rest = stripped[7:].strip()  # after ".PHONY:"
+            for name in rest.split():
+                targets.add(name)
+    return targets
+
+
+def _documented_make_commands(developer_tooling_path: Path) -> set[str]:
+    """Extract make target names from the Command column in developer_tooling.rst."""
+    text = developer_tooling_path.read_text()
+    documented: set[str] = set()
+    for match in re.findall(r"^\s+\*\s+-\s+make\s+(\S+)", text, re.MULTILINE):
+        documented.add(match)
+    return documented
+
+
+def test_makefile_targets_documented_in_developer_tooling(
+    real_project_root_dir: Path, docs_dir: Path
+) -> None:
+    """Every .PHONY target in the root Makefile must be in developer_tooling.rst."""
+    makefile_path = real_project_root_dir.joinpath("Makefile")
+    developer_tooling_path = docs_dir.joinpath("developer_tooling.rst")
+    makefile_targets = _makefile_phony_targets(makefile_path)
+    documented_targets = _documented_make_commands(developer_tooling_path)
+    missing = makefile_targets - documented_targets
+    assert not missing, (
+        f"Makefile target(s) not documented in docs/developer_tooling.rst: "
+        f"{sorted(missing)}. Add a row to the Standardized Developer Commands table."
+    )
+
+
 def test_subprojects_documented(real_project_root_dir: Path, docs_dir: Path) -> None:
     subprojects_doc_file = docs_dir.joinpath("subprojects.rst")
     expected_subproject_name_to_doc_link: dict[str, list[str]] = {}

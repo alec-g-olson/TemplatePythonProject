@@ -18,7 +18,7 @@ Requirements
 Acceptance Criteria / Feature Tests
 -----------------------------------
 - Running :code:`make type_checks` uses ty and succeeds on the repository.
-- Running :code:`make type_check_build_support` uses ty and reports failures for
+- Running :code:`make type_check_pypi` uses ty and reports failures for
   intentionally invalid type-check fixture files.
 - :code:`pyproject.toml` contains ty configuration with all checks set to error, and no
   mypy configuration block remains.

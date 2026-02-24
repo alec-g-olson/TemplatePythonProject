@@ -63,19 +63,20 @@ def test_make_echo_image_tags_on_main_shows_unsuffixed(
 ) -> None:
     """On main, echo_image_tags reports empty TAG_SUFFIX and unsuffixed image names."""
     mock_lightweight_project.git.checkout(PRIMARY_BRANCH_NAME)
-    context = copy.copy(default_command_context)
-    context.args_prefix = [
+    default_command_context.args_prefix = [
         *make_command_prefix_without_tag_suffix,
         "CI_CD_FEATURE_TEST_MODE_FLAG=",
     ]
-    return_code, stdout, _ = run_command_and_save_logs(context, ["echo_image_tags"])
+    return_code, stdout, _ = run_command_and_save_logs(
+        default_command_context, ["echo_image_tags"]
+    )
     assert return_code == 0
     parsed = _parse_echo_image_tags_stdout(stdout)
     assert parsed.get("TAG_SUFFIX") == "", (
         f"On main TAG_SUFFIX should be empty, got {parsed.get('TAG_SUFFIX')!r}"
     )
     expected = _expected_image_names(
-        project_root=context.mock_project_root, tag_suffix=""
+        project_root=default_command_context.mock_project_root, tag_suffix=""
     )
     assert parsed.get("DOCKER_BUILD_IMAGE") == expected[0]
     assert parsed.get("DOCKER_DEV_IMAGE") == expected[1]
@@ -90,12 +91,13 @@ def test_make_echo_image_tags_on_non_main_shows_ticket_suffix(
 ) -> None:
     """On non-main branches, reports ``-<ticket_id>`` and suffixed names."""
     assert mock_new_branch.name.startswith(current_ticket_id)
-    context = copy.copy(default_command_context)
-    context.args_prefix = [
+    default_command_context.args_prefix = [
         *make_command_prefix_without_tag_suffix,
         "CI_CD_FEATURE_TEST_MODE_FLAG=",
     ]
-    return_code, stdout, _ = run_command_and_save_logs(context, ["echo_image_tags"])
+    return_code, stdout, _ = run_command_and_save_logs(
+        default_command_context, ["echo_image_tags"]
+    )
     assert return_code == 0
     parsed = _parse_echo_image_tags_stdout(stdout)
     expected_suffix = f"-{current_ticket_id}"
@@ -104,7 +106,8 @@ def test_make_echo_image_tags_on_non_main_shows_ticket_suffix(
         f"{parsed.get('TAG_SUFFIX')!r}"
     )
     expected = _expected_image_names(
-        project_root=context.mock_project_root, tag_suffix=expected_suffix
+        project_root=default_command_context.mock_project_root,
+        tag_suffix=expected_suffix,
     )
     assert parsed.get("DOCKER_BUILD_IMAGE") == expected[0]
     assert parsed.get("DOCKER_DEV_IMAGE") == expected[1]
@@ -128,14 +131,13 @@ def test_different_ticket_branches_build_different_image_tags(
         branch_name=f"{first_ticket_id}-first-branch",
     )
     assert first_branch.name.startswith(first_ticket_id)
-    first_context = copy.copy(default_command_context)
-    first_context.args_prefix = [
+    default_command_context.args_prefix = [
         *make_command_prefix_without_tag_suffix,
         "CI_CD_FEATURE_TEST_MODE_FLAG=",
     ]
-    first_context.log_name = f"{default_command_context.test_name}_first"
+    default_command_context.log_name = f"{default_command_context.test_name}_first"
     first_setup_build_return_code, _, _ = run_command_and_save_logs(
-        first_context, ["setup_build_env"]
+        default_command_context, ["setup_build_env"]
     )
     assert first_setup_build_return_code == 0
 
@@ -146,10 +148,6 @@ def test_different_ticket_branches_build_different_image_tags(
     )
     assert second_branch.name.startswith(second_ticket_id)
     second_context = copy.copy(default_command_context)
-    second_context.args_prefix = [
-        *make_command_prefix_without_tag_suffix,
-        "CI_CD_FEATURE_TEST_MODE_FLAG=",
-    ]
     second_context.log_name = f"{default_command_context.test_name}_second"
     second_setup_build_return_code, _, _ = run_command_and_save_logs(
         second_context, ["setup_build_env"]

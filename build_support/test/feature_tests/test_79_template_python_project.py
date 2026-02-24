@@ -1,5 +1,3 @@
-import copy
-
 import pytest
 from build_support.ci_cd_vars.project_setting_vars import get_project_name
 from build_support.ci_cd_vars.subproject_structure import (
@@ -39,9 +37,10 @@ def test_check_feature_test_added(
 def test_fail_check_feature_test_not_added_to_branch(
     default_command_context: FeatureTestCommandContext,
 ) -> None:
-    failure_context = copy.copy(default_command_context)
-    failure_context.expect_failure = True
-    return_code, _, _ = run_command_and_save_logs(failure_context, ["check_process"])
+    default_command_context.expect_failure = True
+    return_code, _, _ = run_command_and_save_logs(
+        default_command_context, ["check_process"]
+    )
     assert return_code != 0
 
 

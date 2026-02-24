@@ -132,7 +132,7 @@ def default_command_context(
         mock_project_root=mock_project_root,
         real_project_root_dir=real_project_root_dir,
         test_name=request.node.name,
-        log_name=request.node.name
+        log_name=request.node.name,
     )
 
 

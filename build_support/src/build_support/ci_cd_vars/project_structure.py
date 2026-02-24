@@ -86,18 +86,18 @@ def get_feature_test_scratch_folder(project_root: Path) -> Path:
     return maybe_build_dir(dir_to_build=project_root.joinpath("test_scratch_folder"))
 
 
-def get_feature_test_log_name(project_root: Path, test_name: str) -> Path:
+def get_feature_test_log_file(project_root: Path, log_name: str) -> Path:
     """Gets the path to a log file for a feature test.
 
     Args:
         project_root (Path): Path to this project's root.
-        test_name (str): Name of the test (will be sanitized for filename).
+        log_name (str): Name of the test (will be sanitized for filename).
 
     Returns:
         Path: Path to the log file for the test in test_scratch_folder/test_logs/.
     """
     # Sanitize test name for use as filename
-    safe_test_name = test_name.replace("[", "_").replace("]", "_").replace("::", "_")
+    safe_test_name = log_name.replace("[", "_").replace("]", "_").replace("::", "_")
     # Remove trailing underscores that may result from sanitization
     safe_test_name = safe_test_name.rstrip("_")
     log_dir = maybe_build_dir(

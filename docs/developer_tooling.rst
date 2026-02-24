@@ -80,6 +80,9 @@ a few important ones for people who are new to this repository.
    * - make echo_v
      -
      - Prints a Makefile variable; useful when debugging or adding new targets.
+   * - make echo_image_tags
+     -
+     - Prints Docker image tag variables (TAG_SUFFIX, DOCKER_BUILD_IMAGE, etc.).
    * - make setup_build_env
      -
      - Builds the Docker image for the build environment.
@@ -96,6 +99,9 @@ a few important ones for people who are new to this repository.
      -
      - Updates :code:`uv.lock` in the dev container after changing
        :code:`pyproject.toml`. Builds the dev image if needed.
+   * - make make_new_project
+     -
+     - Creates a new project from this template (interactive).
    * - make format
      - Yes
      - Runs code formatting for this repo.
@@ -130,6 +136,9 @@ a few important ones for people who are new to this repository.
    * - make type_check_build_support
      -
      - Runs ty type checks for the :code:`build_support` subproject only.
+   * - make type_check_pypi
+     -
+     - Runs ty type checks for the :code:`pypi_package` subproject only.
    * - make security_checks
      -
      - Runs Bandit security checks for this repo.

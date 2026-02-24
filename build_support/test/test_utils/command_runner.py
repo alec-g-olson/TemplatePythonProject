@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from subprocess import PIPE, Popen
 
-from build_support.ci_cd_vars.project_structure import get_feature_test_log_name
+from build_support.ci_cd_vars.project_structure import get_feature_test_log_file
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,6 @@ class FeatureTestCommandContext:
     expect_failure: bool = False
 
 
-
 def run_command_and_save_logs(
     context: FeatureTestCommandContext, command_args: list[str]
 ) -> tuple[int, str, str]:
@@ -62,8 +61,8 @@ def run_command_and_save_logs(
     args = [*context.args_prefix, *command_args]
     cwd = context.mock_project_root
     log_name = context.log_name
-    log_file = get_feature_test_log_name(
-        project_root=context.real_project_root_dir, test_name=log_name
+    log_file = get_feature_test_log_file(
+        project_root=context.real_project_root_dir, log_name=log_name
     )
 
     cmd = Popen(args=args, cwd=cwd, stdout=PIPE, stderr=PIPE, text=True)

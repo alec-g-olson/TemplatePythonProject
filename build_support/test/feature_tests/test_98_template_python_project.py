@@ -6,7 +6,6 @@ writes a file per ty rule (each file violates that rule), runs the type
 checker once, and parses the output to ensure every rule is flagged.
 """
 
-import copy
 import re
 from pathlib import Path
 from subprocess import run
@@ -1055,10 +1054,9 @@ def test_all_ty_rules_flagged_in_type_check_output(
             entry_with_extras = cast(tuple[str, str, str, list[tuple[str, str]]], entry)
             for extra_name, extra_content in entry_with_extras[3]:
                 test_dir.joinpath(extra_name).write_text(extra_content)
-    failure_context = copy.copy(default_command_context)
-    failure_context.expect_failure = True
+    default_command_context.expect_failure = True
     return_code, stdout, stderr = run_command_and_save_logs(
-        failure_context, ["type_check_pypi"]
+        default_command_context, ["type_check_pypi"]
     )
     assert return_code != 0, "type_check_pypi should fail when rules are violated"
     combined_output = stdout + stderr

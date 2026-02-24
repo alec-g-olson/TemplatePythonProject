@@ -4,8 +4,6 @@ Three levels: INFO = steps only; DEBUG = steps + commands; TRACE = steps + comma
 + task stdout/stderr. Failures always log command, code, stdout, and stderr at ERROR.
 """
 
-import copy
-
 import pytest
 from build_support.ci_cd_vars.subproject_structure import (
     SubprojectContext,
@@ -79,10 +77,9 @@ def test_failure_visible_at_default_log_level(
     x: int = "not an int"
 """
     )
-    failure_context = copy.copy(default_command_context)
-    failure_context.expect_failure = True
+    default_command_context.expect_failure = True
     return_code, stdout, stderr = run_command_and_save_logs(
-        failure_context, ["type_check_build_support"]
+        default_command_context, ["type_check_build_support"]
     )
     combined = stdout + stderr
     assert return_code != 0
